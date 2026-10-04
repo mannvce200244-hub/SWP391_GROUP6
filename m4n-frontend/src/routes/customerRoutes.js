@@ -3,9 +3,26 @@ export const CUSTOMER_ROUTES = Object.freeze({
   products: '/products',
   productDetail: (productId) =>
     `/products/${encodeURIComponent(String(productId))}`,
+  login: '/login',
+  register: '/register',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
+  profile: '/profile',
+  security: '/account/security',
+  forbidden: '/403',
+  staff: '/staff',
+  pos: '/pos',
+  admin: '/admin',
 })
 
 export const ROUTE_CHANGE_EVENT = 'm4n:navigate'
+
+export function navigateTo(pathname) {
+  if (typeof window === 'undefined') return
+  window.history.pushState(null, '', pathname)
+  window.dispatchEvent(new Event(ROUTE_CHANGE_EVENT))
+  window.scrollTo(0, 0)
+}
 
 export function normalizePathname(pathname) {
   if (pathname === CUSTOMER_ROUTES.home) {

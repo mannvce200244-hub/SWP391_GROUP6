@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
-import LoadingState from '../components/ui/LoadingState.jsx'
+import { ProductDetailSkeleton } from '../components/ui/Skeleton.jsx'
 import ProductDetailInfo from '../features/catalog/ProductDetailInfo.jsx'
 import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
@@ -38,13 +38,13 @@ function ProductDetailPage({ productId }) {
   }
 
   return (
-    <div className="page-shell">
-      <RouterLink className="back-link" href={CUSTOMER_ROUTES.products}>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <RouterLink className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-brand transition-colors mb-6 cursor-pointer" href={CUSTOMER_ROUTES.products}>
         <span aria-hidden="true">←</span> Trở về danh mục
       </RouterLink>
       <section aria-busy={detail.status === 'loading'} aria-label="Chi tiết sản phẩm">
         {detail.status === 'loading' ? (
-          <LoadingState message="Đang tải thông tin sản phẩm…" />
+          <ProductDetailSkeleton />
         ) : null}
         {detail.status === 'error' ? (
           <ErrorState

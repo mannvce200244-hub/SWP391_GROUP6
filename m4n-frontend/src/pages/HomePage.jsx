@@ -19,7 +19,7 @@ const CATEGORIES = Object.freeze([
     num: '01',
     label: 'DÂY',
     title: 'Nhạc cụ dây',
-    desc: 'Đàn tranh, đàn bầu, đàn nguyệt và các nhạc cụ dây cổ truyền chế tác từ gỗ cẩm lai, gỗ mun và gỗ gụ quý.',
+    desc: 'Đàn tranh, đàn bầu, đàn nguyệt chế tác từ gỗ cẩm lai, gỗ mun và gỗ gụ quý với âm sắc ngân vang.',
     image: catNhacCuDay,
     alt: 'Nhạc cụ dây truyền thống Việt Nam: đàn tranh và đàn bầu',
   }),
@@ -28,7 +28,7 @@ const CATEGORIES = Object.freeze([
     num: '02',
     label: 'HƠI',
     title: 'Nhạc cụ hơi',
-    desc: 'Sáo trúc, tiêu và các nhạc cụ hơi nứa già thủ công mang âm sắc thanh thoát của làng quê Việt.',
+    desc: 'Sáo trúc, tiêu và các nhạc cụ hơi nứa già thủ công mang âm sắc thanh thoát, mộc mạc.',
     image: catNhacCuHoi,
     alt: 'Nhạc cụ hơi truyền thống: sáo trúc và tiêu thủ công',
   }),
@@ -37,7 +37,7 @@ const CATEGORIES = Object.freeze([
     num: '03',
     label: 'GÕ',
     title: 'Nhạc cụ gõ',
-    desc: 'Trống bản, thanh la, mõ gỗ mít và các nhạc cụ gõ mộc mạc gìn giữ nhịp điệu dân tộc.',
+    desc: 'Trống bản, thanh la, mõ gỗ mít gìn giữ nhịp điệu cổ truyền và nghi lễ dân gian.',
     image: catNhacCuGo,
     alt: 'Nhạc cụ gõ truyền thống: trống bản và thanh la',
   }),
@@ -110,137 +110,160 @@ function HomePage() {
   const [catDay, catHoi, catGo] = CATEGORIES
 
   return (
-    <div className="home-page">
-      {/* SECTION 1: HERO (Asymmetric 5 cols / 7 cols) */}
-      <section aria-labelledby="hero-title" className="home-hero-wrap">
-        <div className="home-container home-hero">
-          <div className="home-hero__content">
-            <p className="eyebrow">NHẠC CỤ TRUYỀN THỐNG VIỆT NAM</p>
-            <h1 id="hero-title">
-              Nhạc cụ truyền thống, cho không gian sống hôm nay.
-            </h1>
-            <p className="home-hero__summary">
-              Khám phá nhạc cụ theo nhóm, nghệ nhân và làng nghề, với thông tin rõ
-              ràng về nguồn gốc và chế tác thủ công.
+    <div className="w-full">
+      {/* SECTION 1: HERO */}
+      <section aria-labelledby="hero-title" className="py-12 sm:py-16 lg:py-20 bg-surface border-b border-border/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          <div className="lg:col-span-5 flex flex-col gap-4 sm:gap-6">
+            <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+              <span className="resonance-motif" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+                <span />
+              </span>
+              Nhạc cụ truyền thống Việt Nam
             </p>
-            <div className="home-hero__actions">
+            <h1 id="hero-title" className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-ink font-sans tracking-tight leading-tight">
+              Thanh âm Việt, trong một trải nghiệm hiện đại.
+            </h1>
+            <p className="text-base text-muted leading-relaxed max-w-lg">
+              Khám phá bộ sưu tập nhạc cụ chế tác thủ công bởi nghệ nhân làng nghề, 
+              minh bạch nguồn gốc và chất liệu dành cho người yêu âm sắc hôm nay.
+            </p>
+            <div className="flex flex-wrap items-center gap-4 pt-2">
               <RouterLink
-                className="button button--primary"
+                className="inline-flex items-center justify-center font-semibold transition-colors bg-brand text-white hover:bg-brand-hover h-11 px-6 text-base rounded-lg cursor-pointer shadow-xs"
                 href={CUSTOMER_ROUTES.products}
               >
                 Khám phá sản phẩm
               </RouterLink>
-              <a className="secondary-link" href="#categories">
+              <a className="inline-flex items-center gap-1 text-sm font-semibold text-ink hover:text-brand transition-colors cursor-pointer" href="#categories">
                 Xem danh mục <span aria-hidden="true">→</span>
               </a>
             </div>
           </div>
 
-          <div className="home-hero__media">
-            <div className="home-hero__image-wrap">
+          <div className="lg:col-span-7">
+            <div className="relative rounded-2xl overflow-hidden border border-border shadow-md bg-surface-secondary aspect-4/3 lg:aspect-16/10">
               <img
                 alt="Nghệ sĩ biểu diễn Đàn Tranh truyền thống Việt Nam"
-                className="home-hero__image"
+                className="w-full h-full object-cover"
                 decoding="async"
                 fetchPriority="high"
                 height="650"
                 src={heroDanTranh}
                 width="880"
               />
+              <div className="absolute bottom-4 left-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-medium border border-white/10 shadow-sm" aria-hidden="true">
+                <span className="w-2 h-2 rounded-full bg-brand" />
+                <span>Đàn Tranh · Nhạc cụ dây</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 2: CATEGORIES (Asymmetric 12-Column Editorial Grid) */}
+      {/* SECTION 2: QUICK CATEGORY NAVIGATION */}
       <section
         aria-labelledby="categories-title"
-        className="home-section-wrap home-categories-wrap"
+        className="py-14 sm:py-20 bg-canvas"
         id="categories"
       >
-        <div className="home-container">
-          <div className="section-header section-header--with-action">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-12">
             <div>
-              <p className="eyebrow">DANH MỤC NHẠC CỤ</p>
-              <h2 id="categories-title">Khám phá danh mục</h2>
+              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand mb-1">
+                <span className="resonance-motif" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                DANH MỤC NHẠC CỤ
+              </p>
+              <h2 id="categories-title" className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">Khám phá theo nhóm nhạc cụ</h2>
+              <p className="text-sm text-muted leading-relaxed max-w-lg mt-1">
+                Ba nhóm nhạc cụ chính cấu thành bản sắc âm nhạc cổ truyền Việt Nam.
+              </p>
             </div>
-            <p className="section-header__lead">
-              Ba nhóm nhạc cụ chính cấu thành bản sắc âm nhạc cổ truyền Việt Nam.
-            </p>
           </div>
 
-          <div className="categories-asym-grid">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Primary Feature: Nhạc cụ dây (7 cols) */}
-            <div className="cat-feature">
+            <div className="lg:col-span-7 flex flex-col rounded-2xl bg-surface border border-border overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 group">
               <RouterLink
-                className="cat-feature-link"
+                className="flex flex-col h-full no-underline"
                 href={CUSTOMER_ROUTES.products}
               >
-                <div className="cat-feature__media">
+                <div className="aspect-16/10 w-full overflow-hidden bg-surface-secondary relative">
                   <img
                     alt={catDay.alt}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     decoding="async"
                     height="520"
                     src={catDay.image}
                     width="780"
                   />
-                  <span className="cat-tag">{catDay.num} / {catDay.label}</span>
+                  <span className="absolute top-4 left-4 px-2.5 py-1 rounded-md bg-surface/90 backdrop-blur-md text-xs font-bold text-ink border border-border/80 tracking-wider uppercase">{catDay.num} / {catDay.label}</span>
                 </div>
-                <div className="cat-feature__body">
-                  <div className="cat-feature__meta">
-                    <h3>{catDay.title}</h3>
-                    <span className="text-link">
+                <div className="p-6 sm:p-8 flex flex-col gap-2 flex-1 justify-between">
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="text-xl font-bold text-ink group-hover:text-brand transition-colors">{catDay.title}</h3>
+                    <span className="text-xs font-semibold text-brand flex items-center gap-1 group-hover:underline">
                       Xem sản phẩm <span aria-hidden="true">→</span>
                     </span>
                   </div>
-                  <p>{catDay.desc}</p>
+                  <p className="text-sm text-muted leading-relaxed">{catDay.desc}</p>
                 </div>
               </RouterLink>
             </div>
 
             {/* Secondary Stack: Nhạc cụ hơi & Nhạc cụ gõ (5 cols) */}
-            <div className="cat-stack">
+            <div className="lg:col-span-5 flex flex-col gap-6">
               <RouterLink
-                className="cat-stack-card"
+                className="flex flex-col sm:flex-row lg:flex-col rounded-2xl bg-surface border border-border overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 group flex-1 no-underline"
                 href={CUSTOMER_ROUTES.products}
               >
-                <div className="cat-stack-card__media">
+                <div className="w-full sm:w-48 lg:w-full aspect-16/9 sm:aspect-auto lg:aspect-16/9 overflow-hidden bg-surface-secondary relative shrink-0">
                   <img
                     alt={catHoi.alt}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     decoding="async"
                     height="240"
                     src={catHoi.image}
                     width="360"
                   />
-                  <span className="cat-tag">{catHoi.num} / {catHoi.label}</span>
+                  <span className="absolute top-3 left-3 px-2 py-0.5 rounded-md bg-surface/90 backdrop-blur-md text-[11px] font-bold text-ink border border-border/80 tracking-wider uppercase">{catHoi.num} / {catHoi.label}</span>
                 </div>
-                <div className="cat-stack-card__body">
-                  <h3>{catHoi.title}</h3>
-                  <p>{catHoi.desc}</p>
-                  <span className="text-link">
+                <div className="p-5 sm:p-6 flex flex-col gap-1.5 flex-1 justify-between">
+                  <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">{catHoi.title}</h3>
+                  <p className="text-xs text-muted leading-relaxed line-clamp-2">{catHoi.desc}</p>
+                  <span className="text-xs font-semibold text-brand flex items-center gap-1 group-hover:underline mt-1">
                     Xem sản phẩm <span aria-hidden="true">→</span>
                   </span>
                 </div>
               </RouterLink>
 
               <RouterLink
-                className="cat-stack-card"
+                className="flex flex-col sm:flex-row lg:flex-col rounded-2xl bg-surface border border-border overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 group flex-1 no-underline"
                 href={CUSTOMER_ROUTES.products}
               >
-                <div className="cat-stack-card__media">
+                <div className="w-full sm:w-48 lg:w-full aspect-16/9 sm:aspect-auto lg:aspect-16/9 overflow-hidden bg-surface-secondary relative shrink-0">
                   <img
                     alt={catGo.alt}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     decoding="async"
                     height="240"
                     src={catGo.image}
                     width="360"
                   />
-                  <span className="cat-tag">{catGo.num} / {catGo.label}</span>
+                  <span className="absolute top-3 left-3 px-2 py-0.5 rounded-md bg-surface/90 backdrop-blur-md text-[11px] font-bold text-ink border border-border/80 tracking-wider uppercase">{catGo.num} / {catGo.label}</span>
                 </div>
-                <div className="cat-stack-card__body">
-                  <h3>{catGo.title}</h3>
-                  <p>{catGo.desc}</p>
-                  <span className="text-link">
+                <div className="p-5 sm:p-6 flex flex-col gap-1.5 flex-1 justify-between">
+                  <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">{catGo.title}</h3>
+                  <p className="text-xs text-muted leading-relaxed line-clamp-2">{catGo.desc}</p>
+                  <span className="text-xs font-semibold text-brand flex items-center gap-1 group-hover:underline mt-1">
                     Xem sản phẩm <span aria-hidden="true">→</span>
                   </span>
                 </div>
@@ -250,30 +273,37 @@ function HomePage() {
         </div>
       </section>
 
-      {/* SECTION 3: FEATURED PRODUCTS (Sản phẩm được quan tâm) */}
+      {/* SECTION 3: FEATURED PRODUCTS */}
       <section
         aria-labelledby="featured-title"
-        className="home-section-wrap home-products-wrap"
+        className="py-14 sm:py-20 bg-surface border-y border-border/60"
       >
-        <div className="home-container">
-          <div className="section-header section-header--with-action">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-12">
             <div>
-              <p className="eyebrow">TUYỂN CHỌN M4N</p>
-              <h2 id="featured-title">Sản phẩm được quan tâm</h2>
-              <p className="section-header__lead">
-                Những nhạc cụ tiêu biểu được chế tác thủ công bởi các nghệ nhân làng
-                nghề.
+              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand mb-1">
+                <span className="resonance-motif" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                TUYỂN CHỌN M4N
+              </p>
+              <h2 id="featured-title" className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">Sản phẩm nổi bật</h2>
+              <p className="text-sm text-muted leading-relaxed max-w-lg mt-1">
+                Những nhạc cụ tiêu biểu được tuyển chọn kỹ lưỡng về âm sắc và độ hoàn thiện.
               </p>
             </div>
             <RouterLink
-              className="text-link text-link--section"
+              className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
               href={CUSTOMER_ROUTES.products}
             >
               Xem tất cả sản phẩm <span aria-hidden="true">→</span>
             </RouterLink>
           </div>
 
-          <ul aria-label="Danh sách sản phẩm được quan tâm" className="product-grid product-grid--4col">
+          <ul aria-label="Danh sách sản phẩm nổi bật" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 list-none p-0 m-0">
             {FEATURED_PRODUCTS.map((product) => (
               <li key={product.id}>
                 <ProductCard priority={true} product={product} />
@@ -281,9 +311,9 @@ function HomePage() {
             ))}
           </ul>
 
-          <div className="section-footer-mobile">
+          <div className="sm:hidden mt-8 text-center">
             <RouterLink
-              className="button button--quiet"
+              className="inline-flex items-center justify-center font-semibold transition-colors border border-border bg-surface text-ink hover:bg-surface-secondary h-10 px-5 text-sm rounded-lg w-full"
               href={CUSTOMER_ROUTES.products}
             >
               Xem tất cả sản phẩm →
@@ -292,17 +322,17 @@ function HomePage() {
         </div>
       </section>
 
-      {/* SECTION 4: ARTISAN & CRAFT VILLAGE (Asymmetric 7 cols / 5 cols) */}
+      {/* SECTION 4: ARTISAN & CRAFT VILLAGE */}
       <section
         aria-labelledby="artisan-section-title"
-        className="home-section-wrap home-artisan-wrap"
+        className="py-14 sm:py-20 bg-canvas"
       >
-        <div className="home-container">
-          <div className="artisan-grid">
-            <div className="artisan-grid__media">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            <div className="lg:col-span-7 rounded-2xl overflow-hidden border border-border shadow-md bg-surface-secondary aspect-4/3">
               <img
                 alt="Nghệ nhân chế tác đàn truyền thống tại xưởng mộc làng nghề"
-                className="artisan-grid__image"
+                className="w-full h-full object-cover"
                 decoding="async"
                 height="620"
                 src={artisanWorkshop}
@@ -310,34 +340,42 @@ function HomePage() {
               />
             </div>
 
-            <div className="artisan-grid__content">
-              <p className="eyebrow">NGHỆ NHÂN & LÀNG NGHỀ</p>
-              <h2 id="artisan-section-title">
-                Người làm nên thanh âm.
+            <div className="lg:col-span-5 flex flex-col gap-4 text-sm text-muted leading-relaxed">
+              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+                <span className="resonance-motif" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                NGHỆ NHÂN & LÀNG NGHỀ
+              </p>
+              <h2 id="artisan-section-title" className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
+                Nghệ nhân — người giữ hồn nhạc cụ
               </h2>
               <p>
-                Mỗi cây đàn, chiếc sáo tại M4N được tạo tác thủ công bởi các nghệ
-                nhân dày dạn kinh nghiệm từ những cái nôi làng nghề truyền thống
-                như Đào Xá, Trúc Sơn hay Bát Tràng.
+                Mỗi nhạc cụ tại M4N mang dấu ấn của bàn tay nghệ nhân dày dặn kinh nghiệm 
+                từ những làng nghề truyền thống lâu đời như Đào Xá, Trúc Sơn và các vùng 
+                nghề nổi tiếng khác trên khắp Việt Nam.
               </p>
               <p>
-                Sự tỉ mỉ trong từng đường vân gỗ quý, kỹ thuật căng dây chuẩn xác và
-                đôi tai thẩm âm mộc mạc mang lại những nhạc cụ có thanh âm chuẩn mực,
-                đồng hành bền bỉ cùng người nghệ sĩ.
+                Từ việc chọn lựa gỗ quý, thực hiện kỹ thuật căng dây chuẩn xác đến 
+                quá trình hoàn thiện âm sắc — mỗi công đoạn đều được thực hiện tỉ mỉ 
+                để mang đến những nhạc cụ có chất lượng vượt trội, thanh âm thuần khiết.
               </p>
 
-              <div className="artisan-grid__actions">
+              <div className="flex flex-wrap items-center gap-4 pt-2">
                 <RouterLink
-                  className="button button--primary"
+                  className="inline-flex items-center justify-center font-semibold transition-colors bg-brand text-white hover:bg-brand-hover h-10 px-5 text-sm rounded-lg shadow-xs"
                   href={CUSTOMER_ROUTES.products}
                 >
-                  Khám phá nghệ nhân
+                  Khám phá nhạc cụ
                 </RouterLink>
                 <RouterLink
-                  className="secondary-link"
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-ink hover:text-brand transition-colors"
                   href={CUSTOMER_ROUTES.products}
                 >
-                  Khám phá làng nghề <span aria-hidden="true">→</span>
+                  Tìm hiểu làng nghề <span aria-hidden="true">→</span>
                 </RouterLink>
               </div>
             </div>
@@ -345,56 +383,64 @@ function HomePage() {
         </div>
       </section>
 
-      {/* SECTION 5: VỀ M4N / VALUES (12-Column Asymmetric Editorial Grid) */}
+      {/* SECTION 5: VỀ M4N / VALUES */}
       <section
         aria-labelledby="values-heading"
-        className="home-section-wrap home-values-wrap"
+        className="py-14 sm:py-20 bg-surface border-t border-border/60"
       >
-        <div className="home-container">
-          <div className="values-editorial-grid">
-            {/* Left: 4 columns editorial intro */}
-            <div className="values-editorial__intro">
-              <p className="eyebrow">VỀ M4N</p>
-              <h2 id="values-heading">
-                Một nơi để hiểu rõ hơn về nhạc cụ Việt.
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+            {/* Left: editorial intro */}
+            <div className="lg:col-span-5 flex flex-col gap-3">
+              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+                <span className="resonance-motif" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                VỀ M4N
+              </p>
+              <h2 id="values-heading" className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
+                Tôn vinh di sản âm nhạc Việt
               </h2>
-              <p className="values-editorial__lead">
-                M4N tập trung vào sản phẩm, nguồn gốc và thông tin cần thiết để
-                người mua lựa chọn phù hợp.
+              <p className="text-sm text-muted leading-relaxed">
+                M4N cam kết mang đến trải nghiệm mua sắm nhạc cụ truyền thống 
+                với thông tin minh bạch, chất lượng đảm bảo và sự hỗ trợ tận tâm.
               </p>
             </div>
 
-            {/* Right: 8 columns stacked horizontal rows */}
-            <div className="values-editorial__list">
-              <div className="values-row">
-                <span className="values-row__num" aria-hidden="true">01</span>
-                <div className="values-row__content">
-                  <h3 className="values-row__title">Thông tin rõ ràng</h3>
-                  <p className="values-row__desc">
-                    Minh bạch về chất liệu gỗ, kích thước, xuất xứ làng nghề và thông
-                    tin nghệ nhân trực tiếp chế tác.
+            {/* Right: structured value rows */}
+            <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-6">
+              <div className="flex gap-4 sm:gap-6 p-6 rounded-xl bg-canvas border border-border/80">
+                <span className="text-2xl font-bold text-brand/40 font-mono shrink-0" aria-hidden="true">01</span>
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-bold text-ink">Minh bạch nguồn gốc</h3>
+                  <p className="text-sm text-muted leading-relaxed">
+                    Mỗi sản phẩm đều có thông tin đầy đủ về chất liệu, kích thước, 
+                    xuất xứ làng nghề và nghệ nhân chế tác để bạn lựa chọn tự tin.
                   </p>
                 </div>
               </div>
 
-              <div className="values-row">
-                <span className="values-row__num" aria-hidden="true">02</span>
-                <div className="values-row__content">
-                  <h3 className="values-row__title">Nhạc cụ truyền thống</h3>
-                  <p className="values-row__desc">
-                    Tập trung chuẩn mực vào 3 nhóm nhạc cụ dây, hơi và gõ tiêu biểu của
-                    âm nhạc truyền thống Việt Nam.
+              <div className="flex gap-4 sm:gap-6 p-6 rounded-xl bg-canvas border border-border/80">
+                <span className="text-2xl font-bold text-brand/40 font-mono shrink-0" aria-hidden="true">02</span>
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-bold text-ink">Tuyển chọn âm sắc</h3>
+                  <p className="text-sm text-muted leading-relaxed">
+                    Nhạc cụ được thẩm định kỹ lưỡng, chỉ chấp nhận những sản phẩm 
+                    đạt chuẩn về độ vang, tính cân bằng âm học và thẩm mỹ cao nhất.
                   </p>
                 </div>
               </div>
 
-              <div className="values-row">
-                <span className="values-row__num" aria-hidden="true">03</span>
-                <div className="values-row__content">
-                  <h3 className="values-row__title">Hỗ trợ trực tuyến</h3>
-                  <p className="values-row__desc">
-                    Nhân viên tư vấn trực tuyến hỗ trợ giải đáp kỹ thuật, âm sắc và cách
-                    bảo quản đàn chu đáo.
+              <div className="flex gap-4 sm:gap-6 p-6 rounded-xl bg-canvas border border-border/80">
+                <span className="text-2xl font-bold text-brand/40 font-mono shrink-0" aria-hidden="true">03</span>
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-base font-bold text-ink">Tư vấn chuyên môn</h3>
+                  <p className="text-sm text-muted leading-relaxed">
+                    Đội ngũ am hiểu nhạc cụ sẵn sàng hỗ trợ tư vấn âm sắc, kỹ thuật bảo quản 
+                    và hướng dẫn sử dụng phù hợp với từng nhu cầu học tập và biểu diễn.
                   </p>
                 </div>
               </div>

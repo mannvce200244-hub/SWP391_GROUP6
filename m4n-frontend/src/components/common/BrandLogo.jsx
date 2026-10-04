@@ -1,55 +1,63 @@
 /**
- * BrandLogo - Intentional, modern M4N brand identity
- * Minimal acoustic string-rhythm mark + crafted typography
+ * BrandLogo - Contemporary M4N Brand Identity (2026)
+ * Geometric instrument string resonance mark + modern sans-serif typography
  */
 function BrandLogo({ variant = 'default', className = '' }) {
   const isDark = variant === 'dark'
 
   return (
-    <div className={`brand-mark-group brand-mark-group--${variant} ${className}`}>
-      {/* Precision acoustic string & resonance mark */}
+    <div className={`inline-flex items-center gap-2.5 select-none no-underline ${className}`}>
+      {/* Precision 4-line Resonance Mark */}
       <svg
         aria-hidden="true"
-        className="brand-symbol"
+        className="shrink-0 w-6 h-6"
         fill="none"
         height="24"
         viewBox="0 0 24 24"
         width="24"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <line
-          stroke={isDark ? '#E5E5E5' : '#1A1A1A'}
-          strokeLinecap="round"
-          strokeWidth="2"
-          x1="5"
-          x2="5"
-          y1="4"
-          y2="20"
+        <rect
+          fill={isDark ? '#E5E5E5' : '#191919'}
+          height="14"
+          rx="1"
+          width="2.5"
+          x="3"
+          y="5"
         />
-        <line
-          stroke={isDark ? '#E5E5E5' : '#1A1A1A'}
-          strokeLinecap="round"
-          strokeWidth="2"
-          x1="12"
-          x2="12"
-          y1="2"
-          y2="22"
+        <rect
+          fill="#A63F2A"
+          height="20"
+          rx="1.25"
+          width="2.5"
+          x="8.5"
+          y="2"
         />
-        <line
-          stroke={isDark ? '#E5E5E5' : '#1A1A1A'}
-          strokeLinecap="round"
-          strokeWidth="2"
-          x1="19"
-          x2="19"
-          y1="5"
-          y2="19"
+        <rect
+          fill={isDark ? '#E5E5E5' : '#191919'}
+          height="16"
+          rx="1"
+          width="2.5"
+          x="14"
+          y="4"
         />
-        <circle cx="12" cy="9" fill="#8A4028" r="2.25" />
+        <rect
+          fill={isDark ? '#999999' : '#666666'}
+          height="10"
+          rx="1"
+          width="2.5"
+          x="19.5"
+          y="7"
+        />
       </svg>
 
-      <div className="brand-copy">
-        <span className="brand-copy__name">M4N</span>
-        <span className="brand-copy__tagline">Nhạc cụ truyền thống</span>
+      <div className="flex flex-col leading-none">
+        <span className={`text-lg font-extrabold tracking-tight font-sans ${isDark ? 'text-white' : 'text-ink'}`}>
+          M4N
+        </span>
+        <span className={`text-[9px] font-semibold tracking-wider font-sans uppercase mt-0.5 ${isDark ? 'text-white/60' : 'text-muted'}`}>
+          NHẠC CỤ TRUYỀN THỐNG
+        </span>
       </div>
     </div>
   )

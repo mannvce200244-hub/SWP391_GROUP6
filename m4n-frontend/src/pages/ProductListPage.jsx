@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
-import LoadingState from '../components/ui/LoadingState.jsx'
+import { ProductGridSkeleton } from '../components/ui/Skeleton.jsx'
 import Button from '../components/ui/Button.jsx'
 import ProductFilters from '../features/catalog/ProductFilters.jsx'
 import ProductGrid from '../features/catalog/ProductGrid.jsx'
@@ -69,12 +69,20 @@ function ProductListPage() {
   const hasAppliedFilters = Object.values(request.filters).some(Boolean)
 
   return (
-    <div className="page-shell catalog-page">
-      <header className="page-heading">
-        <p className="eyebrow">Customer Catalog</p>
-        <h1>Danh mục sản phẩm</h1>
-        <p>
-          Tìm kiếm nhạc cụ theo những tiêu chí đã được xác định trong phạm vi M4N.
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <header className="mb-8 flex flex-col gap-2 max-w-2xl">
+        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand">
+          <span className="resonance-motif" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+          </span>
+          BỘ SƯU TẬP M4N
+        </p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">Danh mục sản phẩm</h1>
+        <p className="text-sm text-muted leading-relaxed">
+          Khám phá các nhạc cụ truyền thống Việt Nam được chế tác thủ công bởi các nghệ nhân làng nghề uy tín.
         </p>
       </header>
 
@@ -88,7 +96,7 @@ function ProductListPage() {
 
       <section aria-busy={isLoading} aria-label="Kết quả sản phẩm">
         {catalog.status === 'loading' ? (
-          <LoadingState message="Đang tải danh mục sản phẩm…" />
+          <ProductGridSkeleton count={6} />
         ) : null}
         {catalog.status === 'error' ? (
           <ErrorState
@@ -117,8 +125,8 @@ function ProductListPage() {
           </EmptyState>
         ) : null}
         {catalog.status === 'success' && catalog.products.length > 0 ? (
-          <div className="catalog-results">
-            <p aria-live="polite" className="catalog-results__summary">
+          <div>
+            <p aria-live="polite" className="text-xs font-medium text-muted mb-4">
               Đang hiển thị {catalog.products.length} sản phẩm
             </p>
             <ProductGrid products={catalog.products} />

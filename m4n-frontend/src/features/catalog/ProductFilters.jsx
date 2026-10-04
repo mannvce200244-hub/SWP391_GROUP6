@@ -73,25 +73,27 @@ function ProductFilters({ busy, onApply, onChange, onReset, value }) {
   }
 
   return (
-    <form className="catalog-filters" noValidate onSubmit={handleSubmit}>
+    <form className="w-full mb-8" noValidate onSubmit={handleSubmit}>
       <details
-        className="catalog-filters__disclosure"
+        className="bg-surface border border-border rounded-xl overflow-hidden shadow-xs transition-all"
         onToggle={(event) => setFiltersOpen(event.currentTarget.open)}
         open={filtersOpen}
       >
-        <summary className="catalog-filters__summary">Bộ lọc sản phẩm</summary>
-        <div className="catalog-filters__content">
-          <div className="catalog-filters__heading">
+        <summary className="px-5 py-3.5 font-semibold text-sm text-ink cursor-pointer bg-surface-secondary/40 hover:bg-surface-secondary transition-colors">
+          Bộ lọc sản phẩm
+        </summary>
+        <div className="p-5 sm:p-6 flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-4 pb-4 border-b border-border/60">
             <div>
-              <p className="eyebrow">Bộ lọc</p>
-              <h2>Tìm sản phẩm phù hợp</h2>
+              <p className="text-xs font-bold uppercase tracking-wider text-brand mb-0.5">Bộ lọc</p>
+              <h2 className="text-lg font-bold text-ink">Tìm sản phẩm phù hợp</h2>
             </div>
             <Button disabled={busy} onClick={handleReset} variant="quiet">
               Xóa bộ lọc
             </Button>
           </div>
 
-          <div className="catalog-filters__fields">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Input
               autoComplete="off"
               id="catalog-keyword"
@@ -170,13 +172,15 @@ function ProductFilters({ busy, onApply, onChange, onReset, value }) {
             />
           </div>
 
-          <p className="catalog-filters__note">
+          <p className="text-xs text-muted leading-relaxed">
             Đơn vị tiền và cách gửi bộ lọc sẽ theo API contract sau khi được thống
             nhất.
           </p>
-          <Button loading={busy} loadingLabel="Đang tìm…" type="submit">
-            Tìm sản phẩm
-          </Button>
+          <div className="pt-2">
+            <Button loading={busy} loadingLabel="Đang tìm…" type="submit">
+              Tìm sản phẩm
+            </Button>
+          </div>
         </div>
       </details>
     </form>
