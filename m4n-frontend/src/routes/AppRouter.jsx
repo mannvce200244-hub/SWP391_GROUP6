@@ -9,6 +9,8 @@ import HomePage from '../pages/HomePage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
 import ProductDetailPage from '../pages/ProductDetailPage.jsx'
 import ProductListPage from '../pages/ProductListPage.jsx'
+import ArtisansPage from '../pages/ArtisansPage.jsx'
+import CraftVillageDetailPage from '../pages/CraftVillageDetailPage.jsx'
 
 import LoginPage from '../features/auth/LoginPage.jsx'
 import RegisterPage from '../features/auth/RegisterPage.jsx'
@@ -26,6 +28,7 @@ import RequireAuth from './RequireAuth.jsx'
 import RequireRole from './RequireRole.jsx'
 import {
   CUSTOMER_ROUTES,
+  matchCraftVillageDetailPath,
   matchProductDetailPath,
   normalizePathname,
   ROUTE_CHANGE_EVENT,
@@ -107,6 +110,8 @@ function AppRouter() {
     pageContent = <HomePage />
   } else if (pathname === CUSTOMER_ROUTES.products) {
     pageContent = <ProductListPage />
+  } else if (pathname === CUSTOMER_ROUTES.artisans) {
+    pageContent = <ArtisansPage />
   } else if (pathname === CUSTOMER_ROUTES.profile) {
     pageContent = (
       <RequireAuth>
@@ -123,8 +128,17 @@ function AppRouter() {
     pageContent = <ForbiddenPage />
   } else {
     const productId = matchProductDetailPath(pathname)
+    const villageSlugOrId = matchCraftVillageDetailPath(pathname)
+
     if (productId) {
       pageContent = <ProductDetailPage key={productId} productId={productId} />
+    } else if (villageSlugOrId) {
+      pageContent = (
+        <CraftVillageDetailPage
+          key={villageSlugOrId}
+          slugOrId={villageSlugOrId}
+        />
+      )
     } else {
       pageContent = <NotFoundPage />
     }

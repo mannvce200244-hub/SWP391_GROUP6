@@ -21,16 +21,20 @@ function getRenderableMedia(media) {
     return []
   }
 
-  return media.filter(
-    (item) =>
-      item &&
-      (item.type === 'image' || item.type === 'video') &&
-      isSafeMediaUrl(item.url),
-  )
+  return media.filter((item) => {
+    if (!item || !isSafeMediaUrl(item.url)) return false
+    const type = item.type ? String(item.type).toLowerCase() : 'image'
+    return type === 'image' || type === 'video'
+  })
 }
 
 function getFirstProductImage(media) {
-  return getRenderableMedia(media).find((item) => item.type === 'image') ?? null
+  return (
+    getRenderableMedia(media).find((item) => {
+      const type = item.type ? String(item.type).toLowerCase() : 'image'
+      return type === 'image'
+    }) ?? null
+  )
 }
 
-export { getFirstProductImage, getRenderableMedia }
+export { getFirstProductImage, getRenderableMedia, isSafeMediaUrl }

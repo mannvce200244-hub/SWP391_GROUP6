@@ -102,10 +102,10 @@ function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto flex flex-col gap-6">
-      <header className="flex flex-col gap-1.5">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">Đăng nhập vào M4N</h1>
-        <p className="text-sm text-muted leading-relaxed">
+    <div className="w-full max-w-lg mx-auto flex flex-col gap-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink font-sans">Đăng nhập vào M4N</h1>
+        <p className="text-sm sm:text-base text-muted leading-relaxed">
           Quản lý đơn hàng, hồ sơ và các hoạt động trên tài khoản của bạn.
         </p>
       </header>
@@ -121,7 +121,7 @@ function LoginPage() {
         </div>
       )}
 
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+      <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
         <Input
           id="login-email"
           name="email"
@@ -174,11 +174,11 @@ function LoginPage() {
           }}
         />
 
-        <div className="pt-2">
+        <div className="pt-3">
           <Button
             type="submit"
             variant="primary"
-            className="w-full"
+            className="w-full h-12"
             loading={isSubmitting}
             loadingLabel="Đang đăng nhập…"
           >

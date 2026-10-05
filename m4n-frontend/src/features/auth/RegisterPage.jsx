@@ -93,10 +93,10 @@ function RegisterPage() {
   }
 
   return (
-    <div className="w-full max-w-lg mx-auto flex flex-col gap-6">
-      <header className="flex flex-col gap-1.5">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">Tạo tài khoản</h1>
-        <p className="text-sm text-muted leading-relaxed">
+    <div className="w-full max-w-xl mx-auto flex flex-col gap-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink font-sans">Tạo tài khoản</h1>
+        <p className="text-sm sm:text-base text-muted leading-relaxed">
           Tạo tài khoản M4N để theo dõi đơn hàng và quản lý thông tin cá nhân.
         </p>
       </header>
@@ -132,7 +132,7 @@ function RegisterPage() {
             </div>
           )}
 
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+          <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
             <Input
               id="reg-fullname"
               name="name"
@@ -239,11 +239,11 @@ function RegisterPage() {
               />
             </div>
 
-            <div className="pt-2">
+            <div className="pt-3">
               <Button
                 type="submit"
                 variant="primary"
-                className="w-full"
+                className="w-full h-12"
                 loading={isSubmitting}
                 loadingLabel="Đang tạo tài khoản…"
               >
