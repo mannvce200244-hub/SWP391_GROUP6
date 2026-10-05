@@ -8,66 +8,67 @@
   --font-serif: "Lora", Georgia, "Times New Roman", serif;
 
   /* ==================================================
-     COLOR PALETTE — Contemporary Craft Commerce (2026)
+     APPROVED M4N PALETTE — White + Charcoal + Lacquer Red + Deep Jade Accent
      ================================================== */
 
-  /* PRIMARY: Brand Lacquer Red (#A63F2A) */
-  --color-brand: #A63F2A;
-  --color-brand-hover: #8A3220;
-  --color-brand-deep: #722A1D;
-  --color-brand-soft: #FDF3F0;
-  --color-brand-border: #F7DDD6;
+  /* PRIMARY: Brand Lacquer Red (#A62F25) */
+  --color-brand: #A62F25;
+  --color-brand-hover: #84231D;
+  --color-brand-active: #721D18;
+  --color-brand-deep: #721D18;
+  --color-brand-soft: #FBEDEC;
+  --color-brand-border: #F7D7D4;
 
-  /* SECONDARY: Deep Jade (#285C52) */
-  --color-jade: #285C52;
-  --color-jade-hover: #1E473F;
-  --color-jade-soft: #EAF2F0;
-  --color-jade-border: #D0E3DF;
+  /* SECONDARY: Deep Jade Micro-Accent (#2F5A50) */
+  --color-jade: #2F5A50;
+  --color-jade-hover: #24483F;
+  --color-jade-active: #1D3B34;
+  --color-jade-soft: #EDF4F1;
+  --color-jade-border: #D5E5E0;
 
-  /* TERTIARY: Restrained Ochre / Brass */
-  --color-ochre: #8A641E;
-  --color-ochre-soft: #FBF6EC;
-  --color-ochre-border: #F5ECCF;
-
-  /* SURFACES & CANVAS */
-  --color-canvas: #F7F7F6;
+  /* BACKGROUND & SURFACES — Clean Neutral Foundation (No Beige / Yellow Undertones) */
+  --color-background: #FFFFFF;
+  --color-canvas: #FFFFFF;
   --color-surface: #FFFFFF;
   --color-surface-raised: #FFFFFF;
-  --color-surface-secondary: #F2F2EF;
-  --color-surface-muted: #EAEAE6;
+  --color-surface-muted: #F6F7F8;
+  --color-surface-subtle: #F2F4F5;
+  --color-surface-secondary: #F6F7F8;
 
-  /* INK & TYPOGRAPHY */
-  --color-ink: #191919;
-  --color-ink-secondary: #333330;
-  --color-muted: #666666;
-  --color-subtle: #767670;
-  --color-faint: #8A8A85;
+  /* INK & TYPOGRAPHY — Modern Cool Charcoal & Slate */
+  --color-foreground: #17191B;
+  --color-foreground-secondary: #5F646A;
+  --color-ink: #17191B;
+  --color-ink-secondary: #2C3033;
+  --color-muted: #5F646A;
+  --color-subtle: #7D8389;
+  --color-faint: #CDD2D5;
 
-  /* BORDERS */
-  --color-border: #E6E6E3;
-  --color-border-subtle: #EDEDE9;
-  --color-border-strong: #D4D4CE;
-  --color-control-border: #D8D8D2;
+  /* BORDERS — Cool Neutral (Zero Yellow / Khaki Undertones) */
+  --color-border: #E3E6E8;
+  --color-border-subtle: #F2F4F5;
+  --color-border-strong: #CDD2D5;
+  --color-control-border: #CDD2D5;
 
   /* SEMANTIC SHORTCUTS */
-  --color-primary: #A63F2A;
-  --color-primary-hover: #8A3220;
-  --color-primary-soft: #FDF3F0;
-  --color-primary-border: #F7DDD6;
+  --color-primary: #A62F25;
+  --color-primary-hover: #84231D;
+  --color-primary-soft: #FBEDEC;
+  --color-primary-border: #F7D7D4;
 
-  --color-danger: #A63F2A;
-  --color-danger-soft: #FDF3F0;
-  --color-danger-border: #F7DDD6;
+  --color-danger: #A62F25;
+  --color-danger-soft: #FBEDEC;
+  --color-danger-border: #F7D7D4;
 
-  --color-success: #285C52;
-  --color-success-soft: #EAF2F0;
-  --color-success-border: #D0E3DF;
+  --color-success: #2F5A50;
+  --color-success-soft: #EDF4F1;
+  --color-success-border: #D5E5E0;
 
-  --color-warning: #8A641E;
-  --color-warning-soft: #FBF6EC;
-  --color-warning-border: #F5ECCF;
+  --color-warning: #856404;
+  --color-warning-soft: #FFF9E6;
+  --color-warning-border: #FFEBAA;
 
-  --color-footer: #191919;
+  --color-footer: #17191B;
 
   /* RADII */
   --radius-xs: 4px;
@@ -76,12 +77,32 @@
   --radius-lg: 12px;
   --radius-xl: 16px;
 
-  /* SHADOWS */
+  /* SHADOWS — Clean Neutral Crisp Elevation */
+  --shadow-2xs: 0 1px 2px rgb(0 0 0 / 0.03);
   --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04), 0 4px 12px -4px rgb(0 0 0 / 0.06);
-  --shadow-md: 0 4px 12px -4px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.04);
-  --shadow-lg: 0 16px 32px -12px rgb(0 0 0 / 0.10), 0 4px 12px -4px rgb(0 0 0 / 0.05);
-  --shadow-xl: 0 24px 48px -16px rgb(0 0 0 / 0.12), 0 4px 12px -4px rgb(0 0 0 / 0.06);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.03);
+}
+
+:root {
+  --background: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-muted: #F6F7F8;
+  --surface-subtle: #F2F4F5;
+  --foreground: #17191B;
+  --foreground-secondary: #5F646A;
+  --muted: #7D8389;
+  --border: #E3E6E8;
+  --border-strong: #CDD2D5;
+  --brand: #A62F25;
+  --brand-hover: #84231D;
+  --brand-active: #721D18;
+  --brand-soft: #FBEDEC;
+  --jade: #2F5A50;
+  --jade-hover: #24483F;
+  --jade-soft: #EDF4F1;
 }
 
 /* Base Document Styles */
@@ -126,26 +147,29 @@ summary:focus-visible,
 
 /* ==================================================
    RESONANCE MOTIF — Contemporary Vietnamese Identity
+   Acoustic string vibrations in authentic lacquer red
    ================================================== */
 .resonance-motif {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 14px;
+  gap: 2.5px;
+  height: 12px;
   vertical-align: middle;
+  color: var(--color-brand);
+  flex-shrink: 0;
 }
 
 .resonance-motif span {
   display: block;
-  width: 2px;
-  border-radius: 1px;
+  width: 1.5px;
+  border-radius: 0.75px;
   background: currentColor;
 }
 
-.resonance-motif span:nth-child(1) { height: 8px; }
-.resonance-motif span:nth-child(2) { height: 14px; background: var(--color-brand); }
-.resonance-motif span:nth-child(3) { height: 10px; }
-.resonance-motif span:nth-child(4) { height: 6px; }
+.resonance-motif span:nth-child(1) { height: 7px; }
+.resonance-motif span:nth-child(2) { height: 12px; }
+.resonance-motif span:nth-child(3) { height: 9px; }
+.resonance-motif span:nth-child(4) { height: 5px; }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {

@@ -46,7 +46,7 @@ function PosDashboardPage() {
     <div className="flex flex-col gap-8">
       <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
         <div className="flex flex-col gap-1.5">
-          <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-ochre">ĐIỂM BÁN HÀNG SHOWROOM</span>
+          <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-muted">ĐIỂM BÁN HÀNG SHOWROOM</span>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
             Xin chào, {user?.fullName || 'Thu ngân'}
           </h2>
@@ -61,7 +61,7 @@ function PosDashboardPage() {
           </div>
           <div className="flex flex-col px-4 py-2 rounded-xl bg-canvas border border-border text-xs">
             <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Vai trò</span>
-            <span className="font-bold text-ochre mt-0.5">Nhân viên POS</span>
+            <span className="font-bold text-ink mt-0.5">Nhân viên POS</span>
           </div>
         </div>
       </div>
@@ -79,14 +79,14 @@ function PosDashboardPage() {
                 onClick={() => navigateTo(item.path)}
               >
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-surface-secondary flex items-center justify-center text-ink group-hover:text-ochre group-hover:bg-ochre-soft transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-surface-secondary flex items-center justify-center text-ink group-hover:text-brand group-hover:bg-brand-soft transition-colors">
                     <ItemIcon size={22} />
                   </div>
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-surface-secondary text-muted uppercase tracking-wider">{item.badge}</span>
                 </div>
-                <h4 className="text-base font-bold text-ink group-hover:text-ochre transition-colors mb-1">{item.title}</h4>
+                <h4 className="text-base font-bold text-ink group-hover:text-brand transition-colors mb-1">{item.title}</h4>
                 <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-4">{item.description}</p>
-                <div className="mt-auto pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-ochre w-full">
+                <div className="mt-auto pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-brand w-full">
                   <span>Truy cập</span>
                   <IconChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                 </div>

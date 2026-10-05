@@ -1,5 +1,16 @@
 import { ROUTE_CHANGE_EVENT } from './customerRoutes.js'
 
+function scrollToHash(hash) {
+  if (!hash) return
+
+  const id = decodeURIComponent(hash.slice(1))
+  const target = document.getElementById(id)
+
+  // Omitting `behavior` uses the document's CSS `scroll-behavior` (smooth),
+  // which global.css already overrides to instant for prefers-reduced-motion.
+  target?.scrollIntoView({ block: 'start' })
+}
+
 function RouterLink({ children, download, href, onClick, target, ...anchorProps }) {
   const handleClick = (event) => {
     onClick?.(event)
@@ -19,11 +30,22 @@ function RouterLink({ children, download, href, onClick, target, ...anchorProps 
 
     const destination = new URL(href, window.location.href)
 
-    if (destination.origin !== window.location.origin || destination.hash) {
+    if (destination.origin !== window.location.origin) {
       return
     }
 
     event.preventDefault()
+
+    // Hash navigation (e.g. /#artisans): update the URL and let a hash-scroll
+    // handler on the target page scroll once the section has rendered. When the
+    // section is already in the DOM, scroll immediately.
+    if (destination.hash) {
+      window.history.pushState(null, '', destination)
+      window.dispatchEvent(new Event(ROUTE_CHANGE_EVENT))
+      scrollToHash(destination.hash)
+      return
+    }
+
     window.history.pushState(null, '', destination)
     window.dispatchEvent(new Event(ROUTE_CHANGE_EVENT))
     window.scrollTo(0, 0)

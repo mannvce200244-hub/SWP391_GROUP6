@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import RouterLink from '../../routes/RouterLink.jsx'
 import BrandLogo from './BrandLogo.jsx'
 import useAuth from '../../features/auth/useAuth.js'
+import useCart from '../../features/cart/useCart.js'
 import {
   CUSTOMER_ROUTES,
   isProductPath,
@@ -25,6 +26,7 @@ const ROLE_LABELS = Object.freeze({
 
 function SiteHeader({ pathname }) {
   const { user, isAuthenticated, logout } = useAuth()
+  const { cartItemCount } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -32,6 +34,9 @@ function SiteHeader({ pathname }) {
 
   const isHomeRoute = pathname === CUSTOMER_ROUTES.home
   const isCatalogRoute = isProductPath(pathname)
+  const isArtisansRoute =
+    pathname === CUSTOMER_ROUTES.artisans ||
+    pathname.startsWith(`${CUSTOMER_ROUTES.artisans}/`)
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const closeAccountMenu = () => setAccountMenuOpen(false)
@@ -126,6 +131,19 @@ function SiteHeader({ pathname }) {
                 Sản phẩm
               </RouterLink>
             </li>
+            <li>
+              <RouterLink
+                aria-current={isArtisansRoute ? 'page' : undefined}
+                className={`px-3.5 py-1.5 rounded-lg text-sm transition-colors ${
+                  isArtisansRoute
+                    ? 'text-brand font-semibold bg-brand-soft/60'
+                    : 'text-ink hover:text-brand hover:bg-surface-secondary font-medium'
+                }`}
+                href={CUSTOMER_ROUTES.artisans}
+              >
+                Nghệ nhân & Làng nghề
+              </RouterLink>
+            </li>
           </ul>
         </nav>
 
@@ -157,7 +175,7 @@ function SiteHeader({ pathname }) {
           </RouterLink>
 
           <RouterLink
-            aria-label="Giỏ hàng (0 sản phẩm)"
+            aria-label={`Giỏ hàng (${cartItemCount} sản phẩm)`}
             className="inline-flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary text-sm font-medium transition-colors cursor-pointer relative"
             href={CUSTOMER_ROUTES.products}
             onClick={closeMobileMenu}
@@ -180,9 +198,11 @@ function SiteHeader({ pathname }) {
                 <path d="M3 6h18" />
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 text-[10px] font-bold text-white bg-brand rounded-full" aria-hidden="true">
-                0
-              </span>
+              {cartItemCount > 0 && (
+                <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 text-[10px] font-bold text-white bg-brand rounded-full" aria-hidden="true">
+                  {cartItemCount}
+                </span>
+              )}
             </span>
             <span className="hidden lg:inline text-xs font-medium ml-1">Giỏ hàng</span>
           </RouterLink>
@@ -412,6 +432,20 @@ function SiteHeader({ pathname }) {
                   onClick={closeMobileMenu}
                 >
                   Sản phẩm
+                </RouterLink>
+              </li>
+              <li>
+                <RouterLink
+                  aria-current={isArtisansRoute ? 'page' : undefined}
+                  className={`block px-3.5 py-2.5 rounded-lg text-sm transition-colors ${
+                    isArtisansRoute
+                      ? 'text-brand font-semibold bg-brand-soft'
+                      : 'text-ink hover:text-brand hover:bg-surface-secondary font-medium'
+                  }`}
+                  href={CUSTOMER_ROUTES.artisans}
+                  onClick={closeMobileMenu}
+                >
+                  Nghệ nhân & Làng nghề
                 </RouterLink>
               </li>
 

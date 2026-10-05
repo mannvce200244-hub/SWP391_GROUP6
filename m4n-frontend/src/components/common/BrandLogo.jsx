@@ -18,7 +18,7 @@ function BrandLogo({ variant = 'default', className = '' }) {
         xmlns="http://www.w3.org/2000/svg"
       >
         <rect
-          fill={isDark ? '#E5E5E5' : '#191919'}
+          fill={isDark ? '#FFFFFF' : '#17191B'}
           height="14"
           rx="1"
           width="2.5"
@@ -26,7 +26,7 @@ function BrandLogo({ variant = 'default', className = '' }) {
           y="5"
         />
         <rect
-          fill="#A63F2A"
+          fill="#A62F25"
           height="20"
           rx="1.25"
           width="2.5"
@@ -34,7 +34,7 @@ function BrandLogo({ variant = 'default', className = '' }) {
           y="2"
         />
         <rect
-          fill={isDark ? '#E5E5E5' : '#191919'}
+          fill={isDark ? '#FFFFFF' : '#17191B'}
           height="16"
           rx="1"
           width="2.5"
@@ -42,7 +42,7 @@ function BrandLogo({ variant = 'default', className = '' }) {
           y="4"
         />
         <rect
-          fill={isDark ? '#999999' : '#666666'}
+          fill={isDark ? '#A5AAAE' : '#5F646A'}
           height="10"
           rx="1"
           width="2.5"

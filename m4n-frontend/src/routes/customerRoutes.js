@@ -3,6 +3,12 @@ export const CUSTOMER_ROUTES = Object.freeze({
   products: '/products',
   productDetail: (productId) =>
     `/products/${encodeURIComponent(String(productId))}`,
+  artisans: '/artisans',
+  artisanDetail: (slugOrId) =>
+    `/artisans/${encodeURIComponent(String(slugOrId))}`,
+  craftVillages: '/craft-villages',
+  craftVillageDetail: (slugOrId) =>
+    `/craft-villages/${encodeURIComponent(String(slugOrId))}`,
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',
@@ -13,6 +19,13 @@ export const CUSTOMER_ROUTES = Object.freeze({
   staff: '/staff',
   pos: '/pos',
   admin: '/admin',
+})
+
+const ARTISAN_SECTION_ID = 'artisans'
+
+export const HOME_ARTISAN_SECTION = Object.freeze({
+  id: ARTISAN_SECTION_ID,
+  href: CUSTOMER_ROUTES.artisans,
 })
 
 export const ROUTE_CHANGE_EVENT = 'm4n:navigate'
@@ -58,3 +71,24 @@ export function isProductPath(pathname) {
     pathname.startsWith(`${CUSTOMER_ROUTES.products}/`)
   )
 }
+
+export function matchCraftVillageDetailPath(pathname) {
+  const detailPrefix = `${CUSTOMER_ROUTES.craftVillages}/`
+
+  if (!pathname.startsWith(detailPrefix)) {
+    return null
+  }
+
+  const encodedId = pathname.slice(detailPrefix.length)
+
+  if (!encodedId || encodedId.includes('/')) {
+    return null
+  }
+
+  try {
+    return decodeURIComponent(encodedId)
+  } catch {
+    return null
+  }
+}
+

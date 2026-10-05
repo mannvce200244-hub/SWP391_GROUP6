@@ -1,100 +1,247 @@
 import useAuth from '../features/auth/useAuth.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
+import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import {
   IconInstrument,
   IconUser,
   IconLock,
   IconStore,
+  IconShield,
+  IconPackage,
   IconChevronRight,
 } from '../components/ui/Icons.jsx'
 
 function AdminDashboardPage() {
   const { user } = useAuth()
 
+  // Key performance & status metrics
+  const stats = [
+    {
+      title: 'Kho Nhạc cụ',
+      metric: '24+ Mẫu',
+      desc: 'Nhạc cụ Dây · Hơi · Gõ',
+      badge: 'Đa dạng',
+      Icon: IconInstrument,
+      iconColor: 'bg-brand-soft border-brand-border text-brand',
+      path: CUSTOMER_ROUTES.products,
+    },
+    {
+      title: 'Cửa hàng Online',
+      metric: 'Sẵn sàng',
+      desc: 'Giao diện mua sắm công khai',
+      badge: 'Bán lẻ',
+      Icon: IconStore,
+      iconColor: 'bg-jade-soft border-jade-border text-jade',
+      path: CUSTOMER_ROUTES.home,
+    },
+    {
+      title: 'Làng nghề & Nghệ nhân',
+      metric: '06 Đối tác',
+      desc: 'Làng Đào Xá, Trúc Sơn,...',
+      badge: 'Nguồn gốc',
+      Icon: IconPackage,
+      iconColor: 'bg-surface-secondary border-border text-ink',
+      path: CUSTOMER_ROUTES.products,
+    },
+    {
+      title: 'An toàn Hệ thống',
+      metric: 'Được bảo vệ',
+      desc: 'Xác thực JWT & Phân quyền',
+      badge: 'Bảo mật',
+      Icon: IconShield,
+      iconColor: 'bg-surface-secondary border-border-strong text-ink',
+      path: CUSTOMER_ROUTES.security,
+    },
+  ]
+
+  // Main management navigation modules
   const quickActions = [
     {
       title: 'Danh mục sản phẩm',
-      description: 'Tra cứu kho nhạc cụ truyền thống, nhóm nhạc cụ và nghệ nhân.',
+      description: 'Tra cứu kho nhạc cụ truyền thống, nhóm nhạc cụ và thông tin nghệ nhân chế tác.',
       path: CUSTOMER_ROUTES.products,
       Icon: IconInstrument,
-      badge: 'Sản phẩm',
+      badge: 'Kho & Danh mục',
+      tagColor: 'bg-brand-soft text-brand border-brand-border',
+      iconBox: 'bg-brand-soft text-brand group-hover:bg-brand group-hover:text-white',
     },
     {
       title: 'Cửa hàng trực tuyến',
-      description: 'Xem giao diện mua sắm công khai dưới góc độ khách hàng.',
+      description: 'Xem trực tiếp giao diện mua sắm công khai dưới góc độ trải nghiệm của khách hàng.',
       path: CUSTOMER_ROUTES.home,
       Icon: IconStore,
-      badge: 'Bán lẻ',
+      badge: 'Bán lẻ & Mua sắm',
+      tagColor: 'bg-jade-soft text-jade border-jade-border',
+      iconBox: 'bg-jade-soft text-jade group-hover:bg-jade group-hover:text-white',
     },
     {
       title: 'Hồ sơ cá nhân',
-      description: 'Xem và cập nhật họ tên, số điện thoại và thông tin quản trị viên.',
+      description: 'Xem và cập nhật họ tên, số điện thoại cùng thông tin tài khoản quản trị viên.',
       path: CUSTOMER_ROUTES.profile,
       Icon: IconUser,
-      badge: 'Cá nhân',
+      badge: 'Thông tin cá nhân',
+      tagColor: 'bg-surface-secondary text-ink border-border',
+      iconBox: 'bg-surface-secondary text-ink group-hover:bg-ink group-hover:text-white',
     },
     {
       title: 'Bảo mật tài khoản',
-      description: 'Thay đổi mật khẩu đăng nhập và quản trị các phiên hoạt động.',
+      description: 'Thay đổi mật khẩu đăng nhập, quản lý phiên hoạt động và cài đặt an ninh tài khoản.',
       path: CUSTOMER_ROUTES.security,
       Icon: IconLock,
-      badge: 'Bảo mật',
+      badge: 'An ninh & Mật khẩu',
+      tagColor: 'bg-surface-secondary text-ink border-border-strong',
+      iconBox: 'bg-surface-secondary text-ink group-hover:bg-ink group-hover:text-white',
     },
   ]
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Welcome Banner */}
-      <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="flex flex-col gap-1.5">
-          <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-brand">TỔNG QUAN HỆ THỐNG</span>
-          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
-            Xin chào, {user?.fullName || 'Quản trị viên'}
+    <div className="flex flex-col gap-8 pb-8">
+      {/* Modern Welcome Banner */}
+      <div className="bg-gradient-to-r from-surface via-surface to-brand-soft/30 rounded-2xl border border-border p-6 sm:p-8 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden">
+        {/* Subtle decorative motif */}
+        <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-brand-soft/50 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col gap-2 relative z-10 max-w-2xl">
+          <EditorialEyebrow label="Tổng quan hệ thống quản trị M4N" />
+
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink font-sans">
+            Xin chào, <span className="text-brand">{user?.fullName || 'Quản trị viên'}</span>
           </h2>
-          <p className="text-sm text-muted">
-            Quản lý các hoạt động và điều hướng chức năng của hệ thống M4N.
+
+          <p className="text-sm sm:text-base text-muted leading-relaxed">
+            Trung tâm kiểm soát, vận hành và quản trị dữ liệu nhạc cụ truyền thống Việt Nam.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <div className="flex flex-col px-4 py-2 rounded-xl bg-canvas border border-border text-xs">
-            <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Trạng thái</span>
-            <span className="font-bold text-jade mt-0.5">Đang hoạt động</span>
+
+        {/* Live System Status Badges */}
+        <div className="flex flex-wrap gap-2.5 relative z-10">
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface border border-border shadow-2xs text-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-semibold text-muted uppercase tracking-wider leading-none">Trạng thái</span>
+              <span className="font-bold text-jade mt-0.5 leading-tight">Đang hoạt động</span>
+            </div>
           </div>
-          <div className="flex flex-col px-4 py-2 rounded-xl bg-canvas border border-border text-xs">
-            <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Phân quyền</span>
-            <span className="font-bold text-ink mt-0.5">Quản trị viên (ADMIN)</span>
+
+          <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface border border-border shadow-2xs text-xs">
+            <span className="w-2 h-2 rounded-full bg-brand" />
+            <div className="flex flex-col">
+              <span className="text-[10px] font-semibold text-muted uppercase tracking-wider leading-none">Phân quyền</span>
+              <span className="font-bold text-ink mt-0.5 leading-tight">Quản trị viên (ADMIN)</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Module Shortcuts Grid */}
+      {/* KPI Stats Overview Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {stats.map((stat) => {
+          const StatIcon = stat.Icon
+          return (
+            <div
+              key={stat.title}
+              onClick={() => navigateTo(stat.path)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') navigateTo(stat.path)
+              }}
+              className="flex items-start justify-between p-5 rounded-2xl bg-surface border border-border shadow-xs hover:shadow-md hover:border-brand/30 hover:-translate-y-0.5 transition-all cursor-pointer group"
+            >
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-semibold text-muted">{stat.title}</span>
+                <p className="text-xl sm:text-2xl font-extrabold text-ink font-sans tracking-tight group-hover:text-brand transition-colors">
+                  {stat.metric}
+                </p>
+                <span className="text-xs text-muted/80 mt-1">{stat.desc}</span>
+              </div>
+              <div className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform ${stat.iconColor}`}>
+                <StatIcon size={22} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Main Action Modules Grid */}
       <div className="flex flex-col gap-4">
-        <h3 className="text-base font-bold text-ink">Chức năng khả dụng</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-ink tracking-tight">Chức năng quản trị khả dụng</h3>
+          <span className="text-xs font-semibold text-muted">4 phân hệ chính</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
           {quickActions.map((action) => {
             const ActionIcon = action.Icon
             return (
               <button
                 key={action.path}
                 type="button"
-                className="flex flex-col rounded-2xl bg-surface border border-border p-6 shadow-xs hover:shadow-md hover:border-border-strong transition-all duration-200 text-left group cursor-pointer"
+                className="flex flex-col rounded-2xl bg-surface border border-border p-6 shadow-xs hover:shadow-lg hover:border-brand/40 hover:-translate-y-1 transition-all duration-300 text-left group cursor-pointer"
                 onClick={() => navigateTo(action.path)}
               >
+                {/* Header row with Icon and Badge */}
                 <div className="flex items-center justify-between gap-2 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-surface-secondary flex items-center justify-center text-ink group-hover:text-brand group-hover:bg-brand-soft transition-colors">
-                    <ActionIcon size={22} />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 shadow-2xs ${action.iconBox}`}>
+                    <ActionIcon size={24} />
                   </div>
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-surface-secondary text-muted uppercase tracking-wider">{action.badge}</span>
+                  <span className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border uppercase tracking-wider ${action.tagColor}`}>
+                    {action.badge}
+                  </span>
                 </div>
-                <h4 className="text-base font-bold text-ink group-hover:text-brand transition-colors mb-1">{action.title}</h4>
-                <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-4">{action.description}</p>
-                <div className="mt-auto pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-brand w-full">
-                  <span>Truy cập</span>
-                  <IconChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+
+                {/* Content */}
+                <h4 className="text-base sm:text-lg font-bold text-ink group-hover:text-brand transition-colors mb-1.5">
+                  {action.title}
+                </h4>
+                <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-6">
+                  {action.description}
+                </p>
+
+                {/* Footer Action */}
+                <div className="mt-auto pt-3 border-t border-border/70 flex items-center justify-between text-xs font-bold text-brand w-full">
+                  <span>Truy cập chức năng</span>
+                  <span className="inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                    <IconChevronRight size={15} />
+                  </span>
                 </div>
               </button>
             )
           })}
+        </div>
+      </div>
+
+      {/* Operational Architecture & System Standards Notice */}
+      <div className="rounded-2xl bg-surface border border-border p-6 sm:p-7 shadow-xs flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+        <div className="flex flex-col gap-1.5 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-brand" />
+            <h4 className="text-sm font-bold text-ink uppercase tracking-wider">
+              Quy chuẩn Vận hành M4N
+            </h4>
+          </div>
+          <p className="text-xs sm:text-sm text-muted leading-relaxed">
+            Hệ thống M4N áp dụng kiến trúc Thin Controllers và đồng bộ thời gian thực: Tồn kho chỉ được trừ khi xác nhận đơn hàng thành công, bảo mật xác thực máy chủ và bảo toàn thông tin văn hóa truyền thống.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-secondary text-ink hover:text-brand text-xs font-bold border border-border transition-colors cursor-pointer"
+            onClick={() => navigateTo(CUSTOMER_ROUTES.products)}
+          >
+            <IconPackage size={15} />
+            <span>Xem Kho Nhạc cụ</span>
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand text-white hover:bg-brand-hover text-xs font-bold transition-all shadow-xs cursor-pointer"
+            onClick={() => navigateTo(CUSTOMER_ROUTES.home)}
+          >
+            <IconStore size={15} />
+            <span>Mở Trang Khách hàng</span>
+          </button>
         </div>
       </div>
     </div>
@@ -102,3 +249,4 @@ function AdminDashboardPage() {
 }
 
 export default AdminDashboardPage
+

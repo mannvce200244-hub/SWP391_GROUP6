@@ -54,7 +54,7 @@ function PosLayout({ children }) {
           >
             <BrandLogo />
           </div>
-          <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-ochre-soft text-ochre tracking-wider uppercase">THU NGÂN SHOWROOM</span>
+          <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-secondary text-ink border border-border tracking-wider uppercase">THU NGÂN SHOWROOM</span>
         </div>
 
         <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-secondary border border-border text-xs font-semibold text-ink">
@@ -70,7 +70,7 @@ function PosLayout({ children }) {
             aria-expanded={dropdownOpen}
             aria-haspopup="true"
           >
-            <div className="w-8 h-8 rounded-full bg-ochre-soft text-ochre font-bold text-sm flex items-center justify-center border border-ochre-border">
+            <div className="w-8 h-8 rounded-full bg-surface-secondary text-ink font-bold text-sm flex items-center justify-center border border-border">
               {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'P'}
             </div>
             <span className="text-xs font-semibold text-ink hidden sm:inline">{user?.fullName || 'Thu ngân'}</span>
@@ -85,7 +85,7 @@ function PosLayout({ children }) {
               </div>
               <button
                 type="button"
-                className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-ink hover:bg-surface-secondary hover:text-ochre transition-colors w-full text-left cursor-pointer"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-ink hover:bg-surface-secondary hover:text-brand transition-colors w-full text-left cursor-pointer"
                 role="menuitem"
                 onClick={() => {
                   setDropdownOpen(false)
@@ -97,7 +97,7 @@ function PosLayout({ children }) {
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-ink hover:bg-surface-secondary hover:text-ochre transition-colors w-full text-left cursor-pointer"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-ink hover:bg-surface-secondary hover:text-brand transition-colors w-full text-left cursor-pointer"
                 role="menuitem"
                 onClick={() => {
                   setDropdownOpen(false)
