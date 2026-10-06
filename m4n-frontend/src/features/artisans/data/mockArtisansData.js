@@ -308,3 +308,90 @@ export const MOCK_ARTISANS = Object.freeze([
   },
 ])
 
+export const MOCK_FEATURED_STORY = Object.freeze({
+  badge: 'CÂU CHUYỆN NGHỆ NHÂN TIÊU BIỂU',
+  heading: 'Hơn bốn mươi năm giữ hồn cho tiếng tơ đồng',
+  artisanName: 'Nghệ nhân Nguyễn Văn Quý',
+  craft: 'Chế tác Đàn Tranh & Đàn Bầu cổ truyền',
+  village: 'Làng nghề Đào Xá, Ứng Hòa, Hà Nội',
+  experienceYears: 42,
+  quote:
+    'Làm cây đàn không chỉ để nhìn cho đẹp, mà tiếng đàn gảy lên phải sáng, ngân nga và đằm thắm. Từng thớ gỗ ngô đồng, ngựa đàn xương trâu đều mang hơi thở của đất trời và tấm lòng người thợ.',
+  storyContent:
+    'Giữa dòng chảy xô bồ của nhịp sống hiện đại, tại xưởng đàn nhỏ làng Đào Xá, tiếng bào gỗ và tiếng gảy thử dây đàn của nghệ nhân Nguyễn Văn Quý vẫn đều đặn vang lên mỗi sớm. Kỹ thuật cẩn xà cừ rồng phụng trên thân gỗ cẩm lai đòi hỏi sự nhẫn nại suốt hàng tháng trời, biến mỗi cây đàn thành một tác phẩm nghệ thuật truyền đời.',
+  image: '/assets/images/artisan-workshop.jpg',
+  alt: 'Nghệ nhân Nguyễn Văn Quý tỉ mỉ cân chỉnh dây đàn trong xưởng mộc truyền thống',
+  targetCraft: 'Nhạc cụ cổ truyền',
+})
+
+export const MOCK_CRAFT_CATEGORIES = Object.freeze([
+  {
+    id: 'nhac-cu',
+    name: 'Nhạc cụ cổ truyền',
+    subtitle: 'Thanh âm ngàn năm từ gỗ và dây tơ',
+    image: '/assets/images/prod-dan-tranh.jpg',
+    craftFilter: 'Nhạc cụ cổ truyền',
+  },
+  {
+    id: 'gom-su',
+    name: 'Gốm sứ thủ công',
+    subtitle: 'Mộc mạc kết tinh từ đất và lửa',
+    image: '/assets/images/auth-craft-showcase.jpg',
+    craftFilter: 'Gốm sứ',
+  },
+  {
+    id: 'det-theu',
+    name: 'Dệt & thêu tơ lụa',
+    subtitle: 'Những hoa văn dệt bằng thời gian',
+    image: '/assets/images/hero-dan-tranh.jpg',
+    craftFilter: 'Dệt & thêu',
+  },
+  {
+    id: 'may-tre',
+    name: 'Mây tre đan',
+    subtitle: 'Từ vật liệu tự nhiên đến hình hài mới',
+    image: '/assets/images/cat-nhac-cu-day.jpg',
+    craftFilter: 'Mây tre đan',
+  },
+  {
+    id: 'dieu-khac',
+    name: 'Điêu khắc đá & gỗ',
+    subtitle: 'Dấu vết bàn tay trên từng thớ đá, thớ gỗ',
+    image: '/assets/images/cat-nhac-cu-go.jpg',
+    craftFilter: 'Điêu khắc đá',
+  },
+  {
+    id: 'tranh-dan-gian',
+    name: 'Tranh dân gian & sơn mài',
+    subtitle: 'Những câu chuyện lưu giữ bằng sắc màu',
+    image: '/assets/images/auth-dan-bau.jpg',
+    craftFilter: 'Tranh dân gian',
+  },
+])
+
+export const MOCK_REGIONS = Object.freeze([
+  {
+    id: 'Bac',
+    name: 'Miền Bắc',
+    tagline: 'Cái nôi văn hiến & trăm nghề truyền thống',
+    description: 'Vùng châu thổ sông Hồng với hàng trăm làng nghề cổ kính lâu đời.',
+    villages: ['Làng Đào Xá', 'Làng Trúc Sơn', 'Làng Bát Tràng', 'Làng Vạn Phúc', 'Làng Đông Hồ'],
+    image: '/assets/images/artisan-workshop.jpg',
+  },
+  {
+    id: 'Trung',
+    name: 'Miền Trung',
+    tagline: 'Đậm đà phong vị di sản ven duyên hải',
+    description: 'Nơi kỹ nghệ mộc cung đình, gốm và điêu khắc đá giao thoa trầm tích văn hóa.',
+    villages: ['Làng đá Non Nước', 'Làng mộc Kim Bồng', 'Làng gốm Thanh Hà'],
+    image: '/assets/images/auth-craft-showcase.jpg',
+  },
+  {
+    id: 'Nam',
+    name: 'Miền Nam',
+    tagline: 'Phóng khoáng, mộc mạc sông nước phương Nam',
+    description: 'Nghề thủ công phương Nam hòa quyện cùng đời sống sông nước miệt vườn trù phú.',
+    villages: ['Làng chiếu Định Yên', 'Gốm Lái Thiêu', 'Lụa Tân Châu'],
+    image: '/assets/images/cat-nhac-cu-hoi.jpg',
+  },
+])
