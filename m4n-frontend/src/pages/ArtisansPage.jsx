@@ -1,18 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import Pagination from '../features/catalog/Pagination.jsx'
 import ArtisanCard from '../features/artisans/ArtisanCard.jsx'
 import ArtisanFilters from '../features/artisans/ArtisanFilters.jsx'
-import ArtisansCTA from '../features/artisans/ArtisansCTA.jsx'
 import ArtisansHero from '../features/artisans/ArtisansHero.jsx'
 import ArtisanVillageTabs from '../features/artisans/ArtisanVillageTabs.jsx'
-import CraftCategoriesSection from '../features/artisans/CraftCategoriesSection.jsx'
-import FeaturedArtisanStory from '../features/artisans/FeaturedArtisanStory.jsx'
-import HeritageStorySection from '../features/artisans/HeritageStorySection.jsx'
-import RegionExplorerSection from '../features/artisans/RegionExplorerSection.jsx'
 import VillageCard from '../features/artisans/VillageCard.jsx'
-import WhyArtisansMatter from '../features/artisans/WhyArtisansMatter.jsx'
 import ArtisanProductsSection from '../features/artisans/ArtisanProductsSection.jsx'
 import artisanService from '../services/artisanService.js'
 
@@ -156,10 +149,6 @@ function ArtisansPage() {
     return artisanService.getFilterOptions(params.tab)
   }, [params.tab])
 
-  const featuredStory = useMemo(() => artisanService.getFeaturedStory(), [])
-  const craftCategories = useMemo(() => artisanService.getCraftCategories(), [])
-  const regions = useMemo(() => artisanService.getRegions(), [])
-
   // Tab change handler
   const handleTabChange = (newTab) => {
     if (newTab === params.tab) return
@@ -191,35 +180,12 @@ function ArtisansPage() {
     })
   }
 
-  // Category card shortcut handler
-  const handleSelectCraftCategory = (craftName) => {
-    updateParams({
-      craft: craftName,
-      page: 1,
-      province: 'all',
-      region: 'all',
-      search: '',
-    })
-  }
-
-  // Region shortcut handler
-  const handleSelectRegion = (regionId) => {
-    updateParams({
-      craft: 'all',
-      page: 1,
-      province: 'all',
-      region: regionId,
-      search: '',
-    })
-  }
-
   const isArtisansTab = params.tab === 'artisans'
 
   return (
     <div className="w-full flex flex-col bg-white">
-      {/* 1. HERO SECTION */}
+      {/* 1. COMPACT EDITORIAL HERO */}
       <ArtisansHero
-        onSelectTab={handleTabChange}
         stats={{
           artisans: 8,
           crafts: 6,
@@ -227,32 +193,30 @@ function ArtisansPage() {
         }}
       />
 
-      {/* 2. STORY / INTRO SECTION */}
-      <HeritageStorySection />
-
-      {/* 3. MAIN DISCOVERY SECTION */}
+      {/* 2. MAIN DISCOVERY & FILTER SECTION */}
       <section
         aria-labelledby="heritage-discovery-heading"
-        className="py-16 sm:py-20 bg-surface border-b border-border/80 scroll-mt-20"
+        className="py-10 sm:py-14 bg-white border-b border-border/80"
         id="heritage-discovery"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-8 sm:gap-10">
-          {/* Header & Tabs */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div className="max-w-2xl flex flex-col gap-2">
-              <EditorialEyebrow label="KHÁM PHÁ DI SẢN THỦ CÔNG" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-6 sm:gap-8">
+          {/* Header & Tabs Switcher */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border/60">
+            <div>
               <h2
                 id="heritage-discovery-heading"
-                className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-ink font-sans"
+                className="text-xl sm:text-2xl font-bold tracking-tight text-ink font-sans"
               >
-                Gặp gỡ những người giữ hồn nghề Việt
+                {isArtisansTab ? 'Danh sách nghệ nhân tiêu biểu' : 'Danh sách làng nghề truyền thống'}
               </h2>
-              <p className="text-sm sm:text-base text-muted leading-relaxed">
-                Tìm kiếm nghệ nhân và làng nghề theo vùng miền, ngành nghề hoặc câu chuyện bạn quan tâm.
+              <p className="text-xs sm:text-sm text-muted mt-0.5">
+                {isArtisansTab
+                  ? 'Gặp gỡ những bàn tay tài hoa chế tác và gìn giữ âm sắc nhạc cụ Việt'
+                  : 'Khám phá các làng nghề giàu truyền thống văn hóa trên khắp mọi miền'}
               </p>
             </div>
 
-            {/* Dual Tabs: [ Nghệ nhân ] [ Làng nghề ] */}
+            {/* Dual Tabs: [ Nghệ nhân (8) ] [ Làng nghề (8) ] */}
             <ArtisanVillageTabs
               activeTab={params.tab}
               artisanCount={8}
@@ -300,23 +264,16 @@ function ArtisansPage() {
           ) : (
             <div className="flex flex-col gap-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                {data.items.map((item) => {
-                  return (
-                    <div key={item.id} className="flex flex-col">
-                      {isArtisansTab ? (
-                        <ArtisanCard artisan={item} />
-                      ) : (
-                        <VillageCard village={item} />
-                      )}
-                    </div>
-                  )
-                })}
+                {data.items.map((item) => (
+                  <div key={item.id} className="flex flex-col">
+                    {isArtisansTab ? (
+                      <ArtisanCard artisan={item} />
+                    ) : (
+                      <VillageCard village={item} />
+                    )}
+                  </div>
+                ))}
               </div>
-
-              {/* Featured Artisan Breakout (Rendered on Artisans tab if on page 1) */}
-              {isArtisansTab && params.page === 1 && !params.search && (
-                <FeaturedArtisanStory story={featuredStory} />
-              )}
 
               {/* Pagination */}
               {data.totalPages > 1 && (
@@ -335,32 +292,8 @@ function ArtisansPage() {
         </div>
       </section>
 
-      {/* 4. EXPLORE BY CRAFT BENTO */}
-      <CraftCategoriesSection
-        categories={craftCategories}
-        onSelectCraft={handleSelectCraftCategory}
-      />
-
-      {/* 5. REGION EXPLORER (Từ Bắc vào Nam) */}
-      <RegionExplorerSection
-        onSelectRegion={handleSelectRegion}
-        regions={regions}
-      />
-
-      {/* 6. STORYTELLING: WHY ARTISANS MATTER */}
-      <WhyArtisansMatter />
-
-      {/* 7. CONNECTED PRODUCTS CAROUSEL/GRID */}
+      {/* 3. CONNECTED CRAFTED PRODUCTS */}
       <ArtisanProductsSection />
-
-      {/* 8. PRE-FOOTER EDITORIAL CTA */}
-      <ArtisansCTA
-        onScrollToArtisans={() => {
-          handleTabChange('artisans')
-          const el = document.getElementById('heritage-discovery')
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }}
-      />
     </div>
   )
 }

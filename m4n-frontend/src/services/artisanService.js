@@ -1,15 +1,12 @@
 import {
   MOCK_ARTISANS,
-  MOCK_CRAFT_CATEGORIES,
   MOCK_CRAFT_VILLAGES,
-  MOCK_FEATURED_STORY,
-  MOCK_REGIONS,
 } from '../features/artisans/data/mockArtisansData.js'
 import apiClient from '../api/apiClient.js'
 
 /**
  * Service abstraction for Artisans & Craft Villages.
- * Currently serves standard mock data with search, filter, and pagination logic.
+ * Serves standard data with search, filter, and pagination logic.
  * Ready for transparent switch to backend endpoints (/api/v1/artisans, /api/v1/craft-villages).
  */
 function createArtisanService() {
@@ -217,27 +214,6 @@ function createArtisanService() {
       ).sort((a, b) => a.localeCompare(b, 'vi'))
 
       return { provinces, crafts }
-    },
-
-    /**
-     * Get featured artisan breakout story.
-     */
-    getFeaturedStory() {
-      return MOCK_FEATURED_STORY
-    },
-
-    /**
-     * Get craft categories taxonomy for visual bento explore section.
-     */
-    getCraftCategories() {
-      return MOCK_CRAFT_CATEGORIES
-    },
-
-    /**
-     * Get regional metadata (Bắc, Trung, Nam).
-     */
-    getRegions() {
-      return MOCK_REGIONS
     },
   })
 }

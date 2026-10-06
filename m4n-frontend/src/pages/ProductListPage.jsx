@@ -24,11 +24,19 @@ const EMPTY_FILTERS = Object.freeze({
 
 const ITEMS_PER_PAGE = 9
 
+const CATEGORY_TABS = Object.freeze([
+  { id: '', label: 'Tất cả' },
+  { id: 'DAY', label: 'Nhạc cụ dây' },
+  { id: 'HOI', label: 'Nhạc cụ hơi' },
+  { id: 'GO', label: 'Nhạc cụ gõ' },
+])
+
 function ProductListPage() {
   const [draftFilters, setDraftFilters] = useState(EMPTY_FILTERS)
   const [request, setRequest] = useState({ filters: EMPTY_FILTERS, sequence: 0 })
   const [catalog, setCatalog] = useState({ status: 'loading', products: [] })
   const [currentPage, setCurrentPage] = useState(1)
+  const [sortBy, setSortBy] = useState('default')
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
 
   // Fetch product list when request changes
@@ -78,6 +86,11 @@ function ProductListPage() {
     applyFilters(updatedFilters)
   }
 
+  const handleCategoryTabClick = (groupId) => {
+    const updatedFilters = { ...draftFilters, group: groupId }
+    applyFilters(updatedFilters)
+  }
+
   const handleRemoveSingleFilter = (filterKey) => {
     let updatedFilters = { ...draftFilters }
     if (filterKey === 'price') {
@@ -103,38 +116,71 @@ function ProductListPage() {
     (val) => val && String(val).trim() !== '',
   ).length
 
+  // Sort products locally
+  const sortedProducts = [...catalog.products].sort((a, b) => {
+    const priceA = Number(a.price ?? a.unitPrice ?? 0)
+    const priceB = Number(b.price ?? b.unitPrice ?? 0)
+    if (sortBy === 'price-asc') return priceA - priceB
+    if (sortBy === 'price-desc') return priceB - priceA
+    if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '', 'vi')
+    return 0
+  })
+
   // Pagination calculation
-  const totalProducts = catalog.products.length
+  const totalProducts = sortedProducts.length
   const totalPages = Math.ceil(totalProducts / ITEMS_PER_PAGE) || 1
-  const paginatedProducts = catalog.products.slice(
+  const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE,
   )
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-white">
-      {/* 1. Compact Catalog Header */}
+      {/* 1. Pure White Heritage Catalog Header */}
       <section className="bg-white border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            {/* Title & Eyebrow */}
-            <div className="flex flex-col gap-1.5 max-w-2xl">
-              <EditorialEyebrow label="Bộ sưu tập M4N" />
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
-                Nhạc cụ truyền thống Việt Nam
-              </h1>
-              <p className="text-sm text-muted leading-relaxed">
-                Khám phá sản phẩm theo nhóm nhạc cụ, nghệ nhân, làng nghề và khoảng giá phù hợp.
-              </p>
-            </div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 lg:py-14 text-center">
+          {/* Eyebrow with string resonance motif */}
+          <div className="flex justify-center mb-3">
+            <EditorialEyebrow brandPrefix="M4N" label="BỘ SƯU TẬP DI SẢN" showResonance />
+          </div>
 
-            {/* Prominent Search Bar (360–480px wide on desktop) */}
-            <div className="w-full md:w-80 lg:w-96 shrink-0">
-              <ProductSearch
-                busy={isLoading}
-                onSearch={handleSearchSubmit}
-                value={draftFilters.keyword}
-              />
+          {/* Title & Description */}
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight font-sans">
+            Nhạc cụ truyền thống Việt Nam
+          </h1>
+          <p className="mt-2.5 text-xs sm:text-sm text-muted max-w-2xl mx-auto leading-relaxed">
+            Được đẽo gọt thủ công từ danh mộc mun, cẩm lai và tre nứa già tuyển chọn bởi các nghệ nhân ưu tú tại các làng nghề di sản.
+          </p>
+
+          {/* Centered Prominent Search Bar */}
+          <div className="w-full max-w-xl mx-auto mt-6 sm:mt-7">
+            <ProductSearch
+              busy={isLoading}
+              onSearch={handleSearchSubmit}
+              value={draftFilters.keyword}
+            />
+          </div>
+
+          {/* Centered Category Filter Segmented Tabs */}
+          <div className="flex items-center justify-center mt-6">
+            <div className="inline-flex items-center p-1 bg-surface-secondary rounded-full border border-border shadow-2xs gap-1 max-w-full overflow-x-auto scrollbar-none">
+              {CATEGORY_TABS.map((tab) => {
+                const isSelected = (!draftFilters.group && !tab.id) || draftFilters.group === tab.id
+                return (
+                  <button
+                    key={tab.id || 'all'}
+                    type="button"
+                    onClick={() => handleCategoryTabClick(tab.id)}
+                    className={`px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
+                      isSelected
+                        ? 'bg-brand text-white shadow-2xs'
+                        : 'text-muted hover:text-ink hover:bg-surface-muted'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -143,7 +189,7 @@ function ProductListPage() {
       {/* 2. Main Catalog Body with 2-column layout */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div className="flex flex-col lg:flex-row gap-8 xl:gap-10">
-          {/* Desktop Left Filter Sidebar (Section 8: 220–260px wide) */}
+          {/* Desktop Left Filter Sidebar (240–260px wide) */}
           <aside
             aria-label="Bộ lọc danh mục sản phẩm"
             className="hidden lg:block w-60 xl:w-64 shrink-0"
@@ -161,41 +207,65 @@ function ProductListPage() {
 
           {/* Right: Products Area */}
           <div className="flex-1 min-w-0">
-            {/* Active Filters Chips Bar (Section 10 & 11) */}
+            {/* Active Filters Chips Bar */}
             {hasAppliedFilters && (
               <ActiveFilterChips
-                className="mb-3"
+                className="mb-4"
                 filters={request.filters}
                 onClearAll={resetFilters}
                 onRemoveFilter={handleRemoveSingleFilter}
               />
             )}
 
-            {/* Toolbar above grid (Section 13) */}
-            <div className="flex items-center justify-between gap-4 pb-4 mb-6 border-b border-border/60">
-              <p aria-live="polite" className="text-xs font-semibold text-muted uppercase tracking-wide">
-                {catalog.status === 'success'
-                  ? `${totalProducts} sản phẩm`
-                  : isLoading
-                    ? 'Đang tải sản phẩm…'
-                    : 'Danh mục sản phẩm'}
+            {/* Toolbar above grid */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-border">
+              <p aria-live="polite" className="text-xs font-semibold text-muted tracking-wide">
+                {catalog.status === 'success' ? (
+                  <span>
+                    Hiển thị <strong className="text-ink font-bold">{totalProducts}</strong> sản phẩm
+                  </span>
+                ) : isLoading ? (
+                  'Đang tải sản phẩm...'
+                ) : (
+                  'Danh mục sản phẩm'
+                )}
               </p>
 
-              {/* Mobile Filter Trigger Button (Section 12) */}
-              <button
-                aria-label="Mở bộ lọc tìm kiếm"
-                className="lg:hidden inline-flex items-center gap-2 h-9 px-3.5 rounded-lg border border-control-border bg-surface text-ink text-xs font-medium hover:bg-surface-secondary hover:border-brand/40 transition-colors shadow-2xs cursor-pointer"
-                onClick={() => setMobileDrawerOpen(true)}
-                type="button"
-              >
-                <IconFilter className="text-brand" size={16} />
-                <span>Bộ lọc</span>
-                {activeFilterCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 text-[10px] font-bold text-white bg-brand rounded-full">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
+              <div className="flex items-center gap-3">
+                {/* Sort Dropdown */}
+                <div className="flex items-center gap-2">
+                  <label htmlFor="catalog-sort" className="text-xs text-muted font-medium shrink-0">
+                    Sắp xếp:
+                  </label>
+                  <select
+                    id="catalog-sort"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="h-9 px-2.5 pr-7 text-xs bg-white text-ink rounded-lg border border-border hover:border-border-strong focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20 transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <option value="default">Mặc định</option>
+                    <option value="price-asc">Giá: Thấp đến cao</option>
+                    <option value="price-desc">Giá: Cao đến thấp</option>
+                    <option value="name-asc">Tên: A - Z</option>
+                  </select>
+                </div>
+
+                {/* Mobile Filter Trigger Button */}
+                <button
+                  aria-label="Mở bộ lọc tìm kiếm"
+                  className="lg:hidden inline-flex items-center gap-2 h-9 px-3.5 rounded-lg border border-border bg-white text-ink text-xs font-medium hover:bg-surface-secondary transition-colors shadow-2xs cursor-pointer"
+                  onClick={() => setMobileDrawerOpen(true)}
+                  type="button"
+                >
+                  <IconFilter className="text-brand" size={15} />
+                  <span>Bộ lọc</span>
+                  {activeFilterCount > 0 && (
+                    <span className="inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 text-[10px] font-bold text-white bg-brand rounded-full">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Product Grid / States Section */}
@@ -247,7 +317,7 @@ function ProductListPage() {
         </div>
       </div>
 
-      {/* 3. Mobile Filter Drawer (Section 12) */}
+      {/* 3. Mobile Filter Drawer */}
       <MobileFilterDrawer
         busy={isLoading}
         isOpen={mobileDrawerOpen}

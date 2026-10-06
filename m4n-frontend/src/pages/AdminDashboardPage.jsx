@@ -23,16 +23,16 @@ function AdminDashboardPage() {
       badge: 'Đa dạng',
       Icon: IconInstrument,
       iconColor: 'bg-brand-soft border-brand-border text-brand',
-      path: CUSTOMER_ROUTES.products,
+      path: CUSTOMER_ROUTES.adminInstruments,
     },
     {
       title: 'Cửa hàng Online',
       metric: 'Sẵn sàng',
-      desc: 'Giao diện mua sắm công khai',
+      desc: 'Đang mở bán trực tuyến',
       badge: 'Bán lẻ',
       Icon: IconStore,
-      iconColor: 'bg-jade-soft border-jade-border text-jade',
-      path: CUSTOMER_ROUTES.home,
+      iconColor: 'bg-emerald-50 border-emerald-200 text-emerald-600',
+      path: CUSTOMER_ROUTES.adminStore,
     },
     {
       title: 'Làng nghề & Nghệ nhân',
@@ -41,7 +41,7 @@ function AdminDashboardPage() {
       badge: 'Nguồn gốc',
       Icon: IconPackage,
       iconColor: 'bg-surface-secondary border-border text-ink',
-      path: CUSTOMER_ROUTES.products,
+      path: CUSTOMER_ROUTES.adminInstruments,
     },
     {
       title: 'An toàn Hệ thống',
@@ -50,16 +50,16 @@ function AdminDashboardPage() {
       badge: 'Bảo mật',
       Icon: IconShield,
       iconColor: 'bg-surface-secondary border-border-strong text-ink',
-      path: CUSTOMER_ROUTES.security,
+      path: CUSTOMER_ROUTES.adminSecurity,
     },
   ]
 
   // Main management navigation modules
   const quickActions = [
     {
-      title: 'Danh mục sản phẩm',
-      description: 'Tra cứu kho nhạc cụ truyền thống, nhóm nhạc cụ và thông tin nghệ nhân chế tác.',
-      path: CUSTOMER_ROUTES.products,
+      title: 'Danh mục nhạc cụ',
+      description: 'Quản lý kho nhạc cụ truyền thống, cập nhật số lượng tồn, giá bán và nghệ nhân chế tác.',
+      path: CUSTOMER_ROUTES.adminInstruments,
       Icon: IconInstrument,
       badge: 'Kho & Danh mục',
       tagColor: 'bg-brand-soft text-brand border-brand-border',
@@ -67,17 +67,17 @@ function AdminDashboardPage() {
     },
     {
       title: 'Cửa hàng trực tuyến',
-      description: 'Xem trực tiếp giao diện mua sắm công khai dưới góc độ trải nghiệm của khách hàng.',
-      path: CUSTOMER_ROUTES.home,
+      description: 'Quản lý trạng thái mở bán, tiếp nhận và điều phối các đơn hàng đặt trực tuyến.',
+      path: CUSTOMER_ROUTES.adminStore,
       Icon: IconStore,
       badge: 'Bán lẻ & Mua sắm',
-      tagColor: 'bg-jade-soft text-jade border-jade-border',
-      iconBox: 'bg-jade-soft text-jade group-hover:bg-jade group-hover:text-white',
+      tagColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      iconBox: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
     },
     {
       title: 'Hồ sơ cá nhân',
-      description: 'Xem và cập nhật họ tên, số điện thoại cùng thông tin tài khoản quản trị viên.',
-      path: CUSTOMER_ROUTES.profile,
+      description: 'Xem và cập nhật thông tin cá nhân, chức vụ và quyền hạn của quản trị viên.',
+      path: CUSTOMER_ROUTES.adminProfile,
       Icon: IconUser,
       badge: 'Thông tin cá nhân',
       tagColor: 'bg-surface-secondary text-ink border-border',
@@ -85,8 +85,8 @@ function AdminDashboardPage() {
     },
     {
       title: 'Bảo mật tài khoản',
-      description: 'Thay đổi mật khẩu đăng nhập, quản lý phiên hoạt động và cài đặt an ninh tài khoản.',
-      path: CUSTOMER_ROUTES.security,
+      description: 'Thay đổi mật khẩu quản trị, cài đặt xác thực 2 bước và quản lý phiên máy trạm.',
+      path: CUSTOMER_ROUTES.adminSecurity,
       Icon: IconLock,
       badge: 'An ninh & Mật khẩu',
       tagColor: 'bg-surface-secondary text-ink border-border-strong',
@@ -229,10 +229,10 @@ function AdminDashboardPage() {
           <button
             type="button"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-secondary text-ink hover:text-brand text-xs font-bold border border-border transition-colors cursor-pointer"
-            onClick={() => navigateTo(CUSTOMER_ROUTES.products)}
+            onClick={() => navigateTo(CUSTOMER_ROUTES.adminInstruments)}
           >
             <IconPackage size={15} />
-            <span>Xem Kho Nhạc cụ</span>
+            <span>Quản lý Kho Nhạc cụ</span>
           </button>
           <button
             type="button"

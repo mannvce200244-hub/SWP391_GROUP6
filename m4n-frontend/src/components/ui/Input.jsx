@@ -21,9 +21,13 @@ function Input({
   const effectiveType = isPassword ? (showPassword ? 'text' : 'password') : type
 
   const classes = [
-    'w-full h-11 px-3.5 bg-surface text-ink text-sm rounded-md border border-control-border transition-all duration-150 placeholder:text-subtle focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/15 disabled:bg-surface-secondary disabled:cursor-not-allowed',
+    'w-full h-12 px-4 text-[15px] rounded-xl border transition-all duration-150 placeholder:text-subtle focus-visible:outline-none disabled:cursor-not-allowed',
     isPassword ? 'pr-11' : '',
-    error ? 'border-brand focus-visible:border-brand focus-visible:ring-brand/20' : '',
+    error 
+      ? 'border-danger bg-danger-soft text-ink focus-visible:border-danger focus-visible:ring-3 focus-visible:ring-danger/20' 
+      : inputProps.disabled 
+        ? 'bg-surface-secondary border-border text-subtle'
+        : 'bg-white border-border text-ink focus-visible:border-brand focus-visible:ring-3 focus-visible:ring-brand/15',
     className,
   ]
     .filter(Boolean)
@@ -57,8 +61,11 @@ function Input({
         {isPassword && (
           <button
             type="button"
-            className="absolute right-0 top-0 bottom-0 px-3.5 flex items-center justify-center text-muted hover:text-ink transition-colors cursor-pointer"
+            className="absolute right-0 top-0 bottom-0 px-4 flex items-center justify-center transition-colors cursor-pointer"
+            style={{ color: '#626970' }}
             onClick={() => setShowPassword((prev) => !prev)}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#17191B' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#626970' }}
             aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
             tabIndex={0}
           >

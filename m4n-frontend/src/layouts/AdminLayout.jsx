@@ -45,13 +45,13 @@ function AdminLayout({ children, pathname }) {
 
   const primaryNav = [
     { label: 'Tổng quan hệ thống', path: CUSTOMER_ROUTES.admin, Icon: IconDashboard },
-    { label: 'Danh mục nhạc cụ', path: CUSTOMER_ROUTES.products, Icon: IconInstrument },
-    { label: 'Cửa hàng trực tuyến', path: CUSTOMER_ROUTES.home, Icon: IconStore },
+    { label: 'Danh mục nhạc cụ', path: CUSTOMER_ROUTES.adminInstruments, Icon: IconInstrument },
+    { label: 'Cửa hàng trực tuyến', path: CUSTOMER_ROUTES.adminStore, Icon: IconStore },
   ]
 
   const accountNav = [
-    { label: 'Hồ sơ cá nhân', path: CUSTOMER_ROUTES.profile, Icon: IconUser },
-    { label: 'Bảo mật tài khoản', path: CUSTOMER_ROUTES.security, Icon: IconLock },
+    { label: 'Hồ sơ cá nhân', path: CUSTOMER_ROUTES.adminProfile, Icon: IconUser },
+    { label: 'Bảo mật tài khoản', path: CUSTOMER_ROUTES.adminSecurity, Icon: IconLock },
   ]
 
   const allNav = [...primaryNav, ...accountNav]
@@ -265,7 +265,7 @@ function AdminLayout({ children, pathname }) {
                     role="menuitem"
                     onClick={() => {
                       setDropdownOpen(false)
-                      navigateTo(CUSTOMER_ROUTES.profile)
+                      navigateTo(CUSTOMER_ROUTES.adminProfile)
                     }}
                   >
                     <IconUser size={16} />
@@ -277,7 +277,7 @@ function AdminLayout({ children, pathname }) {
                     role="menuitem"
                     onClick={() => {
                       setDropdownOpen(false)
-                      navigateTo(CUSTOMER_ROUTES.security)
+                      navigateTo(CUSTOMER_ROUTES.adminSecurity)
                     }}
                   >
                     <IconLock size={16} />

@@ -2,61 +2,77 @@ import { useState } from 'react'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 import { getFirstProductImage } from './productMedia.js'
-import { IconInstrument } from '../../components/ui/Icons.jsx'
+import prodSaoTruc from '../../assets/images/prod-sao-truc.jpg'
+import prodDanTranh from '../../assets/images/prod-dan-tranh.jpg'
+import catNhacCuGo from '../../assets/images/cat-nhac-cu-go.jpg'
+
+function getCategoryFallbackImage(product) {
+  const group = (product.groupName || '').toLowerCase()
+  const name = (product.name || '').toLowerCase()
+
+  if (group.includes('hơi') || name.includes('sáo') || name.includes('tiêu')) {
+    return { url: prodSaoTruc, alt: 'Nhạc cụ hơi truyền thống Việt Nam' }
+  }
+  if (group.includes('gõ') || name.includes('trống') || name.includes('mõ') || name.includes('thanh la')) {
+    return { url: catNhacCuGo, alt: 'Nhạc cụ gõ truyền thống Việt Nam' }
+  }
+  return { url: prodDanTranh, alt: 'Nhạc cụ dây truyền thống Việt Nam' }
+}
 
 function ProductCard({ priority = false, product }) {
   const [failedImageUrl, setFailedImageUrl] = useState(null)
-  const image = getFirstProductImage(product.media)
-  const showImage = image && failedImageUrl !== image.url
+  const rawImage = getFirstProductImage(product.media)
+  const fallback = getCategoryFallbackImage(product)
+  const image = rawImage && failedImageUrl !== rawImage.url ? rawImage : fallback
 
   // Stock status text if available in product data
-  const hasStockInfo = product.inStock !== undefined || product.status !== undefined || product.availability !== undefined
-  const isInStock = product.inStock === true || product.status === 'AVAILABLE' || product.status === 'IN_STOCK' || product.availability === 'IN_STOCK'
+  const hasStockInfo =
+    product.inStock !== undefined ||
+    product.status !== undefined ||
+    product.availability !== undefined
+  const isInStock =
+    product.inStock === true ||
+    product.status === 'AVAILABLE' ||
+    product.status === 'IN_STOCK' ||
+    product.availability === 'IN_STOCK'
 
   return (
     <RouterLink
       aria-label={`Xem chi tiết ${product.name}`}
-      className="group flex flex-col h-full no-underline focus-visible:outline-none select-none"
+      className="group flex flex-col h-full no-underline focus-visible:outline-none select-none rounded-xl bg-white border border-border hover:border-brand/40 p-3 hover:-translate-y-1 hover:shadow-md transition-all duration-200"
       href={CUSTOMER_ROUTES.productDetail(product.id)}
     >
-      {/* 1. Image Container (Product visual priority, 1:1, hover scale ~1.02) */}
-      <div className="aspect-square w-full overflow-hidden rounded-xl bg-surface-secondary relative flex items-center justify-center border border-border/60 transition-colors group-hover:border-border-strong">
-        {showImage ? (
-          <img
-            alt={
-              typeof image.alt === 'string' && image.alt.trim()
-                ? image.alt.trim()
-                : product.name
-            }
-            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300 ease-out"
-            decoding="async"
-            height="500"
-            loading={priority ? undefined : 'lazy'}
-            onError={() => setFailedImageUrl(image.url)}
-            src={image.url}
-            width="500"
-          />
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-2 p-6 text-center text-muted">
-            <IconInstrument className="text-subtle/50" size={36} />
-            <span className="text-xs font-medium text-subtle">Nhạc cụ truyền thống</span>
-          </div>
-        )}
+      {/* 1. Image Container (1:1 aspect ratio, smooth hover scale) */}
+      <div className="aspect-square w-full overflow-hidden rounded-lg bg-surface-secondary relative flex items-center justify-center border border-border-subtle">
+        <img
+          alt={
+            typeof image.alt === 'string' && image.alt.trim()
+              ? image.alt.trim()
+              : product.name
+          }
+          className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out"
+          decoding="async"
+          height="500"
+          loading={priority ? undefined : 'lazy'}
+          onError={() => setFailedImageUrl(image.url)}
+          src={image.url}
+          width="500"
+        />
 
-        {/* Floating Category Group Tag (Option A: neutral gray badge on white/95) */}
+        {/* Category Tag */}
         {product.groupName ? (
-          <span className="absolute top-2.5 left-2.5 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-white/95 backdrop-blur-xs text-muted border border-border/80 shadow-2xs">
+          <span className="absolute top-2.5 left-2.5 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-white/95 text-ink-secondary border border-border/80 shadow-2xs backdrop-blur-xs">
             {product.groupName}
           </span>
         ) : null}
 
-        {/* Optional Stock Status badge (deep jade for in-stock, neutral for out-of-stock) */}
+        {/* Optional Stock Status badge */}
         {hasStockInfo ? (
           <span
-            className={`absolute bottom-2.5 right-2.5 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium backdrop-blur-xs shadow-2xs ${
+            className={`absolute bottom-2.5 right-2.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur-xs shadow-2xs ${
               isInStock
                 ? 'bg-jade-soft text-jade border border-jade-border'
-                : 'bg-white text-muted border border-border'
+                : 'bg-white/95 text-muted border border-border'
             }`}
           >
             {isInStock ? 'Còn hàng' : 'Hết hàng'}
@@ -65,27 +81,20 @@ function ProductCard({ priority = false, product }) {
       </div>
 
       {/* 2. Product Details */}
-      <div className="pt-3 pb-1 flex flex-col flex-1 gap-1">
-        {/* Category Metadata */}
-        {product.groupName ? (
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-            {product.groupName}
-          </p>
-        ) : null}
-
+      <div className="pt-3 pb-1 flex flex-col flex-1 gap-1.5">
         {/* Product Title */}
-        <h3 className="text-base font-semibold text-ink leading-snug group-hover:text-brand transition-colors duration-200 line-clamp-2">
+        <h3 className="text-base font-bold text-ink leading-snug group-hover:text-brand transition-colors duration-200 line-clamp-2">
           {product.name}
         </h3>
 
-        {/* Artisan & Village Metadata (rendered only when available) */}
-        {(product.artisanName || product.craftVillageName) ? (
-          <p className="text-xs text-subtle truncate pt-0.5">
+        {/* Artisan & Village Metadata */}
+        {product.artisanName || product.craftVillageName ? (
+          <p className="text-xs text-muted truncate flex items-center gap-1.5">
             {product.artisanName && (
-              <span>{product.artisanName}</span>
+              <span className="font-medium text-ink-secondary">{product.artisanName}</span>
             )}
             {product.artisanName && product.craftVillageName && (
-              <span className="mx-1 text-muted/60" aria-hidden="true">•</span>
+              <span className="text-muted/50" aria-hidden="true">•</span>
             )}
             {product.craftVillageName && (
               <span>{product.craftVillageName}</span>
@@ -94,16 +103,16 @@ function ProductCard({ priority = false, product }) {
         ) : null}
 
         {/* Price & Action Row */}
-        <div className="mt-auto pt-2 flex items-baseline justify-between gap-2">
+        <div className="mt-auto pt-2.5 flex items-baseline justify-between gap-2 border-t border-border-subtle">
           {product.priceDisplay ? (
-            <p className="text-base font-bold text-ink tracking-tight">
+            <p className="text-base font-extrabold text-brand tracking-tight">
               {product.priceDisplay}
             </p>
           ) : (
-            <span className="text-xs text-muted">Liên hệ báo giá</span>
+            <span className="text-xs text-muted font-medium">Liên hệ báo giá</span>
           )}
 
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-muted group-hover:text-brand transition-colors shrink-0">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted group-hover:text-brand transition-colors shrink-0">
             <span>Chi tiết</span>
             <span
               aria-hidden="true"

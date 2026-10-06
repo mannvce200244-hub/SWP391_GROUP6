@@ -1,441 +1,561 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES, HOME_ARTISAN_SECTION } from '../routes/customerRoutes.js'
 import ProductCard from '../features/catalog/ProductCard.jsx'
-import SectionHeading from '../features/home/SectionHeading.jsx'
-import HomepageVideoSection from '../features/home/HomepageVideoSection.jsx'
 import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import {
   ARTISAN,
   CATEGORIES,
   FEATURED_PRODUCTS,
   HERO,
-  KNOWLEDGE_BLOCKS,
-  SUPPORT,
-  TRUST_ITEMS,
-  VALUES,
+  WHY_M4N,
 } from '../features/home/homeContent.js'
 
 function HomePage() {
+  const [selectedGroup, setSelectedGroup] = useState('all')
   const [catDay, catHoi, catGo] = CATEGORIES
 
-  // Scroll to the artisan section when the homepage is opened with its anchor
-  // (e.g. a cross-route click on "Nghệ nhân & Làng nghề" navigated to /#artisans).
   useEffect(() => {
     if (window.location.hash !== `#${HOME_ARTISAN_SECTION.id}`) return
-
     document
       .getElementById(HOME_ARTISAN_SECTION.id)
       ?.scrollIntoView({ block: 'start' })
   }, [])
 
+  // Filter products based on selected tab
+  const filteredProducts =
+    selectedGroup === 'all'
+      ? FEATURED_PRODUCTS
+      : FEATURED_PRODUCTS.filter((p) =>
+          selectedGroup === 'day'
+            ? p.groupName?.toLowerCase().includes('dây')
+            : p.groupName?.toLowerCase().includes('hơi') ||
+              p.groupName?.toLowerCase().includes('gõ'),
+        )
+
   return (
-    <div className="w-full flex flex-col">
-      {/* SECTION 1: HERO */}
-      <section aria-labelledby="hero-title" className="relative py-12 sm:py-16 lg:py-20 bg-surface border-b border-border/80 overflow-hidden">
-        {/* Subtle background ambient craft glow */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-brand-soft/40 rounded-full blur-3xl pointer-events-none -z-10" />
-        <div className="absolute bottom-0 left-10 w-72 h-72 bg-jade-soft/30 rounded-full blur-3xl pointer-events-none -z-10" />
-
+    <div className="w-full flex flex-col bg-white text-ink">
+      {/* ============================================================
+          SECTION 1: HERO — Editorial Heritage Craft Showcase
+          ============================================================ */}
+      <section
+        aria-labelledby="hero-title"
+        className="relative pt-10 pb-16 sm:pt-14 sm:pb-20 lg:pt-16 lg:pb-20 bg-white border-b border-border"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          {/* Hero Left Content */}
-          <div className="lg:col-span-6 flex flex-col gap-5 sm:gap-6">
-            <EditorialEyebrow
-              className="self-start"
-              label="Nhạc cụ truyền thống Việt Nam"
-            />
+          {/* Left Column: Direct value proposition (5 cols) */}
+          <div className="lg:col-span-5 flex flex-col gap-6">
+            <div>
+              <EditorialEyebrow showResonance={false} label="BẢO TỒN VÀ CHẾ TÁC THỦ CÔNG DI SẢN" />
+            </div>
 
-            <h1 id="hero-title" className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-ink font-sans tracking-tight leading-[1.15]">
-              <span className="text-brand">Thanh âm Việt</span>, trong một trải nghiệm hiện đại.
+            <h1
+              id="hero-title"
+              className="text-4xl sm:text-5xl lg:text-[3.25rem] font-extrabold leading-[1.14] tracking-tight text-ink"
+            >
+              Thanh âm di sản từ danh mộc Việt.
             </h1>
 
-            <p className="text-base sm:text-lg text-muted leading-relaxed max-w-xl">
-              Khám phá nhạc cụ theo nhóm, nghệ nhân và làng nghề truyền thống. Thông tin minh bạch về chất liệu, âm sắc và nguồn gốc chế tác.
+            <p className="text-base sm:text-lg leading-relaxed text-muted">
+              Mỗi cây đàn tại M4N là một tác phẩm độc bản được nghệ nhân ưu tú đẽo gọt từ gỗ mun, cẩm lai và tre nứa tuyển chọn, bảo tồn trọn vẹn chuẩn mực thẩm âm của âm nhạc cổ truyền Việt Nam.
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-1">
               <RouterLink
-                className="inline-flex items-center justify-center font-bold transition-all bg-brand text-white hover:bg-brand-hover hover:-translate-y-0.5 shadow-sm hover:shadow-md h-12 px-7 text-base rounded-xl cursor-pointer"
+                className="inline-flex items-center justify-center font-semibold text-white h-12 px-7 text-sm rounded-lg bg-brand hover:bg-brand-hover active:scale-[0.99] transition-all shadow-xs"
                 href={CUSTOMER_ROUTES.products}
               >
-                Khám phá sản phẩm
+                <span>Xem bộ sưu tập</span>
+                <span className="ml-2" aria-hidden="true">→</span>
               </RouterLink>
-              <a
-                className="inline-flex items-center gap-2 text-sm font-semibold text-ink hover:text-brand bg-surface border border-border hover:border-brand/40 hover:bg-surface-secondary px-5 h-12 rounded-xl transition-all shadow-xs cursor-pointer"
-                href="#categories"
+
+              <RouterLink
+                className="inline-flex items-center justify-center font-semibold text-ink h-12 px-6 text-sm rounded-lg bg-white hover:bg-surface-secondary border border-border hover:border-border-strong active:scale-[0.99] transition-all"
+                href={CUSTOMER_ROUTES.artisans}
               >
-                <span>Xem danh mục</span>
-                <span aria-hidden="true">↓</span>
-              </a>
+                <span>Về xưởng thủ công</span>
+              </RouterLink>
             </div>
 
-            {/* Quick Hero Metrics */}
-            <div className="pt-4 sm:pt-6 grid grid-cols-3 gap-4 border-t border-border/70 max-w-lg">
+            {/* Clear, understated provenance metrics */}
+            <div className="pt-6 border-t border-border flex flex-wrap items-center gap-8 sm:gap-10 text-xs">
               <div>
-                <p className="text-xl sm:text-2xl font-extrabold text-ink font-sans">03</p>
-                <p className="text-xs text-muted font-medium mt-0.5">Nhóm nhạc cụ chính</p>
+                <span className="text-2xl font-bold text-ink block">100+</span>
+                <span className="text-muted">Nhạc cụ tinh tuyển</span>
               </div>
-              <div className="border-l border-border/70 pl-4">
-                <p className="text-xl sm:text-2xl font-extrabold text-brand font-sans">100%</p>
-                <p className="text-xs text-muted font-medium mt-0.5">Gỗ & Tre truyền thống</p>
+              <div className="w-px h-8 bg-border" aria-hidden="true" />
+              <div>
+                <span className="text-2xl font-bold text-ink block">15+</span>
+                <span className="text-muted">Nghệ nhân ưu tú</span>
               </div>
-              <div className="border-l border-border/70 pl-4">
-                <p className="text-xl sm:text-2xl font-extrabold text-jade font-sans">Làng nghề</p>
-                <p className="text-xs text-muted font-medium mt-0.5">Đào Xá & Trúc Sơn</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Hero Right Visual Frame */}
-          <div className="lg:col-span-6">
-            <div className="relative rounded-2xl overflow-hidden border border-border shadow-lg bg-surface-secondary aspect-4/3 lg:aspect-16/11 group">
-              <img
-                alt={HERO.alt}
-                className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700 ease-out"
-                decoding="async"
-                fetchPriority="high"
-                height="650"
-                src={HERO.image}
-                width="880"
-              />
-
-              {/* Bottom Craft Metadata Badge */}
-              <div
-                className="absolute bottom-4 left-4 right-4 sm:right-auto inline-flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-black/75 backdrop-blur-md text-white text-xs font-medium border border-white/15 shadow-md"
-                aria-hidden="true"
-              >
-                <span className="w-2.5 h-2.5 rounded-full bg-brand animate-pulse" />
-                <span className="font-semibold">Đàn Tranh 16 Dây</span>
-                <span className="text-white/50">·</span>
-                <span className="text-white/80 truncate">Nghệ nhân Làng Đào Xá</span>
-              </div>
-
-              {/* Top Right Floating Chip */}
-              <div
-                className="absolute top-4 right-4 hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface/90 backdrop-blur-md text-ink text-[11px] font-bold border border-border/80 shadow-xs"
-                aria-hidden="true"
-              >
-                <span className="text-brand">✦</span>
-                <span>Chế tác thủ công</span>
+              <div className="w-px h-8 bg-border" aria-hidden="true" />
+              <div>
+                <span className="text-2xl font-bold text-ink block">3</span>
+                <span className="text-muted">Làng nghề di sản</span>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* SECTION 2: QUICK TRUST STRIP */}
-      <section aria-label="Cam kết dịch vụ M4N" className="bg-surface border-b border-border/70 py-6 sm:py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {TRUST_ITEMS.map((item, index) => (
-            <div
-              key={item.title}
-              className="flex items-start gap-3.5 p-3 rounded-xl bg-canvas/60 border border-border/60 hover:bg-surface-secondary/60 transition-colors"
-            >
-              <div className="w-10 h-10 rounded-lg bg-brand-soft border border-brand-border text-brand shrink-0 flex items-center justify-center font-bold text-sm">
-                {String(index + 1).padStart(2, '0')}
+          {/* Right Column: Authentic Editorial Craft Visual (7 cols) */}
+          <div className="lg:col-span-7 flex flex-col">
+            <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden flex flex-col">
+              <div className="aspect-[16/11] sm:aspect-[16/10] w-full bg-neutral-900 overflow-hidden">
+                <img
+                  src={HERO.image}
+                  alt={HERO.alt}
+                  className="w-full h-full object-cover object-center"
+                  decoding="async"
+                  fetchPriority="high"
+                />
               </div>
-              <div className="flex flex-col gap-0.5">
-                <p className="text-sm font-bold text-ink">{item.title}</p>
-                <p className="text-xs text-muted leading-relaxed">{item.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      {/* SECTION 3: INSTRUMENT CATEGORIES BENTO GRID */}
-      <section aria-labelledby="categories-title" className="py-16 sm:py-20 bg-canvas" id="categories">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading
-            description="Ba nhóm nhạc cụ chính tạo nên nhiều sắc thái đặc trưng trong âm nhạc truyền thống Việt Nam."
-            eyebrow="DANH MỤC NHẠC CỤ"
-            id="categories-title"
-            title="Khám phá theo nhóm nhạc cụ"
-          />
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8 sm:mt-10">
-            {/* Primary Bento Card: Nhạc cụ dây (7 cols) */}
-            <div className="lg:col-span-7 flex flex-col rounded-2xl bg-surface border border-border overflow-hidden shadow-xs hover:shadow-lg hover:border-brand/30 transition-all duration-300 group">
-              <RouterLink className="flex flex-col h-full no-underline" href={CUSTOMER_ROUTES.products}>
-                <div className="aspect-16/10 lg:aspect-auto lg:flex-1 w-full overflow-hidden bg-surface-secondary relative min-h-[260px]">
-                  <img
-                    alt={catDay.alt}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-600 ease-out"
-                    decoding="async"
-                    height="520"
-                    src={catDay.image}
-                    width="780"
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
-                  <span className="absolute top-4 left-4 px-3 py-1 rounded-lg bg-surface/95 backdrop-blur-md text-xs font-bold text-ink border border-border/80 tracking-wider uppercase shadow-xs">
-                    {catDay.num} / {catDay.label}
-                  </span>
+              {/* Museum-grade provenance caption */}
+              <div className="px-5 py-3.5 bg-surface-muted/50 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-muted">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" aria-hidden="true" />
+                  <span className="font-semibold text-ink">{HERO.instrumentName}</span>
+                  <span className="text-border-strong">·</span>
+                  <span>{HERO.materialNote}</span>
                 </div>
-                <div className="p-6 sm:p-8 flex flex-col gap-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-xl sm:text-2xl font-bold text-ink group-hover:text-brand transition-colors">
-                      {catDay.title}
-                    </h3>
-                    <span className="text-xs font-bold text-brand flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
-                      Khám phá ngay <span aria-hidden="true">→</span>
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted leading-relaxed">{catDay.desc}</p>
-                  
-                  {/* Tag Chips */}
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {catDay.examples.map((ex) => (
-                      <span key={ex} className="px-2.5 py-1 rounded-md bg-surface-secondary text-xs font-medium text-ink/80 border border-border/60">
-                        {ex}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </RouterLink>
-            </div>
 
-            {/* Secondary Bento Stack: Nhạc cụ hơi & Nhạc cụ gõ (5 cols) */}
-            <div className="lg:col-span-5 flex flex-col gap-6">
-              {[catHoi, catGo].map((category) => (
                 <RouterLink
-                  key={category.id}
-                  className="flex flex-col sm:flex-row lg:flex-col rounded-2xl bg-surface border border-border overflow-hidden shadow-xs hover:shadow-lg hover:border-brand/30 transition-all duration-300 group flex-1 no-underline"
+                  className="inline-flex items-center gap-1 font-semibold text-brand hover:text-brand-hover transition-colors text-xs shrink-0"
                   href={CUSTOMER_ROUTES.products}
                 >
-                  <div className="w-full sm:w-52 lg:w-full aspect-16/9 sm:aspect-auto lg:aspect-16/9 overflow-hidden bg-surface-secondary relative shrink-0">
-                    <img
-                      alt={category.alt}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-600 ease-out"
-                      decoding="async"
-                      height="240"
-                      src={category.image}
-                      width="360"
-                    />
-                    <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md bg-surface/95 backdrop-blur-md text-[11px] font-bold text-ink border border-border/80 tracking-wider uppercase shadow-xs">
-                      {category.num} / {category.label}
-                    </span>
-                  </div>
-                  <div className="p-5 sm:p-6 flex flex-col gap-2 flex-1 justify-between">
-                    <div className="flex flex-col gap-1.5">
-                      <h3 className="text-lg font-bold text-ink group-hover:text-brand transition-colors">
-                        {category.title}
-                      </h3>
-                      <p className="text-xs text-muted leading-relaxed">{category.desc}</p>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50 mt-1">
-                      <span className="text-xs text-subtle font-medium truncate">
-                        {category.examples.join(' · ')}
-                      </span>
-                      <span className="text-xs font-bold text-brand shrink-0 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                        Xem <span aria-hidden="true">→</span>
-                      </span>
-                    </div>
-                  </div>
+                  <span>Khám phá bộ sưu tập</span>
+                  <span aria-hidden="true">→</span>
                 </RouterLink>
-              ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* SECTION 4: FEATURED PRODUCTS */}
-      <section aria-labelledby="featured-title" className="py-16 sm:py-20 bg-surface border-y border-border/80">
+      {/* ============================================================
+          SECTION 2: TRUST & CRAFTSMANSHIP GUARANTEES
+          ============================================================ */}
+      <section
+        aria-label="Cam kết chất lượng M4N"
+        className="py-10 bg-surface-muted border-b border-border"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8 sm:mb-10">
-            <SectionHeading
-              description="Một số nhạc cụ tiêu biểu đang có trong danh mục tuyển chọn của M4N."
-              eyebrow="TUYỂN CHỌN M4N"
-              id="featured-title"
-              title="Sản phẩm nổi bật"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-brand">01 · Danh mộc tự nhiên</span>
+              <h3 className="text-sm font-bold text-ink">Gỗ nguyên khối chọn lọc</h3>
+              <p className="text-xs leading-relaxed text-muted">
+                Gỗ mun, cẩm lai, gụ mật sấy tự nhiên đạt độ ẩm chuẩn, không nứt nẻ và tối ưu hóa độ vang.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-jade">02 · Chuẩn mực âm học</span>
+              <h3 className="text-sm font-bold text-ink">Thẩm âm thủ công</h3>
+              <p className="text-xs leading-relaxed text-muted">
+                Từng cung bậc được nghệ nhân trực tiếp so dây, căn chỉnh tần số âm thanh chuẩn mực trước khi xuất xưởng.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-brand">03 · Nguồn gốc minh bạch</span>
+              <h3 className="text-sm font-bold text-ink">Bảo tồn làng nghề</h3>
+              <p className="text-xs leading-relaxed text-muted">
+                Sản phẩm gắn liền người thợ và di sản làng nghề Đào Xá, Trúc Sơn, Đọi Tam không qua trung gian.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-jade">04 · Hậu mãi uy tín</span>
+              <h3 className="text-sm font-bold text-ink">Bảo dưỡng trọn đời</h3>
+              <p className="text-xs leading-relaxed text-muted">
+                Đóng gói chuyên dụng chống sốc, hỗ trợ kỹ thuật căn chỉnh âm sắc và chính sách bảo hành toàn quốc.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 3: COLLECTION GATEWAY — 3 Clean Editorial Columns
+          ============================================================ */}
+      <section
+        aria-labelledby="categories-heading"
+        className="py-16 sm:py-20 bg-white border-b border-border"
+        id="categories"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+            <div>
+              <EditorialEyebrow label="DANH MỤC NHẠC CỤ" />
+              <h2
+                id="categories-heading"
+                className="text-2xl sm:text-3xl font-bold text-ink tracking-tight mt-1.5"
+              >
+                Khám phá theo dòng nhạc cụ
+              </h2>
+            </div>
+
             <RouterLink
-              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-bold text-brand hover:text-brand-hover group"
+              className="text-xs font-bold text-brand hover:text-brand-hover transition-colors shrink-0"
               href={CUSTOMER_ROUTES.products}
             >
-              <span>Xem tất cả sản phẩm</span>
-              <span aria-hidden="true" className="group-hover:translate-x-1 transition-transform">→</span>
+              Xem tất cả sản phẩm →
             </RouterLink>
           </div>
 
-          <ul aria-label="Danh sách sản phẩm nổi bật" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 list-none p-0 m-0">
-            {FEATURED_PRODUCTS.map((product) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Column 1: Nhạc cụ Dây */}
+            <RouterLink
+              className="group flex flex-col rounded-xl overflow-hidden border border-border hover:border-brand/40 bg-white shadow-2xs hover:shadow-md transition-all no-underline"
+              href={CUSTOMER_ROUTES.products}
+            >
+              <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
+                <img
+                  alt={catDay.alt}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
+                  loading="lazy"
+                  src={catDay.image}
+                />
+              </div>
+              <div className="p-5 flex flex-col gap-1.5 flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                    {catDay.title}
+                  </h3>
+                  <span className="text-[11px] font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded">
+                    45+ mẫu
+                  </span>
+                </div>
+                <p className="text-xs text-brand font-medium">
+                  Đàn Tranh · Đàn Bầu · Đàn Nguyệt · Tỳ Bà
+                </p>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  {catDay.desc}
+                </p>
+                <span className="text-xs font-semibold text-ink group-hover:text-brand mt-auto pt-3 transition-colors">
+                  Khám phá danh mục →
+                </span>
+              </div>
+            </RouterLink>
+
+            {/* Column 2: Nhạc cụ Hơi */}
+            <RouterLink
+              className="group flex flex-col rounded-xl overflow-hidden border border-border hover:border-brand/40 bg-white shadow-2xs hover:shadow-md transition-all no-underline"
+              href={CUSTOMER_ROUTES.products}
+            >
+              <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
+                <img
+                  alt={catHoi.alt}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
+                  loading="lazy"
+                  src={catHoi.image}
+                />
+              </div>
+              <div className="p-5 flex flex-col gap-1.5 flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                    {catHoi.title}
+                  </h3>
+                  <span className="text-[11px] font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded">
+                    28+ mẫu
+                  </span>
+                </div>
+                <p className="text-xs text-brand font-medium">
+                  Sáo Trúc · Tiêu Bát Khổng · Kèn Bầu
+                </p>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  {catHoi.desc}
+                </p>
+                <span className="text-xs font-semibold text-ink group-hover:text-brand mt-auto pt-3 transition-colors">
+                  Khám phá danh mục →
+                </span>
+              </div>
+            </RouterLink>
+
+            {/* Column 3: Nhạc cụ Gõ */}
+            <RouterLink
+              className="group flex flex-col rounded-xl overflow-hidden border border-border hover:border-brand/40 bg-white shadow-2xs hover:shadow-md transition-all no-underline"
+              href={CUSTOMER_ROUTES.products}
+            >
+              <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
+                <img
+                  alt={catGo.alt}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
+                  loading="lazy"
+                  src={catGo.image}
+                />
+              </div>
+              <div className="p-5 flex flex-col gap-1.5 flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-bold text-ink group-hover:text-brand transition-colors">
+                    {catGo.title}
+                  </h3>
+                  <span className="text-[11px] font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded">
+                    16+ mẫu
+                  </span>
+                </div>
+                <p className="text-xs text-brand font-medium">
+                  Trống Đọi Tam · Mõ Gỗ · Thanh La
+                </p>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  {catGo.desc}
+                </p>
+                <span className="text-xs font-semibold text-ink group-hover:text-brand mt-auto pt-3 transition-colors">
+                  Khám phá danh mục →
+                </span>
+              </div>
+            </RouterLink>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 4: CURATED INSTRUMENTS (Sản phẩm tiêu biểu)
+          ============================================================ */}
+      <section
+        aria-labelledby="featured-products-heading"
+        className="py-16 sm:py-20 bg-surface-muted border-b border-border"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
+            <div>
+              <EditorialEyebrow label="BỘ SƯU TẬP TIÊU BIỂU" />
+              <h2
+                id="featured-products-heading"
+                className="text-2xl sm:text-3xl font-bold text-ink tracking-tight mt-1.5"
+              >
+                Nhạc cụ kiệt tác
+              </h2>
+              <p className="text-sm text-muted mt-1 max-w-lg">
+                Các tác phẩm được tuyển chọn kỹ lưỡng về âm chuẩn và mỹ thuật chế tác.
+              </p>
+            </div>
+
+            {/* Clean category pills */}
+            <div className="flex items-center gap-1.5 p-1 bg-white rounded-lg border border-border self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setSelectedGroup('all')}
+                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  selectedGroup === 'all'
+                    ? 'bg-brand text-white shadow-2xs'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                Tất cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedGroup('day')}
+                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  selectedGroup === 'day'
+                    ? 'bg-brand text-white shadow-2xs'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                Đàn Dây
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedGroup('hoi-go')}
+                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                  selectedGroup === 'hoi-go'
+                    ? 'bg-brand text-white shadow-2xs'
+                    : 'text-muted hover:text-ink'
+                }`}
+              >
+                Bộ Hơi / Gõ
+              </button>
+            </div>
+          </div>
+
+          <ul
+            aria-label="Danh sách nhạc cụ kiệt tác"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 list-none p-0 m-0"
+          >
+            {filteredProducts.map((product) => (
               <li key={product.id}>
                 <ProductCard priority={true} product={product} />
               </li>
             ))}
           </ul>
 
-          <div className="sm:hidden mt-8 text-center">
+          <div className="mt-10 text-center">
             <RouterLink
-              className="inline-flex items-center justify-center font-bold transition-colors border border-border bg-surface text-ink hover:bg-surface-secondary h-11 px-5 text-sm rounded-xl w-full shadow-xs"
+              className="inline-flex items-center justify-center gap-2 h-11 px-7 rounded-lg font-semibold text-xs bg-white hover:bg-surface-secondary text-ink border border-border hover:border-brand/40 shadow-2xs transition-all"
               href={CUSTOMER_ROUTES.products}
             >
-              Xem tất cả sản phẩm →
-            </RouterLink>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 5: THANH ÂM VIỆT — VIDEO EXPERIENCE */}
-      <HomepageVideoSection />
-
-      {/* SECTION 6: ARTISAN & CRAFT VILLAGE */}
-      <section
-        aria-labelledby="artisan-section-title"
-        className="scroll-mt-24 py-16 sm:py-20 bg-surface border-t border-border/80"
-        id={HOME_ARTISAN_SECTION.id}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          <div className="lg:col-span-6 flex flex-col gap-5 lg:order-1">
-            <SectionHeading
-              eyebrow="NGHỆ NHÂN & LÀNG NGHỀ"
-              id="artisan-section-title"
-              title="Đằng sau nhạc cụ là câu chuyện của người làm nghề."
-            />
-            <p className="text-sm sm:text-base text-muted leading-relaxed">{ARTISAN.intro}</p>
-
-            {/* Craft Village Highlight Pills */}
-            <div className="flex flex-wrap gap-2 py-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface-secondary text-xs font-semibold text-ink border border-border">
-                <span className="text-brand">📍</span> Làng nghề Đào Xá (Hà Nội)
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface-secondary text-xs font-semibold text-ink border border-border">
-                <span className="text-brand">📍</span> Làng nghề Trúc Sơn
-              </span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <RouterLink
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand text-white hover:bg-brand-hover text-sm font-bold transition-all shadow-xs"
-                href={CUSTOMER_ROUTES.products}
-              >
-                <span>Khám phá theo nghệ nhân</span>
-                <span aria-hidden="true">→</span>
-              </RouterLink>
-              <RouterLink
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-surface-secondary text-ink hover:text-brand text-sm font-semibold border border-border transition-all"
-                href={CUSTOMER_ROUTES.products}
-              >
-                <span>Khám phá theo làng nghề</span>
-                <span aria-hidden="true">→</span>
-              </RouterLink>
-            </div>
-          </div>
-
-          <div className="lg:col-span-6 lg:order-2 rounded-2xl overflow-hidden border border-border shadow-lg bg-surface-secondary aspect-4/3 group">
-            <img
-              alt={ARTISAN.alt}
-              className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700 ease-out"
-              decoding="async"
-              height="620"
-              loading="lazy"
-              src={ARTISAN.image}
-              width="840"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 7: DISCOVER / KNOWLEDGE */}
-      <section aria-labelledby="knowledge-title" className="py-16 sm:py-20 bg-canvas">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SectionHeading eyebrow="GỢI Ý M4N" id="knowledge-title" title="Hiểu thêm trước khi lựa chọn" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 mt-8 sm:mt-10">
-            {KNOWLEDGE_BLOCKS.map((block, index) => (
-              <div key={block.title} className="flex flex-col gap-3 p-6 rounded-2xl bg-surface border border-border/80 shadow-xs hover:shadow-md hover:border-brand/30 transition-all duration-300">
-                <span className="text-sm font-extrabold text-brand font-mono" aria-hidden="true">
-                  {String(index + 1).padStart(2, '0')}.
-                </span>
-                <h3 className="text-base font-bold text-ink">{block.title}</h3>
-                <p className="text-sm text-muted leading-relaxed">{block.desc}</p>
-                {block.href ? (
-                  <RouterLink
-                    className="inline-flex items-center gap-1.5 text-sm font-bold text-brand hover:text-brand-hover mt-auto pt-2"
-                    href={block.href}
-                  >
-                    <span>{block.linkLabel}</span>
-                    <span aria-hidden="true">→</span>
-                  </RouterLink>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 8: M4N VALUES */}
-      <section aria-labelledby="values-heading" className="py-16 sm:py-20 bg-surface border-t border-border/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
-          <div className="lg:col-span-5 flex flex-col gap-3">
-            <SectionHeading
-              description="Một nền tảng mua sắm nhạc cụ truyền thống với thông tin rõ ràng và hỗ trợ trực tuyến trong cùng một hệ thống."
-              eyebrow="VỀ M4N"
-              id="values-heading"
-              title="Giá trị trong cách M4N hoạt động"
-            />
-          </div>
-
-          <div className="lg:col-span-7 flex flex-col gap-4 sm:gap-5">
-            {VALUES.map((value) => (
-              <div key={value.num} className="flex gap-4 sm:gap-6 p-5 sm:p-6 rounded-2xl bg-canvas border border-border/80 hover:border-border-strong transition-colors">
-                <span className="text-xl sm:text-2xl font-extrabold text-brand/60 font-mono shrink-0" aria-hidden="true">
-                  {value.num}
-                </span>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-base font-bold text-ink">{value.title}</h3>
-                  <p className="text-sm text-muted leading-relaxed">{value.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 9: SUPPORT CTA */}
-      <section aria-labelledby="support-title" className="py-14 sm:py-16 bg-canvas">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl bg-surface-secondary border border-border px-6 sm:px-10 py-8 sm:py-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xs">
-            <div className="flex flex-col gap-1.5 max-w-xl">
-              <h2 id="support-title" className="text-xl sm:text-2xl font-bold tracking-tight text-ink font-sans">
-                {SUPPORT.title}
-              </h2>
-              <p className="text-sm text-muted leading-relaxed">{SUPPORT.desc}</p>
-            </div>
-            <RouterLink
-              className="inline-flex shrink-0 items-center justify-center gap-2 font-bold transition-all bg-brand text-white hover:bg-brand-hover hover:-translate-y-0.5 h-12 px-7 text-sm rounded-xl shadow-xs cursor-pointer"
-              href={SUPPORT.href}
-            >
-              <span>{SUPPORT.linkLabel}</span>
+              <span>Xem toàn bộ 100+ nhạc cụ M4N</span>
               <span aria-hidden="true">→</span>
             </RouterLink>
           </div>
         </div>
       </section>
 
-      {/* SECTION 10: FINAL BRAND CTA */}
-      <section aria-labelledby="final-cta-title" className="py-16 sm:py-20 lg:py-24 bg-white border-t border-border/70 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center gap-5">
-          <span className="resonance-motif text-brand" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
+      {/* ============================================================
+          SECTION 5: THE HERITAGE WORKSHOP (Không gian xưởng nghề Đào Xá)
+          ============================================================ */}
+      <section
+        aria-labelledby="heritage-heading"
+        className="py-16 sm:py-24 bg-white border-b border-border"
+        id={HOME_ARTISAN_SECTION.id}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+            {/* Left: Authentic documentary photograph (6 cols) */}
+            <div className="lg:col-span-6">
+              <div className="rounded-2xl overflow-hidden border border-border bg-surface-secondary shadow-md">
+                <div className="aspect-[4/3] sm:aspect-[16/11] overflow-hidden">
+                  <img
+                    alt={ARTISAN.alt}
+                    className="w-full h-full object-cover hover:scale-102 transition-transform duration-700"
+                    loading="lazy"
+                    src={ARTISAN.image}
+                  />
+                </div>
+                <div className="p-4 bg-surface-muted border-t border-border flex items-center justify-between text-xs text-muted">
+                  <span className="font-semibold text-ink">Xưởng mộc truyền thống Đào Xá</span>
+                  <span>Hà Nội · 200+ năm gìn giữ hồn đàn</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Direct craftsmanship story (6 cols) */}
+            <div className="lg:col-span-6 flex flex-col gap-6">
+              <div>
+                <EditorialEyebrow label="KỸ NGHỆ TRUYỀN ĐỜI" />
+              </div>
+
+              <h2
+                id="heritage-heading"
+                className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight leading-snug"
+              >
+                Hai trăm năm giữ lửa bên thớ gỗ danh mộc
+              </h2>
+
+              <blockquote className="border-l-2 border-brand pl-4 py-1 text-sm sm:text-base text-ink/90 italic leading-relaxed">
+                &ldquo;Mỗi đường đục, thớ gỗ không chỉ tạo nên một cây đàn, mà là gửi gắm cả linh hồn người thợ vào từng cung bậc trầm bổng.&rdquo;
+                <footer className="text-xs text-muted not-italic mt-1.5 font-medium">
+                  — Nghệ nhân Nguyễn Văn Quý, 40 năm gắn bó xưởng Đào Xá
+                </footer>
+              </blockquote>
+
+              <p className="text-sm sm:text-base text-muted leading-relaxed">
+                Tại làng nghề Đào Xá, mỗi cây đàn được chế tác từ việc tuyển chọn súc gỗ cẩm lai, gỗ mun nguyên khối được hong gió tự nhiên qua nhiều năm để thớ gỗ đạt độ ổn định âm học cao nhất.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="p-4 rounded-xl bg-surface-muted border border-border">
+                  <p className="text-xs font-bold text-brand uppercase tracking-wider">
+                    Gỗ sấy tự nhiên 3+ năm
+                  </p>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    Triệt tiêu độ ẩm tự nhiên, loại bỏ hiện tượng co ngót và giúp âm sắc càng chơi càng vang ấm.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-surface-muted border border-border">
+                  <p className="text-xs font-bold text-jade uppercase tracking-wider">
+                    Khảm ốc xà cừ thủ công
+                  </p>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    Nghệ thuật cẩn xà cừ truyền thống trên thành đàn, lưu giữ hoa văn cổ kính và bản sắc Việt Nam.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <RouterLink
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:text-brand-hover transition-colors"
+                  href={CUSTOMER_ROUTES.artisans}
+                >
+                  <span>Khám phá câu chuyện làng nghề & nghệ nhân</span>
+                  <span aria-hidden="true">→</span>
+                </RouterLink>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 6: CRAFTSMANSHIP STANDARDS (Chuẩn mực chế tác M4N)
+          ============================================================ */}
+      <section
+        aria-labelledby="values-heading"
+        className="py-16 sm:py-20 bg-surface-muted border-b border-border"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mb-12">
+            <EditorialEyebrow label="TIÊU CHUẨN M4N" />
+            <h2
+              id="values-heading"
+              className="text-2xl sm:text-3xl font-bold text-ink tracking-tight mt-1.5"
+            >
+              Vì sao người yêu nhạc tin chọn M4N?
+            </h2>
+            <p className="text-sm text-muted mt-2">
+              Cam kết về chất liệu, nguồn gốc minh bạch và chất lượng âm thanh nguyên bản.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {WHY_M4N.slice(0, 3).map((item, idx) => (
+              <div
+                key={item.title}
+                className="p-6 rounded-xl bg-white border border-border shadow-2xs flex flex-col gap-2"
+              >
+                <span className="text-xs font-bold text-brand uppercase tracking-wider">
+                  Tiêu chuẩn 0{idx + 1}
+                </span>
+                <h3 className="text-base font-bold text-ink">
+                  {item.title}
+                </h3>
+                <p className="text-xs leading-relaxed text-muted">
+                  {item.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================
+          SECTION 7: SHOWROOM & CONSULTATION (Lời mời trải nghiệm)
+          ============================================================ */}
+      <section
+        aria-label="Tư vấn và trải nghiệm nhạc cụ"
+        className="py-16 sm:py-20 bg-white"
+      >
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center gap-5">
+          <span className="text-xs font-bold uppercase tracking-wider text-brand">
+            TƯ VẤN TRỰC TIẾP TỪ NGHỆ NHÂN
           </span>
-          <h2 id="final-cta-title" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-ink max-w-2xl font-sans leading-tight">
-            Gìn giữ thanh âm truyền thống trong cách tiếp cận của hôm nay.
+
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-ink tracking-tight">
+            Bạn cần tìm cây đàn phù hợp với hành trình âm nhạc của mình?
           </h2>
+
           <p className="text-sm sm:text-base text-muted max-w-xl leading-relaxed">
-            Khám phá danh mục nhạc cụ truyền thống Việt Nam đầy đủ và minh bạch trên M4N.
+            Đội ngũ M4N và các nghệ nhân làng nghề luôn sẵn sàng hỗ trợ bạn lựa chọn dòng nhạc cụ, kiểm tra âm sắc và tư vấn phương pháp bảo quản tốt nhất.
           </p>
-          <RouterLink
-            className="inline-flex items-center justify-center gap-2 font-bold transition-all bg-brand text-white hover:bg-brand-hover hover:-translate-y-0.5 shadow-sm h-12 px-8 text-base rounded-xl mt-2 cursor-pointer"
-            href={CUSTOMER_ROUTES.products}
-          >
-            <span>Khám phá sản phẩm ngay</span>
-            <span aria-hidden="true">→</span>
-          </RouterLink>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            <RouterLink
+              className="inline-flex items-center justify-center font-semibold text-white h-12 px-7 text-sm rounded-lg bg-brand hover:bg-brand-hover active:scale-[0.99] transition-all shadow-xs"
+              href={CUSTOMER_ROUTES.products}
+            >
+              <span>Xem danh mục nhạc cụ</span>
+              <span className="ml-2" aria-hidden="true">→</span>
+            </RouterLink>
+
+            <RouterLink
+              className="inline-flex items-center justify-center font-semibold text-ink h-12 px-6 text-sm rounded-lg bg-white hover:bg-surface-secondary border border-border active:scale-[0.99] transition-all"
+              href={CUSTOMER_ROUTES.artisans}
+            >
+              <span>Tìm hiểu các nghệ nhân</span>
+            </RouterLink>
+          </div>
         </div>
       </section>
     </div>
@@ -443,4 +563,3 @@ function HomePage() {
 }
 
 export default HomePage
-

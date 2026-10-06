@@ -11,6 +11,7 @@ import ProductDetailPage from '../pages/ProductDetailPage.jsx'
 import ProductListPage from '../pages/ProductListPage.jsx'
 import ArtisansPage from '../pages/ArtisansPage.jsx'
 import CraftVillageDetailPage from '../pages/CraftVillageDetailPage.jsx'
+import CartPage from '../pages/CartPage.jsx'
 
 import LoginPage from '../features/auth/LoginPage.jsx'
 import RegisterPage from '../features/auth/RegisterPage.jsx'
@@ -18,11 +19,16 @@ import ForgotPasswordPage from '../features/auth/ForgotPasswordPage.jsx'
 import ResetPasswordPage from '../features/auth/ResetPasswordPage.jsx'
 import ProfilePage from '../features/auth/ProfilePage.jsx'
 import AccountSecurityPage from '../features/auth/AccountSecurityPage.jsx'
+import CustomerOrdersPage from '../features/orders/CustomerOrdersPage.jsx'
 import ForbiddenPage from '../pages/ForbiddenPage.jsx'
 
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import PosDashboardPage from '../pages/PosDashboardPage.jsx'
 import AdminDashboardPage from '../pages/AdminDashboardPage.jsx'
+import AdminInstrumentsPage from '../pages/admin/AdminInstrumentsPage.jsx'
+import AdminStorePage from '../pages/admin/AdminStorePage.jsx'
+import AdminProfilePage from '../pages/admin/AdminProfilePage.jsx'
+import AdminSecurityPage from '../pages/admin/AdminSecurityPage.jsx'
 
 import RequireAuth from './RequireAuth.jsx'
 import RequireRole from './RequireRole.jsx'
@@ -71,11 +77,28 @@ function AppRouter() {
   }
 
   // 2. Admin shell using AdminLayout
-  if (pathname === CUSTOMER_ROUTES.admin) {
+  if (
+    pathname === CUSTOMER_ROUTES.admin ||
+    pathname === CUSTOMER_ROUTES.adminInstruments ||
+    pathname === CUSTOMER_ROUTES.adminStore ||
+    pathname === CUSTOMER_ROUTES.adminProfile ||
+    pathname === CUSTOMER_ROUTES.adminSecurity
+  ) {
+    let adminContent = <AdminDashboardPage />
+    if (pathname === CUSTOMER_ROUTES.adminInstruments) {
+      adminContent = <AdminInstrumentsPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminStore) {
+      adminContent = <AdminStorePage />
+    } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
+      adminContent = <AdminProfilePage />
+    } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
+      adminContent = <AdminSecurityPage />
+    }
+
     return (
       <RequireRole allowedRoles={['ADMIN']}>
         <AdminLayout pathname={pathname}>
-          <AdminDashboardPage />
+          {adminContent}
         </AdminLayout>
       </RequireRole>
     )
@@ -124,6 +147,14 @@ function AppRouter() {
         <AccountSecurityPage />
       </RequireAuth>
     )
+  } else if (pathname === CUSTOMER_ROUTES.orders) {
+    pageContent = (
+      <RequireAuth>
+        <CustomerOrdersPage />
+      </RequireAuth>
+    )
+  } else if (pathname === CUSTOMER_ROUTES.cart) {
+    pageContent = <CartPage />
   } else if (pathname === CUSTOMER_ROUTES.forbidden) {
     pageContent = <ForbiddenPage />
   } else {

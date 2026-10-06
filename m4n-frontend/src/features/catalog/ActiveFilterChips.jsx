@@ -17,9 +17,18 @@ function ActiveFilterChips({ className = '', filters, onClearAll, onRemoveFilter
   }
 
   if (filters.group && filters.group.trim()) {
+    const groupNameMap = {
+      DAY: 'Nhạc cụ dây',
+      HOI: 'Nhạc cụ hơi',
+      GO: 'Nhạc cụ gõ',
+      Dây: 'Nhạc cụ dây',
+      Hơi: 'Nhạc cụ hơi',
+      Gõ: 'Nhạc cụ gõ',
+    }
+    const displayGroup = groupNameMap[filters.group.trim()] || filters.group.trim()
     chips.push({
       key: 'group',
-      label: `Nhóm: ${filters.group.trim()}`,
+      label: `Dòng: ${displayGroup}`,
     })
   }
 

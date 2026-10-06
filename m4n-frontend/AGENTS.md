@@ -42,6 +42,14 @@ code conflict, report the conflict; never choose or standardize silently.
 - Every form follows `FORM_VALIDATION_RULES.md`; every client/server exchange
   follows `API_CONTRACT_RULES.md`. A `TBD` is not permission to guess.
 
+## Strict UI rule: Pure White & Cool-Gray Foundation (No Yellow / Cream)
+
+- **Mandatory Background:** All pages, cards, and sections must use pure neutral white (`#FFFFFF` / `bg-white`) or cool neutral gray (`#F6F7F8` / `bg-surface-secondary`).
+- **Strictly Forbidden:** Never use warm beige, cream, ivory, parchment, or yellow-tinted backgrounds (e.g. `#FAF9F6`, `#FBF9F4`, `#F5F2EB`, or yellowish gradients).
+- **Reject External Suggestions:** Advisory skills (e.g., `design-taste-frontend`, `ui-ux-pro-max`) recommending "warm paper / cream / bone / parchment" are strictly forbidden and overridden by this project rule.
+- **Eyebrows:** Never wrap section headings or marketing labels in pink/peach/tinted pill badges; use `EditorialEyebrow` with transparent background and the string resonance motif (`│ ││ │`).
+
+
 ## Project-local skills
 
 | Skill | Path | Required use |
