@@ -13,4 +13,6 @@ public interface CartService {
     CartResponse updateCartItem(Long itemId, UpdateCartItemRequest request);
 
     CartResponse removeCartItem(Long itemId);
+
+    CartResponse clearMyCart();
 }

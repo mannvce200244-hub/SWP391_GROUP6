@@ -21,6 +21,10 @@ const cartService = Object.freeze({
   async removeCartItem(itemId) {
     return apiClient.delete(`/cart/items/${itemId}`)
   },
+
+  async clearCart() {
+    return apiClient.delete('/cart')
+  },
 })
 
 export default cartService

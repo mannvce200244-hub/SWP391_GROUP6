@@ -12,6 +12,7 @@ import ProductListPage from '../pages/ProductListPage.jsx'
 import ArtisansPage from '../pages/ArtisansPage.jsx'
 import CraftVillageDetailPage from '../pages/CraftVillageDetailPage.jsx'
 import CartPage from '../pages/CartPage.jsx'
+import CheckoutPage from '../pages/CheckoutPage.jsx'
 
 import LoginPage from '../features/auth/LoginPage.jsx'
 import RegisterPage from '../features/auth/RegisterPage.jsx'
@@ -155,6 +156,12 @@ function AppRouter() {
     )
   } else if (pathname === CUSTOMER_ROUTES.cart) {
     pageContent = <CartPage />
+  } else if (pathname === CUSTOMER_ROUTES.checkout) {
+    pageContent = (
+      <RequireAuth>
+        <CheckoutPage />
+      </RequireAuth>
+    )
   } else if (pathname === CUSTOMER_ROUTES.forbidden) {
     pageContent = <ForbiddenPage />
   } else {

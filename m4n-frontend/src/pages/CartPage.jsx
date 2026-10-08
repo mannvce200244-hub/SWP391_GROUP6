@@ -205,14 +205,10 @@ function CartPage() {
                   <span>Tạm tính tiền hàng:</span>
                   <span className="font-bold text-ink">{cart?.totalAmountDisplay}</span>
                 </div>
-                <div className="flex items-center justify-between text-muted">
-                  <span>Phí vận chuyển:</span>
-                  <span className="font-bold text-brand">Miễn phí toàn quốc</span>
-                </div>
               </div>
 
               <div className="pt-3 border-t border-border/60 flex items-baseline justify-between">
-                <span className="text-sm font-bold text-ink">Tổng cộng:</span>
+                <span className="text-sm font-bold text-ink">Tổng tạm tính:</span>
                 <span className="text-2xl font-black text-brand font-sans">
                   {cart?.totalAmountDisplay}
                 </span>
@@ -220,9 +216,7 @@ function CartPage() {
 
               <button
                 type="button"
-                onClick={() => {
-                  // Proceed to checkout
-                }}
+                onClick={() => navigateTo(CUSTOMER_ROUTES.checkout)}
                 className="w-full h-12 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 <span>Tiến hành thanh toán</span>

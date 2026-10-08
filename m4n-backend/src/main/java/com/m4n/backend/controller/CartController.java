@@ -56,4 +56,10 @@ public class CartController {
     public ResponseEntity<CartResponse> removeCartItem(@PathVariable Long id) {
         return ResponseEntity.ok(cartService.removeCartItem(id));
     }
+
+    @DeleteMapping
+    @Operation(summary = "Clear customer cart", description = "Empties all items from the authenticated customer's cart.")
+    public ResponseEntity<CartResponse> clearCart() {
+        return ResponseEntity.ok(cartService.clearMyCart());
+    }
 }

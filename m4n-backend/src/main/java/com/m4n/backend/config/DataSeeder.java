@@ -5,18 +5,24 @@ import com.m4n.backend.entity.Category;
 import com.m4n.backend.entity.CraftVillage;
 import com.m4n.backend.entity.Inventory;
 import com.m4n.backend.entity.MediaType;
+import com.m4n.backend.entity.Order;
+import com.m4n.backend.entity.OrderItem;
+import com.m4n.backend.entity.OrderStatus;
 import com.m4n.backend.entity.Product;
 import com.m4n.backend.entity.ProductMedia;
 import com.m4n.backend.entity.Role;
 import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
+import com.m4n.backend.entity.Voucher;
 import com.m4n.backend.repository.ArtisanRepository;
 import com.m4n.backend.repository.CategoryRepository;
 import com.m4n.backend.repository.CraftVillageRepository;
 import com.m4n.backend.repository.InventoryRepository;
+import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.RoleRepository;
 import com.m4n.backend.repository.UserRepository;
+import com.m4n.backend.repository.VoucherRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
@@ -26,12 +32,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Seed data runner for development and testing environments.
- * Idempotently initializes default roles and diverse test accounts.
+ * Idempotently initializes default roles, products, dev accounts, and sample orders.
  */
 @Slf4j
 @Component
@@ -45,6 +53,8 @@ public class DataSeeder implements ApplicationRunner {
     private final ArtisanRepository artisanRepository;
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
+    private final OrderRepository orderRepository;
+    private final VoucherRepository voucherRepository;
 
     @Value("${m4n.seed.dev-accounts:true}")
     private boolean seedDevAccounts;
@@ -60,7 +70,9 @@ public class DataSeeder implements ApplicationRunner {
             CraftVillageRepository craftVillageRepository,
             ArtisanRepository artisanRepository,
             ProductRepository productRepository,
-            InventoryRepository inventoryRepository
+            InventoryRepository inventoryRepository,
+            OrderRepository orderRepository,
+            VoucherRepository voucherRepository
     ) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
@@ -70,6 +82,8 @@ public class DataSeeder implements ApplicationRunner {
         this.artisanRepository = artisanRepository;
         this.productRepository = productRepository;
         this.inventoryRepository = inventoryRepository;
+        this.orderRepository = orderRepository;
+        this.voucherRepository = voucherRepository;
     }
 
     @Override
@@ -77,8 +91,10 @@ public class DataSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         initRoles();
         initProducts();
+        initVouchers();
         if (seedDevAccounts) {
             initDevAccounts();
+            initOrders();
             printTestAccountsSummary();
         }
     }
@@ -100,6 +116,41 @@ public class DataSeeder implements ApplicationRunner {
                 roleRepository.save(role);
                 log.info("Initialized system role: {}", roleName);
             }
+        }
+    }
+
+    private void initVouchers() {
+        seedVoucherIfNotExists(
+                "M4N10",
+                new BigDecimal("0.1000"),
+                new BigDecimal("1000000.00"),
+                "Giảm 10% cho đơn hàng nhạc cụ từ 1.000.000₫"
+        );
+        seedVoucherIfNotExists(
+                "DIENM4N",
+                new BigDecimal("0.0500"),
+                new BigDecimal("500000.00"),
+                "Giảm 5% cho đơn hàng từ 500.000₫"
+        );
+        seedVoucherIfNotExists(
+                "VIPM4N",
+                new BigDecimal("0.1500"),
+                new BigDecimal("5000000.00"),
+                "Ưu đãi di sản giảm 15% cho đơn hàng từ 5.000.000₫"
+        );
+    }
+
+    private void seedVoucherIfNotExists(String code, BigDecimal rate, BigDecimal minOrder, String description) {
+        if (voucherRepository.findByCodeIgnoreCase(code).isEmpty()) {
+            Voucher voucher = Voucher.builder()
+                    .code(code)
+                    .discountRate(rate)
+                    .minimumOrderValue(minOrder)
+                    .isActive(true)
+                    .description(description)
+                    .build();
+            voucherRepository.save(voucher);
+            log.info("Initialized seed voucher: {}", code);
         }
     }
 
@@ -510,6 +561,219 @@ public class DataSeeder implements ApplicationRunner {
         log.info("Seeded product: [{}] {} (Stock: {})", code, name, stockQuantity);
     }
 
+    private void initOrders() {
+        if (orderRepository.count() > 0) {
+            return;
+        }
+
+        var customerOpt = userRepository.findByEmailIgnoreCase("customer@m4n.vn");
+        User customer = customerOpt.orElse(null);
+
+        var pTranh = productRepository.findByCodeIgnoreCase("TRN-001").orElse(null);
+        var pBau = productRepository.findByCodeIgnoreCase("BAU-001").orElse(null);
+        var pNguyet = productRepository.findByCodeIgnoreCase("NGU-001").orElse(null);
+        var pSao = productRepository.findByCodeIgnoreCase("SAO-001").orElse(null);
+        var pTieu = productRepository.findByCodeIgnoreCase("TIEU-001").orElse(null);
+
+        if (pTranh == null || pBau == null || pNguyet == null || pSao == null || pTieu == null) {
+            log.warn("Cannot seed orders because products are missing.");
+            return;
+        }
+
+        Instant now = Instant.now();
+
+        // 1. Completed order 1 (today)
+        seedOrder(
+                "M4N-2026-089",
+                customer,
+                "Trần Hoài Nam",
+                "0912 345 678",
+                "nam.tran@gmail.com",
+                "Số 45 Tràng Tiền, Hoàn Kiếm, Hà Nội",
+                OrderStatus.COMPLETED,
+                "Chuyển khoản QR Napas",
+                true,
+                "Yêu cầu khắc tên nghệ nhân lên thành đàn.",
+                now.minus(4, ChronoUnit.HOURS),
+                List.of(new SeedItem(pTranh, 1, pTranh.getPrice()))
+        );
+
+        // 2. Completed order 2 (yesterday)
+        seedOrder(
+                "M4N-2026-088",
+                customer,
+                "Lê Thuỳ Dung",
+                "0988 765 432",
+                "thuydung.le@outlook.com",
+                "228 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+                OrderStatus.COMPLETED,
+                "Chuyển khoản QR Napas",
+                true,
+                "Đóng gói hộp chống sốc chuyên dụng.",
+                now.minus(1, ChronoUnit.DAYS),
+                List.of(
+                        new SeedItem(pBau, 1, pBau.getPrice()),
+                        new SeedItem(pSao, 2, pSao.getPrice())
+                )
+        );
+
+        // 3. Completed order 3 (5 days ago)
+        seedOrder(
+                "M4N-2026-087",
+                customer,
+                "Nguyễn Văn Khách",
+                "0900000004",
+                "customer@m4n.vn",
+                "68 Đường Lê Lợi, TP. Huế",
+                OrderStatus.COMPLETED,
+                "COD",
+                true,
+                "Giao giờ hành chính.",
+                now.minus(5, ChronoUnit.DAYS),
+                List.of(new SeedItem(pNguyet, 1, pNguyet.getPrice()))
+        );
+
+        // 4. Confirmed order 4 (2 days ago)
+        seedOrder(
+                "M4N-2026-086",
+                customer,
+                "Hoàng Minh Quân",
+                "0933 112 233",
+                "quan.hm@gmail.com",
+                "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
+                OrderStatus.CONFIRMED,
+                "Chuyển khoản QR Napas",
+                true,
+                "Đã kiểm tra kho và xác nhận xuất xưởng.",
+                now.minus(2, ChronoUnit.DAYS),
+                List.of(new SeedItem(pTranh, 1, pTranh.getPrice()))
+        );
+
+        // 5. Pending confirmation order 5 (today)
+        seedOrder(
+                "M4N-2026-085",
+                customer,
+                "Vũ Thị Bích",
+                "0977 889 900",
+                "bich.vu@gmail.com",
+                "15 Trần Phú, Ba Đình, Hà Nội",
+                OrderStatus.PENDING_CONFIRMATION,
+                "COD",
+                false,
+                "Chờ nhân viên liên hệ xác nhận đơn.",
+                now.minus(1, ChronoUnit.HOURS),
+                List.of(new SeedItem(pTieu, 2, pTieu.getPrice()))
+        );
+
+        // 6. Out of stock waiting order 6 (3 days ago)
+        seedOrder(
+                "M4N-2026-084",
+                customer,
+                "Đặng Hải Long",
+                "0911 223 344",
+                "long.dh@gmail.com",
+                "34 Hai Bà Trưng, Đà Nẵng",
+                OrderStatus.OUT_OF_STOCK_WAITING,
+                "Chuyển khoản QR Napas",
+                true,
+                "Khách đồng ý đợi xưởng Đào Xá hoàn thiện đợt mới.",
+                now.minus(3, ChronoUnit.DAYS),
+                List.of(new SeedItem(pBau, 1, pBau.getPrice()))
+        );
+
+        // 7. Cancelled order 7 (4 days ago)
+        seedOrder(
+                "M4N-2026-083",
+                customer,
+                "Phạm Đức Anh",
+                "0944 556 677",
+                "ducanh.pham@gmail.com",
+                "89 Cầu Giấy, Hà Nội",
+                OrderStatus.CANCELLED,
+                "COD",
+                false,
+                "Khách đổi ý đặt mẫu khác.",
+                now.minus(4, ChronoUnit.DAYS),
+                List.of(new SeedItem(pSao, 1, pSao.getPrice()))
+        );
+
+        // 8. Completed order from previous period
+        seedOrder(
+                "M4N-2026-070",
+                customer,
+                "Trần Thị Mai Phương",
+                "0987654321",
+                "customer2@m4n.vn",
+                "45 Phố Hàng Gai, Hoàn Kiếm, Hà Nội",
+                OrderStatus.COMPLETED,
+                "Chuyển khoản QR Napas",
+                true,
+                "Đơn hàng hoàn tất tháng trước.",
+                now.minus(35, ChronoUnit.DAYS),
+                List.of(
+                        new SeedItem(pTranh, 1, pTranh.getPrice()),
+                        new SeedItem(pNguyet, 1, pNguyet.getPrice())
+                )
+        );
+
+        log.info("Initialized sample orders for Admin Dashboard.");
+    }
+
+    private record SeedItem(Product product, int quantity, BigDecimal price) {}
+
+    private void seedOrder(
+            String code,
+            User user,
+            String customerName,
+            String customerPhone,
+            String customerEmail,
+            String address,
+            OrderStatus status,
+            String paymentMethod,
+            boolean isPaid,
+            String notes,
+            Instant createdAt,
+            List<SeedItem> items
+    ) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (SeedItem it : items) {
+            total = total.add(it.price().multiply(BigDecimal.valueOf(it.quantity())));
+        }
+
+        Order order = Order.builder()
+                .orderCode(code)
+                .user(user)
+                .customerName(customerName)
+                .customerPhone(customerPhone)
+                .customerEmail(customerEmail)
+                .shippingAddress(address)
+                .totalAmount(total)
+                .discountAmount(BigDecimal.ZERO)
+                .finalAmount(total)
+                .status(status)
+                .paymentMethod(paymentMethod)
+                .isPaid(isPaid)
+                .notes(notes)
+                .createdAt(createdAt)
+                .updatedAt(createdAt)
+                .items(new ArrayList<>())
+                .build();
+
+        for (SeedItem it : items) {
+            OrderItem orderItem = OrderItem.builder()
+                    .order(order)
+                    .product(it.product())
+                    .productName(it.product().getName())
+                    .productCode(it.product().getCode())
+                    .price(it.price())
+                    .quantity(it.quantity())
+                    .build();
+            order.getItems().add(orderItem);
+        }
+
+        orderRepository.save(order);
+    }
+
     private void printTestAccountsSummary() {
         String summary = """
                 \n========================================================================================
@@ -531,3 +795,4 @@ public class DataSeeder implements ApplicationRunner {
         log.info("{}", summary);
     }
 }
+

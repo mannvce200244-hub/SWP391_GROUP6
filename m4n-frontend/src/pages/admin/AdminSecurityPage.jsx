@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import EditorialEyebrow from '../../components/common/EditorialEyebrow.jsx'
 import useToast from '../../components/ui/useToast.js'
 import {
   IconLock,
@@ -45,7 +44,7 @@ function AdminSecurityPage() {
 
   // Password strength calculation
   const getPasswordStrength = (pwd) => {
-    if (!pwd) return { score: 0, label: 'Chưa nhập', color: 'bg-border' }
+    if (!pwd) return { score: 0, label: 'Chưa nhập', color: 'bg-zinc-200' }
     let score = 0
     if (pwd.length >= 8) score += 1
     if (/[A-Z]/.test(pwd)) score += 1
@@ -55,7 +54,7 @@ function AdminSecurityPage() {
     if (score <= 1) return { score: 25, label: 'Yếu', color: 'bg-rose-500' }
     if (score === 2) return { score: 50, label: 'Trung bình', color: 'bg-amber-500' }
     if (score === 3) return { score: 75, label: 'Khá mạnh', color: 'bg-emerald-500' }
-    return { score: 100, label: 'Rất an toàn', color: 'bg-brand' }
+    return { score: 100, label: 'Rất an toàn', color: 'bg-[#1F6B5A]' }
   }
 
   const pwdStrength = getPasswordStrength(newPassword)
@@ -121,12 +120,18 @@ function AdminSecurityPage() {
   return (
     <div className="flex flex-col gap-8 pb-10 max-w-5xl">
       {/* Header Section */}
-      <div className="flex flex-col gap-1.5 bg-surface rounded-2xl border border-border p-6 shadow-xs">
-        <EditorialEyebrow label="An toàn & Kiểm soát truy cập" />
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-sans">
+      <div className="flex flex-col gap-1 bg-white rounded-2xl border border-border p-6 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#0D9488]">
+            Hệ thống Quản trị M4N
+          </span>
+          <span className="text-zinc-300">/</span>
+          <span className="text-xs text-muted font-medium">Bảo mật tài khoản</span>
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-sans">
           Bảo mật Tài khoản Quản trị
-        </h2>
-        <p className="text-sm text-muted">
+        </h1>
+        <p className="text-xs sm:text-sm text-muted">
           Cập nhật mật khẩu phân quyền cao cấp, thiết lập xác thực 2 yếu tố và quản lý phiên máy trạm.
         </p>
       </div>
@@ -134,16 +139,16 @@ function AdminSecurityPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Left 2 Cols: Change Password Form */}
         <div className="lg:col-span-2 flex flex-col gap-8">
-          <div className="bg-surface rounded-2xl border border-border p-6 sm:p-7 shadow-xs">
+          <div className="bg-white rounded-2xl border border-border p-6 sm:p-7 shadow-xs">
             <h3 className="text-base font-bold text-ink mb-5 pb-3 border-b border-border flex items-center gap-2">
-              <IconLock size={18} className="text-brand" />
+              <IconLock size={18} className="text-[#0D9488]" />
               <span>Đổi mật khẩu tài khoản quản trị</span>
             </h3>
 
             <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4 text-sm">
               {/* Current Password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">
                   Mật khẩu hiện tại <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -153,12 +158,12 @@ function AdminSecurityPage() {
                     placeholder="Nhập mật khẩu quản trị hiện tại"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-canvas border border-border text-ink focus:outline-hidden focus:border-brand focus:ring-1 focus:ring-brand font-medium pr-10"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488] font-medium pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCurrent(!showCurrent)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-ink cursor-pointer"
                   >
                     {showCurrent ? <IconEyeOff size={16} /> : <IconEye size={16} />}
                   </button>
@@ -167,7 +172,7 @@ function AdminSecurityPage() {
 
               {/* New Password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">
                   Mật khẩu mới <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -177,12 +182,12 @@ function AdminSecurityPage() {
                     placeholder="Tối thiểu 8 ký tự bao gồm chữ hoa, số & ký tự đặc biệt"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-canvas border border-border text-ink focus:outline-hidden focus:border-brand focus:ring-1 focus:ring-brand font-medium pr-10"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488] font-medium pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNew(!showNew)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-ink cursor-pointer"
                   >
                     {showNew ? <IconEyeOff size={16} /> : <IconEye size={16} />}
                   </button>
@@ -192,10 +197,10 @@ function AdminSecurityPage() {
                 {newPassword && (
                   <div className="flex flex-col gap-1 mt-1">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="text-muted">Độ an toàn mật khẩu:</span>
+                      <span className="text-zinc-500">Độ an toàn mật khẩu:</span>
                       <span className="font-bold text-ink">{pwdStrength.label}</span>
                     </div>
-                    <div className="w-full h-1.5 rounded-full bg-border overflow-hidden">
+                    <div className="w-full h-1.5 rounded-full bg-zinc-200 overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${pwdStrength.color}`}
                         style={{ width: `${pwdStrength.score}%` }}
@@ -207,7 +212,7 @@ function AdminSecurityPage() {
 
               {/* Confirm Password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">
                   Xác nhận lại mật khẩu mới <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
@@ -217,12 +222,12 @@ function AdminSecurityPage() {
                     placeholder="Nhập lại chính xác mật khẩu mới"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-canvas border border-border text-ink focus:outline-hidden focus:border-brand focus:ring-1 focus:ring-brand font-medium pr-10"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488] font-medium pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-ink cursor-pointer"
                   >
                     {showConfirm ? <IconEyeOff size={16} /> : <IconEye size={16} />}
                   </button>
@@ -233,7 +238,7 @@ function AdminSecurityPage() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 >
                   <IconCheck size={16} />
                   <span>{isSubmitting ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}</span>
@@ -243,7 +248,7 @@ function AdminSecurityPage() {
           </div>
 
           {/* Active Sessions Management */}
-          <div className="bg-surface rounded-2xl border border-border p-6 sm:p-7 shadow-xs flex flex-col gap-4">
+          <div className="bg-white rounded-2xl border border-border p-6 sm:p-7 shadow-xs flex flex-col gap-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h3 className="text-base font-bold text-ink flex items-center gap-2">
                 <span>Phiên đăng nhập & Máy trạm đang hoạt động</span>
@@ -253,7 +258,7 @@ function AdminSecurityPage() {
                 <button
                   type="button"
                   onClick={handleRevokeAllOther}
-                  className="text-xs font-bold text-rose-600 hover:underline cursor-pointer"
+                  className="text-xs font-bold text-[#0D9488] hover:underline cursor-pointer"
                 >
                   Đăng xuất thiết bị khác
                 </button>
@@ -264,10 +269,10 @@ function AdminSecurityPage() {
               {sessions.map((sess) => (
                 <div
                   key={sess.id}
-                  className="p-4 rounded-xl bg-canvas border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-4 rounded-xl bg-[#F5F7FA] border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="w-9 h-9 rounded-lg bg-surface-secondary flex items-center justify-center text-ink shrink-0 mt-0.5">
+                    <span className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-ink shrink-0 mt-0.5">
                       💻
                     </span>
                     <div className="flex flex-col">
@@ -279,8 +284,8 @@ function AdminSecurityPage() {
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] text-muted font-mono mt-0.5">{sess.ip}</span>
-                      <span className="text-[11px] text-muted/80">{sess.lastActive}</span>
+                      <span className="text-[11px] text-zinc-500 font-mono mt-0.5">{sess.ip}</span>
+                      <span className="text-[11px] text-zinc-400">{sess.lastActive}</span>
                     </div>
                   </div>
 
@@ -288,7 +293,7 @@ function AdminSecurityPage() {
                     <button
                       type="button"
                       onClick={() => handleRevokeSession(sess.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-rose-600 hover:bg-rose-50 text-xs font-semibold self-start sm:self-center cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-white text-rose-600 hover:bg-rose-50 text-xs font-semibold self-start sm:self-center cursor-pointer shadow-2xs"
                     >
                       <IconLogOut size={14} />
                       <span>Đăng xuất</span>
@@ -303,9 +308,9 @@ function AdminSecurityPage() {
         {/* Right 1 Col: 2FA & Security Standards */}
         <div className="flex flex-col gap-6">
           {/* Two-Factor Authentication Box */}
-          <div className="bg-surface rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-4">
+          <div className="bg-white rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-4">
             <h3 className="text-base font-bold text-ink pb-2 border-b border-border flex items-center gap-2">
-              <IconShield size={18} className="text-brand" />
+              <IconShield size={18} className="text-[#0D9488]" />
               <span>Xác thực 2 bước (2FA)</span>
             </h3>
 
@@ -313,12 +318,12 @@ function AdminSecurityPage() {
               Bắt buộc mã OTP từ ứng dụng bảo mật (Google Authenticator) mỗi khi đăng nhập vào hệ thống quản trị M4N.
             </p>
 
-            <div className="p-3.5 rounded-xl bg-canvas border border-border flex items-center justify-between gap-3">
+            <div className="p-3.5 rounded-xl bg-[#F5F7FA] border border-border flex items-center justify-between gap-3">
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-ink">Bảo vệ 2 lớp</span>
                 <span
                   className={`text-[11px] font-semibold mt-0.5 ${
-                    twoFactorEnabled ? 'text-emerald-600' : 'text-muted'
+                    twoFactorEnabled ? 'text-emerald-700' : 'text-zinc-400'
                   }`}
                 >
                   {twoFactorEnabled ? 'Đang kích hoạt' : 'Chưa bật'}
@@ -329,7 +334,7 @@ function AdminSecurityPage() {
                 type="button"
                 onClick={handleToggle2FA}
                 className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  twoFactorEnabled ? 'bg-brand' : 'bg-border'
+                  twoFactorEnabled ? 'bg-[#0D9488]' : 'bg-zinc-300'
                 }`}
                 aria-label="Bật tắt xác thực 2 bước"
               >
@@ -355,14 +360,14 @@ function AdminSecurityPage() {
           </div>
 
           {/* Security Audit Checklist */}
-          <div className="bg-surface rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted">
+          <div className="bg-white rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
               Quy chuẩn An ninh Vận hành
             </h4>
             <div className="flex flex-col gap-2 text-xs text-muted">
               <div className="flex items-start gap-2">
                 <span className="text-emerald-600 font-bold">✓</span>
-                <span>Mật khẩu mã hóa BCrypt chuẩn cấp quân sự.</span>
+                <span>Mật khẩu mã hóa BCrypt chuẩn an ninh.</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-emerald-600 font-bold">✓</span>

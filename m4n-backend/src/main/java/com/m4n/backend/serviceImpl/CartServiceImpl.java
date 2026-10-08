@@ -128,6 +128,22 @@ public class CartServiceImpl implements CartService {
         return cartMapper.toCartResponse(updatedCart);
     }
 
+    @Override
+    @Transactional
+    public CartResponse clearMyCart() {
+        User user = getAuthenticatedUser();
+        Cart cart = getOrCreateCart(user);
+
+        if (cart.getItems() != null && !cart.getItems().isEmpty()) {
+            cartItemRepository.deleteAll(cart.getItems());
+            cart.getItems().clear();
+            cartRepository.save(cart);
+        }
+
+        Cart updatedCart = cartRepository.findWithItemsByUserId(user.getId()).orElse(cart);
+        return cartMapper.toCartResponse(updatedCart);
+    }
+
     private Cart getOrCreateCart(User user) {
         return cartRepository.findWithItemsByUserId(user.getId())
                 .orElseGet(() -> {
