@@ -506,8 +506,14 @@ public class DataSeeder implements ApplicationRunner {
             int stockQuantity
     ) {
         var existingOpt = productRepository.findByCodeIgnoreCase(code);
+        String standardBarcode = deriveBarcode(code);
         if (existingOpt.isPresent()) {
             Product existing = existingOpt.get();
+            boolean changed = false;
+            if (existing.getBarcode() == null || !existing.getBarcode().equals(standardBarcode)) {
+                existing.setBarcode(standardBarcode);
+                changed = true;
+            }
             boolean needsUpdate = existing.getMedia().size() != mediaList.size();
             if (!needsUpdate) {
                 for (int i = 0; i < mediaList.size(); i++) {
@@ -517,20 +523,23 @@ public class DataSeeder implements ApplicationRunner {
                     }
                 }
             }
-            if (needsUpdate) {
-                existing.getMedia().clear();
-                for (ProductMedia m : mediaList) {
-                    m.setProduct(existing);
-                    existing.getMedia().add(m);
+            if (needsUpdate || changed) {
+                if (needsUpdate) {
+                    existing.getMedia().clear();
+                    for (ProductMedia m : mediaList) {
+                        m.setProduct(existing);
+                        existing.getMedia().add(m);
+                    }
                 }
                 productRepository.save(existing);
-                log.info("Synchronized media for existing product: [{}] (Total media: {})", code, existing.getMedia().size());
+                log.info("Synchronized product and barcode for: [{}] {} (Barcode: {})", code, existing.getName(), standardBarcode);
             }
             return;
         }
 
         Product product = Product.builder()
                 .code(code)
+                .barcode(standardBarcode)
                 .name(name)
                 .price(price)
                 .description(description)
@@ -558,7 +567,17 @@ public class DataSeeder implements ApplicationRunner {
                 .build();
         inventoryRepository.save(inventory);
 
-        log.info("Seeded product: [{}] {} (Stock: {})", code, name, stockQuantity);
+        log.info("Seeded product: [{}] {} (Stock: {}, Barcode: {})", code, name, stockQuantity, standardBarcode);
+    }
+
+    private String deriveBarcode(String code) {
+        return switch (code) {
+            case "TRN-001" -> "8938500000018";
+            case "BAU-001" -> "8938500000025";
+            case "NGU-001" -> "8938500000032";
+            case "SAO-001" -> "8938500000049";
+            default -> "893850000" + String.format("%04d", Math.abs(code.hashCode() % 10000));
+        };
     }
 
     private void initOrders() {

@@ -119,7 +119,7 @@ function AppRouter() {
   // 4. POS showroom shell using PosLayout
   if (pathname === CUSTOMER_ROUTES.pos) {
     return (
-      <RequireRole allowedRoles={['POS_STAFF']}>
+      <RequireRole allowedRoles={['POS_STAFF', 'ADMIN']}>
         <PosLayout pathname={pathname}>
           <PosDashboardPage />
         </PosLayout>
