@@ -1,423 +1,236 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import useToast from '../../components/ui/useToast.js'
-import prodDanTranh from '../../assets/images/prod-dan-tranh.jpg'
-import prodDanBau from '../../assets/images/prod-dan-bau.jpg'
-import prodDanNguyet from '../../assets/images/prod-dan-nguyet.jpg'
-import prodSaoTruc from '../../assets/images/prod-sao-truc.jpg'
-import catNhacCuGo from '../../assets/images/cat-nhac-cu-go.jpg'
-import catNhacCuHoi from '../../assets/images/cat-nhac-cu-hoi.jpg'
-
+import { getInventory, importStock } from '../../services/inventoryService.js'
+import { formatCurrencyVND } from '../../utils/currency.js'
 import {
   IconPlus,
-  IconEdit,
-  IconTrash,
   IconSearch,
-  IconCheck,
-  IconClose,
   IconPackage,
   IconAlertCircle,
+  IconClose,
+  IconCheck,
 } from '../../components/ui/Icons.jsx'
 
-// Standard seed data for traditional instrument inventory
-const INITIAL_INSTRUMENTS = [
-  {
-    id: 'INS-001',
-    sku: 'TRN-CL-19',
-    name: 'Đàn Tranh 19 Dây Gỗ Cẩm Lai Khảm Trai',
-    category: 'DAY',
-    categoryLabel: 'Nhạc cụ dây',
-    artisan: 'NNƯT Nguyễn Văn Bách',
-    craftVillage: 'Làng Đào Xá',
-    price: 14500000,
-    stock: 6,
-    maxStock: 15,
-    status: 'AVAILABLE', // AVAILABLE, LOW_STOCK, OUT_OF_STOCK
-    image: prodDanTranh,
-  },
-  {
-    id: 'INS-002',
-    sku: 'BAU-MT-01',
-    name: 'Đàn Bầu Gỗ Mun Thân Liền Cần Sừng Trâu',
-    category: 'DAY',
-    categoryLabel: 'Nhạc cụ dây',
-    artisan: 'Nghệ nhân Đỗ Bá Kiên',
-    craftVillage: 'Làng Đào Xá',
-    price: 9800000,
-    stock: 4,
-    maxStock: 10,
-    status: 'AVAILABLE',
-    image: prodDanBau,
-  },
-  {
-    id: 'INS-003',
-    sku: 'NGY-TT-02',
-    name: 'Đàn Nguyệt Gỗ Trắc Cần Dài Phím Đồng',
-    category: 'DAY',
-    categoryLabel: 'Nhạc cụ dây',
-    artisan: 'NNƯT Phạm Chí Khánh',
-    craftVillage: 'Làng Đào Xá',
-    price: 11200000,
-    stock: 2,
-    maxStock: 8,
-    status: 'LOW_STOCK',
-    image: prodDanNguyet,
-  },
-  {
-    id: 'INS-004',
-    sku: 'SAO-DN-C5',
-    name: 'Sáo Trúc Tone Đô (C5) Trúc Già Hun Khói',
-    category: 'HOI',
-    categoryLabel: 'Nhạc cụ hơi',
-    artisan: 'Nghệ nhân Bùi Gia Định',
-    craftVillage: 'Làng Trúc Sơn',
-    price: 1250000,
-    stock: 18,
-    maxStock: 30,
-    status: 'AVAILABLE',
-    image: prodSaoTruc,
-  },
-  {
-    id: 'INS-005',
-    sku: 'TIEU-BK-N8',
-    name: 'Tiêu Bát Khổng Nứa Bắc Đốt Tròn Tự Nhiên',
-    category: 'HOI',
-    categoryLabel: 'Nhạc cụ hơi',
-    artisan: 'Nghệ nhân Lê Đình Hưng',
-    craftVillage: 'Làng Trúc Sơn',
-    price: 2400000,
-    stock: 3,
-    maxStock: 12,
-    status: 'LOW_STOCK',
-    image: catNhacCuHoi,
-  },
-  {
-    id: 'INS-006',
-    sku: 'TRG-DT-40',
-    name: 'Trống Đế Lễ Hội Da Trâu Gỗ Mít Cổ Truyền',
-    category: 'GO',
-    categoryLabel: 'Nhạc cụ gõ',
-    artisan: 'Nghệ nhân Trần Văn Tự',
-    craftVillage: 'Làng Đọi Tam',
-    price: 4800000,
-    stock: 0,
-    maxStock: 10,
-    status: 'OUT_OF_STOCK',
-    image: catNhacCuGo,
-  },
-  {
-    id: 'INS-007',
-    sku: 'NHI-MT-08',
-    name: 'Đàn Nhị Líu Gỗ Cẩm Mặt Da Trăn Vàng Tuyển Chọn',
-    category: 'DAY',
-    categoryLabel: 'Nhạc cụ dây',
-    artisan: 'NNƯT Nguyễn Văn Bách',
-    craftVillage: 'Làng Đào Xá',
-    price: 7600000,
-    stock: 5,
-    maxStock: 12,
-    status: 'AVAILABLE',
-    image: prodDanNguyet,
-  },
-  {
-    id: 'INS-008',
-    sku: 'KHEN-HM-06',
-    name: 'Khèn Bè Ống Nứa Dân Tộc Tây Bắc Chế Tác Thủ Công',
-    category: 'HOI',
-    categoryLabel: 'Nhạc cụ hơi',
-    artisan: 'Nghệ nhân Lò Văn Sâm',
-    craftVillage: 'Bản Cát Cát',
-    price: 3600000,
-    stock: 4,
-    maxStock: 8,
-    status: 'AVAILABLE',
-    image: catNhacCuHoi,
-  },
+const STATUS_TABS = [
+  { id: 'ALL', label: 'Tất cả trạng thái' },
+  { id: 'IN_STOCK', label: 'Còn hàng (>5)' },
+  { id: 'LOW_STOCK', label: 'Sắp hết (1-5)' },
+  { id: 'OUT_OF_STOCK', label: 'Hết hàng (0)' },
 ]
 
-function formatVND(amount) {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount)
+function formatDateVN(dateStr) {
+  if (!dateStr) return '—'
+  try {
+    const d = new Date(dateStr)
+    return new Intl.DateTimeFormat('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d)
+  } catch {
+    return dateStr
+  }
 }
 
 function AdminInstrumentsPage() {
   const { addToast } = useToast()
-  const [instruments, setInstruments] = useState(INITIAL_INSTRUMENTS)
+
+  // Data & Query states
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [keyword, setKeyword] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState('ALL')
+  const [page, setPage] = useState(0)
+  const [pageSize] = useState(10)
+  const [totalElements, setTotalElements] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  // Modal states
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState(null)
-  const [stockModalOpen, setStockModalOpen] = useState(false)
-  const [stockItem, setStockItem] = useState(null)
-  const [stockAdjustment, setStockAdjustment] = useState(0)
+  // Stock Import Modal state
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [importQuantity, setImportQuantity] = useState(1)
+  const [importNotes, setImportNotes] = useState('')
+  const [submittingImport, setSubmittingImport] = useState(false)
 
-  // Form State
-  const [formData, setFormData] = useState({
-    name: '',
-    sku: '',
-    category: 'DAY',
-    categoryLabel: 'Nhạc cụ dây',
-    artisan: 'NNƯT Nguyễn Văn Bách',
-    craftVillage: 'Làng Đào Xá',
-    price: 5000000,
-    stock: 5,
-    maxStock: 15,
-  })
+  // Debounced search trigger
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setKeyword(searchInput)
+      setPage(0)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
-  // Filtered instruments
-  const filteredInstruments = useMemo(() => {
-    return instruments.filter((item) => {
-      const matchKeyword =
-        !keyword.trim() ||
-        item.name.toLowerCase().includes(keyword.toLowerCase()) ||
-        item.sku.toLowerCase().includes(keyword.toLowerCase()) ||
-        item.artisan.toLowerCase().includes(keyword.toLowerCase())
+  // Fetch Inventory
+  useEffect(() => {
+    let active = true
 
-      const matchCategory = !selectedCategory || item.category === selectedCategory
-      const matchStatus = !selectedStatus || item.status === selectedStatus
-
-      return matchKeyword && matchCategory && matchStatus
+    getInventory({
+      page,
+      size: pageSize,
+      keyword,
+      status: selectedStatus,
     })
-  }, [instruments, keyword, selectedCategory, selectedStatus])
-
-  // Statistics
-  const totalStockCount = instruments.reduce((sum, item) => sum + item.stock, 0)
-  const lowStockCount = instruments.filter((item) => item.status === 'LOW_STOCK').length
-  const outOfStockCount = instruments.filter((item) => item.status === 'OUT_OF_STOCK').length
-  const totalValuation = instruments.reduce((sum, item) => sum + item.price * item.stock, 0)
-
-  // Handlers
-  const handleOpenAdd = () => {
-    setEditingItem(null)
-    setFormData({
-      name: '',
-      sku: `INS-${Date.now().toString().slice(-4)}`,
-      category: 'DAY',
-      categoryLabel: 'Nhạc cụ dây',
-      artisan: 'NNƯT Nguyễn Văn Bách',
-      craftVillage: 'Làng Đào Xá',
-      price: 5000000,
-      stock: 5,
-      maxStock: 15,
-    })
-    setModalOpen(true)
-  }
-
-  const handleOpenEdit = (item) => {
-    setEditingItem(item)
-    setFormData({
-      name: item.name,
-      sku: item.sku,
-      category: item.category,
-      categoryLabel: item.categoryLabel,
-      artisan: item.artisan,
-      craftVillage: item.craftVillage,
-      price: item.price,
-      stock: item.stock,
-      maxStock: item.maxStock,
-    })
-    setModalOpen(true)
-  }
-
-  const handleDelete = (item) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa nhạc cụ "${item.name}" khỏi danh mục không?`)) {
-      setInstruments((prev) => prev.filter((i) => i.id !== item.id))
-      addToast({
-        message: `Đã xóa nhạc cụ ${item.sku} thành công.`,
-        type: 'info',
+      .then((res) => {
+        if (!active) return
+        const data = res?.data || res
+        setItems(data.content || [])
+        setTotalElements(data.totalElements || 0)
+        setTotalPages(data.totalPages || 1)
+        setLoading(false)
       })
+      .catch((err) => {
+        if (!active) return
+        setError(err?.response?.data?.message || 'Không thể tải danh sách tồn kho nhạc cụ.')
+        setLoading(false)
+      })
+
+    return () => {
+      active = false
     }
+  }, [page, pageSize, keyword, selectedStatus, refreshKey])
+
+  const triggerRefresh = () => {
+    setLoading(true)
+    setRefreshKey((k) => k + 1)
   }
 
-  const handleSaveInstrument = (e) => {
+  // Open Stock Import Modal
+  const handleOpenImport = (product) => {
+    setSelectedProduct(product)
+    setImportQuantity(1)
+    setImportNotes('')
+    setImportModalOpen(true)
+  }
+
+  // Submit Stock Import
+  const handleSubmitImport = async (e) => {
     e.preventDefault()
-    if (!formData.name.trim() || !formData.sku.trim()) {
-      addToast({ message: 'Vui lòng nhập đầy đủ tên và mã nhạc cụ.', type: 'error' })
+    if (!selectedProduct) return
+    const qty = parseInt(importQuantity, 10)
+    if (isNaN(qty) || qty <= 0) {
+      addToast({
+        message: 'Số lượng nhập kho phải là số nguyên dương lớn hơn 0.',
+        type: 'error',
+      })
       return
     }
 
-    const categoryLabels = {
-      DAY: 'Nhạc cụ dây',
-      HOI: 'Nhạc cụ hơi',
-      GO: 'Nhạc cụ gõ',
+    setSubmittingImport(true)
+    try {
+      const res = await importStock(selectedProduct.productId, {
+        quantity: qty,
+        notes: importNotes,
+      })
+      const result = res?.data || res
+      addToast({
+        message: result.message || `Đã nhập thêm ${qty} sản phẩm vào kho thành công.`,
+        type: 'success',
+      })
+      setImportModalOpen(false)
+      setSelectedProduct(null)
+      triggerRefresh()
+    } catch (err) {
+      addToast({
+        message: err?.response?.data?.message || 'Không thể thực hiện nhập kho. Vui lòng thử lại.',
+        type: 'error',
+      })
+    } finally {
+      setSubmittingImport(false)
     }
-
-    let status = 'AVAILABLE'
-    if (Number(formData.stock) === 0) status = 'OUT_OF_STOCK'
-    else if (Number(formData.stock) <= 3) status = 'LOW_STOCK'
-
-    if (editingItem) {
-      setInstruments((prev) =>
-        prev.map((item) =>
-          item.id === editingItem.id
-            ? {
-                ...item,
-                ...formData,
-                price: Number(formData.price),
-                stock: Number(formData.stock),
-                maxStock: Number(formData.maxStock),
-                categoryLabel: categoryLabels[formData.category] || 'Nhạc cụ truyền thống',
-                status,
-              }
-            : item,
-        ),
-      )
-      addToast({ message: 'Đã cập nhật thông tin nhạc cụ thành công.', type: 'success' })
-    } else {
-      const newItem = {
-        id: `INS-${Date.now().toString().slice(-6)}`,
-        ...formData,
-        price: Number(formData.price),
-        stock: Number(formData.stock),
-        maxStock: Number(formData.maxStock),
-        categoryLabel: categoryLabels[formData.category] || 'Nhạc cụ truyền thống',
-        status,
-        image:
-          formData.category === 'DAY'
-            ? prodDanTranh
-            : formData.category === 'HOI'
-              ? prodSaoTruc
-              : catNhacCuGo,
-      }
-      setInstruments((prev) => [newItem, ...prev])
-      addToast({ message: 'Đã thêm nhạc cụ mới vào kho thành công.', type: 'success' })
-    }
-
-    setModalOpen(false)
   }
 
-  const handleOpenStockAdjust = (item) => {
-    setStockItem(item)
-    setStockAdjustment(item.stock)
-    setStockModalOpen(true)
-  }
-
-  const handleSaveStock = () => {
-    if (!stockItem) return
-    const newStock = Math.max(0, Number(stockAdjustment))
-    let status = 'AVAILABLE'
-    if (newStock === 0) status = 'OUT_OF_STOCK'
-    else if (newStock <= 3) status = 'LOW_STOCK'
-
-    setInstruments((prev) =>
-      prev.map((i) =>
-        i.id === stockItem.id
-          ? { ...i, stock: newStock, status }
-          : i,
-      ),
-    )
-    addToast({
-      message: `Đã cập nhật tồn kho cho "${stockItem.name}" thành ${newStock} cây.`,
-      type: 'success',
-    })
-    setStockModalOpen(false)
-  }
+  // Summary counts for current loaded dataset
+  const inStockCount = items.filter((i) => i.status === 'IN_STOCK').length
+  const lowStockCount = items.filter((i) => i.status === 'LOW_STOCK').length
+  const outOfStockCount = items.filter((i) => i.status === 'OUT_OF_STOCK').length
 
   return (
-    <div className="flex flex-col gap-8 pb-10">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white rounded-2xl border border-border p-6 shadow-xs">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#0D9488]">
-              Kho & Di Sản M4N
-            </span>
-            <span className="text-zinc-300">/</span>
-            <span className="text-xs text-muted font-medium">Danh mục & Tồn kho</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-sans">
-            Danh mục Nhạc cụ Truyền thống
-          </h1>
-          <p className="text-xs sm:text-sm text-muted">
-            Quản trị thông tin kỹ thuật, số lượng tồn kho, giá bán và xuất xứ nghệ nhân chế tác.
+    <div className="flex flex-col gap-6">
+      {/* Top Header */}
+      <div className="bg-surface rounded-2xl border border-border p-6 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <span className="text-[10px] font-bold tracking-wider text-muted uppercase">QUẢN TRỊ KHO VẬN</span>
+          <h1 className="text-2xl font-bold tracking-tight text-ink mt-0.5">Nhạc cụ & Tồn kho Showroom</h1>
+          <p className="text-xs text-muted mt-1">
+            Theo dõi số lượng sellable thực tế tại kho, tra cứu mã vạch và thực hiện nghiệp vụ Nhập kho tức thì.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-bold shadow-xs transition-all cursor-pointer shrink-0"
-        >
-          <IconPlus size={16} />
-          <span>Thêm nhạc cụ mới</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={triggerRefresh}
+            className="px-3.5 py-2 rounded-xl border border-border bg-canvas hover:bg-surface-secondary text-xs font-semibold text-ink transition-colors cursor-pointer"
+          >
+            Làm mới dữ liệu
+          </button>
+        </div>
       </div>
 
-      {/* KPI Stats Row */}
+      {/* KPI Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Tổng mẫu nhạc cụ</span>
-            <p className="text-2xl font-extrabold text-ink">{instruments.length} mẫu</p>
-            <span className="text-xs text-zinc-500 mt-0.5">Tổng cộng {totalStockCount} cây trong kho</span>
+        <div className="bg-surface rounded-xl border border-border p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-muted">Tổng nhạc cụ quản lý</span>
+            <p className="text-xl font-bold text-ink mt-0.5">{totalElements}</p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-surface-secondary flex items-center justify-center text-ink">
             <IconPackage size={20} />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Sẵn sàng xuất kho</span>
-            <p className="text-2xl font-extrabold text-[#1F6B5A]">
-              {instruments.filter((i) => i.status === 'AVAILABLE').length} mẫu
-            </p>
-            <span className="text-xs text-[#1F6B5A] font-semibold mt-0.5">Đạt chuẩn âm sắc & kho</span>
+        <div className="bg-surface rounded-xl border border-border p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-muted">Sẵn sàng bán (&gt;5)</span>
+            <p className="text-xl font-bold text-emerald-700 mt-0.5">{inStockCount}</p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-[#1F6B5A] flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
             <IconCheck size={20} />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Cần bổ sung / Hết</span>
-            <p className="text-2xl font-extrabold text-amber-600">
-              {lowStockCount + outOfStockCount} mẫu
-            </p>
-            <span className="text-xs text-amber-600 font-medium mt-0.5">
-              {lowStockCount} sắp hết · {outOfStockCount} hết hàng
-            </span>
+        <div className="bg-surface rounded-xl border border-border p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-muted">Cảnh báo sắp hết (1–5)</span>
+            <p className="text-xl font-bold text-amber-700 mt-0.5">{lowStockCount}</p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <IconAlertCircle size={20} />
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Ước tính giá trị kho</span>
-            <p className="text-2xl font-extrabold text-ink">{formatVND(totalValuation)}</p>
-            <span className="text-xs text-zinc-500 mt-0.5">Theo giá bán niêm yết</span>
+        <div className="bg-surface rounded-xl border border-border p-4 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-semibold text-muted">Đang hết hàng (0)</span>
+            <p className="text-xl font-bold text-rose-700 mt-0.5">{outOfStockCount}</p>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-teal-50 border border-teal-200 text-[#0D9488] flex items-center justify-center shrink-0">
-            <span className="font-bold text-sm">₫</span>
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+            <IconClose size={20} />
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white rounded-2xl border border-border p-4 sm:p-5 shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+      <div className="bg-surface rounded-2xl border border-border p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         {/* Search */}
-        <div className="relative flex-1">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted">
-            <IconSearch size={16} />
-          </span>
+        <div className="relative flex-1 max-w-md">
+          <IconSearch size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
-            placeholder="Tìm theo tên nhạc cụ, mã SKU hoặc nghệ nhân..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-sm text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488] transition-all"
+            placeholder="Tìm theo tên nhạc cụ, mã sản phẩm, barcode..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full pl-9.5 pr-4 py-2 text-xs rounded-xl border border-border bg-canvas focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-all text-ink placeholder:text-muted"
           />
-          {keyword && (
+          {searchInput && (
             <button
               type="button"
-              onClick={() => setKeyword('')}
+              onClick={() => setSearchInput('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
             >
               <IconClose size={14} />
@@ -425,408 +238,333 @@ function AdminInstrumentsPage() {
           )}
         </div>
 
-        {/* Dropdown Filters & Counter */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-xs sm:text-sm font-medium text-ink focus:outline-hidden focus:border-[#0D9488] cursor-pointer"
-          >
-            <option value="">Tất cả dòng nhạc cụ</option>
-            <option value="DAY">Nhạc cụ dây</option>
-            <option value="HOI">Nhạc cụ hơi</option>
-            <option value="GO">Nhạc cụ gõ</option>
-          </select>
-
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-xs sm:text-sm font-medium text-ink focus:outline-hidden focus:border-[#0D9488] cursor-pointer"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="AVAILABLE">Còn hàng</option>
-            <option value="LOW_STOCK">Sắp hết hàng (≤ 3)</option>
-            <option value="OUT_OF_STOCK">Đã hết hàng (0)</option>
-          </select>
-
-          <span className="text-xs font-semibold text-zinc-500 whitespace-nowrap hidden xl:inline px-2">
-            Hiển thị <span className="text-ink font-bold">{filteredInstruments.length}</span> / {instruments.length} mẫu
-          </span>
+        {/* Status Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setSelectedStatus(tab.id)
+                setPage(0)
+              }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer ${
+                selectedStatus === tab.id
+                  ? 'bg-brand text-white shadow-xs'
+                  : 'bg-canvas border border-border text-muted hover:text-ink hover:bg-surface-secondary'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-white rounded-2xl border border-border shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-[#F8FAFC] text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
-                <th className="py-3.5 px-4 sm:px-6">Nhạc cụ & Mã SKU</th>
-                <th className="py-3.5 px-4">Dòng & Nghệ nhân</th>
-                <th className="py-3.5 px-4 text-right">Giá niêm yết</th>
-                <th className="py-3.5 px-4 text-center">Tồn kho</th>
-                <th className="py-3.5 px-4 text-center">Trạng thái</th>
-                <th className="py-3.5 px-4 sm:px-6 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60 text-sm">
-              {filteredInstruments.length > 0 ? (
-                filteredInstruments.map((item) => {
-                  const stockPercent = Math.min(100, Math.round((item.stock / item.maxStock) * 100))
+      {/* Main Inventory Table */}
+      <div className="bg-surface rounded-2xl border border-border shadow-xs overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
+            <div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin" />
+            <span className="text-xs text-muted">Đang tải dữ liệu tồn kho từ cơ sở dữ liệu...</span>
+          </div>
+        ) : error ? (
+          <div className="p-8 text-center flex flex-col items-center justify-center gap-2 text-rose-600">
+            <IconAlertCircle size={24} />
+            <p className="text-xs font-semibold">{error}</p>
+            <button
+              type="button"
+              onClick={triggerRefresh}
+              className="mt-2 px-3 py-1 rounded-lg border border-rose-300 text-xs text-rose-700 bg-rose-50 hover:bg-rose-100 cursor-pointer"
+            >
+              Thử lại
+            </button>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
+            <IconPackage size={32} className="text-muted/60" />
+            <p className="text-sm font-bold text-ink">Không tìm thấy nhạc cụ phù hợp</p>
+            <p className="text-xs text-muted">Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái tồn kho.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-canvas/60 text-muted font-bold tracking-wider uppercase text-[10px]">
+                  <th className="py-3 px-4">Nhạc cụ</th>
+                  <th className="py-3 px-4">Mã SKU / Barcode</th>
+                  <th className="py-3 px-4">Phân loại</th>
+                  <th className="py-3 px-4 text-right">Giá niêm yết</th>
+                  <th className="py-3 px-4 text-center">Tồn khả dụng</th>
+                  <th className="py-3 px-4 text-center">Trạng thái</th>
+                  <th className="py-3 px-4">Cập nhật</th>
+                  <th className="py-3 px-4 text-right">Hành động</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {items.map((item) => {
+                  const statusBadge =
+                    item.status === 'IN_STOCK' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>{item.statusLabel || 'Còn hàng'}</span>
+                      </span>
+                    ) : item.status === 'LOW_STOCK' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span>{item.statusLabel || 'Sắp hết'}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                        <span>{item.statusLabel || 'Hết hàng'}</span>
+                      </span>
+                    )
 
                   return (
-                    <tr key={item.id} className="hover:bg-[#F8FAFC] transition-colors">
-                      {/* Instrument & Thumbnail */}
-                      <td className="py-3.5 px-4 sm:px-6">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-11 h-11 rounded-xl object-cover border border-border shadow-2xs shrink-0 bg-zinc-100"
-                          />
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-ink hover:text-[#0D9488] transition-colors line-clamp-1">
-                              {item.name}
-                            </span>
-                            <span className="text-xs text-zinc-500 font-mono tracking-tight mt-0.5">
-                              {item.sku}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Category & Artisan */}
+                    <tr key={item.id} className="hover:bg-surface-secondary/40 transition-colors">
                       <td className="py-3.5 px-4">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-semibold text-[#0D9488]">
-                            {item.categoryLabel}
-                          </span>
-                          <span className="text-xs text-zinc-700 mt-0.5 font-medium">
-                            {item.artisan}
-                          </span>
-                          <span className="text-[11px] text-zinc-400">
-                            {item.craftVillage}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Price */}
-                      <td className="py-3.5 px-4 text-right font-bold text-ink whitespace-nowrap">
-                        {formatVND(item.price)}
-                      </td>
-
-                      {/* Stock with visual gauge */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex flex-col items-center gap-1 min-w-[70px]">
-                          <span className="font-bold text-xs text-ink">
-                            {item.stock} / {item.maxStock}
-                          </span>
-                          <div className="w-16 h-1.5 rounded-full bg-zinc-200 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-300 ${
-                                item.stock === 0
-                                  ? 'bg-rose-500'
-                                  : item.stock <= 3
-                                    ? 'bg-amber-500'
-                                    : 'bg-[#1F6B5A]'
-                              }`}
-                              style={{ width: `${stockPercent}%` }}
+                        <div className="flex items-center gap-3">
+                          {item.primaryImage ? (
+                            <img
+                              src={item.primaryImage}
+                              alt={item.productName}
+                              className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
                             />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-surface-secondary border border-border flex items-center justify-center text-muted shrink-0">
+                              <IconPackage size={18} />
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            <span className="font-bold text-ink hover:text-brand transition-colors line-clamp-1">
+                              {item.productName}
+                            </span>
+                            <span className="text-[10px] text-muted font-mono">{item.productCode}</span>
                           </div>
                         </div>
                       </td>
-
-                      {/* Status Badge */}
-                      <td className="py-3.5 px-4 text-center">
-                        {item.status === 'AVAILABLE' && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            Còn hàng
-                          </span>
-                        )}
-                        {item.status === 'LOW_STOCK' && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            Sắp hết
-                          </span>
-                        )}
-                        {item.status === 'OUT_OF_STOCK' && (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                            Hết hàng
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenStockAdjust(item)}
-                            className="p-1.5 rounded-lg text-zinc-500 hover:text-[#0D9488] hover:bg-teal-50 transition-colors cursor-pointer"
-                            title="Cập nhật số lượng kho"
-                          >
-                            <IconPackage size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(item)}
-                            className="p-1.5 rounded-lg text-zinc-500 hover:text-ink hover:bg-zinc-100 transition-colors cursor-pointer"
-                            title="Chỉnh sửa thông tin"
-                          >
-                            <IconEdit size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item)}
-                            className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="Xóa nhạc cụ"
-                          >
-                            <IconTrash size={16} />
-                          </button>
+                      <td className="py-3.5 px-4 font-mono text-ink">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-bold">{item.productCode}</span>
+                          {item.barcode ? (
+                            <span className="inline-block text-[10px] text-muted bg-canvas px-1.5 py-0.5 rounded border border-border/80 w-fit">
+                              {item.barcode}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-muted/60">—</span>
+                          )}
                         </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-muted font-medium">
+                        {item.categoryName || '—'}
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold text-ink font-mono">
+                        {formatCurrencyVND(item.price)}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="text-sm font-bold text-ink font-mono">
+                          {item.quantity}
+                        </span>
+                        <span className="text-[10px] text-muted ml-1">cây</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {statusBadge}
+                      </td>
+                      <td className="py-3.5 px-4 text-muted text-[11px] whitespace-nowrap">
+                        {formatDateVN(item.updatedAt)}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImport(item)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          <IconPlus size={13} />
+                          <span>Nhập kho</span>
+                        </button>
                       </td>
                     </tr>
                   )
-                })
-              ) : (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center text-muted">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <IconAlertCircle size={24} className="text-zinc-400" />
-                      <p className="font-semibold text-sm text-ink">Không tìm thấy nhạc cụ nào khớp với bộ lọc.</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setKeyword('')
-                          setSelectedCategory('')
-                          setSelectedStatus('')
-                        }}
-                        className="text-xs font-bold text-[#0D9488] hover:underline mt-1 cursor-pointer"
-                      >
-                        Đặt lại bộ lọc
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Table Footer / Pagination Info */}
-        <div className="px-6 py-3.5 border-t border-border bg-[#F8FAFC] flex items-center justify-between text-xs text-zinc-500">
-          <span>
-            Hiển thị <span className="font-semibold text-ink">{filteredInstruments.length}</span> trên tổng số <span className="font-semibold text-ink">{instruments.length}</span> nhạc cụ di sản
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled
-              className="px-3 py-1 rounded-lg border border-border bg-white text-zinc-400 text-xs font-medium cursor-not-allowed opacity-60"
-            >
-              Trước
-            </button>
-            <span className="px-2 font-bold text-ink">1</span>
-            <button
-              type="button"
-              disabled
-              className="px-3 py-1 rounded-lg border border-border bg-white text-zinc-400 text-xs font-medium cursor-not-allowed opacity-60"
-            >
-              Sau
-            </button>
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Modal: Add or Edit Instrument */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl border border-border w-full max-w-xl shadow-2xl p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-border">
-              <h3 className="text-lg font-bold text-ink">
-                {editingItem ? 'Chỉnh sửa thông tin nhạc cụ' : 'Thêm nhạc cụ di sản mới'}
-              </h3>
+        {/* Pagination Bar */}
+        {!loading && totalPages > 1 && (
+          <div className="p-4 border-t border-border flex items-center justify-between text-xs text-muted">
+            <span>
+              Trang {page + 1} / {totalPages} (Tổng {totalElements} nhạc cụ)
+            </span>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setModalOpen(false)}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-ink hover:bg-zinc-100 transition-colors cursor-pointer"
+                disabled={page <= 0}
+                onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+                className="px-3 py-1 rounded-lg border border-border bg-canvas hover:bg-surface-secondary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-semibold text-ink transition-colors"
+              >
+                Trước
+              </button>
+              <button
+                type="button"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((prev) => Math.min(totalPages - 1, prev + 1))}
+                className="px-3 py-1 rounded-lg border border-border bg-canvas hover:bg-surface-secondary disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-semibold text-ink transition-colors"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stock Import Modal */}
+      {importModalOpen && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-secondary/30">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200">
+                  <IconPlus size={18} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-ink">Nhập kho nhạc cụ</h3>
+                  <span className="text-[10px] text-muted">Bổ sung số lượng bán tại showroom</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !submittingImport && setImportModalOpen(false)}
+                className="text-muted hover:text-ink transition-colors cursor-pointer"
               >
                 <IconClose size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveInstrument} className="flex flex-col gap-4 text-sm">
+            {/* Modal Form */}
+            <form onSubmit={handleSubmitImport} className="p-6 flex flex-col gap-5 text-xs">
+              {/* Product Preview Card */}
+              <div className="p-3.5 rounded-xl bg-canvas border border-border flex items-center gap-3">
+                {selectedProduct.primaryImage ? (
+                  <img
+                    src={selectedProduct.primaryImage}
+                    alt={selectedProduct.productName}
+                    className="w-12 h-12 rounded-lg object-cover border border-border shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-lg bg-surface-secondary border border-border flex items-center justify-center text-muted shrink-0">
+                    <IconPackage size={20} />
+                  </div>
+                )}
+                <div className="flex flex-col min-w-0">
+                  <span className="font-bold text-ink text-sm truncate">{selectedProduct.productName}</span>
+                  <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted font-mono">
+                    <span>Mã: {selectedProduct.productCode}</span>
+                    {selectedProduct.barcode && <span>· Barcode: {selectedProduct.barcode}</span>}
+                  </div>
+                  <span className="text-brand font-bold mt-1 font-mono">{formatCurrencyVND(selectedProduct.price)}</span>
+                </div>
+              </div>
+
+              {/* Current vs Projected Stock */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-surface-secondary/40 border border-border/80 flex flex-col">
+                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Tồn kho hiện tại</span>
+                  <span className="text-lg font-bold text-ink mt-0.5 font-mono">
+                    {selectedProduct.quantity} <span className="text-xs font-normal text-muted">cây</span>
+                  </span>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/80 flex flex-col">
+                  <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider">Dự kiến sau nhập</span>
+                  <span className="text-lg font-bold text-emerald-700 mt-0.5 font-mono">
+                    {selectedProduct.quantity + (parseInt(importQuantity, 10) || 0)}{' '}
+                    <span className="text-xs font-normal text-emerald-700/80">cây</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Import Quantity Input */}
               <div className="flex flex-col gap-1.5">
-                <label className="font-semibold text-ink text-xs uppercase tracking-wider">
-                  Tên nhạc cụ <span className="text-rose-500">*</span>
+                <label htmlFor="import-qty" className="font-bold text-ink text-xs">
+                  Số lượng nhập thêm <span className="text-rose-500">*</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setImportQuantity((prev) => Math.max(1, (parseInt(prev, 10) || 1) - 1))}
+                    className="w-9 h-9 rounded-lg border border-border bg-canvas hover:bg-surface-secondary text-ink font-bold flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    -
+                  </button>
+                  <input
+                    id="import-qty"
+                    type="number"
+                    min="1"
+                    step="1"
+                    required
+                    value={importQuantity}
+                    onChange={(e) => setImportQuantity(e.target.value)}
+                    className="flex-1 text-center py-2 text-sm font-bold text-ink rounded-lg border border-border bg-canvas focus:outline-none focus:ring-1 focus:ring-brand font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setImportQuantity((prev) => (parseInt(prev, 10) || 0) + 1)}
+                    className="w-9 h-9 rounded-lg border border-border bg-canvas hover:bg-surface-secondary text-ink font-bold flex items-center justify-center cursor-pointer transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+                <span className="text-[10px] text-muted">
+                  Backend sẽ cộng dồn số lượng này vào tồn kho hiện tại một cách an toàn và giao dịch.
+                </span>
+              </div>
+
+              {/* Import Notes */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="import-notes" className="font-bold text-ink text-xs">
+                  Ghi chú nhập kho (tùy chọn)
                 </label>
                 <input
+                  id="import-notes"
                   type="text"
-                  required
-                  placeholder="Ví dụ: Đàn Nguyệt Gỗ Trắc Cần Dài"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]"
+                  placeholder="Ví dụ: Nhập bổ sung đợt lễ hội Đào Xá..."
+                  value={importNotes}
+                  onChange={(e) => setImportNotes(e.target.value)}
+                  className="px-3 py-2 rounded-lg border border-border bg-canvas focus:outline-none focus:ring-1 focus:ring-brand text-ink placeholder:text-muted text-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-ink text-xs uppercase tracking-wider">
-                    Mã SKU <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="TRN-CL-19"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink font-mono focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-ink text-xs uppercase tracking-wider">
-                    Dòng nhạc cụ
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] cursor-pointer"
-                  >
-                    <option value="DAY">Nhạc cụ dây</option>
-                    <option value="HOI">Nhạc cụ hơi</option>
-                    <option value="GO">Nhạc cụ gõ</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-ink text-xs uppercase tracking-wider">
-                    Giá niêm yết (VND) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    step={50000}
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-ink text-xs uppercase tracking-wider">
-                    Số lượng tồn hiện tại
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-ink text-xs uppercase tracking-wider">
-                    Nghệ nhân chế tác
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.artisan}
-                    onChange={(e) => setFormData({ ...formData, artisan: e.target.value })}
-                    className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <label className="font-semibold text-ink text-xs uppercase tracking-wider">
-                    Làng nghề truyền thống
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.craftVillage}
-                    onChange={(e) => setFormData({ ...formData, craftVillage: e.target.value })}
-                    className="px-3.5 py-2.5 rounded-xl bg-[#F5F7FA] border border-border text-ink focus:outline-hidden focus:border-[#0D9488] focus:ring-1 focus:ring-[#0D9488]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-border">
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-border flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-border text-ink hover:bg-zinc-100 text-xs font-semibold cursor-pointer"
+                  disabled={submittingImport}
+                  onClick={() => setImportModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-border bg-canvas hover:bg-surface-secondary text-xs font-semibold text-ink transition-colors cursor-pointer"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  disabled={submittingImport || !importQuantity || parseInt(importQuantity, 10) <= 0}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <IconCheck size={16} />
-                  <span>{editingItem ? 'Lưu thay đổi' : 'Thêm nhạc cụ'}</span>
+                  {submittingImport ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Đang cập nhật...</span>
+                    </>
+                  ) : (
+                    <>
+                      <IconCheck size={14} />
+                      <span>Xác nhận nhập kho</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Quick Stock Adjustment */}
-      {stockModalOpen && stockItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-2xl border border-border w-full max-w-sm shadow-2xl p-6">
-            <h3 className="text-base font-bold text-ink mb-1">Cập nhật số lượng kho</h3>
-            <p className="text-xs text-muted mb-4 line-clamp-1">{stockItem.name}</p>
-
-            <div className="flex items-center justify-center gap-4 my-6">
-              <button
-                type="button"
-                onClick={() => setStockAdjustment((prev) => Math.max(0, Number(prev) - 1))}
-                className="w-10 h-10 rounded-xl bg-zinc-100 border border-border flex items-center justify-center text-lg font-bold text-ink hover:text-[#0D9488] hover:bg-teal-50 transition-colors cursor-pointer"
-              >
-                -
-              </button>
-              <input
-                type="number"
-                min={0}
-                value={stockAdjustment}
-                onChange={(e) => setStockAdjustment(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                className="w-20 py-2 text-center text-xl font-bold bg-[#F5F7FA] border border-border rounded-xl text-ink focus:outline-hidden focus:border-[#0D9488]"
-              />
-              <button
-                type="button"
-                onClick={() => setStockAdjustment((prev) => Number(prev) + 1)}
-                className="w-10 h-10 rounded-xl bg-zinc-100 border border-border flex items-center justify-center text-lg font-bold text-ink hover:text-[#0D9488] hover:bg-teal-50 transition-colors cursor-pointer"
-              >
-                +
-              </button>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setStockModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold text-zinc-600 hover:text-ink cursor-pointer"
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveStock}
-                className="px-4 py-2 rounded-xl bg-[#0D9488] text-white text-xs font-bold hover:bg-[#0F766E] transition-colors cursor-pointer shadow-xs"
-              >
-                Cập nhật
-              </button>
-            </div>
           </div>
         </div>
       )}

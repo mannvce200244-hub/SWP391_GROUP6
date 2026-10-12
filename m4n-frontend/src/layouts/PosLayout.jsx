@@ -122,7 +122,7 @@ function PosLayout({ children }) {
         </div>
       </header>
 
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">{children}</main>
+      <main className="flex-1 p-3 sm:p-4 lg:p-6 max-w-[1600px] w-full mx-auto">{children}</main>
     </div>
   )
 }

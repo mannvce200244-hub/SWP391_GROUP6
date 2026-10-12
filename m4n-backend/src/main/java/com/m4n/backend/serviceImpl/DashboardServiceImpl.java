@@ -8,6 +8,8 @@ import com.m4n.backend.dto.response.TopProductResponse;
 import com.m4n.backend.entity.Order;
 import com.m4n.backend.entity.OrderStatus;
 import com.m4n.backend.repository.InventoryRepository;
+import com.m4n.backend.repository.InvoiceItemRepository;
+import com.m4n.backend.repository.InvoiceRepository;
 import com.m4n.backend.repository.OrderItemRepository;
 import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.service.DashboardService;
@@ -26,7 +28,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +42,8 @@ public class DashboardServiceImpl implements DashboardService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
     private final InventoryRepository inventoryRepository;
+    private final InvoiceRepository invoiceRepository;
+    private final InvoiceItemRepository invoiceItemRepository;
 
     @Override
     public DashboardSummaryResponse getDashboardSummary(String period) {
@@ -45,14 +51,19 @@ public class DashboardServiceImpl implements DashboardService {
                 ? "month"
                 : period.trim().toLowerCase();
 
-        // 1. KPI Cards (authoritative database aggregation per BR-REVENUE-01)
-        BigDecimal totalRevenue = orderRepository.sumFinalAmountByStatus(OrderStatus.COMPLETED);
-        long totalOrders = orderRepository.count();
-        long completedOrders = orderRepository.countByStatus(OrderStatus.COMPLETED);
+        // 1. KPI Cards (authoritative database aggregation per BR-REVENUE-01: Online Completed + Finalized POS Invoices)
+        BigDecimal onlineRevenue = orderRepository.sumFinalAmountByStatus(OrderStatus.COMPLETED);
+        BigDecimal posRevenue = invoiceRepository.sumFinalAmount();
+        BigDecimal totalRevenue = (onlineRevenue != null ? onlineRevenue : BigDecimal.ZERO)
+                .add(posRevenue != null ? posRevenue : BigDecimal.ZERO);
+
+        long posCount = invoiceRepository.count();
+        long totalOrders = orderRepository.count() + posCount;
+        long completedOrders = orderRepository.countByStatus(OrderStatus.COMPLETED) + posCount;
         long cancelledOrders = orderRepository.countByStatus(OrderStatus.CANCELLED);
 
         DashboardSummaryResponse.KpiSummary kpi = DashboardSummaryResponse.KpiSummary.builder()
-                .totalRevenue(totalRevenue != null ? totalRevenue : BigDecimal.ZERO)
+                .totalRevenue(totalRevenue)
                 .totalOrders(totalOrders)
                 .completedOrders(completedOrders)
                 .cancelledOrders(cancelledOrders)
@@ -71,14 +82,11 @@ public class DashboardServiceImpl implements DashboardService {
                 .outOfStockCount(outOfStockCount)
                 .build();
 
-        // 3. Revenue Trend by period
+        // 3. Revenue Trend by period (combines completed online orders + finalized POS invoices)
         List<RevenuePointResponse> revenueTrend = calculateRevenueTrend(normalizedPeriod);
 
-        // 4. Best-selling Products (top 5)
-        List<TopProductResponse> topProducts = orderItemRepository.findTopSellingProducts(
-                OrderStatus.COMPLETED,
-                PageRequest.of(0, 5)
-        );
+        // 4. Best-selling Products (top 5 unified across online and showroom)
+        List<TopProductResponse> topProducts = getUnifiedTopProducts();
 
         // 5. Recent Orders (top 5)
         List<Order> recentOrderEntities = orderRepository.findTop5ByOrderByCreatedAtDesc();
@@ -108,11 +116,16 @@ public class DashboardServiceImpl implements DashboardService {
                     Instant start = date.atStartOfDay(VN_ZONE).toInstant();
                     Instant end = date.atTime(LocalTime.MAX).atZone(VN_ZONE).toInstant();
 
-                    BigDecimal rev = orderRepository.sumFinalAmountByStatusAndCreatedAtBetween(OrderStatus.COMPLETED, start, end);
-                    long count = orderRepository.countByCreatedAtBetween(start, end);
+                    BigDecimal onlineRev = orderRepository.sumFinalAmountByStatusAndCreatedAtBetween(OrderStatus.COMPLETED, start, end);
+                    BigDecimal posRev = invoiceRepository.sumFinalAmountByCreatedAtBetween(start, end);
+                    BigDecimal rev = (onlineRev != null ? onlineRev : BigDecimal.ZERO)
+                            .add(posRev != null ? posRev : BigDecimal.ZERO);
+
+                    long count = orderRepository.countByCreatedAtBetween(start, end)
+                            + invoiceRepository.countByCreatedAtBetween(start, end);
 
                     String label = date.format(DateTimeFormatter.ofPattern("dd/MM"));
-                    points.add(new RevenuePointResponse(label, rev != null ? rev : BigDecimal.ZERO, count));
+                    points.add(new RevenuePointResponse(label, rev, count));
                 }
             }
             case "week" -> {
@@ -124,11 +137,16 @@ public class DashboardServiceImpl implements DashboardService {
                     Instant start = weekStart.atStartOfDay(VN_ZONE).toInstant();
                     Instant end = weekEnd.atTime(LocalTime.MAX).atZone(VN_ZONE).toInstant();
 
-                    BigDecimal rev = orderRepository.sumFinalAmountByStatusAndCreatedAtBetween(OrderStatus.COMPLETED, start, end);
-                    long count = orderRepository.countByCreatedAtBetween(start, end);
+                    BigDecimal onlineRev = orderRepository.sumFinalAmountByStatusAndCreatedAtBetween(OrderStatus.COMPLETED, start, end);
+                    BigDecimal posRev = invoiceRepository.sumFinalAmountByCreatedAtBetween(start, end);
+                    BigDecimal rev = (onlineRev != null ? onlineRev : BigDecimal.ZERO)
+                            .add(posRev != null ? posRev : BigDecimal.ZERO);
+
+                    long count = orderRepository.countByCreatedAtBetween(start, end)
+                            + invoiceRepository.countByCreatedAtBetween(start, end);
 
                     String label = "Tuần " + (4 - i);
-                    points.add(new RevenuePointResponse(label, rev != null ? rev : BigDecimal.ZERO, count));
+                    points.add(new RevenuePointResponse(label, rev, count));
                 }
             }
             case "quarter" -> {
@@ -143,11 +161,16 @@ public class DashboardServiceImpl implements DashboardService {
                     Instant start = qStart.atStartOfDay(VN_ZONE).toInstant();
                     Instant end = qEnd.atTime(LocalTime.MAX).atZone(VN_ZONE).toInstant();
 
-                    BigDecimal rev = orderRepository.sumFinalAmountByStatusAndCreatedAtBetween(OrderStatus.COMPLETED, start, end);
-                    long count = orderRepository.countByCreatedAtBetween(start, end);
+                    BigDecimal onlineRev = orderRepository.sumFinalAmountByStatusAndCreatedAtBetween(OrderStatus.COMPLETED, start, end);
+                    BigDecimal posRev = invoiceRepository.sumFinalAmountByCreatedAtBetween(start, end);
+                    BigDecimal rev = (onlineRev != null ? onlineRev : BigDecimal.ZERO)
+                            .add(posRev != null ? posRev : BigDecimal.ZERO);
+
+                    long count = orderRepository.countByCreatedAtBetween(start, end)
+                            + invoiceRepository.countByCreatedAtBetween(start, end);
 
                     String label = "Quý " + q;
-                    points.add(new RevenuePointResponse(label, rev != null ? rev : BigDecimal.ZERO, count));
+                    points.add(new RevenuePointResponse(label, rev, count));
                 }
             }
             default -> {
@@ -157,16 +180,60 @@ public class DashboardServiceImpl implements DashboardService {
                     Instant start = ym.atDay(1).atStartOfDay(VN_ZONE).toInstant();
                     Instant end = ym.atEndOfMonth().atTime(LocalTime.MAX).atZone(VN_ZONE).toInstant();
 
-                    BigDecimal rev = orderRepository.sumFinalAmountByStatusAndCreatedAtBetween(OrderStatus.COMPLETED, start, end);
-                    long count = orderRepository.countByCreatedAtBetween(start, end);
+                    BigDecimal onlineRev = orderRepository.sumFinalAmountByStatusAndCreatedAtBetween(OrderStatus.COMPLETED, start, end);
+                    BigDecimal posRev = invoiceRepository.sumFinalAmountByCreatedAtBetween(start, end);
+                    BigDecimal rev = (onlineRev != null ? onlineRev : BigDecimal.ZERO)
+                            .add(posRev != null ? posRev : BigDecimal.ZERO);
+
+                    long count = orderRepository.countByCreatedAtBetween(start, end)
+                            + invoiceRepository.countByCreatedAtBetween(start, end);
 
                     String label = "Tháng " + ym.getMonthValue();
-                    points.add(new RevenuePointResponse(label, rev != null ? rev : BigDecimal.ZERO, count));
+                    points.add(new RevenuePointResponse(label, rev, count));
                 }
             }
         }
 
         return points;
+    }
+
+    private List<TopProductResponse> getUnifiedTopProducts() {
+        List<TopProductResponse> onlineTop = orderItemRepository.findTopSellingProducts(OrderStatus.COMPLETED, PageRequest.of(0, 10));
+        List<TopProductResponse> posTop = invoiceItemRepository.findTopSellingProducts(PageRequest.of(0, 10));
+
+        Map<Long, TopProductResponse> map = new LinkedHashMap<>();
+        for (TopProductResponse item : onlineTop) {
+            map.put(item.getProductId(), TopProductResponse.builder()
+                    .productId(item.getProductId())
+                    .productCode(item.getProductCode())
+                    .productName(item.getProductName())
+                    .categoryName(item.getCategoryName())
+                    .quantitySold(item.getQuantitySold())
+                    .revenue(item.getRevenue() != null ? item.getRevenue() : BigDecimal.ZERO)
+                    .build());
+        }
+
+        for (TopProductResponse item : posTop) {
+            if (map.containsKey(item.getProductId())) {
+                TopProductResponse existing = map.get(item.getProductId());
+                existing.setQuantitySold(existing.getQuantitySold() + item.getQuantitySold());
+                existing.setRevenue(existing.getRevenue().add(item.getRevenue() != null ? item.getRevenue() : BigDecimal.ZERO));
+            } else {
+                map.put(item.getProductId(), TopProductResponse.builder()
+                        .productId(item.getProductId())
+                        .productCode(item.getProductCode())
+                        .productName(item.getProductName())
+                        .categoryName(item.getCategoryName())
+                        .quantitySold(item.getQuantitySold())
+                        .revenue(item.getRevenue() != null ? item.getRevenue() : BigDecimal.ZERO)
+                        .build());
+            }
+        }
+
+        return map.values().stream()
+                .sorted((a, b) -> Long.compare(b.getQuantitySold(), a.getQuantitySold()))
+                .limit(5)
+                .toList();
     }
 
     private RecentOrderResponse mapToRecentOrderResponse(Order order) {
