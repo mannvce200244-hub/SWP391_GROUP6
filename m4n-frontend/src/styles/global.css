@@ -8,25 +8,38 @@
   --font-serif: "Lora", Georgia, "Times New Roman", serif;
 
   /* ==================================================
-     APPROVED M4N PALETTE — White + Charcoal + Lacquer Red + Deep Jade Accent
+     M4N PALETTE — Contemporary Vietnamese Craft Commerce
+     Approved: DESIGN_SYSTEM.md cool-neutral foundation
      ================================================== */
 
-  /* PRIMARY: Brand Lacquer Red (#A62F25) */
-  --color-brand: #A62F25;
-  --color-brand-hover: #84231D;
-  --color-brand-active: #721D18;
-  --color-brand-deep: #721D18;
-  --color-brand-soft: #FBEDEC;
-  --color-brand-border: #F7D7D4;
+  /* PRIMARY: Deep Emerald Teal (fresh, elegant, soothing, artisan nature) */
+  --color-brand: #0D9488;
+  --color-brand-hover: #0F766E;
+  --color-brand-active: #115E59;
+  --color-brand-deep: #115E59;
+  --color-brand-soft: #F0FDFA;
+  --color-brand-border: #CCFBF1;
 
-  /* SECONDARY: Deep Jade Micro-Accent (#2F5A50) */
+  /* SECONDARY: Deep Jade (approved #2F5A50) */
   --color-jade: #2F5A50;
   --color-jade-hover: #24483F;
   --color-jade-active: #1D3B34;
   --color-jade-soft: #EDF4F1;
   --color-jade-border: #D5E5E0;
 
-  /* BACKGROUND & SURFACES — Clean Neutral Foundation (No Beige / Yellow Undertones) */
+  /* ACCENT: Warm Gold Highlight */
+  --color-gold: #C28B2C;
+  --color-gold-hover: #A57323;
+  --color-gold-soft: #FDF8ED;
+  --color-gold-border: #F5E8C7;
+
+  /* ACCENT: Muted Coral Warm Touch */
+  --color-coral: #D96B5F;
+  --color-coral-hover: #C5594E;
+  --color-coral-soft: #FDF2F1;
+  --color-coral-border: #F7D9D5;
+
+  /* BACKGROUND & SURFACES — Approved cool-neutral foundation */
   --color-background: #FFFFFF;
   --color-canvas: #FFFFFF;
   --color-surface: #FFFFFF;
@@ -35,34 +48,34 @@
   --color-surface-subtle: #F2F4F5;
   --color-surface-secondary: #F6F7F8;
 
-  /* INK & TYPOGRAPHY — Modern Cool Charcoal & Slate */
+  /* INK & TYPOGRAPHY — Approved charcoal */
   --color-foreground: #17191B;
-  --color-foreground-secondary: #5F646A;
+  --color-foreground-secondary: #2C3033;
   --color-ink: #17191B;
   --color-ink-secondary: #2C3033;
   --color-muted: #5F646A;
   --color-subtle: #7D8389;
   --color-faint: #CDD2D5;
 
-  /* BORDERS — Cool Neutral (Zero Yellow / Khaki Undertones) */
+  /* BORDERS — Approved cool neutral */
   --color-border: #E3E6E8;
   --color-border-subtle: #F2F4F5;
   --color-border-strong: #CDD2D5;
   --color-control-border: #CDD2D5;
 
   /* SEMANTIC SHORTCUTS */
-  --color-primary: #A62F25;
-  --color-primary-hover: #84231D;
-  --color-primary-soft: #FBEDEC;
-  --color-primary-border: #F7D7D4;
+  --color-primary: #0D9488;
+  --color-primary-hover: #0F766E;
+  --color-primary-soft: #F0FDFA;
+  --color-primary-border: #CCFBF1;
 
-  --color-danger: #A62F25;
-  --color-danger-soft: #FBEDEC;
-  --color-danger-border: #F7D7D4;
+  --color-danger: #EF4444;
+  --color-danger-soft: #FEF2F2;
+  --color-danger-border: #FECACA;
 
-  --color-success: #2F5A50;
-  --color-success-soft: #EDF4F1;
-  --color-success-border: #D5E5E0;
+  --color-success: #0D9488;
+  --color-success-soft: #F0FDFA;
+  --color-success-border: #CCFBF1;
 
   --color-warning: #856404;
   --color-warning-soft: #FFF9E6;
@@ -92,17 +105,21 @@
   --surface-muted: #F6F7F8;
   --surface-subtle: #F2F4F5;
   --foreground: #17191B;
-  --foreground-secondary: #5F646A;
-  --muted: #7D8389;
+  --foreground-secondary: #2C3033;
+  --muted: #5F646A;
   --border: #E3E6E8;
   --border-strong: #CDD2D5;
-  --brand: #A62F25;
-  --brand-hover: #84231D;
-  --brand-active: #721D18;
-  --brand-soft: #FBEDEC;
+  --brand: #0D9488;
+  --brand-hover: #0F766E;
+  --brand-active: #115E59;
+  --brand-soft: #F0FDFA;
   --jade: #2F5A50;
   --jade-hover: #24483F;
   --jade-soft: #EDF4F1;
+  --gold: #C28B2C;
+  --gold-soft: #FDF8ED;
+  --coral: #D96B5F;
+  --coral-soft: #FDF2F1;
 }
 
 /* Base Document Styles */
@@ -146,7 +163,7 @@ summary:focus-visible,
 }
 
 /* ==================================================
-   RESONANCE MOTIF — Contemporary Vietnamese Identity
+   RESONANCE MOTIF & ACOUSTIC WAVEFORMS
    Acoustic string vibrations in authentic lacquer red
    ================================================== */
 .resonance-motif {
@@ -171,6 +188,17 @@ summary:focus-visible,
 .resonance-motif span:nth-child(3) { height: 9px; }
 .resonance-motif span:nth-child(4) { height: 5px; }
 
+/* Clean subtle hover elevation for products and cards */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-strong);
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -182,3 +210,4 @@ summary:focus-visible,
     transition-duration: 0.01ms !important;
   }
 }
+

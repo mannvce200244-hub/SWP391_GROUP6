@@ -136,7 +136,7 @@ function ProductDetailInfo({ product }) {
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-jade-soft/60 text-jade border border-jade-border/70">
-                <span className="w-2 h-2 rounded-full bg-jade animate-pulse" /> Còn hàng {product.stockQuantity != null ? `(${product.stockQuantity} sản phẩm)` : ''}
+                <span className="w-2 h-2 rounded-full bg-jade animate-pulse" /> Còn hàng
               </span>
             )}
           </div>
@@ -178,9 +178,9 @@ function ProductDetailInfo({ product }) {
               <label className="text-xs font-semibold uppercase tracking-wider text-muted block">
                 Số lượng
               </label>
-              {product.stockQuantity != null && !isOutOfStock && (
-                <span className="text-xs text-muted">
-                  Kho hàng: <strong className="font-semibold text-ink">{product.stockQuantity}</strong> sản phẩm có sẵn
+              {!isOutOfStock && (
+                <span className="text-xs text-jade font-medium">
+                  Sẵn sàng giao hàng
                 </span>
               )}
             </div>

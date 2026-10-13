@@ -107,13 +107,26 @@ class ProductControllerTest {
     }
 
     @Test
+    void shouldReturn400WhenProductIdIsNonNumeric() throws Exception {
+        mockMvc.perform(get("/api/v1/products/abc")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Tham số 'id' không hợp lệ: abc"));
+    }
+
+    @Test
     void shouldListProductsPublicly() throws Exception {
-        when(productService.listProducts(any(), any(), any(), any(), any(), any()))
-                .thenReturn(Collections.emptyList());
+        org.springframework.data.domain.Page<com.m4n.backend.dto.response.ProductSummaryResponse> emptyPage =
+                new org.springframework.data.domain.PageImpl<>(Collections.emptyList());
+
+        when(productService.listProducts(any(), any(), any(), any(), any(), any(), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(emptyPage);
 
         mockMvc.perform(get("/api/v1/products")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").value(0));
     }
 }

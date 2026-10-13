@@ -3,6 +3,7 @@ import RouterLink from '../../routes/RouterLink.jsx'
 import BrandLogo from './BrandLogo.jsx'
 import useAuth from '../../features/auth/useAuth.js'
 import useCart from '../../features/cart/useCart.js'
+import CartDrawer from '../../features/cart/CartDrawer.jsx'
 import {
   CUSTOMER_ROUTES,
   isProductPath,
@@ -29,6 +30,7 @@ function SiteHeader({ pathname }) {
   const { cartItemCount } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const accountMenuRef = useRef(null)
 
@@ -174,11 +176,11 @@ function SiteHeader({ pathname }) {
             <span className="hidden lg:inline text-xs font-medium">Tìm kiếm</span>
           </RouterLink>
 
-          <RouterLink
+          <button
+            type="button"
             aria-label={`Giỏ hàng (${cartItemCount} sản phẩm)`}
             className="inline-flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary text-sm font-medium transition-colors cursor-pointer relative"
-            href={CUSTOMER_ROUTES.products}
-            onClick={closeMobileMenu}
+            onClick={() => setCartDrawerOpen(true)}
             title="Giỏ hàng"
           >
             <span className="relative flex items-center">
@@ -205,7 +207,7 @@ function SiteHeader({ pathname }) {
               )}
             </span>
             <span className="hidden lg:inline text-xs font-medium ml-1">Giỏ hàng</span>
-          </RouterLink>
+          </button>
 
           {/* Account action / Dropdown */}
           <div className="relative" ref={accountMenuRef}>
@@ -283,6 +285,18 @@ function SiteHeader({ pathname }) {
                     >
                       <IconUser size={16} />
                       <span>Hồ sơ cá nhân</span>
+                    </RouterLink>
+                  </li>
+
+                  <li>
+                    <RouterLink
+                      href={CUSTOMER_ROUTES.orders}
+                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-ink hover:bg-surface-secondary hover:text-brand transition-colors cursor-pointer"
+                      onClick={closeAccountMenu}
+                      role="menuitem"
+                    >
+                      <IconPackage size={16} />
+                      <span>Đơn hàng của tôi</span>
                     </RouterLink>
                   </li>
 
@@ -449,6 +463,31 @@ function SiteHeader({ pathname }) {
                 </RouterLink>
               </li>
 
+              <li>
+                <button
+                  type="button"
+                  className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-lg text-sm text-ink hover:text-brand hover:bg-surface-secondary font-medium transition-colors text-left cursor-pointer"
+                  onClick={() => {
+                    closeMobileMenu()
+                    setCartDrawerOpen(true)
+                  }}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <svg className="w-5 h-5 shrink-0 text-ink/70" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                      <path d="M3 6h18" />
+                      <path d="M16 10a4 4 0 0 1-8 0" />
+                    </svg>
+                    Giỏ hàng
+                  </span>
+                  {cartItemCount > 0 && (
+                    <span className="px-2 py-0.5 text-[11px] font-bold text-white bg-brand rounded-full">
+                      {cartItemCount}
+                    </span>
+                  )}
+                </button>
+              </li>
+
               {/* Mobile Auth Actions */}
               {isAuthenticated && user ? (
                 <>
@@ -464,6 +503,15 @@ function SiteHeader({ pathname }) {
                       onClick={closeMobileMenu}
                     >
                       Hồ sơ cá nhân
+                    </RouterLink>
+                  </li>
+                  <li>
+                    <RouterLink
+                      className="flex items-center gap-2 px-3.5 py-2 text-sm text-ink hover:text-brand hover:bg-surface-secondary rounded-lg font-medium"
+                      href={CUSTOMER_ROUTES.orders}
+                      onClick={closeMobileMenu}
+                    >
+                      Đơn hàng của tôi
                     </RouterLink>
                   </li>
                   <li>
@@ -545,6 +593,12 @@ function SiteHeader({ pathname }) {
           </nav>
         </div>
       ) : null}
+
+      {/* Slide-over Cart Drawer */}
+      <CartDrawer
+        isOpen={cartDrawerOpen}
+        onClose={() => setCartDrawerOpen(false)}
+      />
     </header>
   )
 }

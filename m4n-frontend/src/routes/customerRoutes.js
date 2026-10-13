@@ -15,10 +15,17 @@ export const CUSTOMER_ROUTES = Object.freeze({
   resetPassword: '/reset-password',
   profile: '/profile',
   security: '/account/security',
+  orders: '/account/orders',
+  cart: '/cart',
+  checkout: '/checkout',
   forbidden: '/403',
   staff: '/staff',
   pos: '/pos',
   admin: '/admin',
+  adminInstruments: '/admin/instruments',
+  adminStore: '/admin/store',
+  adminProfile: '/admin/profile',
+  adminSecurity: '/admin/security',
 })
 
 const ARTISAN_SECTION_ID = 'artisans'

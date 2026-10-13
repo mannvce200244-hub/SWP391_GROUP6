@@ -104,6 +104,22 @@ export function CartProvider({ children }) {
     }
   }, [])
 
+  const clearCart = useCallback(async () => {
+    try {
+      setLoading(true)
+      await cartService.clearCart()
+      setCart({ items: [], totalItems: 0, totalAmount: 0, totalAmountDisplay: '0 ₫' })
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || 'Không thể làm trống giỏ hàng',
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   const effectiveCart = isAuthenticated ? cart : null
   const cartItemCount = effectiveCart?.totalItems || 0
 
@@ -114,6 +130,7 @@ export function CartProvider({ children }) {
     addToCart,
     updateCartItem,
     removeCartItem,
+    clearCart,
     refreshCart,
   }
 

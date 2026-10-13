@@ -15,9 +15,14 @@ const EDITABLE_FILTERS = new Set([
 
 const PRICE_PRESETS = Object.freeze([
   { label: 'Dưới 2 triệu', min: '', max: '2000000' },
-  { label: '2 – 5 triệu', min: '2000000', max: '5000000' },
-  { label: '5 – 10 triệu', min: '5000000', max: '10000000' },
+  { label: '2 - 5 triệu', min: '2000000', max: '5000000' },
+  { label: '5 - 10 triệu', min: '5000000', max: '10000000' },
   { label: 'Trên 10 triệu', min: '10000000', max: '' },
+])
+
+const POPULAR_VILLAGES = Object.freeze([
+  'Làng Đào Xá',
+  'Làng Trúc Sơn',
 ])
 
 function ProductFilters({
@@ -36,6 +41,21 @@ function ProductFilters({
     onChange({ ...value, [name]: nextValue })
     if (errors[name]) {
       setErrors((current) => ({ ...current, [name]: undefined }))
+    }
+  }
+
+  const handleGroupChange = (nextGroup) => {
+    const nextFilters = {
+      ...value,
+      group: nextGroup,
+    }
+    onChange(nextFilters)
+    if (errors.group) {
+      setErrors((current) => ({ ...current, group: undefined }))
+    }
+    const validation = validateProductFilters(nextFilters)
+    if (Object.keys(validation.errors).length === 0) {
+      onApply(validation.normalizedFilters)
     }
   }
 
@@ -73,15 +93,15 @@ function ProductFilters({
 
   return (
     <form
-      className={`flex flex-col gap-6 text-sm text-ink ${className}`}
+      className={`flex flex-col gap-5 text-sm text-ink ${className}`}
       noValidate
       onSubmit={handleSubmit}
     >
       {/* Sidebar Header (desktop only, drawer has its own header) */}
       {!isDrawer && (
-        <div className="flex items-center justify-between pb-3 border-b border-border/80">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-ink flex items-center gap-2">
-            <span>Bộ lọc</span>
+        <div className="flex items-center justify-between pb-3 border-b border-border">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-2">
+            <span>Bộ lọc sản phẩm</span>
           </h2>
           {hasActiveFilters && (
             <button
@@ -96,54 +116,42 @@ function ProductFilters({
         </div>
       )}
 
-      {/* 1. Nhóm nhạc cụ (Danh mục) */}
-      <fieldset className="flex flex-col gap-2.5">
-        <legend className="text-xs font-bold uppercase tracking-wider text-muted mb-1">
-          Danh mục nhạc cụ
-        </legend>
-        <div className="space-y-1">
-          <label className="flex items-center gap-2.5 py-1 px-1.5 rounded-md hover:bg-surface-secondary/70 transition-colors cursor-pointer select-none">
-            <input
-              checked={!value.group}
-              className="w-4 h-4 text-brand border-control-border focus:ring-brand focus:ring-1 cursor-pointer accent-brand"
-              name="group"
-              onChange={() => handleChange('group', '')}
-              type="radio"
-              value=""
-            />
-            <span className={`text-sm ${!value.group ? 'font-semibold text-brand' : 'text-ink'}`}>
-              Tất cả nhóm
-            </span>
-          </label>
-
-          {PRODUCT_GROUPS.map((group) => {
-            const isSelected = value.group === group.value
-            return (
-              <label
-                key={group.value}
-                className="flex items-center gap-2.5 py-1 px-1.5 rounded-md hover:bg-surface-secondary/70 transition-colors cursor-pointer select-none"
-              >
-                <input
-                  checked={isSelected}
-                  className="w-4 h-4 text-brand border-control-border focus:ring-brand focus:ring-1 cursor-pointer accent-brand"
-                  name="group"
-                  onChange={() => handleChange('group', group.value)}
-                  type="radio"
-                  value={group.value}
-                />
-                <span className={`text-sm ${isSelected ? 'font-semibold text-brand' : 'text-ink'}`}>
-                  Nhạc cụ {group.label.toLowerCase()}
-                </span>
-              </label>
-            )
-          })}
+      {/* 1. Dòng nhạc cụ (Dropdown select) */}
+      <div className="flex flex-col gap-1.5">
+        <label
+          htmlFor="catalog-group-select"
+          className="text-xs font-bold uppercase tracking-wider text-muted"
+        >
+          Dòng nhạc cụ
+        </label>
+        <div className="relative">
+          <select
+            id="catalog-group-select"
+            name="group"
+            value={value.group || ''}
+            onChange={(e) => handleGroupChange(e.target.value)}
+            disabled={busy}
+            className="w-full appearance-none bg-white border border-border hover:border-border-strong rounded-lg px-3 py-2 text-xs font-medium text-ink focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand cursor-pointer transition-all pr-8 shadow-2xs disabled:bg-surface-secondary disabled:cursor-not-allowed"
+          >
+            <option value="">Tất cả dòng nhạc cụ</option>
+            {PRODUCT_GROUPS.map((group) => (
+              <option key={group.value} value={group.value}>
+                {group.label}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
-      </fieldset>
+      </div>
 
       <div className="border-t border-border/60" />
 
       {/* 2. Khoảng giá */}
-      <fieldset className="flex flex-col gap-3">
+      <fieldset className="flex flex-col gap-2.5">
         <legend className="text-xs font-bold uppercase tracking-wider text-muted">
           Khoảng giá
         </legend>
@@ -156,9 +164,9 @@ function ProductFilters({
             return (
               <button
                 key={preset.label}
-                className={`px-2.5 py-1.5 text-xs rounded-md border transition-all text-center cursor-pointer ${
+                className={`px-2.5 py-1.5 text-xs rounded-lg border transition-all text-center cursor-pointer ${
                   isActive
-                    ? 'border-brand bg-brand-soft font-semibold text-brand shadow-2xs'
+                    ? 'border-brand bg-brand text-white font-semibold shadow-2xs'
                     : 'border-border bg-white hover:bg-surface-secondary hover:border-border-strong text-muted hover:text-ink'
                 }`}
                 onClick={() => handleApplyPreset(preset)}
@@ -180,24 +188,24 @@ function ProductFilters({
               <input
                 aria-label="Giá từ"
                 autoComplete="off"
-                className={`w-full h-9 px-2.5 pr-6 text-xs bg-surface text-ink rounded border transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20 ${
+                className={`w-full h-9 px-2.5 pr-6 text-xs bg-white text-ink rounded-lg border transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20 ${
                   errors.minPrice ? 'border-brand' : 'border-control-border'
                 }`}
                 id="catalog-min-price"
                 inputMode="decimal"
                 name="minPrice"
                 onChange={(e) => handleChange('minPrice', e.target.value)}
-                placeholder="Từ (₫)"
+                placeholder="Từ (đ)"
                 type="number"
                 value={value.minPrice}
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted pointer-events-none">
-                ₫
+                đ
               </span>
             </div>
           </div>
 
-          <span className="text-muted text-xs shrink-0">—</span>
+          <span className="text-muted text-xs shrink-0">đến</span>
 
           <div className="flex-1 min-w-0">
             <label className="sr-only" htmlFor="catalog-max-price">
@@ -207,19 +215,19 @@ function ProductFilters({
               <input
                 aria-label="Giá đến"
                 autoComplete="off"
-                className={`w-full h-9 px-2.5 pr-6 text-xs bg-surface text-ink rounded border transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20 ${
+                className={`w-full h-9 px-2.5 pr-6 text-xs bg-white text-ink rounded-lg border transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20 ${
                   errors.maxPrice ? 'border-brand' : 'border-control-border'
                 }`}
                 id="catalog-max-price"
                 inputMode="decimal"
                 name="maxPrice"
                 onChange={(e) => handleChange('maxPrice', e.target.value)}
-                placeholder="Đến (₫)"
+                placeholder="Đến (đ)"
                 type="number"
                 value={value.maxPrice}
               />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted pointer-events-none">
-                ₫
+                đ
               </span>
             </div>
           </div>
@@ -234,19 +242,68 @@ function ProductFilters({
 
       <div className="border-t border-border/60" />
 
-      {/* 3. Nghệ nhân */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="catalog-artisan">
-          Nghệ nhân
+      {/* 3. Làng nghề truyền thống */}
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="catalog-craft-village">
+          Làng nghề truyền thống
         </label>
         <div className="relative">
           <input
             autoComplete="off"
-            className="w-full h-9 px-2.5 pr-7 text-xs bg-surface text-ink rounded border border-control-border placeholder:text-subtle transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20"
+            className="w-full h-9 px-2.5 pr-7 text-xs bg-white text-ink rounded-lg border border-control-border placeholder:text-subtle transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20"
+            id="catalog-craft-village"
+            name="craftVillage"
+            onChange={(e) => handleChange('craftVillage', e.target.value)}
+            placeholder="Ví dụ: Đào Xá, Trúc Sơn..."
+            type="text"
+            value={value.craftVillage}
+          />
+          {value.craftVillage ? (
+            <button
+              aria-label="Xóa làng nghề"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-ink cursor-pointer"
+              onClick={() => handleChange('craftVillage', '')}
+              type="button"
+            >
+              <IconX size={13} />
+            </button>
+          ) : null}
+        </div>
+
+        {/* Quick Village Chips */}
+        <div className="flex flex-wrap gap-1.5 pt-0.5">
+          {POPULAR_VILLAGES.map((village) => (
+            <button
+              key={village}
+              type="button"
+              onClick={() => handleChange('craftVillage', value.craftVillage === village ? '' : village)}
+              className={`px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer border ${
+                value.craftVillage === village
+                  ? 'bg-brand text-white border-brand font-medium'
+                  : 'bg-surface-secondary text-muted hover:text-ink border-border/80'
+              }`}
+            >
+              {village}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="border-t border-border/60" />
+
+      {/* 4. Nghệ nhân chế tác */}
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="catalog-artisan">
+          Nghệ nhân chế tác
+        </label>
+        <div className="relative">
+          <input
+            autoComplete="off"
+            className="w-full h-9 px-2.5 pr-7 text-xs bg-white text-ink rounded-lg border border-control-border placeholder:text-subtle transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20"
             id="catalog-artisan"
             name="artisan"
             onChange={(e) => handleChange('artisan', e.target.value)}
-            placeholder="Tên nghệ nhân chế tác…"
+            placeholder="Tên nghệ nhân..."
             type="text"
             value={value.artisan}
           />
@@ -263,44 +320,13 @@ function ProductFilters({
         </div>
       </div>
 
-      <div className="border-t border-border/60" />
-
-      {/* 4. Làng nghề */}
-      <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="catalog-craft-village">
-          Làng nghề truyền thống
-        </label>
-        <div className="relative">
-          <input
-            autoComplete="off"
-            className="w-full h-9 px-2.5 pr-7 text-xs bg-surface text-ink rounded border border-control-border placeholder:text-subtle transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20"
-            id="catalog-craft-village"
-            name="craftVillage"
-            onChange={(e) => handleChange('craftVillage', e.target.value)}
-            placeholder="Ví dụ: Đào Xá, Trúc Sơn…"
-            type="text"
-            value={value.craftVillage}
-          />
-          {value.craftVillage ? (
-            <button
-              aria-label="Xóa làng nghề"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-ink cursor-pointer"
-              onClick={() => handleChange('craftVillage', '')}
-              type="button"
-            >
-              <IconX size={13} />
-            </button>
-          ) : null}
-        </div>
-      </div>
-
       {/* Action Buttons */}
       <div className="flex items-center gap-2 pt-2">
         <Button
           className="w-full"
           disabled={busy}
           loading={busy}
-          loadingLabel="Đang lọc…"
+          loadingLabel="Đang lọc..."
           size="sm"
           type="submit"
         >

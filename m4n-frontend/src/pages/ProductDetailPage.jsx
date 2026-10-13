@@ -35,7 +35,7 @@ function ProductDetailPage({ productId }) {
   useEffect(() => {
     if (detail.product?.name) {
       const originalTitle = document.title
-      document.title = `${detail.product.name} — M4N Nhạc Cụ Truyền Thống`
+      document.title = `${detail.product.name} · M4N Nhạc Cụ Truyền Thống`
       return () => {
         document.title = originalTitle
       }
