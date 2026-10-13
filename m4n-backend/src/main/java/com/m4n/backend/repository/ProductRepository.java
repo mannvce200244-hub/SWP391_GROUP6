@@ -19,6 +19,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @EntityGraph(attributePaths = {"category", "artisan", "craftVillage", "media"})
     Optional<Product> findWithDetailsByIdAndIsActiveTrue(Long id);
 
+    @Override
+    @EntityGraph(attributePaths = {"category", "artisan", "craftVillage"})
+    Page<Product> findAll(org.springframework.data.jpa.domain.Specification<Product> spec, Pageable pageable);
+
     Optional<Product> findByIdAndIsActiveTrue(Long id);
 
     Optional<Product> findByCodeIgnoreCase(String code);

@@ -139,7 +139,7 @@ public class ProductMapper {
         return toDetailResponse(product, availability, null);
     }
 
-    public ProductSummaryResponse toSummaryResponse(Product product, String availability) {
+    public ProductSummaryResponse toSummaryResponse(Product product, String availability, ProductMedia primaryMedia) {
         if (product == null) {
             return null;
         }
@@ -147,6 +147,10 @@ public class ProductMapper {
         String groupName = product.getCategory() != null ? product.getCategory().getName() : null;
         String artisanName = product.getArtisan() != null ? product.getArtisan().getName() : null;
         String craftVillageName = product.getCraftVillage() != null ? product.getCraftVillage().getName() : null;
+
+        List<ProductMediaResponse> mediaResponses = primaryMedia != null
+                ? List.of(toProductMediaResponse(primaryMedia))
+                : (product.getMedia() != null ? toPrimaryMediaResponses(product.getMedia()) : Collections.emptyList());
 
         return new ProductSummaryResponse(
                 product.getId(),
@@ -157,8 +161,12 @@ public class ProductMapper {
                 groupName,
                 artisanName,
                 craftVillageName,
-                toPrimaryMediaResponses(product.getMedia()),
+                mediaResponses,
                 availability
         );
+    }
+
+    public ProductSummaryResponse toSummaryResponse(Product product, String availability) {
+        return toSummaryResponse(product, availability, null);
     }
 }

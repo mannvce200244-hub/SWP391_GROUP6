@@ -207,7 +207,7 @@ function HomePage() {
             {/* Column 1: Nhạc cụ Dây */}
             <RouterLink
               className="group flex flex-col rounded-xl overflow-hidden border border-border hover:border-brand/40 bg-white shadow-2xs hover:shadow-md transition-all no-underline"
-              href={CUSTOMER_ROUTES.products}
+              href={`${CUSTOMER_ROUTES.products}?group=DAY`}
             >
               <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
                 <img
@@ -241,7 +241,7 @@ function HomePage() {
             {/* Column 2: Nhạc cụ Hơi */}
             <RouterLink
               className="group flex flex-col rounded-xl overflow-hidden border border-border hover:border-brand/40 bg-white shadow-2xs hover:shadow-md transition-all no-underline"
-              href={CUSTOMER_ROUTES.products}
+              href={`${CUSTOMER_ROUTES.products}?group=HOI`}
             >
               <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
                 <img
@@ -275,7 +275,7 @@ function HomePage() {
             {/* Column 3: Nhạc cụ Gõ */}
             <RouterLink
               className="group flex flex-col rounded-xl overflow-hidden border border-border hover:border-brand/40 bg-white shadow-2xs hover:shadow-md transition-all no-underline"
-              href={CUSTOMER_ROUTES.products}
+              href={`${CUSTOMER_ROUTES.products}?group=GO`}
             >
               <div className="aspect-[4/3] overflow-hidden bg-surface-secondary">
                 <img

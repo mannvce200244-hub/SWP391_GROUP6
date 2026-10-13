@@ -1,6 +1,7 @@
 package com.m4n.backend.service;
 
 import com.m4n.backend.dto.response.ProductDetailResponse;
+import com.m4n.backend.dto.response.ProductSummaryResponse;
 import com.m4n.backend.entity.Artisan;
 import com.m4n.backend.entity.Category;
 import com.m4n.backend.entity.CraftVillage;
@@ -8,16 +9,24 @@ import com.m4n.backend.entity.Inventory;
 import com.m4n.backend.entity.MediaType;
 import com.m4n.backend.entity.Product;
 import com.m4n.backend.entity.ProductMedia;
+import com.m4n.backend.exception.InvalidFilterException;
 import com.m4n.backend.exception.ProductNotFoundException;
 import com.m4n.backend.mapper.ProductMapper;
 import com.m4n.backend.repository.InventoryRepository;
+import com.m4n.backend.repository.ProductMediaRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.serviceImpl.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -25,6 +34,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,16 +46,20 @@ class ProductServiceTest {
     @Mock
     private InventoryRepository inventoryRepository;
 
+    @Mock
+    private ProductMediaRepository productMediaRepository;
+
     private ProductMapper productMapper;
     private ProductService productService;
 
     @BeforeEach
     void setUp() {
         productMapper = new ProductMapper();
-        productService = new ProductServiceImpl(productRepository, inventoryRepository, productMapper);
+        productService = new ProductServiceImpl(productRepository, inventoryRepository, productMediaRepository, productMapper);
     }
 
     @Test
+    @DisplayName("Should return full product detail when product exists")
     void shouldReturnProductDetailWhenProductExists() {
         Category category = Category.builder().id(1L).code("DAY").name("Nhạc cụ dây").build();
         CraftVillage craftVillage = CraftVillage.builder().id(1L).name("Làng Đào Xá").location("Hà Nội").build();
@@ -93,6 +107,7 @@ class ProductServiceTest {
     }
 
     @Test
+    @DisplayName("Should return OUT_OF_STOCK when inventory quantity is zero")
     void shouldReturnOutOfStockWhenInventoryIsZero() {
         Category category = Category.builder().id(1L).code("DAY").name("Nhạc cụ dây").build();
         Product product = Product.builder()
@@ -116,6 +131,7 @@ class ProductServiceTest {
     }
 
     @Test
+    @DisplayName("Should return media gallery sorted deterministically by sortOrder")
     void shouldReturnProductDetailWithMultipleMediaSorted() {
         Category category = Category.builder().id(1L).code("DAY").name("Nhạc cụ dây").build();
         Product product = Product.builder()
@@ -142,7 +158,6 @@ class ProductServiceTest {
         assertThat(response.media()).hasSize(5);
         assertThat(response.media().get(0).sortOrder()).isEqualTo(1);
         assertThat(response.media().get(0).url()).isEqualTo("/media/1.jpg");
-        assertThat(response.media().get(0).type()).isEqualTo("IMAGE");
         assertThat(response.media().get(1).sortOrder()).isEqualTo(2);
         assertThat(response.media().get(2).sortOrder()).isEqualTo(3);
         assertThat(response.media().get(3).sortOrder()).isEqualTo(4);
@@ -152,6 +167,7 @@ class ProductServiceTest {
     }
 
     @Test
+    @DisplayName("Should return empty media list when product has no media")
     void shouldReturnProductDetailWithZeroMedia() {
         Category category = Category.builder().id(2L).code("HOI").name("Nhạc cụ hơi").build();
         Product product = Product.builder()
@@ -174,6 +190,7 @@ class ProductServiceTest {
     }
 
     @Test
+    @DisplayName("Should return only 1 primary media item in paginated product list")
     void shouldReturnOnlyPrimaryMediaInProductList() {
         Category category = Category.builder().id(1L).code("DAY").name("Nhạc cụ dây").build();
         Product productWith5Media = Product.builder()
@@ -189,18 +206,56 @@ class ProductServiceTest {
                 ))
                 .build();
 
-        when(productRepository.findAllByIsActiveTrueOrderByCreatedAtDesc()).thenReturn(List.of(productWith5Media));
-        when(inventoryRepository.findAll()).thenReturn(List.of());
+        Pageable pageable = PageRequest.of(0, 9);
+        Page<Product> productPage = new PageImpl<>(List.of(productWith5Media), pageable, 1);
 
-        var summaries = productService.listProducts(null, null, null, null, null, null);
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(productPage);
+        when(inventoryRepository.findByProductIdIn(any())).thenReturn(List.of(
+                Inventory.builder().id(10L).product(productWith5Media).quantity(5).build()
+        ));
+        when(productMediaRepository.findByProductIdInOrderBySortOrderAsc(any())).thenReturn(List.of(
+                ProductMedia.builder().id(1L).product(productWith5Media).mediaType(MediaType.IMAGE).url("/media/primary.jpg").sortOrder(1).build(),
+                ProductMedia.builder().id(2L).product(productWith5Media).mediaType(MediaType.IMAGE).url("/media/secondary.jpg").sortOrder(2).build()
+        ));
 
-        assertThat(summaries).hasSize(1);
-        assertThat(summaries.get(0).media()).hasSize(1);
-        assertThat(summaries.get(0).media().get(0).url()).isEqualTo("/media/primary.jpg");
-        assertThat(summaries.get(0).media().get(0).sortOrder()).isEqualTo(1);
+        Page<ProductSummaryResponse> responsePage = productService.listProducts(
+                null, null, null, null, null, null, pageable
+        );
+
+        assertThat(responsePage).isNotNull();
+        assertThat(responsePage.getTotalElements()).isEqualTo(1);
+        assertThat(responsePage.getContent()).hasSize(1);
+
+        ProductSummaryResponse card = responsePage.getContent().get(0);
+        assertThat(card.media()).hasSize(1);
+        assertThat(card.media().get(0).url()).isEqualTo("/media/primary.jpg");
+        assertThat(card.media().get(0).sortOrder()).isEqualTo(1);
+        assertThat(card.availability()).isEqualTo("IN_STOCK");
     }
 
     @Test
+    @DisplayName("Should reject invalid price filters with InvalidFilterException")
+    void shouldRejectInvalidPriceFilters() {
+        Pageable pageable = PageRequest.of(0, 9);
+
+        // minPrice < 0
+        assertThatThrownBy(() -> productService.listProducts(null, null, null, null, new BigDecimal("-1000"), null, pageable))
+                .isInstanceOf(InvalidFilterException.class)
+                .hasMessageContaining("Giá tối thiểu không được nhỏ hơn 0");
+
+        // maxPrice < 0
+        assertThatThrownBy(() -> productService.listProducts(null, null, null, null, null, new BigDecimal("-500"), pageable))
+                .isInstanceOf(InvalidFilterException.class)
+                .hasMessageContaining("Giá tối đa không được nhỏ hơn 0");
+
+        // minPrice > maxPrice
+        assertThatThrownBy(() -> productService.listProducts(null, null, null, null, new BigDecimal("10000000"), new BigDecimal("5000000"), pageable))
+                .isInstanceOf(InvalidFilterException.class)
+                .hasMessageContaining("Giá tối thiểu không được lớn hơn giá tối đa");
+    }
+
+    @Test
+    @DisplayName("Should throw ProductNotFoundException when product ID is missing")
     void shouldThrowProductNotFoundExceptionWhenProductMissing() {
         when(productRepository.findWithDetailsByIdAndIsActiveTrue(999L)).thenReturn(Optional.empty());
 

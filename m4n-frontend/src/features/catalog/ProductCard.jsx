@@ -2,6 +2,7 @@ import { useState } from 'react'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 import { getFirstProductImage } from './productMedia.js'
+import { IconInstrument } from '../../components/ui/Icons.jsx'
 import prodSaoTruc from '../../assets/images/prod-sao-truc.jpg'
 import prodDanTranh from '../../assets/images/prod-dan-tranh.jpg'
 import catNhacCuGo from '../../assets/images/cat-nhac-cu-go.jpg'
@@ -23,7 +24,12 @@ function ProductCard({ priority = false, product }) {
   const [failedImageUrl, setFailedImageUrl] = useState(null)
   const rawImage = getFirstProductImage(product.media)
   const fallback = getCategoryFallbackImage(product)
-  const image = rawImage && failedImageUrl !== rawImage.url ? rawImage : fallback
+  const image =
+    rawImage && failedImageUrl !== rawImage.url
+      ? rawImage
+      : failedImageUrl !== fallback.url
+        ? fallback
+        : null
 
   // Stock status text if available in product data
   const hasStockInfo =
@@ -44,20 +50,27 @@ function ProductCard({ priority = false, product }) {
     >
       {/* 1. Image Container (1:1 aspect ratio, smooth hover scale) */}
       <div className="aspect-square w-full overflow-hidden rounded-lg bg-surface-secondary relative flex items-center justify-center border border-border-subtle">
-        <img
-          alt={
-            typeof image.alt === 'string' && image.alt.trim()
-              ? image.alt.trim()
-              : product.name
-          }
-          className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out"
-          decoding="async"
-          height="500"
-          loading={priority ? undefined : 'lazy'}
-          onError={() => setFailedImageUrl(image.url)}
-          src={image.url}
-          width="500"
-        />
+        {image ? (
+          <img
+            alt={
+              typeof image.alt === 'string' && image.alt.trim()
+                ? image.alt.trim()
+                : product.name
+            }
+            className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out"
+            decoding="async"
+            height="500"
+            loading={priority ? undefined : 'lazy'}
+            onError={() => setFailedImageUrl(image.url)}
+            src={image.url}
+            width="500"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-surface-secondary/60 text-subtle p-4 text-center select-none">
+            <IconInstrument size={40} className="text-muted/40 mb-2 group-hover:scale-105 transition-transform duration-200" />
+            <span className="text-[11px] font-medium text-muted/70">Hình ảnh đang cập nhật</span>
+          </div>
+        )}
 
         {/* Category Tag */}
         {product.groupName ? (

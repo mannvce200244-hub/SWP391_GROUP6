@@ -1,10 +1,5 @@
 import { IconX } from '../../components/ui/Icons.jsx'
-
-function formatVndPrice(value) {
-  const num = Number(value)
-  if (!Number.isFinite(num)) return value
-  return new Intl.NumberFormat('vi-VN').format(num) + ' ₫'
-}
+import { formatCurrencyVND } from '../../utils/currency.js'
 
 function ActiveFilterChips({ className = '', filters, onClearAll, onRemoveFilter }) {
   const chips = []
@@ -52,17 +47,17 @@ function ActiveFilterChips({ className = '', filters, onClearAll, onRemoveFilter
   if (hasMinPrice && hasMaxPrice) {
     chips.push({
       key: 'price',
-      label: `Giá: ${formatVndPrice(filters.minPrice)} – ${formatVndPrice(filters.maxPrice)}`,
+      label: `Giá: ${formatCurrencyVND(filters.minPrice)} – ${formatCurrencyVND(filters.maxPrice)}`,
     })
   } else if (hasMinPrice) {
     chips.push({
       key: 'minPrice',
-      label: `Giá từ: ${formatVndPrice(filters.minPrice)}`,
+      label: `Giá từ: ${formatCurrencyVND(filters.minPrice)}`,
     })
   } else if (hasMaxPrice) {
     chips.push({
       key: 'maxPrice',
-      label: `Giá đến: ${formatVndPrice(filters.maxPrice)}`,
+      label: `Giá đến: ${formatCurrencyVND(filters.maxPrice)}`,
     })
   }
 
