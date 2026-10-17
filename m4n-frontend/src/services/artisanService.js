@@ -215,6 +215,33 @@ function createArtisanService() {
 
       return { provinces, crafts }
     },
+
+    /**
+     * Backend API integrations
+     */
+    async getArtisans() {
+      return apiClient.get('/artisans')
+    },
+
+    async getAdminArtisans() {
+      return apiClient.get('/admin/artisans')
+    },
+
+    async getArtisanDetail(id) {
+      return apiClient.get(`/admin/artisans/${id}`)
+    },
+
+    async createArtisan(payload) {
+      return apiClient.post('/admin/artisans', payload)
+    },
+
+    async updateArtisan(id, payload) {
+      return apiClient.put(`/admin/artisans/${id}`, payload)
+    },
+
+    async deleteArtisan(id) {
+      return apiClient.delete(`/admin/artisans/${id}`)
+    },
   })
 }
 

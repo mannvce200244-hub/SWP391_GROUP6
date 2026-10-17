@@ -5,10 +5,13 @@ import com.m4n.backend.dto.response.TopProductResponse;
 import com.m4n.backend.entity.Order;
 import com.m4n.backend.entity.OrderStatus;
 import com.m4n.backend.repository.InventoryRepository;
+import com.m4n.backend.repository.InvoiceItemRepository;
+import com.m4n.backend.repository.InvoiceRepository;
 import com.m4n.backend.repository.OrderItemRepository;
 import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.serviceImpl.DashboardServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -36,19 +39,36 @@ class DashboardServiceTest {
     @Mock
     private InventoryRepository inventoryRepository;
 
+    @Mock
+    private InvoiceRepository invoiceRepository;
+
+    @Mock
+    private InvoiceItemRepository invoiceItemRepository;
+
     private DashboardService dashboardService;
 
     @BeforeEach
     void setUp() {
-        dashboardService = new DashboardServiceImpl(orderRepository, orderItemRepository, inventoryRepository);
+        dashboardService = new DashboardServiceImpl(
+                orderRepository,
+                orderItemRepository,
+                inventoryRepository,
+                invoiceRepository,
+                invoiceItemRepository
+        );
     }
 
     @Test
+    @DisplayName("getDashboardSummary should calculate unified metrics from online orders and POS invoices (BR-REVENUE-01)")
     void getDashboardSummary_calculatesMetricsCorrectly_adheringToBRRevenue01() {
         // Arrange
         when(orderRepository.sumFinalAmountByStatus(OrderStatus.COMPLETED))
                 .thenReturn(new BigDecimal("21150000"));
+        when(invoiceRepository.sumFinalAmount())
+                .thenReturn(new BigDecimal("5000000")); // POS showroom revenue
+
         when(orderRepository.count()).thenReturn(7L);
+        when(invoiceRepository.count()).thenReturn(2L); // 2 POS invoices
         when(orderRepository.countByStatus(OrderStatus.COMPLETED)).thenReturn(3L);
         when(orderRepository.countByStatus(OrderStatus.CANCELLED)).thenReturn(1L);
 
@@ -57,7 +77,7 @@ class DashboardServiceTest {
         when(inventoryRepository.countByQuantityBetween(1, 5)).thenReturn(1L);
         when(inventoryRepository.countByQuantity(0)).thenReturn(0L);
 
-        TopProductResponse topProduct = TopProductResponse.builder()
+        TopProductResponse topOnline = TopProductResponse.builder()
                 .productId(1L)
                 .productCode("TRN-001")
                 .productName("Đàn Tranh 16 Dây")
@@ -66,7 +86,18 @@ class DashboardServiceTest {
                 .revenue(new BigDecimal("17000000"))
                 .build();
         when(orderItemRepository.findTopSellingProducts(eq(OrderStatus.COMPLETED), any(PageRequest.class)))
-                .thenReturn(List.of(topProduct));
+                .thenReturn(List.of(topOnline));
+
+        TopProductResponse topPos = TopProductResponse.builder()
+                .productId(1L)
+                .productCode("TRN-001")
+                .productName("Đàn Tranh 16 Dây")
+                .categoryName("Nhạc cụ dây")
+                .quantitySold(1L)
+                .revenue(new BigDecimal("8500000"))
+                .build();
+        when(invoiceItemRepository.findTopSellingProducts(any(PageRequest.class)))
+                .thenReturn(List.of(topPos));
 
         Order recentOrder = Order.builder()
                 .id(1L)
@@ -87,10 +118,12 @@ class DashboardServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.getPeriod()).isEqualTo("month");
 
-        // KPI asserts
-        assertThat(response.getKpi().getTotalRevenue()).isEqualByComparingTo("21150000");
-        assertThat(response.getKpi().getTotalOrders()).isEqualTo(7L);
-        assertThat(response.getKpi().getCompletedOrders()).isEqualTo(3L);
+        // Unified KPI asserts: 21,150,000 (online) + 5,000,000 (POS) = 26,150,000
+        assertThat(response.getKpi().getTotalRevenue()).isEqualByComparingTo("26150000");
+        // Total orders: 7 (online) + 2 (POS) = 9
+        assertThat(response.getKpi().getTotalOrders()).isEqualTo(9L);
+        // Completed orders: 3 (online) + 2 (POS) = 5
+        assertThat(response.getKpi().getCompletedOrders()).isEqualTo(5L);
         assertThat(response.getKpi().getCancelledOrders()).isEqualTo(1L);
 
         // Inventory asserts
@@ -99,14 +132,16 @@ class DashboardServiceTest {
         assertThat(response.getInventory().getLowStockCount()).isEqualTo(1L);
         assertThat(response.getInventory().getOutOfStockCount()).isEqualTo(0L);
 
-        // Top products asserts
+        // Top products asserts: merged quantities: 2 + 1 = 3 sold
         assertThat(response.getTopProducts()).hasSize(1);
-        assertThat(response.getTopProducts().get(0).getProductCode()).isEqualTo("TRN-001");
+        assertThat(response.getTopProducts().getFirst().getProductCode()).isEqualTo("TRN-001");
+        assertThat(response.getTopProducts().getFirst().getQuantitySold()).isEqualTo(3L);
+        assertThat(response.getTopProducts().getFirst().getRevenue()).isEqualByComparingTo("25500000");
 
         // Recent orders asserts
         assertThat(response.getRecentOrders()).hasSize(1);
-        assertThat(response.getRecentOrders().get(0).getOrderCode()).isEqualTo("M4N-2026-089");
-        assertThat(response.getRecentOrders().get(0).getStatusLabel()).isEqualTo("Đã hoàn thành");
+        assertThat(response.getRecentOrders().getFirst().getOrderCode()).isEqualTo("M4N-2026-089");
+        assertThat(response.getRecentOrders().getFirst().getStatusLabel()).isEqualTo("Đã hoàn thành");
 
         // Revenue trend asserts
         assertThat(response.getRevenueTrend()).isNotEmpty();

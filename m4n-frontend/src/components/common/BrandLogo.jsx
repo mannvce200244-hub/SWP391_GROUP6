@@ -2,7 +2,7 @@
  * BrandLogo - Contemporary M4N Brand Identity (2026)
  * Geometric instrument string resonance mark + modern sans-serif typography
  */
-function BrandLogo({ variant = 'default', className = '' }) {
+function BrandLogo({ variant = 'default', className = '', collapsed = false }) {
   const isDark = variant === 'dark'
 
   return (
@@ -51,14 +51,16 @@ function BrandLogo({ variant = 'default', className = '' }) {
         />
       </svg>
 
-      <div className="flex flex-col leading-none">
-        <span className={`text-lg font-extrabold tracking-tight font-sans ${isDark ? 'text-white' : 'text-ink'}`}>
-          M4N
-        </span>
-        <span className={`text-[9px] font-semibold tracking-wider font-sans uppercase mt-0.5 ${isDark ? 'text-white/60' : 'text-muted'}`}>
-          NHẠC CỤ TRUYỀN THỐNG
-        </span>
-      </div>
+      {!collapsed && (
+        <div className="flex flex-col leading-none">
+          <span className={`text-lg font-extrabold tracking-tight font-sans ${isDark ? 'text-white' : 'text-ink'}`}>
+            M4N
+          </span>
+          <span className={`text-[9px] font-semibold tracking-wider font-sans uppercase mt-0.5 ${isDark ? 'text-white/60' : 'text-muted'}`}>
+            NHẠC CỤ TRUYỀN THỐNG
+          </span>
+        </div>
+      )}
     </div>
   )
 }

@@ -3,7 +3,6 @@ import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import { ProductDetailSkeleton } from '../components/ui/Skeleton.jsx'
 import ProductDetailInfo from '../features/catalog/ProductDetailInfo.jsx'
-import RelatedProducts from '../features/catalog/RelatedProducts.jsx'
 import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
 import productService from '../services/productService.js'
@@ -120,10 +119,7 @@ function ProductDetailPage({ productId }) {
         ) : null}
 
         {detail.status === 'success' && detail.product ? (
-          <>
-            <ProductDetailInfo product={detail.product} />
-            <RelatedProducts currentProduct={detail.product} />
-          </>
+          <ProductDetailInfo product={detail.product} />
         ) : null}
       </section>
     </div>

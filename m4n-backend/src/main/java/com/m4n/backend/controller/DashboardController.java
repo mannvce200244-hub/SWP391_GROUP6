@@ -25,7 +25,7 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'ONLINE_STAFF')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'ONLINE_STAFF')")
     @Operation(summary = "Get admin dashboard metrics", description = "Returns aggregated revenue, orders, inventory status, trend series, and top selling products.")
     public ResponseEntity<DashboardSummaryResponse> getDashboard(
             @RequestParam(defaultValue = "month") String period

@@ -7,7 +7,7 @@ const VARIANT_MAP = {
 }
 
 const SIZE_MAP = {
-  sm: 'h-9 px-3.5 text-xs',
+  sm: 'h-9 px-3.5 text-[13.5px]',
   md: 'h-11 px-5 text-sm',
   lg: 'h-12 px-6 text-base',
 }

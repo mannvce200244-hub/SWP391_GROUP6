@@ -1,4 +1,4 @@
-import { IconSearch } from '../../components/ui/Icons.jsx'
+import { IconSearch, IconX } from '../../components/ui/Icons.jsx'
 
 function ArtisanFilters({
   activeTab = 'artisans',
@@ -127,7 +127,8 @@ function ArtisanFilters({
             onClick={onClearFilters}
             type="button"
           >
-            ✕ Xóa bộ lọc
+            <IconX size={13} />
+            <span>Xóa bộ lọc</span>
           </button>
         )}
       </div>

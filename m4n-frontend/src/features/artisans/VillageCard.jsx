@@ -27,7 +27,7 @@ function VillageCard({ village }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-75 group-hover:opacity-65 transition-opacity pointer-events-none" />
 
         {/* Top Tag */}
-        <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-white/95 backdrop-blur-xs text-ink border border-border/80 tracking-wider uppercase shadow-2xs">
+        <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md text-xs font-bold bg-white/95 backdrop-blur-xs text-ink border border-border/80 tracking-wider uppercase shadow-2xs">
           Làng nghề di sản
         </span>
 

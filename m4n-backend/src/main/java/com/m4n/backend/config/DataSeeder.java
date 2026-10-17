@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +56,7 @@ public class DataSeeder implements ApplicationRunner {
     private final InventoryRepository inventoryRepository;
     private final OrderRepository orderRepository;
     private final VoucherRepository voucherRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     @Value("${m4n.seed.dev-accounts:true}")
     private boolean seedDevAccounts;
@@ -72,7 +74,8 @@ public class DataSeeder implements ApplicationRunner {
             ProductRepository productRepository,
             InventoryRepository inventoryRepository,
             OrderRepository orderRepository,
-            VoucherRepository voucherRepository
+            VoucherRepository voucherRepository,
+            JdbcTemplate jdbcTemplate
     ) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
@@ -84,6 +87,7 @@ public class DataSeeder implements ApplicationRunner {
         this.inventoryRepository = inventoryRepository;
         this.orderRepository = orderRepository;
         this.voucherRepository = voucherRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -100,9 +104,17 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private void initRoles() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE roles DROP CONSTRAINT IF EXISTS roles_name_check");
+            jdbcTemplate.execute("ALTER TABLE roles ADD CONSTRAINT roles_name_check CHECK (name IN ('CUSTOMER', 'ONLINE_STAFF', 'POS_STAFF', 'ADMIN', 'SUPER_ADMIN'))");
+        } catch (Exception e) {
+            log.debug("Roles check constraint update skipped or not applicable: {}", e.getMessage());
+        }
+
         for (RoleName roleName : RoleName.values()) {
             if (roleRepository.findByName(roleName).isEmpty()) {
                 String description = switch (roleName) {
+                    case SUPER_ADMIN -> "Quản trị viên cấp cao nhất hệ thống M4N";
                     case ADMIN -> "Quản trị viên hệ thống M4N";
                     case ONLINE_STAFF -> "Nhân viên xử lý đơn hàng trực tuyến";
                     case POS_STAFF -> "Nhân viên bán hàng tại showroom POS";
@@ -155,7 +167,18 @@ public class DataSeeder implements ApplicationRunner {
     }
 
     private void initDevAccounts() {
-        // 1. Quản trị viên (ADMIN)
+        // 0. Quản trị viên cấp cao nhất (SUPER_ADMIN)
+        seedAccountIfNotExists(
+                "superadmin@m4n.vn",
+                defaultPassword,
+                "Lê Quản Trị Cấp Cao (Super Admin)",
+                "0900000099",
+                "01 Hoàng Thành Thăng Long, Ba Đình, Hà Nội",
+                RoleName.SUPER_ADMIN,
+                true
+        );
+
+        // 1. Quản trị viên chính (ADMIN)
         seedAccountIfNotExists(
                 "admin@m4n.vn",
                 defaultPassword,
@@ -506,8 +529,14 @@ public class DataSeeder implements ApplicationRunner {
             int stockQuantity
     ) {
         var existingOpt = productRepository.findByCodeIgnoreCase(code);
+        String standardBarcode = deriveBarcode(code);
         if (existingOpt.isPresent()) {
             Product existing = existingOpt.get();
+            boolean changed = false;
+            if (existing.getBarcode() == null || !existing.getBarcode().equals(standardBarcode)) {
+                existing.setBarcode(standardBarcode);
+                changed = true;
+            }
             boolean needsUpdate = existing.getMedia().size() != mediaList.size();
             if (!needsUpdate) {
                 for (int i = 0; i < mediaList.size(); i++) {
@@ -517,20 +546,23 @@ public class DataSeeder implements ApplicationRunner {
                     }
                 }
             }
-            if (needsUpdate) {
-                existing.getMedia().clear();
-                for (ProductMedia m : mediaList) {
-                    m.setProduct(existing);
-                    existing.getMedia().add(m);
+            if (needsUpdate || changed) {
+                if (needsUpdate) {
+                    existing.getMedia().clear();
+                    for (ProductMedia m : mediaList) {
+                        m.setProduct(existing);
+                        existing.getMedia().add(m);
+                    }
                 }
                 productRepository.save(existing);
-                log.info("Synchronized media for existing product: [{}] (Total media: {})", code, existing.getMedia().size());
+                log.info("Synchronized product and barcode for: [{}] {} (Barcode: {})", code, existing.getName(), standardBarcode);
             }
             return;
         }
 
         Product product = Product.builder()
                 .code(code)
+                .barcode(standardBarcode)
                 .name(name)
                 .price(price)
                 .description(description)
@@ -558,7 +590,17 @@ public class DataSeeder implements ApplicationRunner {
                 .build();
         inventoryRepository.save(inventory);
 
-        log.info("Seeded product: [{}] {} (Stock: {})", code, name, stockQuantity);
+        log.info("Seeded product: [{}] {} (Stock: {}, Barcode: {})", code, name, stockQuantity, standardBarcode);
+    }
+
+    private String deriveBarcode(String code) {
+        return switch (code) {
+            case "TRN-001" -> "8938500000018";
+            case "BAU-001" -> "8938500000025";
+            case "NGU-001" -> "8938500000032";
+            case "SAO-001" -> "8938500000049";
+            default -> "893850000" + String.format("%04d", Math.abs(code.hashCode() % 10000));
+        };
     }
 
     private void initOrders() {
@@ -782,6 +824,7 @@ public class DataSeeder implements ApplicationRunner {
                 ----------------------------------------------------------------------------------------
                 Role           | Email              | Status   | Full Name
                 ----------------------------------------------------------------------------------------
+                SUPER_ADMIN    | superadmin@m4n.vn  | ACTIVE   | Lê Quản Trị Cấp Cao (Super Admin)
                 ADMIN          | admin@m4n.vn       | ACTIVE   | Quản Trị Viên Hệ Thống
                 ONLINE_STAFF   | staff@m4n.vn       | ACTIVE   | Nhân Viên Bán Hàng Online
                 ONLINE_STAFF   | staff2@m4n.vn      | ACTIVE   | Lê Thu Hà (Online Staff)

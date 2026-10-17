@@ -23,9 +23,13 @@ export const CUSTOMER_ROUTES = Object.freeze({
   pos: '/pos',
   admin: '/admin',
   adminInstruments: '/admin/instruments',
+  adminInstrumentDetail: (id) =>
+    `/admin/instruments/${encodeURIComponent(String(id))}`,
   adminStore: '/admin/store',
   adminProfile: '/admin/profile',
   adminSecurity: '/admin/security',
+  adminUsers: '/admin/users',
+  staffChat: '/staff/chat',
 })
 
 const ARTISAN_SECTION_ID = 'artisans'
@@ -98,4 +102,25 @@ export function matchCraftVillageDetailPath(pathname) {
     return null
   }
 }
+
+export function matchAdminInstrumentDetailPath(pathname) {
+  const detailPrefix = `${CUSTOMER_ROUTES.adminInstruments}/`
+
+  if (!pathname.startsWith(detailPrefix)) {
+    return null
+  }
+
+  const encodedId = pathname.slice(detailPrefix.length)
+
+  if (!encodedId || encodedId.includes('/')) {
+    return null
+  }
+
+  try {
+    return decodeURIComponent(encodedId)
+  } catch {
+    return null
+  }
+}
+
 

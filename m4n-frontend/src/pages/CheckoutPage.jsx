@@ -228,7 +228,7 @@ function CheckoutPage() {
           <div className="w-16 h-16 rounded-2xl bg-brand-soft text-brand flex items-center justify-center mx-auto">
             <IconShoppingBag size={28} />
           </div>
-          <h2 className="text-xl font-black text-ink">Vui lòng đăng nhập để thanh toán</h2>
+          <h2 className="text-xl font-bold text-ink">Vui lòng đăng nhập để thanh toán</h2>
           <p className="text-xs text-muted">
             Quý khách cần đăng nhập tài khoản M4N để bảo mật thông tin đơn hàng và theo dõi tiến độ giao nhận.
           </p>
@@ -269,7 +269,7 @@ function CheckoutPage() {
             <span className="text-brand font-bold">Thanh toán đơn hàng</span>
           </nav>
 
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-ink font-sans">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
             Thanh toán an toàn
           </h1>
           <p className="text-xs sm:text-sm text-muted mt-1">
@@ -312,7 +312,7 @@ function CheckoutPage() {
               {/* Card 1: Delivery Information */}
               <div className="rounded-[28px] bg-white border border-border/80 p-6 sm:p-7 shadow-xs space-y-5">
                 <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                  <h2 className="text-base sm:text-lg font-black text-ink font-sans flex items-center gap-2.5">
+                  <h2 className="text-base sm:text-lg font-bold text-ink font-sans flex items-center gap-2.5">
                     <span className="w-6 h-6 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">1</span>
                     <span>Thông tin người nhận</span>
                   </h2>
@@ -497,7 +497,7 @@ function CheckoutPage() {
                       </p>
                     )}
 
-                    <div className="text-[11px] text-muted flex items-center gap-2">
+                    <div className="text-xs text-muted flex items-center gap-2">
                       <span className="font-semibold text-ink">Gợi ý mã:</span>
                       <button
                         type="button"
@@ -515,7 +515,7 @@ function CheckoutPage() {
               {/* Card 3: Payment Method */}
               <div className="rounded-[28px] bg-white border border-border/80 p-6 sm:p-7 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                  <h2 className="text-base sm:text-lg font-black text-ink font-sans flex items-center gap-2.5">
+                  <h2 className="text-base sm:text-lg font-bold text-ink font-sans flex items-center gap-2.5">
                     <span className="w-6 h-6 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">3</span>
                     <span>Phương thức thanh toán</span>
                   </h2>
@@ -539,7 +539,7 @@ function CheckoutPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-ink">Thanh toán khi nhận hàng (COD)</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                           Khuyên dùng
                         </span>
                       </div>
@@ -567,7 +567,7 @@ function CheckoutPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-ink">Thanh toán trực tuyến (Cổng thanh toán)</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-secondary text-subtle">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-secondary text-subtle">
                           Đang cấu hình
                         </span>
                       </div>
@@ -585,7 +585,7 @@ function CheckoutPage() {
             <div className="lg:col-span-5 space-y-6 lg:sticky lg:top-24">
               <div className="rounded-[28px] bg-white border border-border/80 p-6 sm:p-7 shadow-sm space-y-6">
                 <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                  <h3 className="text-base sm:text-lg font-black text-ink font-sans">
+                  <h3 className="text-base sm:text-lg font-bold text-ink font-sans">
                     Chi tiết nhạc cụ đặt mua
                   </h3>
                   <span className="text-xs font-bold text-muted">
@@ -610,7 +610,7 @@ function CheckoutPage() {
                         <h4 className="text-xs font-bold text-ink line-clamp-1">
                           {item.productName}
                         </h4>
-                        <div className="text-[11px] text-muted flex items-center gap-2 mt-0.5">
+                        <div className="text-xs text-muted flex items-center gap-2 mt-0.5">
                           <span>SL: <strong className="text-ink">{item.quantity}</strong></span>
                           <span>&bull;</span>
                           <span>Đơn giá: {item.unitPriceDisplay}</span>
@@ -642,15 +642,15 @@ function CheckoutPage() {
                   )}
 
                   <div className="pt-3 border-t border-border/60 flex items-baseline justify-between">
-                    <span className="text-sm font-black text-ink">Tổng thanh toán:</span>
-                    <span className="text-2xl font-black text-brand font-sans">
+                    <span className="text-sm font-bold text-ink">Tổng thanh toán:</span>
+                    <span className="text-2xl font-bold text-brand font-sans">
                       {preview?.finalAmountDisplay || cart?.totalAmountDisplay}
                     </span>
                   </div>
                 </div>
 
                 {/* Business Explanation Note per Rule 34 */}
-                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 space-y-1">
+                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 space-y-1">
                   <p className="font-bold flex items-center gap-1.5">
                     <span>Lưu ý về đơn hàng trực tuyến:</span>
                   </p>

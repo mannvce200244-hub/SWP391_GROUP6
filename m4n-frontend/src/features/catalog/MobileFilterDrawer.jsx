@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { IconX } from '../../components/ui/Icons.jsx'
 import ProductFilters from './ProductFilters.jsx'
+import validateProductFilters from './productFilterValidation.js'
 
 function MobileFilterDrawer({
   busy = false,
@@ -43,6 +44,14 @@ function MobileFilterDrawer({
   const handleApplyAndClose = (normalizedFilters) => {
     onApply(normalizedFilters)
     onClose()
+  }
+
+  const handleApplyClick = () => {
+    const validation = validateProductFilters(value)
+    if (Object.keys(validation.errors).length > 0) {
+      return
+    }
+    handleApplyAndClose(validation.normalizedFilters)
   }
 
   const handleResetAndClose = () => {
@@ -117,7 +126,7 @@ function MobileFilterDrawer({
           <button
             className="flex-1 h-10 px-4 rounded-md bg-brand text-white text-xs font-semibold hover:bg-brand-hover active:bg-brand-deep transition-all duration-150 shadow-xs cursor-pointer text-center"
             disabled={busy}
-            onClick={() => handleApplyAndClose(value)}
+            onClick={handleApplyClick}
             type="button"
           >
             Xem kết quả

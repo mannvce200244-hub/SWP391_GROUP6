@@ -149,6 +149,7 @@ summary,
 textarea {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  font-family: inherit;
 }
 
 button:focus-visible,

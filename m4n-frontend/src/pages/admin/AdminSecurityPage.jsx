@@ -7,6 +7,7 @@ import {
   IconEye,
   IconEyeOff,
   IconLogOut,
+  IconComputer,
 } from '../../components/ui/Icons.jsx'
 
 function AdminSecurityPage() {
@@ -122,13 +123,13 @@ function AdminSecurityPage() {
       {/* Header Section */}
       <div className="flex flex-col gap-1 bg-white rounded-2xl border border-border p-6 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#0D9488]">
-            Hệ thống Quản trị M4N
+          <span className="text-xs font-semibold uppercase tracking-wider text-brand">
+            AN TOÀN HỆ THỐNG
           </span>
           <span className="text-zinc-300">/</span>
-          <span className="text-xs text-muted font-medium">Bảo mật tài khoản</span>
+          <span className="text-xs text-secondary font-medium">Bảo mật</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-sans">
+        <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight font-sans">
           Bảo mật Tài khoản Quản trị
         </h1>
         <p className="text-xs sm:text-sm text-muted">
@@ -196,7 +197,7 @@ function AdminSecurityPage() {
                 {/* Password strength bar */}
                 {newPassword && (
                   <div className="flex flex-col gap-1 mt-1">
-                    <div className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center justify-between text-xs">
                       <span className="text-zinc-500">Độ an toàn mật khẩu:</span>
                       <span className="font-bold text-ink">{pwdStrength.label}</span>
                     </div>
@@ -272,20 +273,20 @@ function AdminSecurityPage() {
                   className="p-4 rounded-xl bg-[#F5F7FA] border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-ink shrink-0 mt-0.5">
-                      💻
+                    <span className="w-9 h-9 rounded-lg bg-surface-secondary border border-border flex items-center justify-center text-secondary shrink-0 mt-0.5">
+                      <IconComputer size={18} />
                     </span>
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-ink">{sess.device}</span>
                         {sess.isCurrent && (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                          <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">
                             Thiết bị này
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] text-zinc-500 font-mono mt-0.5">{sess.ip}</span>
-                      <span className="text-[11px] text-zinc-400">{sess.lastActive}</span>
+                      <span className="text-xs text-zinc-500 font-mono mt-0.5">{sess.ip}</span>
+                      <span className="text-xs text-zinc-400">{sess.lastActive}</span>
                     </div>
                   </div>
 
@@ -322,7 +323,7 @@ function AdminSecurityPage() {
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-ink">Bảo vệ 2 lớp</span>
                 <span
-                  className={`text-[11px] font-semibold mt-0.5 ${
+                  className={`text-xs font-semibold mt-0.5 ${
                     twoFactorEnabled ? 'text-emerald-700' : 'text-zinc-400'
                   }`}
                 >
@@ -352,7 +353,7 @@ function AdminSecurityPage() {
                   <IconCheck size={14} />
                   Tài khoản đang được bảo vệ an toàn
                 </span>
-                <span className="text-[11px] text-emerald-700 leading-snug">
+                <span className="text-xs text-emerald-700 leading-snug">
                   Mã xác thực 6 số sẽ được yêu cầu ở các lần đăng nhập mới hoặc thiết bị lạ.
                 </span>
               </div>
@@ -364,17 +365,17 @@ function AdminSecurityPage() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
               Quy chuẩn An ninh Vận hành
             </h4>
-            <div className="flex flex-col gap-2 text-xs text-muted">
+            <div className="flex flex-col gap-2.5 text-xs text-muted">
               <div className="flex items-start gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
+                <IconCheck size={16} className="text-jade shrink-0 mt-0.5" />
                 <span>Mật khẩu mã hóa BCrypt chuẩn an ninh.</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
+                <IconCheck size={16} className="text-jade shrink-0 mt-0.5" />
                 <span>Token JWT tự động hết hạn và thu hồi khi đăng xuất.</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="text-emerald-600 font-bold">✓</span>
+                <IconCheck size={16} className="text-jade shrink-0 mt-0.5" />
                 <span>Giao dịch kho và thanh toán được ghi log bất biến.</span>
               </div>
             </div>

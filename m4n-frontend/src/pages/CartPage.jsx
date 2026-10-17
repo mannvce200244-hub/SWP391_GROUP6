@@ -36,7 +36,7 @@ function CartPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-ink font-sans">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
                 Giỏ hàng nhạc cụ
               </h1>
               {cartItemCount > 0 && (
@@ -64,7 +64,7 @@ function CartPage() {
             <div className="w-16 h-16 rounded-2xl bg-brand-soft text-brand flex items-center justify-center mx-auto border border-brand-border">
               <IconShoppingBag size={28} />
             </div>
-            <h3 className="text-xl font-black text-ink">
+            <h3 className="text-xl font-bold text-ink">
               Vui lòng đăng nhập tài khoản
             </h3>
             <p className="text-xs text-muted max-w-sm mx-auto">
@@ -85,7 +85,7 @@ function CartPage() {
             <div className="w-16 h-16 rounded-2xl bg-surface-secondary text-subtle flex items-center justify-center mx-auto border border-border">
               <IconShoppingBag size={28} />
             </div>
-            <h3 className="text-xl font-black text-ink">
+            <h3 className="text-xl font-bold text-ink">
               Giỏ hàng của bạn đang trống
             </h3>
             <p className="text-xs text-muted max-w-sm mx-auto">
@@ -139,7 +139,7 @@ function CartPage() {
                           Mã: {item.productCode}
                         </p>
                       )}
-                      <p className="text-sm font-black text-brand mt-1">
+                      <p className="text-sm font-bold text-brand mt-1">
                         {item.unitPriceDisplay}
                       </p>
                     </div>
@@ -173,7 +173,7 @@ function CartPage() {
 
                     {/* Subtotal */}
                     <div className="text-right min-w-[100px]">
-                      <span className="text-sm font-black text-ink block">
+                      <span className="text-sm font-bold text-ink block">
                         {item.subtotalDisplay}
                       </span>
                       <button
@@ -192,7 +192,7 @@ function CartPage() {
 
             {/* Right: Summary Box */}
             <div className="rounded-[28px] bg-white border border-border/80 p-6 sm:p-7 shadow-sm space-y-5 sticky top-24">
-              <h3 className="text-lg font-black text-ink font-sans pb-3 border-b border-border/60">
+              <h3 className="text-lg font-bold text-ink font-sans pb-3 border-b border-border/60">
                 Tóm tắt đơn hàng
               </h3>
 
@@ -209,7 +209,7 @@ function CartPage() {
 
               <div className="pt-3 border-t border-border/60 flex items-baseline justify-between">
                 <span className="text-sm font-bold text-ink">Tổng tạm tính:</span>
-                <span className="text-2xl font-black text-brand font-sans">
+                <span className="text-2xl font-bold text-brand font-sans">
                   {cart?.totalAmountDisplay}
                 </span>
               </div>

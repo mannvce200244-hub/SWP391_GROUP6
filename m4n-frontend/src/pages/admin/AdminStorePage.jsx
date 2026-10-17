@@ -7,6 +7,9 @@ import {
   IconEye,
   IconAlertCircle,
   IconInstrument,
+  IconClock,
+  IconCircleCheck,
+  IconTriangleAlert,
 } from '../../components/ui/Icons.jsx'
 
 const ADMIN_STATUS_TABS = [
@@ -291,7 +294,7 @@ function AdminStorePage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white rounded-2xl border border-border p-6 shadow-xs">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#0D9488]">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#0D9488]">
               Vận hành & Kênh Bán Lẻ M4N
             </span>
             <span className="text-zinc-300">/</span>
@@ -311,33 +314,33 @@ function AdminStorePage() {
         <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Chờ xác nhận (Chưa trừ kho)</span>
-            <p className="text-2xl font-extrabold text-amber-600">{pendingCount} đơn</p>
+            <p className="text-2xl font-bold text-amber-600">{pendingCount} đơn</p>
             <span className="text-xs text-amber-600 font-semibold mt-0.5">Cần kiểm tra tồn kho & duyệt</span>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0 font-bold">
-            ⏳
+          <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
+            <IconClock size={20} />
           </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Đã xác nhận (Đã trừ kho)</span>
-            <p className="text-2xl font-extrabold text-teal-600">{confirmedCount} đơn</p>
+            <p className="text-2xl font-bold text-teal-600">{confirmedCount} đơn</p>
             <span className="text-xs text-teal-600 font-semibold mt-0.5">Sẵn sàng đóng gói hoàn tất</span>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center shrink-0 font-bold">
-            ✓
+          <div className="w-11 h-11 rounded-xl bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center shrink-0">
+            <IconCircleCheck size={20} />
           </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Chờ xử lý tồn kho</span>
-            <p className="text-2xl font-extrabold text-orange-600">{outOfStockCount} đơn</p>
+            <p className="text-2xl font-bold text-orange-600">{outOfStockCount} đơn</p>
             <span className="text-xs text-orange-600 font-semibold mt-0.5">Hết hàng khi duyệt đơn</span>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-200 text-orange-600 flex items-center justify-center shrink-0 font-bold">
-            ⚠️
+          <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-200 text-orange-600 flex items-center justify-center shrink-0">
+            <IconTriangleAlert size={20} />
           </div>
         </div>
       </div>
@@ -388,7 +391,7 @@ function AdminStorePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border bg-[#F8FAFC] text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
+              <tr className="border-b border-border bg-[#F8FAFC] text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 <th className="py-3.5 px-4 sm:px-6">Mã đơn & Thời gian</th>
                 <th className="py-3.5 px-4">Khách hàng</th>
                 <th className="py-3.5 px-4">Số lượng</th>
@@ -452,7 +455,7 @@ function AdminStorePage() {
                           <span className="font-extrabold text-ink text-sm font-sans">
                             {order.finalAmountDisplay}
                           </span>
-                          <span className="text-[11px] text-muted">
+                          <span className="text-xs text-muted">
                             {order.paymentMethod}
                           </span>
                         </div>
@@ -596,7 +599,7 @@ function AdminStorePage() {
                 <>
                   {/* Recipient Information */}
                   <div className="p-4 rounded-2xl bg-zinc-50 border border-border/70 space-y-2">
-                    <h4 className="font-bold text-ink uppercase tracking-wider text-[11px] pb-1 border-b border-border/60">
+                    <h4 className="font-bold text-ink uppercase tracking-wider text-xs pb-1 border-b border-border/60">
                       Thông tin người nhận & Địa chỉ giao
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-muted">
@@ -612,7 +615,7 @@ function AdminStorePage() {
 
                   {/* Order Items */}
                   <div className="space-y-3">
-                    <h4 className="font-bold text-ink uppercase tracking-wider text-[11px]">
+                    <h4 className="font-bold text-ink uppercase tracking-wider text-xs">
                       Danh sách nhạc cụ đặt mua ({orderDetail.items?.length || 0})
                     </h4>
                     <div className="space-y-2">
@@ -629,7 +632,7 @@ function AdminStorePage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h5 className="font-bold text-ink line-clamp-1">{it.productName}</h5>
-                            <span className="text-[11px] text-muted font-mono">Mã: {it.productCode} &bull; Số lượng: {it.quantity}</span>
+                            <span className="text-xs text-muted font-mono">Mã: {it.productCode} &bull; Số lượng: {it.quantity}</span>
                           </div>
                           <div className="text-right font-bold text-ink">
                             {it.lineTotalDisplay}
@@ -666,8 +669,8 @@ function AdminStorePage() {
                     </div>
 
                     <div className="pt-2 border-t border-border/60 flex justify-between items-baseline">
-                      <span className="text-sm font-black text-ink">Tổng thanh toán:</span>
-                      <span className="text-lg font-black text-[#0D9488] font-sans">{orderDetail.finalAmountDisplay}</span>
+                      <span className="text-sm font-bold text-ink">Tổng thanh toán:</span>
+                      <span className="text-lg font-bold text-[#0D9488] font-sans">{orderDetail.finalAmountDisplay}</span>
                     </div>
                   </div>
                 </>

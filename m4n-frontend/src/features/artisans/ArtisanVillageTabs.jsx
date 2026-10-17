@@ -24,7 +24,7 @@ function ArtisanVillageTabs({
       >
         <span>Nghệ nhân</span>
         <span
-          className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+          className={`px-1.5 py-0.5 rounded text-xs font-mono ${
             activeTab === 'artisans'
               ? 'bg-brand-soft text-brand font-bold'
               : 'bg-surface text-muted'
@@ -48,7 +48,7 @@ function ArtisanVillageTabs({
       >
         <span>Làng nghề</span>
         <span
-          className={`px-1.5 py-0.5 rounded text-[11px] font-mono ${
+          className={`px-1.5 py-0.5 rounded text-xs font-mono ${
             activeTab === 'villages'
               ? 'bg-brand-soft text-brand font-bold'
               : 'bg-surface text-muted'

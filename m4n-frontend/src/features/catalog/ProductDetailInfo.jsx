@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IconShoppingBag } from '../../components/ui/Icons.jsx'
+import { IconShoppingBag, IconCheck, IconArrowRight } from '../../components/ui/Icons.jsx'
 import { useToast } from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
@@ -136,7 +136,7 @@ function ProductDetailInfo({ product }) {
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-jade-soft/60 text-jade border border-jade-border/70">
-                <span className="w-2 h-2 rounded-full bg-jade animate-pulse" /> Còn hàng {product.stockQuantity != null ? `(${product.stockQuantity} sản phẩm)` : ''}
+                <span className="w-2 h-2 rounded-full bg-jade animate-pulse" /> Còn hàng
               </span>
             )}
           </div>
@@ -178,9 +178,9 @@ function ProductDetailInfo({ product }) {
               <label className="text-xs font-semibold uppercase tracking-wider text-muted block">
                 Số lượng
               </label>
-              {product.stockQuantity != null && !isOutOfStock && (
-                <span className="text-xs text-muted">
-                  Kho hàng: <strong className="font-semibold text-ink">{product.stockQuantity}</strong> sản phẩm có sẵn
+              {!isOutOfStock && (
+                <span className="text-xs text-jade font-medium">
+                  Sẵn sàng giao hàng
                 </span>
               )}
             </div>
@@ -224,7 +224,7 @@ function ProductDetailInfo({ product }) {
                     : 'Mua hàng'}
               </span>
               {!isOutOfStock && !isBuying && (
-                <span aria-hidden="true" className="text-base font-normal">→</span>
+                <IconArrowRight size={16} aria-hidden="true" />
               )}
             </button>
           </div>
@@ -232,15 +232,15 @@ function ProductDetailInfo({ product }) {
           {/* Craft Trust Guarantees */}
           <div className="mt-4 pt-4 border-t border-border/60 flex flex-col gap-2 text-xs text-muted">
             <div className="flex items-center gap-2">
-              <span className="text-jade font-bold">✓</span>
+              <IconCheck size={15} className="text-jade shrink-0 stroke-[2.5]" />
               <span>Chế tác thủ công chuẩn quy cách di sản âm nhạc dân tộc</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-jade font-bold">✓</span>
+              <IconCheck size={15} className="text-jade shrink-0 stroke-[2.5]" />
               <span>Kiểm định âm sắc và căn chỉnh bởi nghệ nhân</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-jade font-bold">✓</span>
+              <IconCheck size={15} className="text-jade shrink-0 stroke-[2.5]" />
               <span>Đóng gói chuyên dụng chống sốc trong quá trình vận chuyển</span>
             </div>
           </div>

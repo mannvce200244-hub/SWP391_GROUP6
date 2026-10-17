@@ -1,5 +1,7 @@
 package com.m4n.backend.mapper;
 
+import com.m4n.backend.dto.response.AdminProductDetailResponse;
+import com.m4n.backend.dto.response.AdminProductSummaryResponse;
 import com.m4n.backend.dto.response.ArtisanSummaryResponse;
 import com.m4n.backend.dto.response.CategorySummaryResponse;
 import com.m4n.backend.dto.response.CraftVillageSummaryResponse;
@@ -139,7 +141,7 @@ public class ProductMapper {
         return toDetailResponse(product, availability, null);
     }
 
-    public ProductSummaryResponse toSummaryResponse(Product product, String availability) {
+    public ProductSummaryResponse toSummaryResponse(Product product, String availability, ProductMedia primaryMedia) {
         if (product == null) {
             return null;
         }
@@ -147,6 +149,10 @@ public class ProductMapper {
         String groupName = product.getCategory() != null ? product.getCategory().getName() : null;
         String artisanName = product.getArtisan() != null ? product.getArtisan().getName() : null;
         String craftVillageName = product.getCraftVillage() != null ? product.getCraftVillage().getName() : null;
+
+        List<ProductMediaResponse> mediaResponses = primaryMedia != null
+                ? List.of(toProductMediaResponse(primaryMedia))
+                : (product.getMedia() != null ? toPrimaryMediaResponses(product.getMedia()) : Collections.emptyList());
 
         return new ProductSummaryResponse(
                 product.getId(),
@@ -157,8 +163,72 @@ public class ProductMapper {
                 groupName,
                 artisanName,
                 craftVillageName,
-                toPrimaryMediaResponses(product.getMedia()),
+                mediaResponses,
                 availability
+        );
+    }
+
+    public ProductSummaryResponse toSummaryResponse(Product product, String availability) {
+        return toSummaryResponse(product, availability, null);
+    }
+
+    public AdminProductSummaryResponse toAdminSummaryResponse(
+            Product product,
+            String availability,
+            Integer stockQuantity,
+            String primaryImage
+    ) {
+        if (product == null) {
+            return null;
+        }
+        return new AdminProductSummaryResponse(
+                product.getId(),
+                product.getCode(),
+                product.getBarcode(),
+                product.getName(),
+                product.getPrice(),
+                formatPriceDisplay(product.getPrice()),
+                toCategorySummary(product.getCategory()),
+                toArtisanSummary(product.getArtisan()),
+                toCraftVillageSummary(product.getCraftVillage()),
+                primaryImage,
+                stockQuantity,
+                availability,
+                product.isActive(),
+                product.getCreatedAt(),
+                product.getUpdatedAt()
+        );
+    }
+
+    public AdminProductDetailResponse toAdminDetailResponse(
+            Product product,
+            String availability,
+            Integer stockQuantity
+    ) {
+        if (product == null) {
+            return null;
+        }
+        return new AdminProductDetailResponse(
+                product.getId(),
+                product.getCode(),
+                product.getBarcode(),
+                product.getName(),
+                product.getPrice(),
+                formatPriceDisplay(product.getPrice()),
+                product.getDescription(),
+                toCategorySummary(product.getCategory()),
+                product.getMaterial(),
+                product.getDimensions(),
+                product.getMusicalRange(),
+                product.getOrigin(),
+                toArtisanSummary(product.getArtisan()),
+                toCraftVillageSummary(product.getCraftVillage()),
+                toProductMediaResponses(product.getMedia()),
+                product.isActive(),
+                stockQuantity,
+                availability,
+                product.getCreatedAt(),
+                product.getUpdatedAt()
         );
     }
 }

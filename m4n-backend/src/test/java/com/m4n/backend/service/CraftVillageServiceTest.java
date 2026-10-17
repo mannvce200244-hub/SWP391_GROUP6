@@ -25,13 +25,19 @@ class CraftVillageServiceTest {
     @Mock
     private CraftVillageRepository craftVillageRepository;
 
+    @Mock
+    private com.m4n.backend.repository.ArtisanRepository artisanRepository;
+
+    @Mock
+    private com.m4n.backend.repository.ProductRepository productRepository;
+
     private ProductMapper productMapper;
     private CraftVillageService craftVillageService;
 
     @BeforeEach
     void setUp() {
         productMapper = new ProductMapper();
-        craftVillageService = new CraftVillageServiceImpl(craftVillageRepository, productMapper);
+        craftVillageService = new CraftVillageServiceImpl(craftVillageRepository, productMapper, artisanRepository, productRepository);
     }
 
     @Test
@@ -95,5 +101,28 @@ class CraftVillageServiceTest {
         assertThatThrownBy(() -> craftVillageService.getCraftVillage(null))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("không hợp lệ");
+    }
+
+    @Test
+    void shouldRejectDeleteCraftVillageWhenArtisansAssociated() {
+        CraftVillage village = CraftVillage.builder().id(1L).name("Làng Đào Xá").build();
+        when(craftVillageRepository.findById(1L)).thenReturn(Optional.of(village));
+        when(artisanRepository.countByCraftVillageId(1L)).thenReturn(2L);
+
+        assertThatThrownBy(() -> craftVillageService.deleteCraftVillage(1L))
+                .isInstanceOf(com.m4n.backend.exception.ResourceInUseException.class)
+                .hasMessageContaining("2");
+    }
+
+    @Test
+    void shouldRejectDeleteCraftVillageWhenProductsAssociated() {
+        CraftVillage village = CraftVillage.builder().id(1L).name("Làng Đào Xá").build();
+        when(craftVillageRepository.findById(1L)).thenReturn(Optional.of(village));
+        when(artisanRepository.countByCraftVillageId(1L)).thenReturn(0L);
+        when(productRepository.countByCraftVillageId(1L)).thenReturn(7L);
+
+        assertThatThrownBy(() -> craftVillageService.deleteCraftVillage(1L))
+                .isInstanceOf(com.m4n.backend.exception.ResourceInUseException.class)
+                .hasMessageContaining("7");
     }
 }

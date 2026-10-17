@@ -70,11 +70,11 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                     {user?.email}
                   </p>
                   {roleLabel ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-brand-soft text-brand border border-brand-border mt-1.5">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-soft text-brand border border-brand-border mt-1.5">
                       {roleLabel}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-white text-muted border border-border mt-1.5">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white text-muted border border-border mt-1.5">
                       Thành viên M4N
                     </span>
                   )}

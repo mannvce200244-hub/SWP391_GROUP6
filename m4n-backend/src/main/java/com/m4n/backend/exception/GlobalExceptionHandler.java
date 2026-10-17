@@ -97,9 +97,42 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request
+    ) {
+        String message = String.format("Tham số '%s' không hợp lệ: %s", ex.getName(), ex.getValue());
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(message)
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(
             IllegalArgumentException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ApiErrorResponse> handleInsufficientStock(
+            InsufficientStockException ex,
             HttpServletRequest request
     ) {
         ApiErrorResponse errorResponse = ApiErrorResponse.builder()
@@ -118,11 +151,12 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex,
             HttpServletRequest request
     ) {
+        String msg = (ex.getMessage() != null && !ex.getMessage().isBlank()) ? ex.getMessage() : "Access is denied";
         ApiErrorResponse errorResponse = ApiErrorResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.FORBIDDEN.value())
                 .error(HttpStatus.FORBIDDEN.getReasonPhrase())
-                .message("Access is denied")
+                .message(msg)
                 .path(request.getRequestURI())
                 .build();
 
@@ -134,11 +168,118 @@ public class GlobalExceptionHandler {
             DuplicateResourceException ex,
             HttpServletRequest request
     ) {
+        String errCode = ex.getErrorCode();
+        if ("DUPLICATE_RESOURCE".equals(errCode) && ex.getMessage() != null && ex.getMessage().toLowerCase().contains("email")) {
+            errCode = "EMAIL_ALREADY_EXISTS";
+        }
         ApiErrorResponse errorResponse = ApiErrorResponse.builder()
                 .timestamp(Instant.now())
                 .status(HttpStatus.CONFLICT.value())
-                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                .error(errCode != null ? errCode : "CONFLICT")
                 .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(ResourceInUseException.class)
+    public ResponseEntity<ApiErrorResponse> handleResourceInUse(
+            ResourceInUseException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("RESOURCE_IN_USE")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(StaleVersionException.class)
+    public ResponseEntity<ApiErrorResponse> handleStaleVersion(
+            StaleVersionException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("USER_MODIFIED_BY_ANOTHER_OPERATOR")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler({jakarta.persistence.OptimisticLockException.class, org.springframework.orm.ObjectOptimisticLockingFailureException.class})
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLock(
+            Exception ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("USER_MODIFIED_BY_ANOTHER_OPERATOR")
+                .message("Thông tin người dùng đã được thay đổi bởi quản trị viên khác. Dữ liệu mới nhất đã được tải lại. Vui lòng kiểm tra trước khi lưu lại.")
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalState(
+            IllegalStateException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("BUSINESS_INVARIANT_VIOLATION")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
+            org.springframework.dao.DataIntegrityViolationException ex,
+            HttpServletRequest request
+    ) {
+        String raw = ex.getMessage() != null ? ex.getMessage().toLowerCase() : "";
+        String msg;
+        String errorCode = "DATA_INTEGRITY_CONFLICT";
+
+        if (raw.contains("products_code_key") || raw.contains("uq_product_code")) {
+            msg = "Mã sản phẩm đã tồn tại trong hệ thống.";
+            errorCode = "PRODUCT_CODE_EXISTS";
+        } else if (raw.contains("categories_code_key") || raw.contains("uq_category_code")) {
+            msg = "Mã danh mục đã tồn tại trong hệ thống.";
+            errorCode = "CATEGORY_CODE_EXISTS";
+        } else if (raw.contains("categories_name_key") || raw.contains("uq_category_name")) {
+            msg = "Tên danh mục đã tồn tại trong hệ thống.";
+            errorCode = "CATEGORY_NAME_EXISTS";
+        } else if (raw.contains("email")) {
+            msg = "Email này đã được sử dụng trong hệ thống.";
+            errorCode = "EMAIL_ALREADY_EXISTS";
+        } else if (raw.contains("fk_") || raw.contains("foreign key") || raw.contains("violates foreign key constraint")) {
+            msg = "Dữ liệu đang được liên kết và sử dụng bởi các mục khác trong hệ thống, không thể thao tác.";
+            errorCode = "RESOURCE_IN_USE";
+        } else {
+            msg = "Dữ liệu xung đột với ràng buộc trong hệ thống.";
+        }
+
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(errorCode)
+                .message(msg)
                 .path(request.getRequestURI())
                 .build();
 

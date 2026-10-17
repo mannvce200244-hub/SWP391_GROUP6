@@ -76,13 +76,13 @@ function AdminProfilePage() {
       {/* Header Section */}
       <div className="flex flex-col gap-1 bg-white rounded-2xl border border-border p-6 shadow-xs">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#0D9488]">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[#0D9488]">
             Hệ thống Quản trị M4N
           </span>
           <span className="text-zinc-300">/</span>
           <span className="text-xs text-muted font-medium">Hồ sơ cá nhân</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-sans">
+        <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight font-sans">
           Hồ sơ Cá nhân Quản trị viên
         </h1>
         <p className="text-xs sm:text-sm text-muted">
@@ -99,7 +99,7 @@ function AdminProfilePage() {
         <div className="flex flex-col gap-1 flex-1">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 className="text-xl sm:text-2xl font-bold text-ink">{formData.fullName}</h2>
-            <span className="px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#0D9488] text-white uppercase tracking-wider">
+            <span className="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-[#0D9488] text-white uppercase tracking-wider">
               ADMINISTRATOR
             </span>
           </div>
@@ -234,11 +234,11 @@ function AdminProfilePage() {
                         <PermIcon size={15} className="text-[#0D9488]" />
                         <span className="text-xs font-bold text-ink">{perm.title}</span>
                       </div>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                      <span className="px-1.5 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">
                         {perm.status}
                       </span>
                     </div>
-                    <p className="text-[11px] text-zinc-500 leading-relaxed mt-0.5">{perm.desc}</p>
+                    <p className="text-xs text-zinc-500 leading-relaxed mt-0.5">{perm.desc}</p>
                   </div>
                 )
               })}
@@ -253,7 +253,7 @@ function AdminProfilePage() {
             <div className="flex flex-col gap-2.5 divide-y divide-border/60">
               {recentActivities.map((act, idx) => (
                 <div key={idx} className="pt-2 first:pt-0 flex flex-col gap-0.5 text-xs">
-                  <span className="text-[10px] text-zinc-400 font-mono">{act.time}</span>
+                  <span className="text-xs text-zinc-400 font-mono">{act.time}</span>
                   <span className="text-ink font-medium leading-snug">{act.action}</span>
                 </div>
               ))}

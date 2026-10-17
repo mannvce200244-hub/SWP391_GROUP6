@@ -27,9 +27,11 @@ import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import PosDashboardPage from '../pages/PosDashboardPage.jsx'
 import AdminDashboardPage from '../pages/AdminDashboardPage.jsx'
 import AdminInstrumentsPage from '../pages/admin/AdminInstrumentsPage.jsx'
+import AdminProductDetailPage from '../pages/admin/AdminProductDetailPage.jsx'
 import AdminStorePage from '../pages/admin/AdminStorePage.jsx'
 import AdminProfilePage from '../pages/admin/AdminProfilePage.jsx'
 import AdminSecurityPage from '../pages/admin/AdminSecurityPage.jsx'
+import AdminUsersPage from '../pages/admin/AdminUsersPage.jsx'
 
 import RequireAuth from './RequireAuth.jsx'
 import RequireRole from './RequireRole.jsx'
@@ -37,6 +39,7 @@ import {
   CUSTOMER_ROUTES,
   matchCraftVillageDetailPath,
   matchProductDetailPath,
+  matchAdminInstrumentDetailPath,
   normalizePathname,
   ROUTE_CHANGE_EVENT,
 } from './customerRoutes.js'
@@ -78,15 +81,21 @@ function AppRouter() {
   }
 
   // 2. Admin shell using AdminLayout
+  const adminInstrumentDetailId = matchAdminInstrumentDetailPath(pathname)
+
   if (
     pathname === CUSTOMER_ROUTES.admin ||
     pathname === CUSTOMER_ROUTES.adminInstruments ||
+    Boolean(adminInstrumentDetailId) ||
     pathname === CUSTOMER_ROUTES.adminStore ||
     pathname === CUSTOMER_ROUTES.adminProfile ||
-    pathname === CUSTOMER_ROUTES.adminSecurity
+    pathname === CUSTOMER_ROUTES.adminSecurity ||
+    pathname === CUSTOMER_ROUTES.adminUsers
   ) {
     let adminContent = <AdminDashboardPage />
-    if (pathname === CUSTOMER_ROUTES.adminInstruments) {
+    if (adminInstrumentDetailId) {
+      adminContent = <AdminProductDetailPage productId={adminInstrumentDetailId} />
+    } else if (pathname === CUSTOMER_ROUTES.adminInstruments) {
       adminContent = <AdminInstrumentsPage />
     } else if (pathname === CUSTOMER_ROUTES.adminStore) {
       adminContent = <AdminStorePage />
@@ -94,10 +103,12 @@ function AppRouter() {
       adminContent = <AdminProfilePage />
     } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
       adminContent = <AdminSecurityPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
+      adminContent = <AdminUsersPage />
     }
 
     return (
-      <RequireRole allowedRoles={['ADMIN']}>
+      <RequireRole allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
         <AdminLayout pathname={pathname}>
           {adminContent}
         </AdminLayout>
@@ -119,7 +130,7 @@ function AppRouter() {
   // 4. POS showroom shell using PosLayout
   if (pathname === CUSTOMER_ROUTES.pos) {
     return (
-      <RequireRole allowedRoles={['POS_STAFF']}>
+      <RequireRole allowedRoles={['POS_STAFF', 'ADMIN']}>
         <PosLayout pathname={pathname}>
           <PosDashboardPage />
         </PosLayout>

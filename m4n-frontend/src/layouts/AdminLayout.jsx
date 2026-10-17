@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
+import { CUSTOMER_ROUTES, navigateTo, matchAdminInstrumentDetailPath } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
   IconDashboard,
@@ -9,8 +9,14 @@ import {
   IconLock,
   IconLogOut,
   IconChevronDown,
+  IconMenu,
+  IconX,
+  IconExternalLink,
+  IconChevronsLeft,
+  IconChevronsRight,
 } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
+import BrandLogo from '../components/common/BrandLogo.jsx'
 
 function AdminLayout({ children, pathname }) {
   const { user, logout } = useAuth()
@@ -65,15 +71,19 @@ function AdminLayout({ children, pathname }) {
     {
       title: 'HỆ THỐNG',
       items: [
+        { label: 'Quản lý tài khoản', path: CUSTOMER_ROUTES.adminUsers, Icon: IconUser },
         { label: 'Hồ sơ cá nhân', path: CUSTOMER_ROUTES.adminProfile, Icon: IconUser },
         { label: 'Bảo mật tài khoản', path: CUSTOMER_ROUTES.adminSecurity, Icon: IconLock },
       ],
     },
   ]
 
+  const isInstrumentDetail = Boolean(matchAdminInstrumentDetailPath(pathname))
   const allNavItems = navSections.flatMap((s) => s.items)
   const currentNavItem = allNavItems.find((item) => item.path === pathname)
-  const pageTitle = currentNavItem ? currentNavItem.label : 'Dashboard Quản trị'
+  const pageTitle = isInstrumentDetail
+    ? 'Chi tiết sản phẩm'
+    : (currentNavItem ? currentNavItem.label : 'Dashboard Quản trị')
 
   return (
     <div className="min-h-screen flex bg-[#F5F7FA] text-[#17191B]">
@@ -114,20 +124,7 @@ function AdminLayout({ children, pathname }) {
             }}
             title={sidebarCollapsed ? 'Nhấn để mở rộng thanh bên' : 'M4N Admin'}
           >
-            {/* Emerald green monogram badge */}
-            <div className="w-9 h-9 rounded-xl bg-[#0D9488] text-white flex items-center justify-center font-extrabold text-sm tracking-wider shadow-md group-hover:bg-[#0F766E] transition-colors shrink-0">
-              M4N
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex flex-col leading-none min-w-0">
-                <span className="text-white font-bold tracking-tight text-base font-sans truncate">
-                  M4N Admin
-                </span>
-                <span className="text-[10px] text-zinc-400 font-semibold tracking-widest uppercase mt-0.5">
-                  BACK OFFICE
-                </span>
-              </div>
-            )}
+            <BrandLogo variant="dark" collapsed={sidebarCollapsed} />
           </div>
 
           {/* Desktop collapse toggle on sidebar header */}
@@ -139,9 +136,7 @@ function AdminLayout({ children, pathname }) {
               title="Thu gọn menu điều hướng"
               aria-label="Thu gọn menu điều hướng"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              </svg>
+              <IconChevronsLeft size={16} />
             </button>
           )}
 
@@ -152,7 +147,7 @@ function AdminLayout({ children, pathname }) {
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Đóng menu"
           >
-            ✕
+            <IconX size={18} />
           </button>
         </div>
 
@@ -166,14 +161,7 @@ function AdminLayout({ children, pathname }) {
               title="Mở rộng menu điều hướng"
               aria-label="Mở rộng menu điều hướng"
             >
-              <svg
-                className="w-4 h-4 transition-transform group-hover:scale-110"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-              </svg>
+              <IconChevronsRight size={16} className="transition-transform group-hover:scale-110" />
             </button>
           </div>
         )}
@@ -183,7 +171,7 @@ function AdminLayout({ children, pathname }) {
           {navSections.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
               {!sidebarCollapsed ? (
-                <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                <span className="px-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
                   {section.title}
                 </span>
               ) : (
@@ -191,7 +179,9 @@ function AdminLayout({ children, pathname }) {
               )}
 
               {section.items.map((item) => {
-                const isActive = pathname === item.path
+                const isActive =
+                  pathname === item.path ||
+                  (item.path === CUSTOMER_ROUTES.adminInstruments && isInstrumentDetail)
                 const ItemIcon = item.Icon
                 return (
                   <button
@@ -245,7 +235,7 @@ function AdminLayout({ children, pathname }) {
                   <span className="text-xs font-bold text-white truncate leading-tight">
                     {user?.fullName || 'Quản trị viên'}
                   </span>
-                  <span className="text-[10px] text-zinc-400 truncate">
+                  <span className="text-xs text-zinc-400 truncate">
                     {user?.email || 'admin@m4n.vn'}
                   </span>
                 </div>
@@ -278,23 +268,23 @@ function AdminLayout({ children, pathname }) {
             {/* Mobile drawer trigger */}
             <button
               type="button"
-              className="lg:hidden p-2 rounded-xl text-[#17191B] hover:bg-[#F2F4F5] text-lg leading-none cursor-pointer border border-[#E5E8EB]"
+              className="lg:hidden p-2 rounded-xl text-[#17191B] hover:bg-[#F2F4F5] leading-none cursor-pointer border border-[#E5E8EB] flex items-center justify-center"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-label="Mở menu điều hướng"
             >
-              ☰
+              <IconMenu size={20} />
             </button>
 
             {/* Breadcrumb & Page Title */}
             <div className="flex items-center gap-2 text-sm">
               <span
-                className="text-xs font-semibold text-zinc-400 hover:text-[#17191B] cursor-pointer transition-colors"
+                className="text-sm font-medium text-secondary hover:text-[#17191B] cursor-pointer transition-colors"
                 onClick={() => navigateTo(CUSTOMER_ROUTES.admin)}
               >
                 M4N Back Office
               </span>
               <span className="text-zinc-300 text-xs">/</span>
-              <h1 className="font-bold text-[#17191B] text-sm sm:text-base tracking-tight">
+              <h1 className="font-bold text-[#17191B] text-base tracking-tight">
                 {pageTitle}
               </h1>
             </div>
@@ -305,17 +295,17 @@ function AdminLayout({ children, pathname }) {
             {/* Storefront Link Shortcut */}
             <button
               type="button"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-xs font-semibold text-[#17191B] hover:text-[#0D9488] hover:bg-[#F6F7F8] hover:border-[#CDD2D5] transition-colors cursor-pointer shadow-2xs"
+              className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-sm font-medium text-[#17191B] hover:text-[#0D9488] hover:bg-[#F6F7F8] hover:border-[#CDD2D5] transition-colors cursor-pointer shadow-2xs"
               onClick={() => navigateTo(CUSTOMER_ROUTES.home)}
               title="Xem cửa hàng khách hàng"
             >
-              <IconStore size={14} className="text-zinc-400" />
+              <IconStore size={16} className="text-secondary" />
               <span>Xem Cửa hàng</span>
-              <span className="text-[10px] text-zinc-400">↗</span>
+              <IconExternalLink size={14} className="text-secondary" />
             </button>
 
             {/* System Status Pill */}
-            <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold shadow-2xs">
+            <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium shadow-2xs">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Hệ thống: Sẵn sàng</span>
             </div>
@@ -336,7 +326,9 @@ function AdminLayout({ children, pathname }) {
                   <span className="text-xs font-bold text-[#17191B] truncate max-w-[120px]">
                     {user?.fullName || 'Quản trị viên'}
                   </span>
-                  <span className="text-[10px] text-[#0D9488] font-semibold">ADMIN</span>
+                  <span className="text-xs text-[#0D9488] font-medium">
+                    {user?.role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : 'ADMIN'}
+                  </span>
                 </div>
                 <IconChevronDown size={14} className="text-zinc-400" />
               </button>
@@ -351,8 +343,8 @@ function AdminLayout({ children, pathname }) {
                       {user?.fullName || 'Quản trị viên'}
                     </strong>
                     <span className="text-zinc-500 truncate">{user?.email}</span>
-                    <span className="inline-block mt-1.5 px-2 py-0.5 text-[10px] font-bold rounded-md bg-[#0D9488]/10 text-[#0D9488] border border-[#0D9488]/20 self-start">
-                      Quản trị viên (ADMIN)
+                    <span className="inline-block mt-1.5 px-2 py-0.5 text-xs font-medium rounded-md bg-[#0D9488]/10 text-[#0D9488] border border-[#0D9488]/20 self-start">
+                      {user?.role === 'SUPER_ADMIN' ? 'Super Admin (SUPER_ADMIN)' : 'Quản trị viên (ADMIN)'}
                     </span>
                   </div>
 

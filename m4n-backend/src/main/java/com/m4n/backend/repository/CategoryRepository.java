@@ -10,4 +10,8 @@ import java.util.Optional;
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findByCodeIgnoreCase(String code);
     Optional<Category> findByNameIgnoreCase(String name);
+    boolean existsByCodeIgnoreCase(String code);
+    boolean existsByNameIgnoreCase(String name);
+    boolean existsByCodeIgnoreCaseAndIdNot(String code, Long id);
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 }

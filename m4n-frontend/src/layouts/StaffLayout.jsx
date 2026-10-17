@@ -9,8 +9,12 @@ import {
   IconLock,
   IconLogOut,
   IconChevronDown,
+  IconX,
+  IconChevronsLeft,
+  IconChevronsRight,
 } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
+import BrandLogo from '../components/common/BrandLogo.jsx'
 
 function StaffLayout({ children, pathname }) {
   const { user, logout } = useAuth()
@@ -109,20 +113,7 @@ function StaffLayout({ children, pathname }) {
             }}
             title={sidebarCollapsed ? 'Nhấn để mở rộng thanh bên' : 'M4N Staff'}
           >
-            {/* Deep Jade monogram badge for Staff */}
-            <div className="w-9 h-9 rounded-xl bg-[#1F6B5A] text-white flex items-center justify-center font-extrabold text-sm tracking-wider shadow-md group-hover:bg-[#154b3f] transition-colors shrink-0">
-              M4N
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex flex-col leading-none min-w-0">
-                <span className="text-white font-bold tracking-tight text-base font-sans truncate">
-                  M4N Staff
-                </span>
-                <span className="text-[10px] text-[#2EA083] font-bold tracking-widest uppercase mt-0.5">
-                  ONLINE STAFF
-                </span>
-              </div>
-            )}
+            <BrandLogo variant="dark" collapsed={sidebarCollapsed} />
           </div>
 
           {/* Desktop collapse toggle on sidebar header */}
@@ -134,9 +125,7 @@ function StaffLayout({ children, pathname }) {
               title="Thu gọn thanh điều hướng"
               aria-label="Thu gọn thanh điều hướng"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-              </svg>
+              <IconChevronsLeft size={16} />
             </button>
           )}
 
@@ -147,7 +136,7 @@ function StaffLayout({ children, pathname }) {
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Đóng menu"
           >
-            ✕
+            <IconX size={18} />
           </button>
         </div>
 
@@ -161,14 +150,7 @@ function StaffLayout({ children, pathname }) {
               title="Mở rộng thanh điều hướng"
               aria-label="Mở rộng thanh điều hướng"
             >
-              <svg
-                className="w-4 h-4 transition-transform group-hover:scale-110"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-              </svg>
+              <IconChevronsRight size={16} className="transition-transform group-hover:scale-110" />
             </button>
           </div>
         )}
@@ -178,7 +160,7 @@ function StaffLayout({ children, pathname }) {
           {navSections.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
               {!sidebarCollapsed ? (
-                <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                <span className="px-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
                   {section.title}
                 </span>
               ) : (
@@ -243,7 +225,7 @@ function StaffLayout({ children, pathname }) {
                 <span className="text-xs font-semibold text-white truncate">
                   {user?.fullName || 'Nhân viên'}
                 </span>
-                <span className="text-[11px] text-zinc-400 truncate">
+                <span className="text-xs text-zinc-400 truncate">
                   {user?.email || 'staff@m4n.vn'}
                 </span>
               </div>
@@ -318,7 +300,7 @@ function StaffLayout({ children, pathname }) {
                   <span className="text-xs font-bold text-ink leading-tight">
                     {user?.fullName || 'Nhân viên Online'}
                   </span>
-                  <span className="text-[10px] text-zinc-500 font-medium">
+                  <span className="text-xs text-zinc-500 font-medium">
                     {user?.role || 'ONLINE_STAFF'}
                   </span>
                 </div>
@@ -335,7 +317,7 @@ function StaffLayout({ children, pathname }) {
                       {user?.fullName || 'Nhân viên'}
                     </strong>
                     <span className="text-zinc-500 truncate mt-0.5">{user?.email}</span>
-                    <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1F6B5A]">
+                    <span className="inline-block mt-1 text-xs font-semibold uppercase tracking-wider text-[#1F6B5A]">
                       Nhân viên tư vấn
                     </span>
                   </div>

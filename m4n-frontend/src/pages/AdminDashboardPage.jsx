@@ -48,28 +48,28 @@ function getStatusBadge(status, label) {
   switch (status) {
     case 'COMPLETED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>{label || 'Hoàn thành'}</span>
         </span>
       )
     case 'CONFIRMED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
           <span>{label || 'Đã xác nhận'}</span>
         </span>
       )
     case 'OUT_OF_STOCK_WAITING':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
           <span>{label || 'Chờ bổ sung kho'}</span>
         </span>
       )
     case 'CANCELLED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
           <span>{label || 'Đã hủy'}</span>
         </span>
@@ -77,7 +77,7 @@ function getStatusBadge(status, label) {
     case 'PENDING_CONFIRMATION':
     default:
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-300">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
           <span>{label || 'Chờ xác nhận'}</span>
         </span>
@@ -204,7 +204,7 @@ function AdminDashboardPage() {
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#0D9488]" />
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Doanh thu</span>
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-[#0D9488] flex items-center justify-center border border-teal-200 shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-brand flex items-center justify-center shrink-0">
               <IconStore size={18} />
             </div>
           </div>
@@ -212,11 +212,11 @@ function AdminDashboardPage() {
             {loading ? (
               <div className="h-8 w-32 bg-zinc-200 animate-pulse rounded-lg" />
             ) : (
-              <p className="text-2xl font-extrabold text-[#17191B] tracking-tight font-sans">
+              <p className="text-2xl font-bold text-[#17191B] tracking-tight font-sans">
                 {formatCurrencyVND(kpi?.totalRevenue)}
               </p>
             )}
-            <span className="text-[11px] text-zinc-400 font-medium">
+            <span className="text-xs text-muted">
               Đơn hàng đã hoàn thành (BR-REVENUE-01)
             </span>
           </div>
@@ -227,7 +227,7 @@ function AdminDashboardPage() {
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#626970]" />
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Tổng đơn hàng</span>
-            <div className="w-10 h-10 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center border border-zinc-200 shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-secondary flex items-center justify-center shrink-0">
               <IconPackage size={18} />
             </div>
           </div>
@@ -235,11 +235,11 @@ function AdminDashboardPage() {
             {loading ? (
               <div className="h-8 w-20 bg-zinc-200 animate-pulse rounded-lg" />
             ) : (
-              <p className="text-2xl font-extrabold text-[#17191B] tracking-tight font-sans">
+              <p className="text-2xl font-bold text-[#17191B] tracking-tight font-sans">
                 {Number(kpi?.totalOrders || 0).toLocaleString('vi-VN')}
               </p>
             )}
-            <span className="text-[11px] text-zinc-400 font-medium">
+            <span className="text-xs text-muted">
               Tất cả trạng thái đơn
             </span>
           </div>
@@ -250,7 +250,7 @@ function AdminDashboardPage() {
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#1F6B5A]" />
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Đơn hoàn thành</span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-200 shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-jade flex items-center justify-center shrink-0">
               <IconCheck size={18} />
             </div>
           </div>
@@ -258,11 +258,11 @@ function AdminDashboardPage() {
             {loading ? (
               <div className="h-8 w-20 bg-zinc-200 animate-pulse rounded-lg" />
             ) : (
-              <p className="text-2xl font-extrabold text-[#17191B] tracking-tight font-sans">
+              <p className="text-2xl font-bold text-[#17191B] tracking-tight font-sans">
                 {Number(kpi?.completedOrders || 0).toLocaleString('vi-VN')}
               </p>
             )}
-            <span className="text-[11px] text-zinc-400 font-medium">
+            <span className="text-xs text-muted">
               Giao dịch thành công
             </span>
           </div>
@@ -273,7 +273,7 @@ function AdminDashboardPage() {
           <div className="absolute top-0 left-0 right-0 h-1 bg-[#DC2626]" />
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Đơn đã hủy</span>
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center border border-rose-200 shrink-0">
+            <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-danger flex items-center justify-center shrink-0">
               <IconClose size={18} />
             </div>
           </div>
@@ -281,11 +281,11 @@ function AdminDashboardPage() {
             {loading ? (
               <div className="h-8 w-20 bg-zinc-200 animate-pulse rounded-lg" />
             ) : (
-              <p className="text-2xl font-extrabold text-[#17191B] tracking-tight font-sans">
+              <p className="text-2xl font-bold text-[#17191B] tracking-tight font-sans">
                 {Number(kpi?.cancelledOrders || 0).toLocaleString('vi-VN')}
               </p>
             )}
-            <span className="text-[11px] text-zinc-400 font-medium">
+            <span className="text-xs text-muted">
               Không tính vào doanh thu
             </span>
           </div>
@@ -305,7 +305,7 @@ function AdminDashboardPage() {
                 Thống kê doanh thu theo {PERIOD_OPTIONS.find((p) => p.id === period)?.label.toLowerCase()}
               </p>
             </div>
-            <span className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-teal-50 text-[#0D9488] border border-teal-200 self-start sm:self-auto">
+            <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 text-[#0D9488] border border-teal-200 self-start sm:self-auto">
               {PERIOD_OPTIONS.find((p) => p.id === period)?.label}
             </span>
           </div>
@@ -330,7 +330,7 @@ function AdminDashboardPage() {
                 Kho tổng nhạc cụ thời gian thực
               </p>
             </div>
-            <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-zinc-100 text-zinc-700 border border-zinc-200">
+            <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-zinc-100 text-zinc-700 border border-zinc-200">
               KHO M4N
             </span>
           </div>
@@ -374,7 +374,7 @@ function AdminDashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-[#E5E8EB] text-zinc-400 font-semibold uppercase text-[10px] tracking-wider">
+                  <tr className="border-b border-[#E5E8EB] text-zinc-500 font-semibold uppercase text-xs tracking-wider">
                     <th className="py-2.5 px-3">Nhạc cụ</th>
                     <th className="py-2.5 px-3">Phân loại</th>
                     <th className="py-2.5 px-3 text-right">Đã bán</th>
@@ -403,7 +403,7 @@ function AdminDashboardPage() {
                               <span className="font-bold text-[#17191B] truncate max-w-[180px]">
                                 {prod.productName}
                               </span>
-                              <span className="text-[10px] text-zinc-400 font-mono">
+                              <span className="text-xs text-zinc-400 font-mono">
                                 {prod.productCode}
                               </span>
                             </div>
@@ -454,7 +454,7 @@ function AdminDashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-[#E5E8EB] text-zinc-400 font-semibold uppercase text-[10px] tracking-wider">
+                  <tr className="border-b border-[#E5E8EB] text-zinc-500 font-semibold uppercase text-xs tracking-wider">
                     <th className="py-2.5 px-2.5">Mã đơn</th>
                     <th className="py-2.5 px-2.5">Khách hàng</th>
                     <th className="py-2.5 px-2.5 text-right">Giá trị</th>
@@ -466,10 +466,10 @@ function AdminDashboardPage() {
                     <tr key={ord.id} className="hover:bg-[#F9FAFB] transition-colors">
                       <td className="py-3 px-2.5">
                         <div className="flex flex-col">
-                          <span className="font-bold text-[#17191B] font-mono text-[11px]">
+                          <span className="font-bold text-[#17191B] font-mono text-xs">
                             {ord.orderCode}
                           </span>
-                          <span className="text-[10px] text-zinc-400">
+                          <span className="text-xs text-zinc-400">
                             {formatDateVN(ord.createdAt)}
                           </span>
                         </div>

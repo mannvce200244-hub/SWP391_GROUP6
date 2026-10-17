@@ -5,6 +5,11 @@ import com.m4n.backend.dto.response.ProductSummaryResponse;
 import com.m4n.backend.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,18 +18,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/products")
+@RequiredArgsConstructor
 @Tag(name = "Product Catalog", description = "Public customer catalog and product detail APIs")
 public class ProductController {
 
     private final ProductService productService;
-
-    public ProductController(ProductService productService) {
-        this.productService = productService;
-    }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get product detail by ID", description = "Returns full specifications, media gallery, artisan, and craft village for a product.")
@@ -33,15 +34,18 @@ public class ProductController {
     }
 
     @GetMapping
-    @Operation(summary = "Browse and filter product catalog", description = "Returns list of active musical instruments matching optional search and filter criteria.")
-    public ResponseEntity<List<ProductSummaryResponse>> listProducts(
+    @Operation(summary = "Browse and filter product catalog", description = "Returns paginated list of active musical instruments matching optional search and filter criteria.")
+    public ResponseEntity<Page<ProductSummaryResponse>> listProducts(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String group,
             @RequestParam(required = false) String artisan,
             @RequestParam(required = false) String craftVillage,
             @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @PageableDefault(size = 9, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ResponseEntity.ok(productService.listProducts(keyword, group, artisan, craftVillage, minPrice, maxPrice));
+        return ResponseEntity.ok(productService.listProducts(
+                keyword, group, artisan, craftVillage, minPrice, maxPrice, pageable
+        ));
     }
 }

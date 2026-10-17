@@ -9,7 +9,9 @@ import {
   IconPackage,
   IconCheck,
   IconAlertCircle,
+  IconBookOpen,
 } from '../components/ui/Icons.jsx'
+import StaffChatWorkspace from '../features/chat/StaffChatWorkspace.jsx'
 
 function StaffDashboardPage() {
   const { user } = useAuth()
@@ -74,13 +76,13 @@ function StaffDashboardPage() {
       <div className="bg-white rounded-2xl border border-border p-6 sm:p-8 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#1F6B5A]">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#1F6B5A]">
               Bàn Làm Việc Online
             </span>
             <span className="text-zinc-300">/</span>
             <span className="text-xs text-muted font-medium">Bán lẻ & Tư vấn di sản</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight font-sans">
+          <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight font-sans">
             Xin chào, {user?.fullName || 'Nhân viên'}
           </h1>
           <p className="text-xs sm:text-sm text-muted">
@@ -90,13 +92,13 @@ function StaffDashboardPage() {
 
         <div className="flex flex-wrap gap-3">
           <div className="flex flex-col px-4 py-2 rounded-xl bg-[#F5F7FA] border border-border text-xs">
-            <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
               Tài khoản ca trực
             </span>
             <span className="font-bold text-ink mt-0.5 font-mono">{user?.email}</span>
           </div>
           <div className="flex flex-col px-4 py-2 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs">
-            <span className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider">
+            <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
               Trạng thái
             </span>
             <span className="font-bold text-[#1F6B5A] mt-0.5 flex items-center gap-1.5">
@@ -112,7 +114,7 @@ function StaffDashboardPage() {
         <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Kênh hỗ trợ online</span>
-            <p className="text-2xl font-extrabold text-[#1F6B5A]">Sẵn sàng</p>
+            <p className="text-2xl font-bold text-[#1F6B5A]">Sẵn sàng</p>
             <span className="text-xs text-emerald-700 font-medium mt-0.5">Tiếp nhận yêu cầu tư vấn</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-[#1F6B5A] flex items-center justify-center shrink-0">
@@ -123,7 +125,7 @@ function StaffDashboardPage() {
         <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Mẫu nhạc cụ hiển thị</span>
-            <p className="text-2xl font-extrabold text-ink">8 mẫu di sản</p>
+            <p className="text-2xl font-bold text-ink">8 mẫu di sản</p>
             <span className="text-xs text-zinc-500 mt-0.5">Làng Đào Xá, Trúc Sơn, Đọi Tam</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0">
@@ -134,7 +136,7 @@ function StaffDashboardPage() {
         <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Cảnh báo tồn kho</span>
-            <p className="text-2xl font-extrabold text-amber-600">3 mẫu</p>
+            <p className="text-2xl font-bold text-amber-600">3 mẫu</p>
             <span className="text-xs text-amber-600 font-medium mt-0.5">Lưu ý trước khi chốt đơn</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
@@ -145,13 +147,22 @@ function StaffDashboardPage() {
         <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold text-muted uppercase tracking-wider">Phiên đăng nhập</span>
-            <p className="text-2xl font-extrabold text-ink">Bảo mật cao</p>
+            <p className="text-2xl font-bold text-ink">Bảo mật cao</p>
             <span className="text-xs text-zinc-500 mt-0.5">Xác thực token JWT an toàn</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0">
             <IconLock size={20} />
           </div>
         </div>
+      </div>
+
+      {/* Customer Support Chat Workspace */}
+      <div className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-base font-bold text-ink">Bàn tư vấn & Hỗ trợ khách hàng trực tuyến</h2>
+          <p className="text-xs text-muted">Tiếp nhận tin nhắn tư vấn và phản hồi khách hàng trong thời gian thực.</p>
+        </div>
+        <StaffChatWorkspace />
       </div>
 
       {/* Quick Action Modules */}
@@ -171,7 +182,7 @@ function StaffDashboardPage() {
                   <div className={`w-10 h-10 rounded-xl ${item.accentBg} ${item.accentColor} flex items-center justify-center transition-colors`}>
                     <ItemIcon size={20} />
                   </div>
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-zinc-100 text-zinc-600 uppercase tracking-wider">
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-zinc-100 text-zinc-600 uppercase tracking-wider">
                     {item.badge}
                   </span>
                 </div>
@@ -194,8 +205,8 @@ function StaffDashboardPage() {
       {/* Guidelines & Cultural Knowledge Section */}
       <div className="bg-white rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-emerald-50 text-[#1F6B5A] flex items-center justify-center font-bold text-xs">
-            📖
+          <span className="w-7 h-7 rounded-lg bg-surface-secondary text-[#1F6B5A] border border-border/80 flex items-center justify-center font-bold text-xs">
+            <IconBookOpen size={16} />
           </span>
           <h2 className="text-base font-bold text-ink">
             Quy chuẩn tư vấn & Lưu ý nhạc cụ truyền thống

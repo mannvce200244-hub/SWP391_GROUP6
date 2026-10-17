@@ -9,4 +9,7 @@ import java.util.Optional;
 @Repository
 public interface ArtisanRepository extends JpaRepository<Artisan, Long> {
     Optional<Artisan> findByNameIgnoreCase(String name);
+    boolean existsByNameIgnoreCase(String name);
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+    long countByCraftVillageId(Long craftVillageId);
 }

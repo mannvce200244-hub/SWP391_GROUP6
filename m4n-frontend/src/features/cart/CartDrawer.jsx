@@ -4,6 +4,7 @@ import {
   IconInstrument,
   IconChevronRight,
   IconArrowRight,
+  IconX,
 } from '../../components/ui/Icons.jsx'
 import useCart from './useCart.js'
 import useAuth from '../auth/useAuth.js'
@@ -63,14 +64,14 @@ function CartDrawer({ isOpen, onClose }) {
                 <IconShoppingBag size={18} />
               </div>
               <div>
-                <h3 className="text-base font-black text-ink font-sans">
+                <h3 className="text-base font-bold text-ink font-sans">
                   Giỏ hàng của bạn
                 </h3>
-                <p className="text-xs text-muted">
-                  {cartItemCount > 0
-                    ? `${cartItemCount} nhạc cụ đã chọn`
-                    : 'Chưa có sản phẩm nào'}
-                </p>
+                {cartItemCount > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-soft text-brand border border-brand-border">
+                    {cartItemCount}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -80,9 +81,7 @@ function CartDrawer({ isOpen, onClose }) {
               className="w-9 h-9 rounded-xl flex items-center justify-center text-muted hover:text-ink hover:bg-surface-secondary transition-colors cursor-pointer"
               aria-label="Đóng giỏ hàng"
             >
-              <svg aria-hidden="true" className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <IconX size={18} />
             </button>
           </div>
 
@@ -174,8 +173,8 @@ function CartDrawer({ isOpen, onClose }) {
                       >
                         {item.productName}
                       </h4>
-                      <p className="text-xs font-black text-brand mt-0.5">
-                        {item.unitPriceDisplay || item.subtotalDisplay}
+                      <p className="text-xs font-bold text-brand mt-0.5">
+                        {item.unitPriceDisplay}
                       </p>
 
                       {/* Quantity Controls */}
@@ -226,11 +225,11 @@ function CartDrawer({ isOpen, onClose }) {
             <div className="p-5 sm:p-6 border-t border-border bg-surface-secondary/40 space-y-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted font-medium">Tạm tính:</span>
-                <span className="text-base font-black text-ink font-sans">
+                <span className="text-base font-bold text-ink font-sans">
                   {cart?.totalAmountDisplay || '0 ₫'}
                 </span>
               </div>
-              <p className="text-[11px] text-subtle">
+              <p className="text-xs text-subtle">
                 Phí vận chuyển và chi phí bảo hiểm nhạc cụ sẽ được tính tại bước thanh toán.
               </p>
 

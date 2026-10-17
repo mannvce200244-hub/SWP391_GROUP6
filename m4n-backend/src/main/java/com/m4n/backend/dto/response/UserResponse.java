@@ -9,5 +9,6 @@ public record UserResponse(
         String phone,
         String address,
         RoleName role,
-        boolean isActive
+        boolean isActive,
+        Long version
 ) {}

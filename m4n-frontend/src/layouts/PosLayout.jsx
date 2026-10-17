@@ -54,7 +54,7 @@ function PosLayout({ children }) {
           >
             <BrandLogo />
           </div>
-          <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-surface-secondary text-ink border border-border tracking-wider uppercase">THU NGÂN SHOWROOM</span>
+          <span className="px-2 py-0.5 text-xs font-semibold rounded bg-surface-secondary text-ink border border-border tracking-wide uppercase">THU NGÂN SHOWROOM</span>
         </div>
 
         <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-secondary border border-border text-xs font-semibold text-ink">
@@ -122,7 +122,7 @@ function PosLayout({ children }) {
         </div>
       </header>
 
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">{children}</main>
+      <main className="flex-1 p-3 sm:p-4 lg:p-6 max-w-[1600px] w-full mx-auto">{children}</main>
     </div>
   )
 }

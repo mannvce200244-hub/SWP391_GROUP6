@@ -199,7 +199,7 @@ function ProductFilters({
                 type="number"
                 value={value.minPrice}
               />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted pointer-events-none">
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted pointer-events-none">
                 đ
               </span>
             </div>
@@ -226,7 +226,7 @@ function ProductFilters({
                 type="number"
                 value={value.maxPrice}
               />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] text-muted pointer-events-none">
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted pointer-events-none">
                 đ
               </span>
             </div>
@@ -234,7 +234,7 @@ function ProductFilters({
         </div>
 
         {(errors.minPrice || errors.maxPrice) && (
-          <p className="text-[11px] text-brand leading-tight" role="alert">
+          <p className="text-xs text-brand leading-tight" role="alert">
             {errors.minPrice || errors.maxPrice}
           </p>
         )}
@@ -277,7 +277,7 @@ function ProductFilters({
               key={village}
               type="button"
               onClick={() => handleChange('craftVillage', value.craftVillage === village ? '' : village)}
-              className={`px-2 py-0.5 rounded text-[11px] transition-colors cursor-pointer border ${
+              className={`px-2 py-0.5 rounded text-xs transition-colors cursor-pointer border ${
                 value.craftVillage === village
                   ? 'bg-brand text-white border-brand font-medium'
                   : 'bg-surface-secondary text-muted hover:text-ink border-border/80'

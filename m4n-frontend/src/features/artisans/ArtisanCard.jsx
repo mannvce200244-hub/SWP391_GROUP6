@@ -29,7 +29,7 @@ function ArtisanCard({ artisan }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-80 group-hover:opacity-70 transition-opacity pointer-events-none" />
 
         {/* Top Badge: Subtle NGHỆ NHÂN pill */}
-        <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-white/95 backdrop-blur-xs text-ink border border-border/80 tracking-wider uppercase shadow-2xs">
+        <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md text-xs font-bold bg-white/95 backdrop-blur-xs text-ink border border-border/80 tracking-wider uppercase shadow-2xs">
           Nghệ nhân
         </span>
 
@@ -63,7 +63,7 @@ function ArtisanCard({ artisan }) {
               {artisan.specialties.slice(0, 2).map((sp) => (
                 <span
                   key={sp}
-                  className="px-2 py-0.5 rounded bg-surface-secondary text-[11px] font-medium text-ink/80 border border-border/60 truncate max-w-[180px]"
+                  className="px-2 py-0.5 rounded bg-surface-secondary text-xs font-medium text-ink/80 border border-border/60 truncate max-w-[180px]"
                 >
                   #{sp}
                 </span>

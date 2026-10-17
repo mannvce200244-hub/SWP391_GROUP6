@@ -2,28 +2,12 @@ import { useState } from 'react'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 import { getFirstProductImage } from './productMedia.js'
-import prodSaoTruc from '../../assets/images/prod-sao-truc.jpg'
-import prodDanTranh from '../../assets/images/prod-dan-tranh.jpg'
-import catNhacCuGo from '../../assets/images/cat-nhac-cu-go.jpg'
-
-function getCategoryFallbackImage(product) {
-  const group = (product.groupName || '').toLowerCase()
-  const name = (product.name || '').toLowerCase()
-
-  if (group.includes('hơi') || name.includes('sáo') || name.includes('tiêu')) {
-    return { url: prodSaoTruc, alt: 'Nhạc cụ hơi truyền thống Việt Nam' }
-  }
-  if (group.includes('gõ') || name.includes('trống') || name.includes('mõ') || name.includes('thanh la')) {
-    return { url: catNhacCuGo, alt: 'Nhạc cụ gõ truyền thống Việt Nam' }
-  }
-  return { url: prodDanTranh, alt: 'Nhạc cụ dây truyền thống Việt Nam' }
-}
+import { IconInstrument } from '../../components/ui/Icons.jsx'
 
 function ProductCard({ priority = false, product }) {
   const [failedImageUrl, setFailedImageUrl] = useState(null)
   const rawImage = getFirstProductImage(product.media)
-  const fallback = getCategoryFallbackImage(product)
-  const image = rawImage && failedImageUrl !== rawImage.url ? rawImage : fallback
+  const hasValidImage = Boolean(rawImage && failedImageUrl !== rawImage.url)
 
   // Stock status text if available in product data
   const hasStockInfo =
@@ -44,24 +28,31 @@ function ProductCard({ priority = false, product }) {
     >
       {/* 1. Image Container (1:1 aspect ratio, smooth hover scale) */}
       <div className="aspect-square w-full overflow-hidden rounded-lg bg-surface-secondary relative flex items-center justify-center border border-border-subtle">
-        <img
-          alt={
-            typeof image.alt === 'string' && image.alt.trim()
-              ? image.alt.trim()
-              : product.name
-          }
-          className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out"
-          decoding="async"
-          height="500"
-          loading={priority ? undefined : 'lazy'}
-          onError={() => setFailedImageUrl(image.url)}
-          src={image.url}
-          width="500"
-        />
+        {hasValidImage ? (
+          <img
+            alt={
+              typeof rawImage.alt === 'string' && rawImage.alt.trim()
+                ? rawImage.alt.trim()
+                : product.name
+            }
+            className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out"
+            decoding="async"
+            height="500"
+            loading={priority ? undefined : 'lazy'}
+            onError={() => setFailedImageUrl(rawImage.url)}
+            src={rawImage.url}
+            width="500"
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-surface-secondary/60 text-subtle p-4 text-center select-none">
+            <IconInstrument size={40} className="text-muted/40 mb-2 group-hover:scale-105 transition-transform duration-200" />
+            <span className="text-xs font-medium text-muted/70">Hình ảnh đang cập nhật</span>
+          </div>
+        )}
 
         {/* Category Tag */}
         {product.groupName ? (
-          <span className="absolute top-2.5 left-2.5 inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-white/95 text-ink-secondary border border-border/80 shadow-2xs backdrop-blur-xs">
+          <span className="absolute top-2.5 left-2.5 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-white/95 text-ink-secondary border border-border/80 shadow-2xs backdrop-blur-xs">
             {product.groupName}
           </span>
         ) : null}
@@ -69,7 +60,7 @@ function ProductCard({ priority = false, product }) {
         {/* Optional Stock Status badge */}
         {hasStockInfo ? (
           <span
-            className={`absolute bottom-2.5 right-2.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur-xs shadow-2xs ${
+            className={`absolute bottom-2.5 right-2.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-xs shadow-2xs ${
               isInStock
                 ? 'bg-jade-soft text-jade border border-jade-border'
                 : 'bg-white/95 text-muted border border-border'

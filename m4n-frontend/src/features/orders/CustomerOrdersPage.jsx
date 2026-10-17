@@ -10,6 +10,7 @@ import {
   IconInstrument,
   IconPackage,
   IconAlertCircle,
+  IconCheck,
 } from '../../components/ui/Icons.jsx'
 
 const STATUS_TABS = [
@@ -246,7 +247,7 @@ function CustomerOrdersPage() {
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                  className={`text-xs px-1.5 py-0.2 rounded-full font-semibold ${
                     isActive
                       ? 'bg-white/20 text-white'
                       : 'bg-surface-secondary text-subtle'
@@ -308,11 +309,11 @@ function CustomerOrdersPage() {
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-border/50">
                     <div className="flex items-center gap-3">
-                      <span className="font-mono text-sm font-black text-ink">
+                      <span className="font-mono text-sm font-bold text-ink">
                         {order.orderCode}
                       </span>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badge.className}`}
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.className}`}
                       >
                         {badge.label}
                       </span>
@@ -337,8 +338,8 @@ function CustomerOrdersPage() {
 
                     <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/40">
                       <div className="text-right">
-                        <span className="text-[11px] text-muted block">Tổng thanh toán</span>
-                        <span className="text-base font-black text-brand font-sans">
+                        <span className="text-xs text-muted block">Tổng thanh toán</span>
+                        <span className="text-base font-bold text-brand font-sans">
                           {order.finalAmountDisplay}
                         </span>
                       </div>
@@ -411,7 +412,7 @@ function CustomerOrdersPage() {
                 <>
                   {/* Status Timeline */}
                   <div className="p-4 rounded-2xl bg-surface-secondary/50 border border-border/70 space-y-3">
-                    <h4 className="font-bold text-ink uppercase tracking-wider text-[11px]">
+                    <h4 className="font-bold text-ink uppercase tracking-wider text-xs">
                       Tiến độ đơn hàng
                     </h4>
 
@@ -428,9 +429,9 @@ function CustomerOrdersPage() {
                         {/* Step 1 */}
                         <div className="space-y-1">
                           <div className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center mx-auto text-xs font-bold">
-                            ✓
+                            <IconCheck size={14} className="stroke-[2.5]" />
                           </div>
-                          <span className="font-bold text-ink block text-[11px]">Đã đặt hàng</span>
+                          <span className="font-semibold text-ink block text-xs">Đã đặt hàng</span>
                         </div>
                         {/* Step 2 */}
                         <div className="space-y-1">
@@ -439,9 +440,13 @@ function CustomerOrdersPage() {
                               ? 'bg-brand text-white'
                               : 'bg-amber-100 text-amber-800 ring-2 ring-amber-400'
                           }`}>
-                            {orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED' ? '✓' : '2'}
+                            {orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED' ? (
+                              <IconCheck size={14} className="stroke-[2.5]" />
+                            ) : (
+                              '2'
+                            )}
                           </div>
-                          <span className="font-bold text-ink block text-[11px]">Chờ xác nhận</span>
+                          <span className="font-semibold text-ink block text-xs">Chờ xác nhận</span>
                         </div>
                         {/* Step 3 */}
                         <div className="space-y-1">
@@ -452,9 +457,13 @@ function CustomerOrdersPage() {
                               ? 'bg-teal-600 text-white'
                               : 'bg-surface-secondary text-muted'
                           }`}>
-                            {orderDetail.status === 'COMPLETED' ? '✓' : '3'}
+                            {orderDetail.status === 'COMPLETED' ? (
+                              <IconCheck size={14} className="stroke-[2.5]" />
+                            ) : (
+                              '3'
+                            )}
                           </div>
-                          <span className="font-bold text-ink block text-[11px]">
+                          <span className="font-semibold text-ink block text-xs">
                             {orderDetail.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã xác nhận'}
                           </span>
                         </div>
@@ -464,7 +473,7 @@ function CustomerOrdersPage() {
 
                   {/* Customer Information Snapshot */}
                   <div className="space-y-2 p-4 rounded-2xl bg-white border border-border/80">
-                    <h4 className="font-bold text-ink uppercase tracking-wider text-[11px] pb-2 border-b border-border/60">
+                    <h4 className="font-bold text-ink uppercase tracking-wider text-xs pb-2 border-b border-border/60">
                       Thông tin giao nhận
                     </h4>
                     <div className="grid grid-cols-2 gap-2 text-muted">
@@ -480,7 +489,7 @@ function CustomerOrdersPage() {
 
                   {/* Purchased Items List */}
                   <div className="space-y-3">
-                    <h4 className="font-bold text-ink uppercase tracking-wider text-[11px]">
+                    <h4 className="font-bold text-ink uppercase tracking-wider text-xs">
                       Danh sách nhạc cụ ({orderDetail.items?.length || 0})
                     </h4>
                     <div className="space-y-2">
@@ -497,7 +506,7 @@ function CustomerOrdersPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h5 className="font-bold text-ink line-clamp-1">{it.productName}</h5>
-                            <span className="text-[11px] text-muted">Mã: {it.productCode} &bull; SL: {it.quantity}</span>
+                            <span className="text-xs text-muted">Mã: {it.productCode} &bull; SL: {it.quantity}</span>
                           </div>
                           <div className="text-right font-bold text-ink">
                             {it.lineTotalDisplay}

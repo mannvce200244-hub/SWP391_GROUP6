@@ -5,9 +5,9 @@ import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 const DISCOVER_LINKS = Object.freeze([
   { label: 'Tất cả sản phẩm', href: CUSTOMER_ROUTES.products },
   { label: 'Nghệ nhân & Làng nghề', href: CUSTOMER_ROUTES.artisans },
-  { label: 'Nhạc cụ dây', href: CUSTOMER_ROUTES.products },
-  { label: 'Nhạc cụ hơi', href: CUSTOMER_ROUTES.products },
-  { label: 'Nhạc cụ gõ', href: CUSTOMER_ROUTES.products },
+  { label: 'Nhạc cụ dây', href: `${CUSTOMER_ROUTES.products}?group=DAY` },
+  { label: 'Nhạc cụ hơi', href: `${CUSTOMER_ROUTES.products}?group=HOI` },
+  { label: 'Nhạc cụ gõ', href: `${CUSTOMER_ROUTES.products}?group=GO` },
 ])
 
 function SiteFooter() {

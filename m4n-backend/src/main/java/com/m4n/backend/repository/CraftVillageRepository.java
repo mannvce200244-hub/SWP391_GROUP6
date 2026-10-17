@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface CraftVillageRepository extends JpaRepository<CraftVillage, Long> {
     Optional<CraftVillage> findByNameIgnoreCase(String name);
+    boolean existsByNameIgnoreCase(String name);
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 }
