@@ -6,7 +6,7 @@ function ProductSearch({
   className = '',
   id = 'catalog-search',
   onSearch,
-  placeholder = 'Tìm theo tên hoặc mã nhạc cụ (ví dụ: Đàn Tranh, TRN-001)...',
+  placeholder = 'Tìm theo tên, mã nhạc cụ hoặc nghệ nhân (ví dụ: Đàn Tranh, TRN-001)...',
   value = '',
 }) {
   const [prevValue, setPrevValue] = useState(value)

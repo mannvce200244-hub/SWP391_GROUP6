@@ -46,7 +46,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByBarcodeIgnoreCaseAndIdNot(String barcode, Long id);
 
-    @Query("SELECT p FROM Product p WHERE p.isActive    = true AND " +
+    @Query("SELECT p FROM Product p WHERE p.isActive = true AND " +
             "(LOWER(p.code) = LOWER(:term) OR LOWER(p.barcode) = LOWER(:term))")
     Optional<Product> findByCodeOrBarcode(@Param("term") String term);
 
