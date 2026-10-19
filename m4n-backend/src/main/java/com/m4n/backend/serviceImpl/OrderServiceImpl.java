@@ -15,6 +15,7 @@ import com.m4n.backend.entity.Order;
 import com.m4n.backend.entity.OrderItem;
 import com.m4n.backend.entity.OrderStatus;
 import com.m4n.backend.entity.Product;
+import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.exception.ResourceNotFoundException;
 import com.m4n.backend.mapper.CartMapper;
@@ -25,10 +26,12 @@ import com.m4n.backend.repository.InventoryRepository;
 import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.UserRepository;
+import com.m4n.backend.entity.NotificationType;
+import com.m4n.backend.service.NotificationService;
 import com.m4n.backend.service.OrderService;
 import com.m4n.backend.service.VoucherService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -41,6 +44,7 @@ import java.math.BigDecimal;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +52,6 @@ import java.util.Random;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
@@ -60,8 +63,49 @@ public class OrderServiceImpl implements OrderService {
     private final VoucherService voucherService;
     private final CartMapper cartMapper;
     private final OrderMapper orderMapper;
+    private final NotificationService notificationService;
 
     private static final Random RANDOM = new Random();
+
+    @Autowired
+    public OrderServiceImpl(
+            OrderRepository orderRepository,
+            CartRepository cartRepository,
+            CartItemRepository cartItemRepository,
+            ProductRepository productRepository,
+            InventoryRepository inventoryRepository,
+            UserRepository userRepository,
+            VoucherService voucherService,
+            CartMapper cartMapper,
+            OrderMapper orderMapper,
+            NotificationService notificationService
+    ) {
+        this.orderRepository = orderRepository;
+        this.cartRepository = cartRepository;
+        this.cartItemRepository = cartItemRepository;
+        this.productRepository = productRepository;
+        this.inventoryRepository = inventoryRepository;
+        this.userRepository = userRepository;
+        this.voucherService = voucherService;
+        this.cartMapper = cartMapper;
+        this.orderMapper = orderMapper;
+        this.notificationService = notificationService;
+    }
+
+    public OrderServiceImpl(
+            OrderRepository orderRepository,
+            CartRepository cartRepository,
+            CartItemRepository cartItemRepository,
+            ProductRepository productRepository,
+            InventoryRepository inventoryRepository,
+            UserRepository userRepository,
+            VoucherService voucherService,
+            CartMapper cartMapper,
+            OrderMapper orderMapper
+    ) {
+        this(orderRepository, cartRepository, cartItemRepository, productRepository,
+             inventoryRepository, userRepository, voucherService, cartMapper, orderMapper, null);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -219,6 +263,11 @@ public class OrderServiceImpl implements OrderService {
         // Save order and items
         Order savedOrder = orderRepository.save(order);
 
+        // Dispatch customer notification
+        notifyUser(user, "Đơn hàng đã được tiếp nhận",
+                "Đơn hàng " + orderCode + " đang chờ xác nhận từ nhân viên.",
+                NotificationType.ORDER, "/account/orders");
+
         // Clear cart items atomically after order creation
         cartItemRepository.deleteAll(cart.getItems());
         cart.getItems().clear();
@@ -256,7 +305,8 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderDetailResponse customerCancelOrder(Long orderId, String reason) {
         User user = getAuthenticatedUser();
-        Order order = orderRepository.findById(orderId)
+        // Lock the order row so the status check is serialized against concurrent confirm/cancel
+        Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
 
         if (order.getUser() == null || !order.getUser().getId().equals(user.getId())) {
@@ -282,6 +332,10 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
         log.info("Customer cancelled pending order: {}", order.getOrderCode());
 
+        notifyUser(user, "Hủy đơn hàng thành công",
+                "Quý khách đã hủy thành công đơn hàng " + order.getOrderCode() + ".",
+                NotificationType.ORDER, "/account/orders");
+
         return orderMapper.toOrderDetailResponse(savedOrder, true);
     }
 
@@ -303,19 +357,28 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderConfirmResultResponse confirmOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+        // Lock the order row first so concurrent confirmations serialize on the status
+        // check-then-act below and cannot double-deduct inventory for the same order
+        // (BR-INVENTORY-01, BR-INVENTORY-02, BR-INVENTORY-03).
+        Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
 
         if (order.getStatus() != OrderStatus.PENDING_CONFIRMATION) {
             throw new IllegalArgumentException("Chỉ có thể xác nhận đơn hàng đang ở trạng thái 'Chờ xác nhận'. Trạng thái hiện tại: " + orderMapper.formatStatusLabel(order.getStatus()));
         }
 
-        // BR-INVENTORY-01 & BR-INVENTORY-02: Re-check inventory for ALL items using Pessimistic Lock
+        // BR-INVENTORY-01 & BR-INVENTORY-02: Re-check inventory for ALL items using Pessimistic Lock.
+        // Items are locked in ascending productId order to keep a deterministic lock ordering
+        // and avoid deadlocks between two confirmations sharing overlapping products.
+        List<OrderItem> itemsInLockOrder = order.getItems().stream()
+                .sorted(Comparator.comparing(item -> item.getProduct().getId()))
+                .toList();
+
         Map<Long, Inventory> lockedInventories = new HashMap<>();
         boolean allSufficient = true;
         String insufficientReason = null;
 
-        for (OrderItem item : order.getItems()) {
+        for (OrderItem item : itemsInLockOrder) {
             Long productId = item.getProduct().getId();
             Inventory inventory = inventoryRepository.findByProductIdWithLock(productId)
                     .orElse(null);
@@ -338,6 +401,10 @@ public class OrderServiceImpl implements OrderService {
             String stockNote = "[Hết hàng tại thời điểm xác nhận] " + insufficientReason;
             order.setNotes(order.getNotes() != null ? order.getNotes() + " | " + stockNote : stockNote);
             orderRepository.save(order);
+
+            notifyUser(order.getUser(), "Đơn hàng chờ xử lý kho",
+                    "Đơn hàng " + order.getOrderCode() + " tạm thời chờ xử lý bổ sung tồn kho.",
+                    NotificationType.ORDER, "/account/orders");
 
             log.warn("Order {} could not be confirmed due to insufficient stock. Transitioned to OUT_OF_STOCK_WAITING. Reason: {}",
                     order.getOrderCode(), insufficientReason);
@@ -362,6 +429,10 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.CONFIRMED);
         Order savedOrder = orderRepository.save(order);
 
+        notifyUser(savedOrder.getUser(), "Đơn hàng đã được xác nhận",
+                "Đơn hàng " + savedOrder.getOrderCode() + " đã được xác nhận và đang đóng gói.",
+                NotificationType.ORDER, "/account/orders");
+
         log.info("Order {} confirmed by staff. Inventory successfully deducted atomically.", savedOrder.getOrderCode());
 
         return new OrderConfirmResultResponse(
@@ -377,7 +448,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderDetailResponse completeOrder(Long orderId) {
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
 
         if (order.getStatus() != OrderStatus.CONFIRMED) {
@@ -391,13 +462,19 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
         log.info("Order {} completed successfully.", savedOrder.getOrderCode());
 
+        notifyUser(savedOrder.getUser(), "Đơn hàng hoàn thành",
+                "Đơn hàng " + savedOrder.getOrderCode() + " đã hoàn thành. Quý khách có thể đánh giá sản phẩm ngay!",
+                NotificationType.ORDER, "/account/orders");
+
         return orderMapper.toOrderDetailResponse(savedOrder, false);
     }
 
     @Override
     @Transactional
     public OrderDetailResponse staffCancelOrder(Long orderId, String reason) {
-        Order order = orderRepository.findById(orderId)
+        // Lock the order row so the status check is serialized against concurrent confirm/cancel:
+        // a CONFIRMED deduction can never be overwritten by a cancellation that skipped restoration.
+        Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
 
         if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
@@ -406,7 +483,11 @@ public class OrderServiceImpl implements OrderService {
 
         // If order was already CONFIRMED, we must atomically restore deducted stock!
         if (order.getStatus() == OrderStatus.CONFIRMED) {
-            for (OrderItem item : order.getItems()) {
+            // Restore in ascending productId order for deterministic lock ordering
+            List<OrderItem> itemsInLockOrder = order.getItems().stream()
+                    .sorted(Comparator.comparing(item -> item.getProduct().getId()))
+                    .toList();
+            for (OrderItem item : itemsInLockOrder) {
                 Inventory inventory = inventoryRepository.findByProductIdWithLock(item.getProduct().getId())
                         .orElse(null);
                 if (inventory != null) {
@@ -425,7 +506,22 @@ public class OrderServiceImpl implements OrderService {
         order.setNotes(order.getNotes() != null ? order.getNotes() + " | " + cancelNote : cancelNote);
 
         Order savedOrder = orderRepository.save(order);
+
+        notifyUser(savedOrder.getUser(), "Đơn hàng đã bị hủy",
+                "Đơn hàng " + savedOrder.getOrderCode() + " đã bị hủy bởi ban quản trị.",
+                NotificationType.ORDER, "/account/orders");
+
         return orderMapper.toOrderDetailResponse(savedOrder, false);
+    }
+
+    private void notifyUser(User user, String title, String message, NotificationType type, String link) {
+        if (notificationService != null && user != null) {
+            try {
+                notificationService.createNotification(user, title, message, type, link);
+            } catch (Exception e) {
+                log.warn("Failed to dispatch notification: {}", e.getMessage());
+            }
+        }
     }
 
     private String generateOrderCode() {
@@ -441,7 +537,11 @@ public class OrderServiceImpl implements OrderService {
         }
 
         String email = authentication.getName();
-        return userRepository.findByEmailIgnoreCase(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin tài khoản người dùng"));
+        if (user.getRole().getName() != RoleName.CUSTOMER) {
+            throw new AccessDeniedException("Luồng mua hàng trực tuyến chỉ dành cho tài khoản khách hàng.");
+        }
+        return user;
     }
 }

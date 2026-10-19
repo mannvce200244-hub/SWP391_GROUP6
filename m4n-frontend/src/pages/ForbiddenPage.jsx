@@ -7,7 +7,7 @@ function ForbiddenPage() {
 
   let homeDestination = CUSTOMER_ROUTES.home
   if (isAuthenticated && user) {
-    if (user.role === 'ADMIN') homeDestination = CUSTOMER_ROUTES.admin
+    if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') homeDestination = CUSTOMER_ROUTES.admin
     else if (user.role === 'ONLINE_STAFF') homeDestination = CUSTOMER_ROUTES.staff
     else if (user.role === 'POS_STAFF') homeDestination = CUSTOMER_ROUTES.pos
   }

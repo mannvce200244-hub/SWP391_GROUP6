@@ -2,13 +2,13 @@ import { useState } from 'react'
 import useAuth from '../../features/auth/useAuth.js'
 import useToast from '../../components/ui/useToast.js'
 import {
-  IconUser,
-  IconCheck,
-  IconShield,
-  IconPackage,
-  IconStore,
-  IconCreditCard,
-} from '../../components/ui/Icons.jsx'
+  UserRound,
+  Check,
+  Shield,
+  Package,
+  Store,
+  CreditCard,
+} from 'lucide-react'
 
 function AdminProfilePage() {
   const { user } = useAuth()
@@ -41,25 +41,25 @@ function AdminProfilePage() {
     {
       title: 'Quản lý kho & Danh mục di sản',
       desc: 'Toàn quyền thêm mới, chỉnh sửa thông số kỹ thuật, cập nhật giá và tồn kho nhạc cụ.',
-      Icon: IconPackage,
+      Icon: Package,
       status: 'Toàn quyền',
     },
     {
       title: 'Điều phối đơn hàng trực tuyến',
       desc: 'Tiếp nhận đơn hàng online, phê duyệt yêu cầu chế tác và điều phối vận chuyển bảo hiểm.',
-      Icon: IconStore,
+      Icon: Store,
       status: 'Toàn quyền',
     },
     {
       title: 'Xác nhận thanh toán & Đối soát',
       desc: 'Theo dõi dòng tiền chuyển khoản QR, COD và phê duyệt hóa đơn nhạc cụ.',
-      Icon: IconCreditCard,
+      Icon: CreditCard,
       status: 'Toàn quyền',
     },
     {
       title: 'An ninh & Phân quyền nhân viên',
       desc: 'Cấp quyền truy cập cho nhân viên trực tuyến (Staff), nhân viên POS và giám sát an ninh.',
-      Icon: IconShield,
+      Icon: Shield,
       status: 'Toàn quyền',
     },
   ]
@@ -121,7 +121,7 @@ function AdminProfilePage() {
         {/* Left 2 Cols: Edit Profile Form */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-border p-6 sm:p-7 shadow-xs">
           <h3 className="text-base font-bold text-ink mb-5 pb-3 border-b border-border flex items-center gap-2">
-            <IconUser size={18} className="text-[#0D9488]" />
+            <UserRound size={18} className="text-[#0D9488]" />
             <span>Thông tin chi tiết quản trị viên</span>
           </h3>
 
@@ -207,9 +207,9 @@ function AdminProfilePage() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white text-xs font-bold shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
-                <IconCheck size={16} />
+                <Check size={16} />
                 <span>{isSaving ? 'Đang lưu...' : 'Lưu thay đổi hồ sơ'}</span>
               </button>
             </div>
@@ -220,7 +220,7 @@ function AdminProfilePage() {
         <div className="flex flex-col gap-6">
           <div className="bg-white rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-4">
             <h3 className="text-base font-bold text-ink pb-2 border-b border-border flex items-center gap-2">
-              <IconShield size={18} className="text-[#0D9488]" />
+              <Shield size={18} className="text-[#0D9488]" />
               <span>Thẩm quyền Quản trị (Admin)</span>
             </h3>
 

@@ -6,6 +6,7 @@ import com.m4n.backend.dto.response.CartResponse;
 import com.m4n.backend.entity.Cart;
 import com.m4n.backend.entity.CartItem;
 import com.m4n.backend.entity.Product;
+import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.exception.ProductNotFoundException;
 import com.m4n.backend.exception.ResourceNotFoundException;
@@ -161,7 +162,11 @@ public class CartServiceImpl implements CartService {
         }
 
         String email = authentication.getName();
-        return userRepository.findByEmailIgnoreCase(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin tài khoản người dùng"));
+        if (user.getRole().getName() != RoleName.CUSTOMER) {
+            throw new AccessDeniedException("Giỏ hàng chỉ dành cho tài khoản khách hàng.");
+        }
+        return user;
     }
 }

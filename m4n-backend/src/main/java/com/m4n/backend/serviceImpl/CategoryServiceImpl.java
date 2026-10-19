@@ -36,18 +36,36 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<CategoryDetailResponse> listAdminCategories() {
-        return categoryRepository.findAll(Sort.by(Sort.Direction.ASC, "name")).stream()
-                .map(cat -> {
-                    long productCount = productRepository.countByCategoryId(cat.getId());
-                    return new CategoryDetailResponse(
-                            cat.getId(),
-                            cat.getCode(),
-                            cat.getName(),
-                            cat.getDescription(),
-                            productCount,
-                            cat.getCreatedAt()
-                    );
-                })
+        return listAdminCategories(null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CategoryDetailResponse> listAdminCategories(String search) {
+        List<Category> categories;
+        if (search != null && !search.trim().isEmpty()) {
+            categories = categoryRepository.searchCategories(search.trim());
+        } else {
+            categories = categoryRepository.findAll(Sort.by(Sort.Direction.ASC, "name"));
+        }
+
+        java.util.Map<Long, Long> productCountMap = productRepository.countProductsGroupedByCategoryId().stream()
+                .filter(row -> row != null && row.length >= 2 && row[0] != null)
+                .collect(java.util.stream.Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L,
+                        (existing, replacement) -> existing
+                ));
+
+        return categories.stream()
+                .map(cat -> new CategoryDetailResponse(
+                        cat.getId(),
+                        cat.getCode(),
+                        cat.getName(),
+                        cat.getDescription(),
+                        productCountMap.getOrDefault(cat.getId(), 0L),
+                        cat.getCreatedAt()
+                ))
                 .toList();
     }
 
@@ -137,3 +155,4 @@ public class CategoryServiceImpl implements CategoryService {
         categoryRepository.delete(cat);
     }
 }
+

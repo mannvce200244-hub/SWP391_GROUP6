@@ -45,12 +45,14 @@ public class OrderController {
     // ==========================================
 
     @PostMapping("/checkout/preview")
+    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(summary = "Preview checkout totals", description = "Calculates authoritative subtotal, discount, and final amount based on current cart and voucher. Does NOT reserve stock.")
     public ResponseEntity<CheckoutPreviewResponse> previewCheckout(@RequestBody(required = false) CheckoutPreviewRequest request) {
         return ResponseEntity.ok(orderService.previewCheckout(request));
     }
 
     @PostMapping("/orders")
+    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(summary = "Place customer order", description = "Creates a new online order in PENDING_CONFIRMATION status. Does NOT deduct or reserve stock.")
     public ResponseEntity<OrderResponse> placeOrder(@Valid @RequestBody PlaceOrderRequest request) {
         OrderResponse response = orderService.placeOrder(request);
@@ -58,18 +60,21 @@ public class OrderController {
     }
 
     @GetMapping("/orders/me")
+    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(summary = "Get current customer orders", description = "Returns order history for the authenticated customer.")
     public ResponseEntity<List<OrderResponse>> getMyOrders() {
         return ResponseEntity.ok(orderService.getMyOrders());
     }
 
     @GetMapping("/orders/{id}")
+    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(summary = "Get customer order detail", description = "Returns order detail with items and status timeline. Enforces ownership.")
     public ResponseEntity<OrderDetailResponse> getOrderDetail(@PathVariable Long id) {
         return ResponseEntity.ok(orderService.getMyOrderDetail(id));
     }
 
     @PostMapping("/orders/{id}/cancel")
+    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(summary = "Customer self-cancel order", description = "Permitted ONLY when order status is PENDING_CONFIRMATION per BR-ORDER-02.")
     public ResponseEntity<OrderDetailResponse> customerCancelOrder(
             @PathVariable Long id,

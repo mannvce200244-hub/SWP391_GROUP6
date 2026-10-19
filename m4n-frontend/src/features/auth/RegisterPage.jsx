@@ -4,7 +4,7 @@ import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import useAuth from './useAuth.js'
 import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { IconAlertCircle, IconCheckCircle } from '../../components/ui/Icons.jsx'
+import { CircleAlert, CircleCheck } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 
 function RegisterPage() {
@@ -104,7 +104,7 @@ function RegisterPage() {
       {isSuccess ? (
         <div className="flex flex-col items-center text-center py-6 px-4 gap-3 bg-jade-soft/30 border border-jade-border rounded-xl" role="status">
           <div className="w-14 h-14 rounded-full bg-jade-soft flex items-center justify-center text-jade mb-2">
-            <IconCheckCircle size={32} />
+            <CircleCheck size={32} />
           </div>
           <h2 className="text-xl font-bold text-ink">Đăng ký thành công!</h2>
           <p className="text-sm text-muted leading-relaxed max-w-sm">
@@ -127,7 +127,7 @@ function RegisterPage() {
               className="flex items-start gap-2.5 p-3.5 rounded-lg border border-brand-border bg-brand-soft text-brand text-sm leading-snug"
               aria-live="assertive"
             >
-              <IconAlertCircle size={18} className="shrink-0 mt-0.5" />
+              <CircleAlert size={18} className="shrink-0 mt-0.5" />
               <span>{generalError}</span>
             </div>
           )}

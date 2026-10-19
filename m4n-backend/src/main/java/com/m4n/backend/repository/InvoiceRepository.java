@@ -35,4 +35,17 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     long countByCreatedAtBetween(Instant start, Instant end);
 
     Page<Invoice> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @EntityGraph(attributePaths = {"staff"})
+    @Query("""
+        SELECT inv FROM Invoice inv
+        WHERE (:search IS NULL OR :search = ''
+               OR LOWER(inv.invoiceCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+               OR LOWER(inv.customerName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+               OR LOWER(inv.staff.fullName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
+        ORDER BY inv.createdAt DESC
+        """)
+    Page<Invoice> searchInvoices(@Param("search") String search, Pageable pageable);
+
+    boolean existsByVoucherCodeIgnoreCase(String voucherCode);
 }

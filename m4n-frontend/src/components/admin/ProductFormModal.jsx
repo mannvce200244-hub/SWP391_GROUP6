@@ -7,14 +7,8 @@ import useToast from '../ui/useToast.js'
 import CategoryManagementModal from './CategoryManagementModal.jsx'
 import ArtisanManagementModal from './ArtisanManagementModal.jsx'
 import CraftVillageManagementModal from './CraftVillageManagementModal.jsx'
-import {
-  IconInstrument,
-  IconClose,
-  IconPlus,
-  IconTrash,
-  IconPackage,
-  IconImage,
-} from '../ui/Icons.jsx'
+import { IconInstrument } from '../ui/Icons.jsx'
+import { X, Plus, Trash2, Image, Package } from 'lucide-react'
 
 export default function ProductFormModal({
   isOpen,
@@ -350,7 +344,7 @@ export default function ProductFormModal({
               className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:text-ink hover:bg-[#F2F4F5] transition-colors cursor-pointer"
               aria-label="Đóng"
             >
-              <IconClose size={18} />
+              <X size={18} />
             </button>
           </div>
 
@@ -698,7 +692,7 @@ export default function ProductFormModal({
                       onClick={handleAddMedia}
                       className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-2xs transition-colors cursor-pointer"
                     >
-                      <IconPlus size={16} />
+                      <Plus size={16} />
                       <span>Thêm ảnh</span>
                     </button>
                   </div>
@@ -706,7 +700,7 @@ export default function ProductFormModal({
                   {/* Media Grid */}
                   {mediaList.length === 0 ? (
                     <div className="py-10 text-center text-sm text-secondary border border-dashed border-[#E3E6E8] rounded-xl flex flex-col items-center gap-2">
-                      <IconImage size={28} className="text-subtle" />
+                      <Image size={28} className="text-subtle" />
                       <span>Chưa có hình ảnh nào. Thêm URL hình ảnh ở trên để hiển thị trong bộ sưu tập.</span>
                     </div>
                   ) : (
@@ -754,8 +748,9 @@ export default function ProductFormModal({
                               onClick={() => handleRemoveMedia(idx)}
                               className="inline-flex items-center text-xs text-rose-600 hover:text-rose-800 ml-auto cursor-pointer p-0.5"
                               title="Xóa ảnh"
+                              aria-label="Xóa ảnh"
                             >
-                              <IconTrash size={14} />
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         </div>
@@ -768,7 +763,7 @@ export default function ProductFormModal({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
                   {!isEdit ? (
                     <div className="flex items-center gap-2 text-sm text-secondary">
-                      <IconPackage size={18} className="text-brand shrink-0" />
+                      <Package size={18} className="text-brand shrink-0" />
                       <span>
                         Tồn kho sản phẩm mới sẽ mặc định là 0. Quản lý kho qua chức năng <strong>Nhập kho</strong>.
                       </span>

@@ -150,8 +150,8 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     public ConversationResponse assignStaff(Long conversationId, String staffEmail) {
         User staff = getUserByEmail(staffEmail);
-        if (staff.getRole().getName() != RoleName.ONLINE_STAFF && staff.getRole().getName() != RoleName.ADMIN && staff.getRole().getName() != RoleName.SUPER_ADMIN) {
-            throw new AccessDeniedException("Chỉ nhân viên trực tuyến hoặc quản trị viên mới có thể nhận hội thoại.");
+        if (staff.getRole().getName() != RoleName.ONLINE_STAFF) {
+            throw new AccessDeniedException("Chỉ nhân viên trực tuyến mới có thể nhận hội thoại.");
         }
 
         Conversation conversation = conversationRepository.findById(conversationId)
@@ -164,14 +164,14 @@ public class ChatServiceImpl implements ChatService {
 
     private void validateAccess(Conversation conversation, User user) {
         RoleName role = user.getRole().getName();
-        if (role == RoleName.POS_STAFF) {
-            throw new AccessDeniedException("Nhân viên POS không có quyền truy cập hệ thống chat hỗ trợ trực tuyến.");
-        }
-
         if (role == RoleName.CUSTOMER) {
             if (!conversation.getCustomer().getId().equals(user.getId())) {
                 throw new AccessDeniedException("Bạn không có quyền truy cập cuộc trò chuyện của khách hàng khác.");
             }
+            return;
+        }
+        if (role != RoleName.ONLINE_STAFF) {
+            throw new AccessDeniedException("Chỉ khách hàng và nhân viên trực tuyến được truy cập hội thoại hỗ trợ.");
         }
     }
 

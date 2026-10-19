@@ -3,7 +3,7 @@ import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import { ProductGridSkeleton } from '../components/ui/Skeleton.jsx'
 import Button from '../components/ui/Button.jsx'
-import { IconFilter } from '../components/ui/Icons.jsx'
+import { Filter } from 'lucide-react'
 import ProductFilters from '../features/catalog/ProductFilters.jsx'
 import ProductGrid from '../features/catalog/ProductGrid.jsx'
 import ProductSearch from '../features/catalog/ProductSearch.jsx'
@@ -380,7 +380,7 @@ function ProductListPage() {
                   onClick={() => setMobileDrawerOpen(true)}
                   type="button"
                 >
-                  <IconFilter className="text-brand" size={15} />
+                  <Filter className="text-brand" size={15} />
                   <span>Bộ lọc</span>
                   {activeFilterCount > 0 && (
                     <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-semibold text-white bg-brand rounded-full leading-none">

@@ -1,37 +1,37 @@
 import { useState, useCallback } from 'react'
 import { ToastContext } from './ToastContext.js'
 import {
-  IconCircleCheck,
-  IconCircleX,
-  IconTriangleAlert,
-  IconInfo,
-  IconX,
-} from './Icons.jsx'
+  CircleCheck,
+  CircleX,
+  TriangleAlert,
+  Info,
+  X,
+} from 'lucide-react'
 
 const TOAST_THEMES = {
   success: {
     border: 'border-jade-border/80',
     bg: 'bg-jade-soft/40',
     text: 'text-jade',
-    Icon: IconCircleCheck,
+    Icon: CircleCheck,
   },
   error: {
     border: 'border-danger-border',
     bg: 'bg-danger-soft/40',
     text: 'text-danger',
-    Icon: IconCircleX,
+    Icon: CircleX,
   },
   warning: {
     border: 'border-warning-border',
     bg: 'bg-warning-soft/40',
     text: 'text-warning',
-    Icon: IconTriangleAlert,
+    Icon: TriangleAlert,
   },
   info: {
     border: 'border-border',
     bg: 'bg-surface-secondary',
     text: 'text-secondary',
-    Icon: IconInfo,
+    Icon: Info,
   },
 }
 
@@ -79,7 +79,7 @@ export function ToastProvider({ children }) {
                 onClick={() => removeToast(toast.id)}
                 aria-label="Đóng thông báo"
               >
-                <IconX size={16} />
+                <X size={16} />
               </button>
             </div>
           )

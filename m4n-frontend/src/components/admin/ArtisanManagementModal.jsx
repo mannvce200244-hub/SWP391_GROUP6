@@ -2,22 +2,27 @@ import { useState, useEffect, useCallback } from 'react'
 import artisanService from '../../services/artisanService.js'
 import craftVillageService from '../../services/craftVillageService.js'
 import useToast from '../ui/useToast.js'
-import { IconUser, IconLandmark, IconX } from '../ui/Icons.jsx'
+import { UserRound, Landmark, X } from 'lucide-react'
+import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 
-export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
+export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, initialArtisan = null }) {
   const { addToast } = useToast()
   const [artisans, setArtisans] = useState([])
   const [craftVillages, setCraftVillages] = useState([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [editingArtisan, setEditingArtisan] = useState(null)
+  const [editingArtisan, setEditingArtisan] = useState(initialArtisan)
   const [search, setSearch] = useState('')
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null)
+  const [modalDeleting, setModalDeleting] = useState(false)
 
   // Form fields
-  const [name, setName] = useState('')
-  const [craftVillageId, setCraftVillageId] = useState('')
-  const [biography, setBiography] = useState('')
-  const [avatarUrl, setAvatarUrl] = useState('')
+  const [name, setName] = useState(() => initialArtisan?.name || '')
+  const [craftVillageId, setCraftVillageId] = useState(() =>
+    initialArtisan?.craftVillageId ? String(initialArtisan.craftVillageId) : ''
+  )
+  const [biography, setBiography] = useState(() => initialArtisan?.biography || '')
+  const [avatarUrl, setAvatarUrl] = useState(() => initialArtisan?.avatarUrl || '')
   const [formErrors, setFormErrors] = useState({})
   const [serverError, setServerError] = useState('')
 
@@ -138,7 +143,7 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
     }
   }
 
-  const handleDelete = async (a) => {
+  const handleDelete = (a) => {
     if (a.productCount > 0) {
       addToast({
         message: `Không thể xóa nghệ nhân "${a.name}" vì đang có ${a.productCount} sản phẩm liên kết.`,
@@ -146,18 +151,20 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
       })
       return
     }
+    setDeleteConfirmTarget(a)
+  }
 
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa nghệ nhân "${a.name}"?`)) {
-      return
-    }
-
+  const confirmDeleteArtisan = async () => {
+    if (!deleteConfirmTarget) return
+    setModalDeleting(true)
     try {
-      await artisanService.deleteArtisan(a.id)
+      await artisanService.deleteArtisan(deleteConfirmTarget.id)
       addToast({
-        message: `Đã xóa nghệ nhân "${a.name}".`,
+        message: `Đã xóa nghệ nhân "${deleteConfirmTarget.name}".`,
         type: 'success',
       })
-      if (editingArtisan?.id === a.id) resetForm()
+      if (editingArtisan?.id === deleteConfirmTarget.id) resetForm()
+      setDeleteConfirmTarget(null)
       await fetchData()
       if (onSuccess) onSuccess()
     } catch (err) {
@@ -165,6 +172,8 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
         message: err.message || 'Không thể xóa nghệ nhân này',
         type: 'error',
       })
+    } finally {
+      setModalDeleting(false)
     }
   }
 
@@ -191,7 +200,7 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
         <div className="px-6 py-4 border-b border-[#E5E8EB] flex items-center justify-between bg-[#FFFFFF]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center font-bold text-sm">
-              <IconUser size={20} />
+              <UserRound size={20} />
             </div>
             <div>
               <h2 id="artisan-modal-title" className="text-lg font-bold text-[#17191B]">
@@ -208,7 +217,7 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
             className="w-9 h-9 rounded-xl flex items-center justify-center text-secondary hover:text-[#17191B] hover:bg-[#F2F4F5] transition-colors cursor-pointer"
             aria-label="Đóng"
           >
-            <IconX size={18} />
+            <X size={18} />
           </button>
         </div>
 
@@ -381,7 +390,7 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
                         <td className="py-3 px-3 text-secondary">
                           {a.craftVillageName ? (
                             <span className="inline-flex items-center gap-1 text-xs">
-                              <IconLandmark size={13} className="text-secondary shrink-0" />
+                              <Landmark size={13} className="text-secondary shrink-0" />
                               <span>{a.craftVillageName}</span>
                             </span>
                           ) : (
@@ -403,7 +412,7 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
                           <button
                             type="button"
                             onClick={() => startEdit(a)}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-xs font-medium transition-colors cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-[13px] font-medium transition-colors cursor-pointer"
                           >
                             Sửa
                           </button>
@@ -416,7 +425,7 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
                                 ? 'Không thể xóa nghệ nhân đang có sản phẩm liên kết'
                                 : 'Xóa nghệ nhân'
                             }
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
                               a.productCount > 0
                                 ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400'
                                 : 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer'
@@ -445,6 +454,18 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess }) {
           </button>
         </div>
       </div>
+
+      {deleteConfirmTarget && (
+        <ConfirmDialog
+          title="Xóa nghệ nhân"
+          message={`Bạn có chắc chắn muốn xóa nghệ nhân "${deleteConfirmTarget.name}"?`}
+          confirmLabel="Xóa"
+          isDestructive
+          isLoading={modalDeleting}
+          onConfirm={confirmDeleteArtisan}
+          onCancel={() => setDeleteConfirmTarget(null)}
+        />
+      )}
     </div>
   )
 }

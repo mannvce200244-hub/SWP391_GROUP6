@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
@@ -280,5 +281,36 @@ class PosServiceTest {
                 .hasMessageContaining("chưa đủ để thanh toán đơn");
 
         verify(inventoryRepository, never()).save(any(Inventory.class));
+    }
+
+    @Test
+    @DisplayName("POS staff cannot retrieve an invoice created by another cashier")
+    void invoiceAccess_foreignPosStaff_throwsAccessDenied() {
+        User otherCashier = User.builder()
+                .id(6L)
+                .email("pos2@m4n.vn")
+                .role(Role.builder().id(3L).name(RoleName.POS_STAFF).build())
+                .build();
+        Invoice invoice = Invoice.builder().id(500L).staff(otherCashier).build();
+        when(userRepository.findByEmailIgnoreCase("pos@m4n.vn"))
+                .thenReturn(Optional.of(staffUser));
+        when(invoiceRepository.findWithDetailsById(500L)).thenReturn(Optional.of(invoice));
+
+        assertThatThrownBy(() -> posService.assertCanAccessInvoice(500L, "pos@m4n.vn"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("không có quyền truy cập hóa đơn này");
+    }
+
+    @Test
+    @DisplayName("POS staff can retrieve an invoice created by the same cashier")
+    void invoiceAccess_owner_success() {
+        Invoice invoice = Invoice.builder().id(500L).staff(staffUser).build();
+        when(userRepository.findByEmailIgnoreCase("pos@m4n.vn"))
+                .thenReturn(Optional.of(staffUser));
+        when(invoiceRepository.findWithDetailsById(500L)).thenReturn(Optional.of(invoice));
+
+        posService.assertCanAccessInvoice(500L, "pos@m4n.vn");
+
+        verify(invoiceRepository).findWithDetailsById(500L);
     }
 }

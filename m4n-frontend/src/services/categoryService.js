@@ -5,8 +5,8 @@ export const categoryService = Object.freeze({
     return apiClient.get('/categories')
   },
 
-  async getAdminCategories() {
-    return apiClient.get('/admin/categories')
+  async getAdminCategories(params = {}) {
+    return apiClient.get('/admin/categories', { params })
   },
 
   async getCategoryDetail(id) {

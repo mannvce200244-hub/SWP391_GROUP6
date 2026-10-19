@@ -14,4 +14,6 @@ public interface VoucherRepository extends JpaRepository<Voucher, Long> {
     Optional<Voucher> findByCodeIgnoreCase(String code);
 
     boolean existsByCodeIgnoreCase(String code);
+
+    java.util.List<Voucher> findAllByOrderByCreatedAtDesc();
 }

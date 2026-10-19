@@ -1,11 +1,11 @@
 import { useEffect } from 'react'
 import {
-  IconShoppingBag,
-  IconInstrument,
-  IconChevronRight,
-  IconArrowRight,
-  IconX,
-} from '../../components/ui/Icons.jsx'
+  ShoppingBag,
+  ChevronRight,
+  ArrowRight,
+  X,
+} from 'lucide-react'
+import { IconInstrument } from '../../components/ui/Icons.jsx'
 import useCart from './useCart.js'
 import useAuth from '../auth/useAuth.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
@@ -61,7 +61,7 @@ function CartDrawer({ isOpen, onClose }) {
           <div className="p-5 sm:p-6 border-b border-border flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-brand-soft text-brand flex items-center justify-center border border-brand-border">
-                <IconShoppingBag size={18} />
+                <ShoppingBag size={18} />
               </div>
               <div>
                 <h3 className="text-base font-bold text-ink font-sans">
@@ -81,7 +81,7 @@ function CartDrawer({ isOpen, onClose }) {
               className="w-9 h-9 rounded-xl flex items-center justify-center text-muted hover:text-ink hover:bg-surface-secondary transition-colors cursor-pointer"
               aria-label="Đóng giỏ hàng"
             >
-              <IconX size={18} />
+              <X size={18} />
             </button>
           </div>
 
@@ -91,7 +91,7 @@ function CartDrawer({ isOpen, onClose }) {
               /* Require Login State */
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
                 <div className="w-16 h-16 rounded-2xl bg-brand-soft text-brand flex items-center justify-center border border-brand-border">
-                  <IconShoppingBag size={28} />
+                  <ShoppingBag size={28} />
                 </div>
                 <div>
                   <h4 className="text-base font-bold text-ink">
@@ -107,17 +107,17 @@ function CartDrawer({ isOpen, onClose }) {
                     onClose()
                     navigateTo(CUSTOMER_ROUTES.login)
                   }}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand text-white text-xs font-bold shadow-md shadow-brand/20 hover:bg-brand-hover transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold shadow-md shadow-brand/20 hover:bg-brand-hover transition-all cursor-pointer"
                 >
                   <span>Đăng nhập ngay</span>
-                  <IconArrowRight size={14} />
+                  <ArrowRight size={16} />
                 </button>
               </div>
             ) : items.length === 0 ? (
               /* Empty Cart State */
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
                 <div className="w-16 h-16 rounded-2xl bg-surface-secondary text-subtle flex items-center justify-center border border-border">
-                  <IconShoppingBag size={28} />
+                  <ShoppingBag size={28} />
                 </div>
                 <div>
                   <h4 className="text-base font-bold text-ink">
@@ -133,10 +133,10 @@ function CartDrawer({ isOpen, onClose }) {
                     onClose()
                     navigateTo(CUSTOMER_ROUTES.products)
                   }}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand text-white text-xs font-bold shadow-md shadow-brand/20 hover:bg-brand-hover transition-all cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-brand text-white text-sm font-semibold shadow-md shadow-brand/20 hover:bg-brand-hover transition-all cursor-pointer"
                 >
                   <span>Khám phá nhạc cụ</span>
-                  <IconArrowRight size={14} />
+                  <ArrowRight size={16} />
                 </button>
               </div>
             ) : (
@@ -240,7 +240,7 @@ function CartDrawer({ isOpen, onClose }) {
                     onClose()
                     navigateTo(CUSTOMER_ROUTES.cart)
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl border border-border bg-white text-ink hover:bg-surface-secondary text-xs font-bold transition-colors cursor-pointer text-center"
+                  className="w-full py-2.5 px-4 rounded-xl border border-border bg-white text-ink hover:bg-surface-secondary text-sm font-semibold transition-colors cursor-pointer text-center"
                 >
                   Xem giỏ hàng
                 </button>
@@ -250,10 +250,10 @@ function CartDrawer({ isOpen, onClose }) {
                     onClose()
                     navigateTo(CUSTOMER_ROUTES.cart)
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-xs font-bold shadow-md shadow-brand/20 transition-all cursor-pointer flex items-center justify-center gap-1"
+                  className="w-full py-2.5 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-md shadow-brand/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <span>Thanh toán</span>
-                  <IconChevronRight size={13} />
+                  <ChevronRight size={15} />
                 </button>
               </div>
             </div>

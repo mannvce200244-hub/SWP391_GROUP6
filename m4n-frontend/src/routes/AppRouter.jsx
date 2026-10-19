@@ -27,8 +27,15 @@ import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import PosDashboardPage from '../pages/PosDashboardPage.jsx'
 import AdminDashboardPage from '../pages/AdminDashboardPage.jsx'
 import AdminInstrumentsPage from '../pages/admin/AdminInstrumentsPage.jsx'
+import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage.jsx'
+import AdminArtisansPage from '../pages/admin/AdminArtisansPage.jsx'
+import AdminCraftVillagesPage from '../pages/admin/AdminCraftVillagesPage.jsx'
+import AdminInventoryPage from '../pages/admin/AdminInventoryPage.jsx'
+import AdminStockImportPage from '../pages/admin/AdminStockImportPage.jsx'
+import AdminOrdersPage from '../pages/admin/AdminOrdersPage.jsx'
+import AdminInvoicesPage from '../pages/admin/AdminInvoicesPage.jsx'
+import AdminVouchersPage from '../pages/admin/AdminVouchersPage.jsx'
 import AdminProductDetailPage from '../pages/admin/AdminProductDetailPage.jsx'
-import AdminStorePage from '../pages/admin/AdminStorePage.jsx'
 import AdminProfilePage from '../pages/admin/AdminProfilePage.jsx'
 import AdminSecurityPage from '../pages/admin/AdminSecurityPage.jsx'
 import AdminUsersPage from '../pages/admin/AdminUsersPage.jsx'
@@ -87,7 +94,14 @@ function AppRouter() {
     pathname === CUSTOMER_ROUTES.admin ||
     pathname === CUSTOMER_ROUTES.adminInstruments ||
     Boolean(adminInstrumentDetailId) ||
-    pathname === CUSTOMER_ROUTES.adminStore ||
+    pathname === CUSTOMER_ROUTES.adminCategories ||
+    pathname === CUSTOMER_ROUTES.adminArtisans ||
+    pathname === CUSTOMER_ROUTES.adminCraftVillages ||
+    pathname === CUSTOMER_ROUTES.adminInventory ||
+    pathname === CUSTOMER_ROUTES.adminStockImport ||
+    pathname === CUSTOMER_ROUTES.adminOrders ||
+    pathname === CUSTOMER_ROUTES.adminInvoices ||
+    pathname === CUSTOMER_ROUTES.adminVouchers ||
     pathname === CUSTOMER_ROUTES.adminProfile ||
     pathname === CUSTOMER_ROUTES.adminSecurity ||
     pathname === CUSTOMER_ROUTES.adminUsers
@@ -97,8 +111,22 @@ function AppRouter() {
       adminContent = <AdminProductDetailPage productId={adminInstrumentDetailId} />
     } else if (pathname === CUSTOMER_ROUTES.adminInstruments) {
       adminContent = <AdminInstrumentsPage />
-    } else if (pathname === CUSTOMER_ROUTES.adminStore) {
-      adminContent = <AdminStorePage />
+    } else if (pathname === CUSTOMER_ROUTES.adminCategories) {
+      adminContent = <AdminCategoriesPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminArtisans) {
+      adminContent = <AdminArtisansPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminCraftVillages) {
+      adminContent = <AdminCraftVillagesPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminInventory) {
+      adminContent = <AdminInventoryPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminStockImport) {
+      adminContent = <AdminStockImportPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminOrders) {
+      adminContent = <AdminOrdersPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminInvoices) {
+      adminContent = <AdminInvoicesPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
+      adminContent = <AdminVouchersPage />
     } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
       adminContent = <AdminProfilePage />
     } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
@@ -117,11 +145,16 @@ function AppRouter() {
   }
 
   // 3. Online Staff shell using StaffLayout
-  if (pathname === CUSTOMER_ROUTES.staff) {
+  if (pathname === CUSTOMER_ROUTES.staff || pathname === CUSTOMER_ROUTES.staffOrders) {
+    let staffContent = <StaffDashboardPage />
+    if (pathname === CUSTOMER_ROUTES.staffOrders) {
+      staffContent = <AdminOrdersPage />
+    }
+
     return (
-      <RequireRole allowedRoles={['ONLINE_STAFF', 'ADMIN']}>
+      <RequireRole allowedRoles={['ONLINE_STAFF']}>
         <StaffLayout pathname={pathname}>
-          <StaffDashboardPage />
+          {staffContent}
         </StaffLayout>
       </RequireRole>
     )
@@ -130,7 +163,7 @@ function AppRouter() {
   // 4. POS showroom shell using PosLayout
   if (pathname === CUSTOMER_ROUTES.pos) {
     return (
-      <RequireRole allowedRoles={['POS_STAFF', 'ADMIN']}>
+      <RequireRole allowedRoles={['POS_STAFF']}>
         <PosLayout pathname={pathname}>
           <PosDashboardPage />
         </PosLayout>
@@ -161,17 +194,21 @@ function AppRouter() {
     )
   } else if (pathname === CUSTOMER_ROUTES.orders) {
     pageContent = (
-      <RequireAuth>
+      <RequireRole allowedRoles={['CUSTOMER']}>
         <CustomerOrdersPage />
-      </RequireAuth>
+      </RequireRole>
     )
   } else if (pathname === CUSTOMER_ROUTES.cart) {
-    pageContent = <CartPage />
+    pageContent = (
+      <RequireRole allowedRoles={['CUSTOMER']}>
+        <CartPage />
+      </RequireRole>
+    )
   } else if (pathname === CUSTOMER_ROUTES.checkout) {
     pageContent = (
-      <RequireAuth>
+      <RequireRole allowedRoles={['CUSTOMER']}>
         <CheckoutPage />
-      </RequireAuth>
+      </RequireRole>
     )
   } else if (pathname === CUSTOMER_ROUTES.forbidden) {
     pageContent = <ForbiddenPage />

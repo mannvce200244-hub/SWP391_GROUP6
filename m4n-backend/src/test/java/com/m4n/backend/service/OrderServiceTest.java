@@ -183,7 +183,7 @@ class OrderServiceTest {
                 .updatedAt(Instant.now())
                 .build();
 
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdWithLock(1L)).thenReturn(Optional.of(order));
         when(inventoryRepository.findByProductIdWithLock(testProduct.getId())).thenReturn(Optional.of(inventory));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -223,7 +223,7 @@ class OrderServiceTest {
                 .updatedAt(Instant.now())
                 .build();
 
-        when(orderRepository.findById(2L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdWithLock(2L)).thenReturn(Optional.of(order));
         when(inventoryRepository.findByProductIdWithLock(testProduct.getId())).thenReturn(Optional.of(inventory));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -249,7 +249,7 @@ class OrderServiceTest {
                 .items(new ArrayList<>())
                 .build();
 
-        when(orderRepository.findById(3L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdWithLock(3L)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         OrderDetailResponse response = orderService.customerCancelOrder(3L, "Doi y khong mua nua");
@@ -270,7 +270,7 @@ class OrderServiceTest {
                 .items(new ArrayList<>())
                 .build();
 
-        when(orderRepository.findById(4L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdWithLock(4L)).thenReturn(Optional.of(order));
 
         assertThatThrownBy(() -> orderService.customerCancelOrder(4L, "Muon huy"))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -290,6 +290,7 @@ class OrderServiceTest {
                 .status(OrderStatus.PENDING_CONFIRMATION)
                 .build();
 
+        when(orderRepository.findByIdWithLock(5L)).thenReturn(Optional.of(order));
         when(orderRepository.findById(5L)).thenReturn(Optional.of(order));
 
         assertThatThrownBy(() -> orderService.customerCancelOrder(5L, "Hack"))

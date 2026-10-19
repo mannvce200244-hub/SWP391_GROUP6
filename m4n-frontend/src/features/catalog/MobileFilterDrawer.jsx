@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { IconX } from '../../components/ui/Icons.jsx'
+import { X } from 'lucide-react'
 import ProductFilters from './ProductFilters.jsx'
 import validateProductFilters from './productFilterValidation.js'
 
@@ -97,7 +97,7 @@ function MobileFilterDrawer({
             onClick={onClose}
             type="button"
           >
-            <IconX size={20} />
+            <X size={20} />
           </button>
         </div>
 
@@ -116,7 +116,7 @@ function MobileFilterDrawer({
         {/* Drawer Footer Actions */}
         <div className="p-4 border-t border-border bg-surface flex items-center gap-3 shrink-0">
           <button
-            className="flex-1 h-10 px-4 rounded-md border border-control-border text-ink text-xs font-semibold hover:bg-surface-secondary transition-colors cursor-pointer text-center"
+            className="flex-1 h-10 px-4 rounded-md border border-control-border text-ink text-sm font-semibold hover:bg-surface-secondary transition-colors cursor-pointer text-center"
             disabled={busy}
             onClick={handleResetAndClose}
             type="button"
@@ -124,7 +124,7 @@ function MobileFilterDrawer({
             Đặt lại
           </button>
           <button
-            className="flex-1 h-10 px-4 rounded-md bg-brand text-white text-xs font-semibold hover:bg-brand-hover active:bg-brand-deep transition-all duration-150 shadow-xs cursor-pointer text-center"
+            className="flex-1 h-10 px-4 rounded-md bg-brand text-white text-sm font-semibold hover:bg-brand-hover active:bg-brand-deep transition-all duration-150 shadow-xs cursor-pointer text-center"
             disabled={busy}
             onClick={handleApplyClick}
             type="button"

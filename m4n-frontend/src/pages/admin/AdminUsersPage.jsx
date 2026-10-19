@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from 'react'
 import adminUserService from '../../services/adminUserService.js'
 import useAuth from '../../features/auth/useAuth.js'
 import useToast from '../../components/ui/useToast.js'
+import { ROUTE_CHANGE_EVENT } from '../../routes/customerRoutes.js'
 import {
-  IconChevronDown,
-  IconSearch,
-  IconShield,
-  IconAlertCircle,
-  IconX,
-} from '../../components/ui/Icons.jsx'
+  ChevronDown,
+  Search,
+  Shield,
+  CircleAlert,
+  X,
+} from 'lucide-react'
 
 const ROLE_DEFINITIONS = Object.freeze({
   CUSTOMER: { label: 'Khách hàng', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' },
@@ -66,6 +67,35 @@ export function AdminUsersPage() {
     }, 350)
     return () => clearTimeout(timer)
   }, [searchTerm])
+
+  // Listen for query params e.g. ?tab=customers or ?tab=staff
+  useEffect(() => {
+    const handleUrlTab = () => {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab')
+      if (tab === 'customers') {
+        setRoleFilter('CUSTOMER')
+        setCurrentPage(0)
+      } else if (tab === 'staff') {
+        setRoleFilter((prev) =>
+          ['ONLINE_STAFF', 'POS_STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(prev)
+            ? prev
+            : 'ONLINE_STAFF'
+        )
+        setCurrentPage(0)
+      } else if (tab === 'all') {
+        setRoleFilter('ALL')
+        setCurrentPage(0)
+      }
+    }
+    handleUrlTab()
+    window.addEventListener('popstate', handleUrlTab)
+    window.addEventListener(ROUTE_CHANGE_EVENT, handleUrlTab)
+    return () => {
+      window.removeEventListener('popstate', handleUrlTab)
+      window.removeEventListener(ROUTE_CHANGE_EVENT, handleUrlTab)
+    }
+  }, [])
 
   const refreshUsers = () => setRefreshKey((k) => k + 1)
 
@@ -339,12 +369,102 @@ export function AdminUsersPage() {
         </button>
       </div>
 
+      {/* Quick Role Segment Tabs */}
+      <div className="flex items-center gap-1.5 p-1 bg-white border border-[#E5E8EB] rounded-xl shadow-2xs overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => {
+            setRoleFilter('ALL')
+            setCurrentPage(0)
+          }}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+            roleFilter === 'ALL'
+              ? 'bg-[#111315] text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+          }`}
+        >
+          Tất cả tài khoản
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setRoleFilter('CUSTOMER')
+            setCurrentPage(0)
+          }}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+            roleFilter === 'CUSTOMER'
+              ? 'bg-[#0D9488] text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+          }`}
+        >
+          Khách hàng
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setRoleFilter('ONLINE_STAFF')
+            setCurrentPage(0)
+          }}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+            roleFilter === 'ONLINE_STAFF'
+              ? 'bg-sky-600 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+          }`}
+        >
+          Nhân viên Online
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setRoleFilter('POS_STAFF')
+            setCurrentPage(0)
+          }}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+            roleFilter === 'POS_STAFF'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+          }`}
+        >
+          Nhân viên POS
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setRoleFilter('ADMIN')
+            setCurrentPage(0)
+          }}
+          className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+            roleFilter === 'ADMIN'
+              ? 'bg-indigo-600 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+          }`}
+        >
+          Quản trị viên
+        </button>
+        {isSuperAdmin && (
+          <button
+            type="button"
+            onClick={() => {
+              setRoleFilter('SUPER_ADMIN')
+              setCurrentPage(0)
+            }}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+              roleFilter === 'SUPER_ADMIN'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+            }`}
+          >
+            Super Admin
+          </button>
+        )}
+      </div>
+
       {/* Toolbar: Search, Role filter, Status filter */}
       <div className="bg-white p-4 rounded-2xl border border-[#E5E8EB] shadow-2xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         {/* Search */}
         <div className="relative flex-1 min-w-[240px]">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary">
-            <IconSearch size={16} />
+            <Search size={16} />
           </div>
           <input
             type="text"
@@ -373,7 +493,7 @@ export function AdminUsersPage() {
               <option value="ADMIN">Quản trị viên</option>
               <option value="SUPER_ADMIN">Super Admin</option>
             </select>
-            <IconChevronDown size={14} className="absolute right-2.5 top-3 text-secondary pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-2.5 top-3 text-secondary pointer-events-none" />
           </div>
 
           {/* Status Filter */}
@@ -390,7 +510,7 @@ export function AdminUsersPage() {
               <option value="ACTIVE">Đang hoạt động</option>
               <option value="DISABLED">Đã vô hiệu hóa</option>
             </select>
-            <IconChevronDown size={14} className="absolute right-2.5 top-3 text-secondary pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-2.5 top-3 text-secondary pointer-events-none" />
           </div>
         </div>
       </div>
@@ -449,7 +569,7 @@ export function AdminUsersPage() {
                         <span
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${roleStyle.bg} ${roleStyle.text} ${roleStyle.border}`}
                         >
-                          {u.role === 'SUPER_ADMIN' && <IconShield size={13} className="shrink-0" />}
+                          {u.role === 'SUPER_ADMIN' && <Shield size={13} className="shrink-0" />}
                           <span>{roleStyle.label}</span>
                         </span>
                       </td>
@@ -475,7 +595,7 @@ export function AdminUsersPage() {
                       <td className="py-3.5 px-4 sm:px-6 text-right">
                         <button
                           type="button"
-                          className="px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-white hover:bg-[#F6F7F8] text-xs font-medium text-[#17191B] hover:text-[#0D9488] transition-colors cursor-pointer shadow-2xs"
+                          className="px-3.5 py-1.5 rounded-lg border border-[#E5E8EB] bg-white hover:bg-[#F6F7F8] text-sm font-medium text-[#17191B] hover:text-[#0D9488] transition-colors cursor-pointer shadow-2xs"
                           onClick={() => handleOpenDetail(u)}
                         >
                           Chi tiết
@@ -531,7 +651,7 @@ export function AdminUsersPage() {
                 onClick={() => setCreateModalOpen(false)}
                 aria-label="Đóng"
               >
-                <IconX size={18} />
+                <X size={18} />
               </button>
             </div>
 
@@ -632,7 +752,7 @@ export function AdminUsersPage() {
                 onClick={() => setDetailModalOpen(false)}
                 aria-label="Đóng"
               >
-                <IconX size={18} />
+                <X size={18} />
               </button>
             </div>
 
@@ -657,6 +777,7 @@ export function AdminUsersPage() {
                 <input
                   type="text"
                   required
+                  disabled={!canActorManageTargetRole(selectedUser.role)}
                   value={editForm.fullName}
                   onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
                   className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
@@ -670,6 +791,7 @@ export function AdminUsersPage() {
                   </label>
                   <input
                     type="tel"
+                    disabled={!canActorManageTargetRole(selectedUser.role)}
                     value={editForm.phone}
                     onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                     className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
@@ -681,6 +803,7 @@ export function AdminUsersPage() {
                   </label>
                   <input
                     type="text"
+                    disabled={!canActorManageTargetRole(selectedUser.role)}
                     value={editForm.address}
                     onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
                     className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
@@ -691,12 +814,17 @@ export function AdminUsersPage() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={isActionLoading}
+                  disabled={isActionLoading || !canActorManageTargetRole(selectedUser.role)}
                   className="px-4 py-2 rounded-xl bg-[#0D9488] text-white font-semibold text-sm hover:bg-[#0F766E] disabled:opacity-50 cursor-pointer shadow-2xs"
                 >
                   {isActionLoading ? 'Đang lưu...' : 'Lưu thông tin liên hệ'}
                 </button>
               </div>
+              {!canActorManageTargetRole(selectedUser.role) && (
+                <p className="text-xs text-secondary">
+                  Chỉ Super Admin mới có quyền chỉnh sửa thông tin tài khoản quản trị viên.
+                </p>
+              )}
             </form>
 
             {/* Privileged Role & Status Section */}
@@ -741,7 +869,7 @@ export function AdminUsersPage() {
                   </div>
                 ) : (
                   <div className="text-xs text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-center gap-2">
-                    <IconAlertCircle size={15} className="shrink-0 text-amber-700" />
+                    <CircleAlert size={15} className="shrink-0 text-amber-700" />
                     <span>Chỉ Super Admin mới có thẩm quyền sửa đổi vai trò của tài khoản Quản trị viên.</span>
                   </div>
                 )}
@@ -791,7 +919,7 @@ export function AdminUsersPage() {
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white rounded-2xl border border-red-200 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 text-red-600 mb-3">
-              <IconAlertCircle size={22} className="shrink-0 text-rose-600" />
+              <CircleAlert size={22} className="shrink-0 text-rose-600" />
               <h2 className="text-base font-bold text-[#17191B]">Xung đột phiên làm việc (HTTP 409)</h2>
             </div>
 

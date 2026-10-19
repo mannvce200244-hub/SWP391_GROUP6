@@ -1,8 +1,8 @@
 import { useState } from 'react'
+import { Play, X, ExternalLink } from 'lucide-react'
 import EditorialEyebrow from '../../components/common/EditorialEyebrow.jsx'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
-import { IconPlay, IconX, IconExternalLink } from '../../components/ui/Icons.jsx'
 import heroDanTranh from '../../assets/images/hero-dan-tranh.jpg'
 
 /**
@@ -146,13 +146,7 @@ function HomepageVideoSection({
                       className="w-16 h-16 sm:w-18 sm:h-18 rounded-full bg-white text-brand group-hover:bg-brand group-hover:text-white border border-border/80 shadow-md transition-all duration-300 flex items-center justify-center group-hover:scale-110 group-active:scale-95"
                       aria-hidden="true"
                     >
-                      <svg
-                        className="w-6 h-6 sm:w-7 sm:h-7 ml-1 fill-current transition-transform"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
+                      <Play className="w-6 h-6 sm:w-7 sm:h-7 ml-1 fill-current transition-transform" />
                     </div>
                   </div>
 
@@ -162,7 +156,7 @@ function HomepageVideoSection({
                       {videoTitle}
                     </p>
                     <span className="text-xs font-medium text-white/95 bg-brand/90 px-2.5 py-0.5 rounded backdrop-blur-xs shrink-0 flex items-center gap-1.5 shadow-xs">
-                      <IconPlay size={10} className="fill-current" aria-hidden="true" />
+                      <Play size={10} className="fill-current" aria-hidden="true" />
                       <span>Bấm để xem</span>
                     </span>
                   </div>
@@ -193,7 +187,7 @@ function HomepageVideoSection({
                     className="inline-flex items-center gap-1.5 font-bold text-white bg-brand hover:bg-brand-hover px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer shadow-xs"
                     aria-label={`Bấm xem video ${videoTitle} ngay trên trang`}
                   >
-                    <IconPlay size={12} className="fill-current" aria-hidden="true" />
+                    <Play size={12} className="fill-current" aria-hidden="true" />
                     <span>Bấm xem video</span>
                   </button>
                 ) : (
@@ -203,7 +197,7 @@ function HomepageVideoSection({
                     className="inline-flex items-center gap-1 font-medium text-ink hover:text-brand bg-surface-secondary border border-border px-3 py-1.5 rounded-md text-xs transition-colors cursor-pointer"
                     aria-label="Đóng trình phát video"
                   >
-                    <IconX size={14} aria-hidden="true" />
+                    <X size={14} aria-hidden="true" />
                     <span>Đóng video</span>
                   </button>
                 )}
@@ -216,7 +210,7 @@ function HomepageVideoSection({
                   aria-label={`Mở video ${videoTitle} trên YouTube (mở trong tab mới)`}
                 >
                   <span>Xem trên YouTube</span>
-                  <IconExternalLink size={13} aria-hidden="true" />
+                  <ExternalLink size={13} aria-hidden="true" />
                 </a>
               </div>
             </div>

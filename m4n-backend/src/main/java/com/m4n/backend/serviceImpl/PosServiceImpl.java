@@ -12,6 +12,7 @@ import com.m4n.backend.entity.Invoice;
 import com.m4n.backend.entity.InvoiceItem;
 import com.m4n.backend.entity.Product;
 import com.m4n.backend.entity.ProductMedia;
+import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.exception.InsufficientStockException;
 import com.m4n.backend.exception.ResourceNotFoundException;
@@ -23,7 +24,9 @@ import com.m4n.backend.service.PosService;
 import com.m4n.backend.service.VoucherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -217,11 +220,16 @@ public class PosServiceImpl implements PosService {
             throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ: " + request.getPaymentMethod() + ". Hỗ trợ: CASH, BANK_TRANSFER.");
         }
 
-        // 4. CRITICAL: Acquire PESSIMISTIC_WRITE lock on ALL items' inventory
-        // Invariant: BR-INVENTORY-03: quantity >= 0, ZERO partial deduction
+        // 4. CRITICAL: Acquire PESSIMISTIC_WRITE lock on ALL items' inventory.
+        // Locked in ascending productId order for deterministic lock ordering so two
+        // concurrent sales with overlapping baskets cannot deadlock (BR-INVENTORY-03).
         Map<Long, Inventory> lockedInventories = new HashMap<>();
 
-        for (Map.Entry<Long, Integer> entry : consolidatedItems.entrySet()) {
+        List<Map.Entry<Long, Integer>> itemsInLockOrder = consolidatedItems.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .toList();
+
+        for (Map.Entry<Long, Integer> entry : itemsInLockOrder) {
             Long productId = entry.getKey();
             int requestedQty = entry.getValue();
 
@@ -300,10 +308,40 @@ public class PosServiceImpl implements PosService {
 
     @Override
     @Transactional(readOnly = true)
-    public PosSaleResponse getInvoiceById(Long invoiceId) {
+    public PosSaleResponse getInvoiceById(Long invoiceId, String actorEmail) {
+        assertCanAccessInvoice(invoiceId, actorEmail);
         Invoice invoice = invoiceRepository.findWithDetailsById(invoiceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hóa đơn với ID: " + invoiceId));
         return mapToPosSaleResponse(invoice);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void assertCanAccessInvoice(Long invoiceId, String actorEmail) {
+        User actor = userRepository.findByEmailIgnoreCase(actorEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin tài khoản nhân viên."));
+        Invoice invoice = invoiceRepository.findWithDetailsById(invoiceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hóa đơn với ID: " + invoiceId));
+        RoleName actorRole = actor.getRole().getName();
+
+        if (actorRole == RoleName.ADMIN || actorRole == RoleName.SUPER_ADMIN) {
+            return;
+        }
+        if (actorRole != RoleName.POS_STAFF
+                || invoice.getStaff() == null
+                || !invoice.getStaff().getId().equals(actor.getId())) {
+            throw new AccessDeniedException("Bạn không có quyền truy cập hóa đơn này.");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PosSaleResponse> listInvoices(String search, Pageable pageable) {
+        String trimmedSearch = (search != null && !search.isBlank()) ? search.trim() : null;
+        Page<Invoice> invoicePage = (trimmedSearch == null)
+                ? invoiceRepository.findAllByOrderByCreatedAtDesc(pageable)
+                : invoiceRepository.searchInvoices(trimmedSearch, pageable);
+        return invoicePage.map(this::mapToPosSaleResponse);
     }
 
     private Map<Long, Integer> consolidateItems(List<PosSaleItemRequest> items) {
@@ -408,7 +446,11 @@ public class PosServiceImpl implements PosService {
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
             throw new AccessDeniedException("Vui lòng đăng nhập để thực hiện bán hàng tại quầy.");
         }
-        return userRepository.findByEmailIgnoreCase(auth.getName())
+        User staff = userRepository.findByEmailIgnoreCase(auth.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin tài khoản nhân viên."));
+        if (staff.getRole().getName() != RoleName.POS_STAFF) {
+            throw new AccessDeniedException("Chỉ nhân viên POS mới có quyền hoàn tất giao dịch tại quầy.");
+        }
+        return staff;
     }
 }

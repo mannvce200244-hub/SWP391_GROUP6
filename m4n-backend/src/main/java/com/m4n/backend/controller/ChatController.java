@@ -38,6 +38,7 @@ public class ChatController {
     }
 
     @GetMapping("/my-conversation")
+    @PreAuthorize("hasRole('CUSTOMER')")
     @Operation(summary = "Get or create own support conversation", description = "Returns active conversation for current customer.")
     public ResponseEntity<ConversationResponse> getMyConversation(Authentication authentication) {
         ConversationResponse response = chatService.getOrCreateMyCustomerConversation(authentication.getName());
@@ -45,6 +46,7 @@ public class ChatController {
     }
 
     @GetMapping("/conversations/{id}/messages")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ONLINE_STAFF')")
     @Operation(summary = "Get messages for conversation", description = "Returns chronological message thread. Enforces customer conversation ownership.")
     public ResponseEntity<List<ChatMessageResponse>> getMessages(
             @PathVariable Long id,
@@ -55,6 +57,7 @@ public class ChatController {
     }
 
     @PostMapping("/conversations/{id}/messages")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ONLINE_STAFF')")
     @Operation(summary = "Send support message", description = "Appends message to thread. Sender derived securely from authentication context.")
     public ResponseEntity<ChatMessageResponse> sendMessage(
             @PathVariable Long id,
@@ -66,7 +69,7 @@ public class ChatController {
     }
 
     @GetMapping("/staff/conversations")
-    @PreAuthorize("hasAnyRole('ONLINE_STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ONLINE_STAFF')")
     @Operation(summary = "List support queue for staff", description = "Returns conversations awaiting response. POS_STAFF is denied access.")
     public ResponseEntity<Page<ConversationResponse>> getStaffConversations(
             @PageableDefault(size = 20, sort = "updatedAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -76,7 +79,7 @@ public class ChatController {
     }
 
     @PostMapping("/conversations/{id}/assign")
-    @PreAuthorize("hasAnyRole('ONLINE_STAFF', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ONLINE_STAFF')")
     @Operation(summary = "Assign staff to conversation", description = "Assigns authenticated staff member to the support conversation.")
     public ResponseEntity<ConversationResponse> assignStaff(
             @PathVariable Long id,

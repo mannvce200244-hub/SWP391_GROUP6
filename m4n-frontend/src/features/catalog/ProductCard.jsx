@@ -3,33 +3,11 @@ import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 import { getFirstProductImage } from './productMedia.js'
 import { IconInstrument } from '../../components/ui/Icons.jsx'
-import prodSaoTruc from '../../assets/images/prod-sao-truc.jpg'
-import prodDanTranh from '../../assets/images/prod-dan-tranh.jpg'
-import catNhacCuGo from '../../assets/images/cat-nhac-cu-go.jpg'
-
-function getCategoryFallbackImage(product) {
-  const group = (product.groupName || '').toLowerCase()
-  const name = (product.name || '').toLowerCase()
-
-  if (group.includes('hơi') || name.includes('sáo') || name.includes('tiêu')) {
-    return { url: prodSaoTruc, alt: 'Nhạc cụ hơi truyền thống Việt Nam' }
-  }
-  if (group.includes('gõ') || name.includes('trống') || name.includes('mõ') || name.includes('thanh la')) {
-    return { url: catNhacCuGo, alt: 'Nhạc cụ gõ truyền thống Việt Nam' }
-  }
-  return { url: prodDanTranh, alt: 'Nhạc cụ dây truyền thống Việt Nam' }
-}
 
 function ProductCard({ priority = false, product }) {
   const [failedImageUrl, setFailedImageUrl] = useState(null)
   const rawImage = getFirstProductImage(product.media)
-  const fallback = getCategoryFallbackImage(product)
-  const image =
-    rawImage && failedImageUrl !== rawImage.url
-      ? rawImage
-      : failedImageUrl !== fallback.url
-        ? fallback
-        : null
+  const hasValidImage = Boolean(rawImage && failedImageUrl !== rawImage.url)
 
   // Stock status text if available in product data
   const hasStockInfo =
@@ -50,19 +28,19 @@ function ProductCard({ priority = false, product }) {
     >
       {/* 1. Image Container (1:1 aspect ratio, smooth hover scale) */}
       <div className="aspect-square w-full overflow-hidden rounded-lg bg-surface-secondary relative flex items-center justify-center border border-border-subtle">
-        {image ? (
+        {hasValidImage ? (
           <img
             alt={
-              typeof image.alt === 'string' && image.alt.trim()
-                ? image.alt.trim()
+              typeof rawImage.alt === 'string' && rawImage.alt.trim()
+                ? rawImage.alt.trim()
                 : product.name
             }
             className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out"
             decoding="async"
             height="500"
             loading={priority ? undefined : 'lazy'}
-            onError={() => setFailedImageUrl(image.url)}
-            src={image.url}
+            onError={() => setFailedImageUrl(rawImage.url)}
+            src={rawImage.url}
             width="500"
           />
         ) : (

@@ -1,13 +1,12 @@
 import useCart from '../features/cart/useCart.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
-  IconShoppingBag,
-  IconInstrument,
-  IconArrowRight,
-  IconChevronRight,
-  IconCheck,
-  IconShield,
-} from '../components/ui/Icons.jsx'
+  ShoppingBag,
+  ArrowRight,
+  ChevronRight,
+  Shield,
+} from 'lucide-react'
+import { IconInstrument } from '../components/ui/Icons.jsx'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 
 function CartPage() {
@@ -52,7 +51,7 @@ function CartPage() {
               className="self-start sm:self-center inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:underline cursor-pointer"
             >
               <span>Tiếp tục chọn nhạc cụ</span>
-              <IconArrowRight size={13} />
+              <ArrowRight size={13} />
             </button>
           </div>
         </div>
@@ -62,7 +61,7 @@ function CartPage() {
           /* Login Prompt */
           <div className="rounded-[32px] bg-white border border-border/80 p-12 text-center shadow-sm max-w-lg mx-auto space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-brand-soft text-brand flex items-center justify-center mx-auto border border-brand-border">
-              <IconShoppingBag size={28} />
+              <ShoppingBag size={28} />
             </div>
             <h3 className="text-xl font-bold text-ink">
               Vui lòng đăng nhập tài khoản
@@ -76,14 +75,14 @@ function CartPage() {
               className="inline-flex items-center gap-2 h-12 px-8 rounded-2xl bg-brand hover:bg-brand-hover text-white text-sm font-bold shadow-md shadow-brand/20 transition-all cursor-pointer"
             >
               <span>Đăng nhập ngay</span>
-              <IconArrowRight size={15} />
+              <ArrowRight size={15} />
             </button>
           </div>
         ) : items.length === 0 ? (
           /* Empty State */
           <div className="rounded-[32px] bg-white border border-border/80 p-12 text-center shadow-sm max-w-lg mx-auto space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-surface-secondary text-subtle flex items-center justify-center mx-auto border border-border">
-              <IconShoppingBag size={28} />
+              <ShoppingBag size={28} />
             </div>
             <h3 className="text-xl font-bold text-ink">
               Giỏ hàng của bạn đang trống
@@ -97,7 +96,7 @@ function CartPage() {
               className="inline-flex items-center gap-2 h-12 px-8 rounded-2xl bg-brand hover:bg-brand-hover text-white text-sm font-bold shadow-md shadow-brand/20 transition-all cursor-pointer"
             >
               <span>Khám phá bộ sưu tập</span>
-              <IconArrowRight size={15} />
+              <ArrowRight size={15} />
             </button>
           </div>
         ) : (
@@ -220,18 +219,12 @@ function CartPage() {
                 className="w-full h-12 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 <span>Tiến hành thanh toán</span>
-                <IconChevronRight size={16} />
+                <ChevronRight size={16} />
               </button>
 
-              <div className="pt-2 flex flex-col gap-2 text-xs text-muted">
-                <div className="flex items-center gap-2">
-                  <IconCheck size={14} className="text-brand shrink-0" />
-                  <span>Bảo hành âm thanh và nứt gãy 12 tháng</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <IconShield size={14} className="text-brand shrink-0" />
-                  <span>Đóng gói hộp xốp & khung gỗ tiêu chuẩn</span>
-                </div>
+              <div className="pt-2 flex items-center gap-2 text-xs text-muted">
+                <Shield size={14} className="text-brand shrink-0" />
+                <span>Tồn kho được xác nhận khi nhân viên xử lý đơn hàng.</span>
               </div>
             </div>
 

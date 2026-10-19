@@ -12,6 +12,8 @@ public interface CategoryService {
 
     List<CategoryDetailResponse> listAdminCategories();
 
+    List<CategoryDetailResponse> listAdminCategories(String search);
+
     CategoryDetailResponse getAdminCategoryDetail(Long id);
 
     CategoryDetailResponse createCategory(CreateCategoryRequest request);
@@ -20,3 +22,4 @@ public interface CategoryService {
 
     void deleteCategory(Long id);
 }
+

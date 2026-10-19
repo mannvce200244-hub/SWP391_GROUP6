@@ -4,12 +4,12 @@ import { formatCurrencyVND } from '../utils/currency.js'
 import RevenueTrendChart from '../components/admin/RevenueTrendChart.jsx'
 import InventoryDonutChart from '../components/admin/InventoryDonutChart.jsx'
 import {
-  IconInstrument,
-  IconPackage,
-  IconCheck,
-  IconClose,
-  IconStore,
-} from '../components/ui/Icons.jsx'
+  Package,
+  Check,
+  X,
+  Store,
+} from 'lucide-react'
+import { IconInstrument } from '../components/ui/Icons.jsx'
 import prodDanTranh from '../assets/images/prod-dan-tranh.jpg'
 import prodDanBau from '../assets/images/prod-dan-bau.jpg'
 import prodDanNguyet from '../assets/images/prod-dan-nguyet.jpg'
@@ -205,7 +205,7 @@ function AdminDashboardPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Doanh thu</span>
             <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-brand flex items-center justify-center shrink-0">
-              <IconStore size={18} />
+              <Store size={18} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -228,7 +228,7 @@ function AdminDashboardPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Tổng đơn hàng</span>
             <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-secondary flex items-center justify-center shrink-0">
-              <IconPackage size={18} />
+              <Package size={18} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -251,7 +251,7 @@ function AdminDashboardPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Đơn hoàn thành</span>
             <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-jade flex items-center justify-center shrink-0">
-              <IconCheck size={18} />
+              <Check size={18} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -274,7 +274,7 @@ function AdminDashboardPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Đơn đã hủy</span>
             <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-danger flex items-center justify-center shrink-0">
-              <IconClose size={18} />
+              <X size={18} />
             </div>
           </div>
           <div className="flex flex-col gap-1">

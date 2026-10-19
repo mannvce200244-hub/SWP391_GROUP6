@@ -140,7 +140,25 @@ class ChatServiceTest {
 
         assertThatThrownBy(() -> chatService.getMessages(100L, "pos@m4n.vn"))
                 .isInstanceOf(AccessDeniedException.class)
-                .hasMessageContaining("Nhân viên POS không có quyền truy cập");
+                .hasMessageContaining("Chỉ khách hàng và nhân viên trực tuyến");
+    }
+
+    @Test
+    @DisplayName("Admin cannot read a customer support conversation")
+    void getMessages_admin_throwsAccessDenied() {
+        User admin = User.builder()
+                .id(5L)
+                .email("admin@m4n.vn")
+                .role(Role.builder().name(RoleName.ADMIN).build())
+                .isActive(true)
+                .build();
+        when(userRepository.findByEmailIgnoreCase("admin@m4n.vn"))
+                .thenReturn(Optional.of(admin));
+        when(conversationRepository.findById(100L)).thenReturn(Optional.of(conversation1));
+
+        assertThatThrownBy(() -> chatService.getMessages(100L, "admin@m4n.vn"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("Chỉ khách hàng và nhân viên trực tuyến");
     }
 
     @Test

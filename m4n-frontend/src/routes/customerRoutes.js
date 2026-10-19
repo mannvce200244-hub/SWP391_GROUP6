@@ -25,11 +25,19 @@ export const CUSTOMER_ROUTES = Object.freeze({
   adminInstruments: '/admin/instruments',
   adminInstrumentDetail: (id) =>
     `/admin/instruments/${encodeURIComponent(String(id))}`,
-  adminStore: '/admin/store',
+  adminCategories: '/admin/categories',
+  adminArtisans: '/admin/artisans',
+  adminCraftVillages: '/admin/craft-villages',
+  adminInventory: '/admin/inventory',
+  adminStockImport: '/admin/stock-import',
+  adminOrders: '/admin/orders',
+  adminInvoices: '/admin/invoices',
+  adminVouchers: '/admin/vouchers',
   adminProfile: '/admin/profile',
   adminSecurity: '/admin/security',
   adminUsers: '/admin/users',
   staffChat: '/staff/chat',
+  staffOrders: '/staff/orders',
 })
 
 const ARTISAN_SECTION_ID = 'artisans'
@@ -122,5 +130,4 @@ export function matchAdminInstrumentDetailPath(pathname) {
     return null
   }
 }
-
 

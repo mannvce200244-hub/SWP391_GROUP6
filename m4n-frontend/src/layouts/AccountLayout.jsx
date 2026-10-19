@@ -1,12 +1,12 @@
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
-  IconUser,
-  IconShield,
-  IconLogOut,
-  IconPackage,
-  IconChevronRight,
-} from '../components/ui/Icons.jsx'
+  UserRound,
+  Shield,
+  LogOut,
+  Package,
+  ChevronRight,
+} from 'lucide-react'
 import useToast from '../components/ui/useToast.js'
 
 function AccountLayout({ children, activeTab = 'profile' }) {
@@ -28,6 +28,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
 
   const roleLabels = {
     ADMIN: 'Quản trị viên',
+    SUPER_ADMIN: 'Super Admin',
     ONLINE_STAFF: 'Nhân viên Online',
     POS_STAFF: 'Nhân viên Showroom POS',
   }
@@ -57,7 +58,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
               {/* User Identity Mini Card */}
               <div className="p-4 rounded-2xl bg-surface-secondary/70 border border-border/60 flex items-center gap-3.5">
                 <div
-                  className="w-13 h-13 rounded-full flex items-center justify-center shrink-0 font-black text-lg bg-brand text-white shadow-sm ring-4 ring-brand-soft select-none"
+                  className="w-13 h-13 rounded-full flex items-center justify-center shrink-0 font-bold text-lg bg-brand text-white shadow-sm ring-4 ring-brand-soft select-none"
                   aria-hidden="true"
                 >
                   {getInitials(user?.fullName || user?.email)}
@@ -93,13 +94,13 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                   onClick={() => navigateTo(CUSTOMER_ROUTES.profile)}
                 >
                   <span className="flex items-center gap-3">
-                    <IconUser
+                    <UserRound
                       size={18}
                       className={activeTab === 'profile' ? 'text-white' : 'text-subtle group-hover:text-ink'}
                     />
                     <span>Hồ sơ cá nhân</span>
                   </span>
-                  <IconChevronRight
+                  <ChevronRight
                     size={16}
                     className={`transition-transform ${
                       activeTab === 'profile' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
@@ -117,13 +118,13 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                   onClick={() => navigateTo(CUSTOMER_ROUTES.security)}
                 >
                   <span className="flex items-center gap-3">
-                    <IconShield
+                    <Shield
                       size={18}
                       className={activeTab === 'security' ? 'text-white' : 'text-subtle group-hover:text-ink'}
                     />
                     <span>Bảo mật & Mật khẩu</span>
                   </span>
-                  <IconChevronRight
+                  <ChevronRight
                     size={16}
                     className={`transition-transform ${
                       activeTab === 'security' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
@@ -141,13 +142,13 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                   onClick={() => navigateTo(CUSTOMER_ROUTES.orders)}
                 >
                   <span className="flex items-center gap-3">
-                    <IconPackage
+                    <Package
                       size={18}
                       className={activeTab === 'orders' ? 'text-white' : 'text-subtle group-hover:text-ink'}
                     />
                     <span>Đơn hàng của tôi</span>
                   </span>
-                  <IconChevronRight
+                  <ChevronRight
                     size={16}
                     className={`transition-transform ${
                       activeTab === 'orders' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
@@ -163,7 +164,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                   className="flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-bold rounded-[18px] text-muted hover:text-brand hover:bg-brand-soft border border-border/80 hover:border-brand-border transition-all w-full cursor-pointer"
                   onClick={handleLogout}
                 >
-                  <IconLogOut size={16} className="shrink-0" />
+                  <LogOut size={16} className="shrink-0" />
                   <span>Đăng xuất tài khoản</span>
                 </button>
               </div>

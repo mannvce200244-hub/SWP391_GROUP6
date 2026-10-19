@@ -138,6 +138,30 @@ export const apiClient = Object.freeze({
   get(endpoint, options = {}) {
     return request(endpoint, { ...options, method: 'GET' })
   },
+  async getBlob(endpoint, options = {}) {
+    const url = endpoint.startsWith('http')
+      ? endpoint
+      : `${API_BASE_URL}/${endpoint.replace(/^\/+/, '')}`
+
+    const headers = { ...options.headers }
+    const token = authTokenStorage.getToken()
+    if (token && !headers.Authorization) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    const res = await fetch(url, {
+      ...options,
+      method: 'GET',
+      credentials: 'include',
+      headers,
+    })
+
+    if (!res.ok) {
+      throw new ApiError(`Tải tệp thất bại (HTTP ${res.status})`, res.status)
+    }
+
+    return res.blob()
+  },
   post(endpoint, body, options = {}) {
     return request(endpoint, { ...options, method: 'POST', body })
   },

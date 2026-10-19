@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import { MessageSquare } from 'lucide-react'
 import chatService from '../../services/chatService.js'
 import useToast from '../../components/ui/useToast.js'
-import { IconMessageSquare } from '../../components/ui/Icons.jsx'
 
 export function StaffChatWorkspace() {
   const { addToast } = useToast()
@@ -153,7 +153,7 @@ export function StaffChatWorkspace() {
             </div>
           ) : conversations.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted flex flex-col items-center gap-2">
-              <IconMessageSquare size={28} className="text-muted/60" />
+              <MessageSquare size={28} className="text-muted/60" />
               <span>Chưa có cuộc trò chuyện cần hỗ trợ.</span>
             </div>
           ) : (
@@ -295,7 +295,7 @@ export function StaffChatWorkspace() {
           </>
         ) : (
           <div className="my-auto text-center p-8 text-xs text-muted flex flex-col items-center gap-2">
-            <IconMessageSquare size={32} className="text-muted/50" />
+            <MessageSquare size={32} className="text-muted/50" />
             <span>Chọn một khách hàng từ hàng đợi bên trái để bắt đầu tư vấn.</span>
           </div>
         )}

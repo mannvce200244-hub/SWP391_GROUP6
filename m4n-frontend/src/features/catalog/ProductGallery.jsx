@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { IconInstrument, IconPlay } from '../../components/ui/Icons.jsx'
+import { Play } from 'lucide-react'
+import { IconInstrument } from '../../components/ui/Icons.jsx'
 import { getRenderableMedia } from './productMedia.js'
 
 function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thống' }) {
@@ -86,7 +87,7 @@ function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thốn
                 {itemType === 'video' ? (
                   <div className="w-full h-full bg-neutral-900 flex items-center justify-center text-white relative">
                     <span className="w-7 h-7 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-xs">
-                      <IconPlay size={12} className="fill-current ml-0.5" />
+                      <Play size={12} className="fill-current ml-0.5" />
                     </span>
                   </div>
                 ) : (

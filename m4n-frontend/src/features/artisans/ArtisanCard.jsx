@@ -23,7 +23,7 @@ function ArtisanCard({ artisan }) {
           decoding="async"
           height="450"
           loading="lazy"
-          src={artisan.avatar || artisan.coverImage}
+          src={artisan.avatar || '/assets/images/artisan-workshop.jpg'}
           width="360"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-80 group-hover:opacity-70 transition-opacity pointer-events-none" />
@@ -35,10 +35,9 @@ function ArtisanCard({ artisan }) {
 
         {/* Bottom Metadata on Image */}
         <div className="absolute bottom-3 left-3 right-3 text-white">
-          <p className="text-xs text-white/80 font-medium truncate">
-            {artisan.village?.name ? `${artisan.village.name} · ` : ''}
-            {artisan.province}
-          </p>
+          {artisan.province && (
+            <p className="text-xs text-white/80 font-medium truncate">{artisan.province}</p>
+          )}
           <h3 className="text-lg sm:text-xl font-bold font-sans text-white group-hover:text-brand-soft transition-colors mt-0.5 leading-snug">
             {artisan.name}
           </h3>
@@ -48,9 +47,7 @@ function ArtisanCard({ artisan }) {
       {/* 2. Content Details */}
       <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3 justify-between">
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold text-brand uppercase tracking-wider">
-            {artisan.craft}
-          </p>
+          <p className="text-xs font-bold text-brand uppercase tracking-wider">Nghệ nhân</p>
           <p className="text-xs sm:text-sm text-muted leading-relaxed line-clamp-3">
             {artisan.description}
           </p>
@@ -71,10 +68,7 @@ function ArtisanCard({ artisan }) {
             </div>
           ) : null}
 
-          <div className="flex items-center justify-between gap-2 text-xs pt-0.5">
-            <span className="text-muted font-medium">
-              {artisan.experienceYears ? `${artisan.experienceYears} năm theo nghề` : 'Nghệ nhân lâu năm'}
-            </span>
+          <div className="flex items-center justify-end gap-2 text-xs pt-0.5">
             <span className="font-bold text-brand flex items-center gap-1 group-hover:translate-x-1 transition-transform">
               Xem câu chuyện <span aria-hidden="true">→</span>
             </span>

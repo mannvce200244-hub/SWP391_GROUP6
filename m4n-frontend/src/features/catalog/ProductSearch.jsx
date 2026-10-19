@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { IconSearch, IconX } from '../../components/ui/Icons.jsx'
+import { Search, X } from 'lucide-react'
 
 function ProductSearch({
   busy = false,
   className = '',
   id = 'catalog-search',
   onSearch,
-  placeholder = 'Tìm theo tên, mã nhạc cụ hoặc nghệ nhân (ví dụ: Đàn Tranh, TRN-001)...',
+  placeholder = 'Tìm theo tên hoặc mã nhạc cụ (ví dụ: Đàn Tranh, TRN-001)...',
   value = '',
 }) {
   const [prevValue, setPrevValue] = useState(value)
@@ -44,7 +44,7 @@ function ProductSearch({
           aria-hidden="true"
           className="absolute left-3.5 text-muted pointer-events-none flex items-center justify-center"
         >
-          <IconSearch className="text-subtle" size={18} />
+          <Search className="text-subtle" size={18} />
         </span>
 
         <input
@@ -70,13 +70,13 @@ function ProductSearch({
               onClick={handleClear}
               type="button"
             >
-              <IconX size={15} />
+              <X size={15} />
             </button>
           ) : null}
 
           <button
             aria-label="Thực hiện tìm kiếm"
-            className="h-8 sm:h-8.5 px-3.5 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-hover active:scale-[0.98] transition-all duration-150 shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="h-8 sm:h-8.5 px-3.5 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-hover active:scale-[0.98] transition-all duration-150 shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={busy}
             type="submit"
           >

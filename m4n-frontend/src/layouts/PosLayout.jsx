@@ -3,11 +3,11 @@ import BrandLogo from '../components/common/BrandLogo.jsx'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
-  IconUser,
-  IconLock,
-  IconLogOut,
-  IconChevronDown,
-} from '../components/ui/Icons.jsx'
+  UserRound,
+  Lock,
+  LogOut,
+  ChevronDown,
+} from 'lucide-react'
 import useToast from '../components/ui/useToast.js'
 
 function PosLayout({ children }) {
@@ -74,7 +74,7 @@ function PosLayout({ children }) {
               {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'P'}
             </div>
             <span className="text-xs font-semibold text-ink hidden sm:inline">{user?.fullName || 'Thu ngân'}</span>
-            <IconChevronDown size={14} className="text-muted" />
+            <ChevronDown size={14} className="text-muted" />
           </button>
 
           {dropdownOpen && (
@@ -85,36 +85,36 @@ function PosLayout({ children }) {
               </div>
               <button
                 type="button"
-                className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-ink hover:bg-surface-secondary hover:text-brand transition-colors w-full text-left cursor-pointer"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-medium text-ink hover:bg-surface-secondary hover:text-brand transition-colors w-full text-left cursor-pointer"
                 role="menuitem"
                 onClick={() => {
                   setDropdownOpen(false)
                   navigateTo(CUSTOMER_ROUTES.profile)
                 }}
               >
-                <IconUser size={16} />
+                <UserRound size={16} />
                 <span>Hồ sơ nhân viên</span>
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-ink hover:bg-surface-secondary hover:text-brand transition-colors w-full text-left cursor-pointer"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-medium text-ink hover:bg-surface-secondary hover:text-brand transition-colors w-full text-left cursor-pointer"
                 role="menuitem"
                 onClick={() => {
                   setDropdownOpen(false)
                   navigateTo(CUSTOMER_ROUTES.security)
                 }}
               >
-                <IconLock size={16} />
+                <Lock size={16} />
                 <span>Bảo mật ca trực</span>
               </button>
               <div className="my-1 border-t border-border" />
               <button
                 type="button"
-                className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-brand hover:bg-brand-soft transition-colors w-full text-left cursor-pointer"
+                className="flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-medium text-brand hover:bg-brand-soft transition-colors w-full text-left cursor-pointer"
                 role="menuitem"
                 onClick={handleLogout}
               >
-                <IconLogOut size={16} />
+                <LogOut size={16} />
                 <span>Đăng xuất ca làm việc</span>
               </button>
             </div>

@@ -21,7 +21,7 @@ function VillageCard({ village }) {
           decoding="async"
           height="320"
           loading="lazy"
-          src={village.coverImage}
+          src={village.coverImage || '/assets/images/artisan-workshop.jpg'}
           width="520"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-75 group-hover:opacity-65 transition-opacity pointer-events-none" />
@@ -34,7 +34,7 @@ function VillageCard({ village }) {
         {/* Bottom Headline on Image */}
         <div className="absolute bottom-3 left-3 right-3 text-white">
           <p className="text-xs text-white/80 font-medium">
-            {village.province} · {village.craft}
+            {village.province}
           </p>
           <h3 className="text-lg sm:text-xl font-bold font-sans text-white group-hover:text-brand-soft transition-colors mt-0.5 leading-snug">
             {village.name}

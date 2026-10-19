@@ -231,6 +231,29 @@ class AdminUserServiceTest {
     }
 
     @Test
+    @DisplayName("Regular Admin cannot edit another ADMIN's contact data")
+    void updateUser_asAdmin_targetAdmin_throwsAccessDenied() {
+        User targetAdmin = User.builder()
+                .id(99L)
+                .email("peer-admin@m4n.vn")
+                .role(adminRole)
+                .version(1L)
+                .build();
+        when(userRepository.findByEmailIgnoreCase("admin@m4n.vn"))
+                .thenReturn(Optional.of(adminOperator));
+        when(userRepository.findById(99L)).thenReturn(Optional.of(targetAdmin));
+
+        UpdateUserRequest request = new UpdateUserRequest(
+                "Peer Admin Updated", "0909999999", "Da Nang", 1L);
+
+        assertThatThrownBy(() -> adminUserService.updateUser(99L, request, "admin@m4n.vn"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("Chỉ Super Admin");
+
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
     @DisplayName("Regular Admin cannot change role of ADMIN - throws AccessDeniedException")
     void changeRole_asAdmin_targetAdmin_throwsAccessDenied() {
         when(userRepository.findByEmailIgnoreCase("admin@m4n.vn")).thenReturn(Optional.of(adminOperator));
@@ -251,7 +274,7 @@ class AdminUserServiceTest {
     void changeRole_lastSuperAdmin_throwsIllegalStateException() {
         when(userRepository.findByEmailIgnoreCase("superadmin@m4n.vn")).thenReturn(Optional.of(superAdminOperator));
         when(userRepository.findById(20L)).thenReturn(Optional.of(superAdminOperator));
-        when(userRepository.countByRole_NameAndIsActiveTrue(RoleName.SUPER_ADMIN)).thenReturn(1L); // ONLY ONE active!
+        when(userRepository.findActiveByRoleNameWithLock(RoleName.SUPER_ADMIN)).thenReturn(java.util.List.of(superAdminOperator)); // ONLY ONE active!
 
         ChangeUserRoleRequest demoteRequest = new ChangeUserRoleRequest(RoleName.ADMIN, 1L);
 
@@ -294,7 +317,7 @@ class AdminUserServiceTest {
     void disableUser_lastSuperAdmin_throwsIllegalStateException() {
         when(userRepository.findByEmailIgnoreCase("superadmin@m4n.vn")).thenReturn(Optional.of(superAdminOperator));
         when(userRepository.findById(40L)).thenReturn(Optional.of(superAdminUser));
-        when(userRepository.countByRole_NameAndIsActiveTrue(RoleName.SUPER_ADMIN)).thenReturn(1L);
+        when(userRepository.findActiveByRoleNameWithLock(RoleName.SUPER_ADMIN)).thenReturn(java.util.List.of(superAdminUser));
 
         assertThatThrownBy(() -> adminUserService.disableUser(40L, 1L, "superadmin@m4n.vn"))
                 .isInstanceOf(IllegalStateException.class)

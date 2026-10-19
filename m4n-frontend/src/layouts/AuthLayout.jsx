@@ -1,6 +1,6 @@
 import BrandLogo from '../components/common/BrandLogo.jsx'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
-import { IconArrowLeft } from '../components/ui/Icons.jsx'
+import { ArrowLeft } from 'lucide-react'
 // CC0 photo: đàn bầu at Vietnam Museum of Ethnology, Hanoi
 // (source: Wikimedia Commons "Dan bau (monochord) - Vietnam Museum of Ethnology")
 import authDanBau from '../assets/images/auth-dan-bau.jpg'
@@ -57,7 +57,7 @@ function AuthLayout({ children }) {
             className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-brand hover:bg-brand-soft/60 transition-colors cursor-pointer py-2 px-3.5 rounded-xl border border-transparent hover:border-brand-border/60 shadow-2xs"
             onClick={() => navigateTo(CUSTOMER_ROUTES.home)}
           >
-            <IconArrowLeft size={16} />
+            <ArrowLeft size={16} />
             <span>Về trang chủ</span>
           </button>
         </div>

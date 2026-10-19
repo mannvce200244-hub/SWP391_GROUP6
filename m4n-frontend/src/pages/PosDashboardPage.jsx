@@ -6,20 +6,20 @@ import {
   lookupBarcode,
   previewSale,
   finalizeSale,
-  getInvoicePdfUrl,
+  downloadInvoicePdf,
 } from '../services/posService.js'
 import { formatCurrencyVND } from '../utils/currency.js'
 import {
-  IconSearch,
-  IconTrash,
-  IconCheck,
-  IconClose,
-  IconPackage,
-  IconAlertCircle,
-  IconStore,
-  IconBanknote,
-  IconQrCode,
-} from '../components/ui/Icons.jsx'
+  Search,
+  Trash2,
+  Check,
+  X,
+  Package,
+  CircleAlert,
+  Store,
+  Banknote,
+  QrCode,
+} from 'lucide-react'
 
 function PosDashboardPage() {
   const { user } = useAuth()
@@ -377,7 +377,7 @@ function PosDashboardPage() {
       <div className="bg-surface rounded-2xl border border-border p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Left: Product Search */}
         <div className="relative flex-1 max-w-lg">
-          <IconSearch size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             placeholder="Tìm nhạc cụ (tên, mã sản phẩm, phân loại)..."
@@ -391,7 +391,7 @@ function PosDashboardPage() {
               onClick={() => setSearchKeyword('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
             >
-              <IconClose size={14} />
+              <X size={14} />
             </button>
           )}
         </div>
@@ -446,7 +446,7 @@ function PosDashboardPage() {
             </div>
           ) : catalog.length === 0 ? (
             <div className="bg-surface rounded-2xl border border-border p-12 text-center flex flex-col items-center justify-center gap-2 shadow-xs">
-              <IconPackage size={32} className="text-muted/60" />
+              <Package size={32} className="text-muted/60" />
               <p className="text-sm font-bold text-ink">Không tìm thấy sản phẩm phù hợp</p>
               <p className="text-xs text-muted">Thử nhập từ khóa khác hoặc quét mã vạch trực tiếp.</p>
             </div>
@@ -475,7 +475,7 @@ function PosDashboardPage() {
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-muted">
-                            <IconPackage size={24} />
+                            <Package size={24} />
                           </div>
                         )}
                         <span
@@ -541,7 +541,7 @@ function PosDashboardPage() {
           <div className="p-4 flex flex-col gap-2.5 max-h-72 overflow-y-auto divide-y divide-border/60">
             {billItems.length === 0 ? (
               <div className="py-10 text-center flex flex-col items-center justify-center gap-2">
-                <IconStore size={32} className="text-muted/40" />
+                <Store size={32} className="text-muted/40" />
                 <p className="text-xs font-bold text-ink">Chưa có sản phẩm nào</p>
                 <p className="text-xs text-muted">
                   Bấm vào sản phẩm bên trái hoặc quét mã vạch để thêm vào hóa đơn.
@@ -559,7 +559,7 @@ function PosDashboardPage() {
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-lg bg-surface-secondary border border-border flex items-center justify-center text-muted shrink-0">
-                        <IconPackage size={16} />
+                        <Package size={16} />
                       </div>
                     )}
                     <div className="flex flex-col min-w-0">
@@ -597,7 +597,7 @@ function PosDashboardPage() {
                       onClick={() => handleRemoveItem(item.productId)}
                       className="text-muted hover:text-rose-600 transition-colors p-1 cursor-pointer"
                     >
-                      <IconTrash size={14} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
@@ -657,29 +657,29 @@ function PosDashboardPage() {
             {/* Payment Method Selector */}
             <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
               <span className="font-bold text-xs text-ink uppercase tracking-wider">Phương thức thanh toán</span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('CASH')}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2.5 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                     paymentMethod === 'CASH'
                       ? 'border-brand bg-brand/5 text-brand shadow-xs'
                       : 'border-border bg-surface text-muted hover:text-ink'
                   }`}
                 >
-                  <IconBanknote size={16} />
+                  <Banknote size={18} />
                   <span>Tiền mặt</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('BANK_TRANSFER')}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2.5 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                     paymentMethod === 'BANK_TRANSFER'
                       ? 'border-brand bg-brand/5 text-brand shadow-xs'
                       : 'border-border bg-surface text-muted hover:text-ink'
                   }`}
                 >
-                  <IconQrCode size={16} />
+                  <QrCode size={18} />
                   <span>Chuyển khoản QR</span>
                 </button>
               </div>
@@ -755,7 +755,7 @@ function PosDashboardPage() {
                 </>
               ) : (
                 <>
-                  <IconCheck size={18} />
+                  <Check size={18} />
                   <span>HOÀN TẤT THANH TOÁN ({formatCurrencyVND(finalAmount)})</span>
                 </>
               )}
@@ -778,7 +778,7 @@ function PosDashboardPage() {
                 onClick={() => setScannerOpen(false)}
                 className="text-muted hover:text-ink transition-colors cursor-pointer"
               >
-                <IconClose size={18} />
+                <X size={18} />
               </button>
             </div>
 
@@ -796,7 +796,7 @@ function PosDashboardPage() {
 
               {cameraError && (
                 <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-start gap-2">
-                  <IconAlertCircle size={16} className="shrink-0 mt-0.5" />
+                  <CircleAlert size={16} className="shrink-0 mt-0.5" />
                   <span>{cameraError}</span>
                 </div>
               )}
@@ -844,7 +844,7 @@ function PosDashboardPage() {
             {/* Header */}
             <div className="p-6 bg-emerald-600 text-white flex flex-col items-center justify-center text-center gap-2">
               <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                <IconCheck size={28} className="text-white" />
+                <Check size={28} className="text-white" />
               </div>
               <h3 className="text-xl font-bold">Thanh toán thành công!</h3>
               <span className="text-xs text-white/90">
@@ -889,14 +889,21 @@ function PosDashboardPage() {
 
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-3 pt-2">
-                <a
-                  href={getInvoicePdfUrl(successSale.invoiceId)}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      addToast({ message: 'Đang chuẩn bị tải hóa đơn PDF...', type: 'info' })
+                      await downloadInvoicePdf(successSale.invoiceId)
+                      addToast({ message: 'Tải hóa đơn PDF thành công!', type: 'success' })
+                    } catch (err) {
+                      addToast({ message: err?.message || 'Không thể tải hóa đơn PDF', type: 'error' })
+                    }
+                  }}
                   className="py-2.5 px-4 rounded-xl border border-brand bg-brand/5 hover:bg-brand/10 text-brand font-bold text-center transition-colors cursor-pointer"
                 >
                   Tải hóa đơn PDF
-                </a>
+                </button>
                 <button
                   type="button"
                   onClick={() => window.print()}

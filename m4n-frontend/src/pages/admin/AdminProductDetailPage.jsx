@@ -6,17 +6,17 @@ import { formatCurrencyVND } from '../../utils/currency.js'
 import useToast from '../../components/ui/useToast.js'
 import ProductFormModal from '../../components/admin/ProductFormModal.jsx'
 import {
-  IconArrowLeft,
-  IconCopy,
-  IconPencil,
-  IconPackage,
-  IconRefresh,
-  IconImageOff,
-  IconUserRound,
-  IconLandmark,
-  IconMapPin,
-  IconClose,
-} from '../../components/ui/Icons.jsx'
+  ArrowLeft,
+  Copy,
+  Pencil,
+  Package,
+  RefreshCw,
+  ImageOff,
+  UserRound,
+  Landmark,
+  MapPin,
+  X,
+} from 'lucide-react'
 
 export default function AdminProductDetailPage({ productId }) {
   const { addToast } = useToast()
@@ -165,7 +165,7 @@ export default function AdminProductDetailPage({ productId }) {
           onClick={() => navigateTo(CUSTOMER_ROUTES.adminInstruments)}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold transition-colors cursor-pointer shadow-2xs"
         >
-          <IconArrowLeft size={16} />
+          <ArrowLeft size={16} />
           <span>Quay lại danh sách nhạc cụ</span>
         </button>
       </div>
@@ -186,7 +186,7 @@ export default function AdminProductDetailPage({ productId }) {
               onClick={() => navigateTo(CUSTOMER_ROUTES.adminInstruments)}
               className="hover:text-brand flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <IconArrowLeft size={16} />
+              <ArrowLeft size={16} />
               <span>Danh sách nhạc cụ</span>
             </button>
             <span className="text-subtle">/</span>
@@ -219,7 +219,7 @@ export default function AdminProductDetailPage({ productId }) {
               className="inline-flex items-center gap-1 text-xs font-medium text-secondary hover:text-brand transition-colors cursor-pointer px-2 py-0.5 rounded hover:bg-[#F6F7F8]"
               title="Sao chép mã nhạc cụ"
             >
-              <IconCopy size={13} />
+              <Copy size={13} />
               <span>Sao chép mã</span>
             </button>
           </div>
@@ -236,7 +236,7 @@ export default function AdminProductDetailPage({ productId }) {
                 : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
             }`}
           >
-            <IconRefresh size={16} className={togglingStatus ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={togglingStatus ? 'animate-spin' : ''} />
             <span>
               {togglingStatus
                 ? 'Đang xử lý...'
@@ -251,7 +251,7 @@ export default function AdminProductDetailPage({ productId }) {
             onClick={() => setShowImportModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-200 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors cursor-pointer shadow-2xs"
           >
-            <IconPackage size={16} />
+            <Package size={16} />
             <span>Nhập kho</span>
           </button>
 
@@ -260,7 +260,7 @@ export default function AdminProductDetailPage({ productId }) {
             onClick={() => setShowEditModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold transition-colors cursor-pointer shadow-2xs"
           >
-            <IconPencil size={16} />
+            <Pencil size={16} />
             <span>Chỉnh sửa</span>
           </button>
         </div>
@@ -298,7 +298,7 @@ export default function AdminProductDetailPage({ productId }) {
               ) : (
                 <div className="text-secondary text-sm flex flex-col items-center justify-center py-12 gap-2.5">
                   <div className="w-12 h-12 rounded-xl bg-surface-secondary border border-border/80 flex items-center justify-center text-muted mb-1">
-                    <IconImageOff size={26} />
+                    <ImageOff size={26} />
                   </div>
                   <span className="font-medium text-ink">Chưa có hình ảnh cho sản phẩm này</span>
                   <button
@@ -422,8 +422,9 @@ export default function AdminProductDetailPage({ productId }) {
                       onClick={handleCopyBarcode}
                       className="p-1 text-secondary hover:text-brand transition-colors cursor-pointer"
                       title="Sao chép barcode"
+                      aria-label="Sao chép mã vạch"
                     >
-                      <IconCopy size={13} />
+                      <Copy size={13} />
                     </button>
                   )}
                 </dd>
@@ -467,7 +468,7 @@ export default function AdminProductDetailPage({ productId }) {
             {/* Artisan Section */}
             <div className="flex items-start gap-3.5">
               <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-secondary flex items-center justify-center shrink-0">
-                <IconUserRound size={18} />
+                <UserRound size={18} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-xs font-semibold text-secondary block">
@@ -495,7 +496,7 @@ export default function AdminProductDetailPage({ productId }) {
             {/* Craft Village Section */}
             <div className="flex items-start gap-3.5">
               <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-secondary flex items-center justify-center shrink-0">
-                <IconLandmark size={18} />
+                <Landmark size={18} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-xs font-semibold text-secondary block">
@@ -508,7 +509,7 @@ export default function AdminProductDetailPage({ productId }) {
                     </h3>
                     {product.craftVillage.location && (
                       <p className="text-sm text-secondary mt-1 flex items-center gap-1">
-                        <IconMapPin size={14} className="text-subtle shrink-0" />
+                        <MapPin size={14} className="text-subtle shrink-0" />
                         <span>{product.craftVillage.location}</span>
                       </p>
                     )}
@@ -545,7 +546,7 @@ export default function AdminProductDetailPage({ productId }) {
           <div className="bg-[#FFFFFF] rounded-2xl border border-[#E3E6E8] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4.5 border-b border-[#E3E6E8] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <IconPackage size={20} className="text-brand" />
+                <Package size={20} className="text-brand" />
                 <h3 className="text-base font-bold text-ink">
                   Nhập kho: {product.code}
                 </h3>
@@ -556,7 +557,7 @@ export default function AdminProductDetailPage({ productId }) {
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:text-ink hover:bg-[#F2F4F5] transition-colors cursor-pointer"
                 aria-label="Đóng"
               >
-                <IconClose size={18} />
+                <X size={18} />
               </button>
             </div>
 
@@ -573,7 +574,7 @@ export default function AdminProductDetailPage({ productId }) {
                 <label className="block text-sm font-semibold text-ink mb-1.5">
                   Số lượng nhập thêm <span className="text-rose-500">*</span>
                 </label>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setImportQuantity((q) => Math.max(1, (parseInt(q, 10) || 1) - 1))}
@@ -584,15 +585,13 @@ export default function AdminProductDetailPage({ productId }) {
                   <input
                     type="number"
                     min="1"
-                    step="1"
-                    required
                     value={importQuantity}
                     onChange={(e) => setImportQuantity(e.target.value)}
-                    className="flex-1 text-center py-2 text-sm font-bold text-ink rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink font-mono text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                   <button
                     type="button"
-                    onClick={() => setImportQuantity((q) => (parseInt(q, 10) || 0) + 1)}
+                    onClick={() => setImportQuantity((q) => (parseInt(q, 10) || 1) + 1)}
                     className="w-10 h-10 rounded-xl border border-[#E3E6E8] bg-[#F6F7F8] hover:bg-[#E3E6E8] font-bold text-sm cursor-pointer"
                   >
                     +
@@ -604,16 +603,16 @@ export default function AdminProductDetailPage({ productId }) {
                 <label className="block text-sm font-semibold text-ink mb-1.5">
                   Ghi chú nhập kho (tùy chọn)
                 </label>
-                <input
-                  type="text"
+                <textarea
                   value={importNotes}
                   onChange={(e) => setImportNotes(e.target.value)}
-                  placeholder="VD: Nhập thêm đợt nghệ nhân Đào Xá hoàn thiện..."
-                  className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/30"
+                  rows={2}
+                  placeholder="Ví dụ: Nhập hàng từ nghệ nhân đợt tháng 9..."
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink text-sm placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E3E6E8]">
+              <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowImportModal(false)}
@@ -626,7 +625,7 @@ export default function AdminProductDetailPage({ productId }) {
                   disabled={submittingImport}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
                 >
-                  <IconPackage size={16} />
+                  <Package size={16} />
                   <span>{submittingImport ? 'Đang cập nhật...' : 'Xác nhận nhập kho'}</span>
                 </button>
               </div>

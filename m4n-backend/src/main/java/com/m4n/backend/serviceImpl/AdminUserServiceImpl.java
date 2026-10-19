@@ -26,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 
 @Slf4j
@@ -122,9 +123,11 @@ public class AdminUserServiceImpl implements AdminUserService {
             throw new StaleVersionException("Thông tin người dùng đã được thay đổi bởi quản trị viên khác. Dữ liệu mới nhất đã được tải lại. Vui lòng kiểm tra trước khi lưu lại.");
         }
 
-        // Regular ADMIN cannot edit details of SUPER_ADMIN
-        if (operatorRole != RoleName.SUPER_ADMIN && targetUser.getRole().getName() == RoleName.SUPER_ADMIN) {
-            throw new AccessDeniedException("Chỉ Super Admin mới có quyền chỉnh sửa thông tin của Super Admin.");
+        // Regular ADMIN cannot modify peer ADMIN or SUPER_ADMIN accounts.
+        if (operatorRole != RoleName.SUPER_ADMIN
+                && (targetUser.getRole().getName() == RoleName.ADMIN
+                || targetUser.getRole().getName() == RoleName.SUPER_ADMIN)) {
+            throw new AccessDeniedException("Chỉ Super Admin mới có quyền chỉnh sửa tài khoản quản trị viên.");
         }
 
         targetUser.setFullName(request.fullName().trim());
@@ -169,10 +172,12 @@ public class AdminUserServiceImpl implements AdminUserService {
             }
         }
 
-        // Last active SUPER_ADMIN protection invariant
+        // Last active SUPER_ADMIN protection invariant.
+        // Lock all active SUPER_ADMIN rows first so two concurrent privileged transitions
+        // serialize here and can never race the active count down to zero (BR-AUTH-06).
         if (currentRole == RoleName.SUPER_ADMIN && requestedRole != RoleName.SUPER_ADMIN) {
-            long activeSuperAdmins = userRepository.countByRole_NameAndIsActiveTrue(RoleName.SUPER_ADMIN);
-            if (activeSuperAdmins <= 1) {
+            List<User> activeSuperAdmins = userRepository.findActiveByRoleNameWithLock(RoleName.SUPER_ADMIN);
+            if (activeSuperAdmins.size() <= 1) {
                 throw new IllegalStateException("Hệ thống phải luôn duy trì ít nhất 1 tài khoản Super Admin hoạt động. Không thể giáng cấp Super Admin duy nhất.");
             }
         }
@@ -217,10 +222,10 @@ public class AdminUserServiceImpl implements AdminUserService {
             }
         }
 
-        // Last active SUPER_ADMIN protection invariant
+        // Last active SUPER_ADMIN protection invariant (same locked check as changeRole, BR-AUTH-06)
         if (targetUser.getRole().getName() == RoleName.SUPER_ADMIN) {
-            long activeSuperAdmins = userRepository.countByRole_NameAndIsActiveTrue(RoleName.SUPER_ADMIN);
-            if (activeSuperAdmins <= 1) {
+            List<User> activeSuperAdmins = userRepository.findActiveByRoleNameWithLock(RoleName.SUPER_ADMIN);
+            if (activeSuperAdmins.size() <= 1) {
                 throw new IllegalStateException("Không thể vô hiệu hóa Super Admin duy nhất của hệ thống.");
             }
         }

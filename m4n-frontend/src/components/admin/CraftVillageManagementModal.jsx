@@ -1,21 +1,24 @@
 import { useState, useEffect, useCallback } from 'react'
 import craftVillageService from '../../services/craftVillageService.js'
 import useToast from '../ui/useToast.js'
-import { IconLandmark, IconX } from '../ui/Icons.jsx'
+import { Landmark, X } from 'lucide-react'
+import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 
-export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess }) {
+export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess, initialVillage = null }) {
   const { addToast } = useToast()
   const [villages, setVillages] = useState([])
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [editingVillage, setEditingVillage] = useState(null)
+  const [editingVillage, setEditingVillage] = useState(initialVillage)
   const [search, setSearch] = useState('')
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null)
+  const [modalDeleting, setModalDeleting] = useState(false)
 
   // Form fields
-  const [name, setName] = useState('')
-  const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  const [name, setName] = useState(() => initialVillage?.name || '')
+  const [location, setLocation] = useState(() => initialVillage?.location || '')
+  const [description, setDescription] = useState(() => initialVillage?.description || '')
+  const [imageUrl, setImageUrl] = useState(() => initialVillage?.imageUrl || '')
   const [formErrors, setFormErrors] = useState({})
   const [serverError, setServerError] = useState('')
 
@@ -134,7 +137,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
     }
   }
 
-  const handleDelete = async (v) => {
+  const handleDelete = (v) => {
     if (v.artisanCount > 0 || v.productCount > 0) {
       addToast({
         message: `Không thể xóa làng nghề "${v.name}" vì đang có ${v.artisanCount} nghệ nhân và ${v.productCount} sản phẩm liên kết.`,
@@ -142,18 +145,20 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
       })
       return
     }
+    setDeleteConfirmTarget(v)
+  }
 
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa làng nghề "${v.name}"?`)) {
-      return
-    }
-
+  const confirmDeleteVillage = async () => {
+    if (!deleteConfirmTarget) return
+    setModalDeleting(true)
     try {
-      await craftVillageService.deleteCraftVillage(v.id)
+      await craftVillageService.deleteCraftVillage(deleteConfirmTarget.id)
       addToast({
-        message: `Đã xóa làng nghề "${v.name}".`,
+        message: `Đã xóa làng nghề "${deleteConfirmTarget.name}".`,
         type: 'success',
       })
-      if (editingVillage?.id === v.id) resetForm()
+      if (editingVillage?.id === deleteConfirmTarget.id) resetForm()
+      setDeleteConfirmTarget(null)
       await fetchVillages()
       if (onSuccess) onSuccess()
     } catch (err) {
@@ -161,6 +166,8 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
         message: err.message || 'Không thể xóa làng nghề này',
         type: 'error',
       })
+    } finally {
+      setModalDeleting(false)
     }
   }
 
@@ -184,7 +191,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
         <div className="px-6 py-4 border-b border-[#E5E8EB] flex items-center justify-between bg-[#FFFFFF]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center font-bold text-sm">
-              <IconLandmark size={20} />
+              <Landmark size={20} />
             </div>
             <div>
               <h2 id="village-modal-title" className="text-lg font-bold text-[#17191B]">
@@ -201,7 +208,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
             className="w-9 h-9 rounded-xl flex items-center justify-center text-secondary hover:text-[#17191B] hover:bg-[#F2F4F5] transition-colors cursor-pointer"
             aria-label="Đóng"
           >
-            <IconX size={18} />
+            <X size={18} />
           </button>
         </div>
 
@@ -379,7 +386,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
                             <button
                               type="button"
                               onClick={() => startEdit(v)}
-                              className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-xs font-medium transition-colors cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-[13px] font-medium transition-colors cursor-pointer"
                             >
                               Sửa
                             </button>
@@ -392,7 +399,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
                                   ? 'Không thể xóa làng nghề đang có nghệ nhân hoặc sản phẩm liên kết'
                                   : 'Xóa làng nghề'
                               }
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
                                 inUse
                                   ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400'
                                   : 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer'
@@ -422,6 +429,18 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
           </button>
         </div>
       </div>
+
+      {deleteConfirmTarget && (
+        <ConfirmDialog
+          title="Xóa làng nghề"
+          message={`Bạn có chắc chắn muốn xóa làng nghề "${deleteConfirmTarget.name}"?`}
+          confirmLabel="Xóa"
+          isDestructive
+          isLoading={modalDeleting}
+          onConfirm={confirmDeleteVillage}
+          onCancel={() => setDeleteConfirmTarget(null)}
+        />
+      )}
     </div>
   )
 }

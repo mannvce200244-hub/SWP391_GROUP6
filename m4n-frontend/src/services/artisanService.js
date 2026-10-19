@@ -1,250 +1,136 @@
-import {
-  MOCK_ARTISANS,
-  MOCK_CRAFT_VILLAGES,
-} from '../features/artisans/data/mockArtisansData.js'
 import apiClient from '../api/apiClient.js'
 
-/**
- * Service abstraction for Artisans & Craft Villages.
- * Serves standard data with search, filter, and pagination logic.
- * Ready for transparent switch to backend endpoints (/api/v1/artisans, /api/v1/craft-villages).
- */
-function createArtisanService() {
-  return Object.freeze({
-    /**
-     * List artisans with filtering, search, sorting and client pagination.
-     */
-    async listArtisans({
-      craft = '',
-      limit = 6,
-      page = 1,
-      province = '',
-      region = '',
-      search = '',
-      sort = 'featured',
-    } = {}) {
-      let filtered = [...MOCK_ARTISANS]
+function paginate(items, page, limit) {
+  const total = items.length
+  const totalPages = Math.max(1, Math.ceil(total / limit))
+  const safePage = Math.max(1, Math.min(page, totalPages))
+  const offset = (safePage - 1) * limit
 
-      if (search && search.trim()) {
-        const query = search.trim().toLowerCase()
-        filtered = filtered.filter(
-          (a) =>
-            a.name.toLowerCase().includes(query) ||
-            a.craft.toLowerCase().includes(query) ||
-            (a.categoryCraft && a.categoryCraft.toLowerCase().includes(query)) ||
-            (a.village?.name && a.village.name.toLowerCase().includes(query)) ||
-            a.description.toLowerCase().includes(query),
-        )
-      }
-
-      if (craft && craft !== 'all') {
-        filtered = filtered.filter(
-          (a) =>
-            a.categoryCraft === craft ||
-            a.craft.toLowerCase().includes(craft.toLowerCase()),
-        )
-      }
-
-      if (province && province !== 'all') {
-        filtered = filtered.filter((a) => a.province === province)
-      }
-
-      if (region && region !== 'all') {
-        filtered = filtered.filter((a) => a.region === region)
-      }
-
-      // Sorting
-      if (sort === 'az') {
-        filtered.sort((a, b) => a.name.localeCompare(b.name, 'vi'))
-      } else if (sort === 'experience') {
-        filtered.sort((a, b) => (b.experienceYears || 0) - (a.experienceYears || 0))
-      } else if (sort === 'newest') {
-        filtered.sort((a, b) => b.id - a.id)
-      } else {
-        // default: featured first, then experience
-        filtered.sort((a, b) => {
-          if (a.featured && !b.featured) return -1
-          if (!a.featured && b.featured) return 1
-          return (b.experienceYears || 0) - (a.experienceYears || 0)
-        })
-      }
-
-      const total = filtered.length
-      const totalPages = Math.max(1, Math.ceil(total / limit))
-      const safePage = Math.max(1, Math.min(page, totalPages))
-      const offset = (safePage - 1) * limit
-      const items = filtered.slice(offset, offset + limit)
-
-      return {
-        items,
-        page: safePage,
-        limit,
-        total,
-        totalPages,
-      }
-    },
-
-    /**
-     * Get artisan by URL slug.
-     */
-    async getArtisanBySlug(slug) {
-      if (!slug) return null
-      return MOCK_ARTISANS.find((a) => a.slug === slug) || null
-    },
-
-    /**
-     * List craft villages with filtering, search, sorting and client pagination.
-     */
-    async listCraftVillages({
-      craft = '',
-      limit = 6,
-      page = 1,
-      province = '',
-      region = '',
-      search = '',
-      sort = 'featured',
-    } = {}) {
-      let filtered = [...MOCK_CRAFT_VILLAGES]
-
-      if (search && search.trim()) {
-        const query = search.trim().toLowerCase()
-        filtered = filtered.filter(
-          (v) =>
-            v.name.toLowerCase().includes(query) ||
-            v.craft.toLowerCase().includes(query) ||
-            v.province.toLowerCase().includes(query) ||
-            v.description.toLowerCase().includes(query),
-        )
-      }
-
-      if (craft && craft !== 'all') {
-        filtered = filtered.filter(
-          (v) =>
-            v.craft === craft || v.craft.toLowerCase().includes(craft.toLowerCase()),
-        )
-      }
-
-      if (province && province !== 'all') {
-        filtered = filtered.filter((v) => v.province === province)
-      }
-
-      if (region && region !== 'all') {
-        filtered = filtered.filter((v) => v.region === region)
-      }
-
-      // Sorting
-      if (sort === 'az') {
-        filtered.sort((a, b) => a.name.localeCompare(b.name, 'vi'))
-      } else if (sort === 'artisans') {
-        filtered.sort((a, b) => (b.artisanCount || 0) - (a.artisanCount || 0))
-      } else if (sort === 'newest') {
-        filtered.sort((a, b) => b.id - a.id)
-      } else {
-        // default: featured first, then product count
-        filtered.sort((a, b) => {
-          if (a.featured && !b.featured) return -1
-          if (!a.featured && b.featured) return 1
-          return (b.productCount || 0) - (a.productCount || 0)
-        })
-      }
-
-      const total = filtered.length
-      const totalPages = Math.max(1, Math.ceil(total / limit))
-      const safePage = Math.max(1, Math.min(page, totalPages))
-      const offset = (safePage - 1) * limit
-      const items = filtered.slice(offset, offset + limit)
-
-      return {
-        items,
-        page: safePage,
-        limit,
-        total,
-        totalPages,
-      }
-    },
-
-    /**
-     * Get craft village by URL slug or numeric ID with backend fallback.
-     */
-    async getCraftVillageBySlug(slugOrId) {
-      if (!slugOrId) return null
-
-      // 1. First check local dataset by slug or ID
-      const matched = MOCK_CRAFT_VILLAGES.find(
-        (v) => v.slug === slugOrId || String(v.id) === String(slugOrId),
-      )
-      if (matched) return matched
-
-      // 2. Query backend API endpoint if numeric ID
-      try {
-        const data = await apiClient.get(`/craft-villages/${encodeURIComponent(String(slugOrId))}`)
-        if (data && data.id) {
-          return {
-            id: data.id,
-            slug: String(data.id),
-            name: data.name,
-            province: data.location,
-            craft: 'Nhạc cụ cổ truyền',
-            coverImage: data.imageUrl || '/assets/images/artisan-workshop.jpg',
-            description: data.description,
-            metadataText: `${data.name} · ${data.location}`,
-          }
-        }
-      } catch {
-        // Backend returned 404 or network error
-      }
-
-      return null
-    },
-
-    /**
-     * Get filter options (provinces and craft types) for a given tab.
-     */
-    getFilterOptions(tab = 'artisans') {
-      const dataset = tab === 'villages' ? MOCK_CRAFT_VILLAGES : MOCK_ARTISANS
-      const provinces = Array.from(new Set(dataset.map((item) => item.province))).sort(
-        (a, b) => a.localeCompare(b, 'vi'),
-      )
-      const crafts = Array.from(
-        new Set(
-          dataset.map((item) =>
-            tab === 'villages' ? item.craft : (item.categoryCraft || item.craft),
-          ),
-        ),
-      ).sort((a, b) => a.localeCompare(b, 'vi'))
-
-      return { provinces, crafts }
-    },
-
-    /**
-     * Backend API integrations
-     */
-    async getArtisans() {
-      return apiClient.get('/artisans')
-    },
-
-    async getAdminArtisans() {
-      return apiClient.get('/admin/artisans')
-    },
-
-    async getArtisanDetail(id) {
-      return apiClient.get(`/admin/artisans/${id}`)
-    },
-
-    async createArtisan(payload) {
-      return apiClient.post('/admin/artisans', payload)
-    },
-
-    async updateArtisan(id, payload) {
-      return apiClient.put(`/admin/artisans/${id}`, payload)
-    },
-
-    async deleteArtisan(id) {
-      return apiClient.delete(`/admin/artisans/${id}`)
-    },
-  })
+  return {
+    items: items.slice(offset, offset + limit),
+    page: safePage,
+    limit,
+    total,
+    totalPages,
+  }
 }
 
-const artisanService = createArtisanService()
+function sortItems(items, sort) {
+  const sorted = [...items]
+  if (sort === 'az') {
+    sorted.sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+  } else if (sort === 'newest') {
+    sorted.sort((a, b) => Number(b.id) - Number(a.id))
+  }
+  return sorted
+}
+
+function mapArtisan(artisan) {
+  return {
+    id: artisan.id,
+    name: artisan.name,
+    description: artisan.biography || '',
+    avatar: artisan.avatarUrl || null,
+  }
+}
+
+function mapVillage(village) {
+  return {
+    id: village.id,
+    slug: String(village.id),
+    name: village.name,
+    province: village.location || '',
+    location: village.location || '',
+    description: village.description || '',
+    coverImage: village.imageUrl || null,
+    artisanCount: village.artisanCount,
+    productCount: village.productCount,
+    createdAt: village.createdAt,
+  }
+}
+
+function matchesSearch(item, search) {
+  if (!search?.trim()) return true
+  const query = search.trim().toLocaleLowerCase('vi')
+  return [item.name, item.description, item.province]
+    .filter(Boolean)
+    .some((value) => value.toLocaleLowerCase('vi').includes(query))
+}
+
+const artisanService = Object.freeze({
+  async listArtisans({ limit = 6, page = 1, search = '', sort = 'featured' } = {}) {
+    const response = await apiClient.get('/artisans')
+    const source = Array.isArray(response) ? response.map(mapArtisan) : []
+    const filtered = source.filter((item) => matchesSearch(item, search))
+    return { ...paginate(sortItems(filtered, sort), page, limit), provinces: [] }
+  },
+
+  async listCraftVillages({
+    limit = 6,
+    page = 1,
+    province = '',
+    search = '',
+    sort = 'featured',
+  } = {}) {
+    const response = await apiClient.get('/craft-villages')
+    const source = Array.isArray(response) ? response.map(mapVillage) : []
+    const provinces = Array.from(new Set(source.map((item) => item.province).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, 'vi'))
+    const filtered = source.filter(
+      (item) =>
+        matchesSearch(item, search) &&
+        (!province || province === 'all' || item.province === province),
+    )
+    return { ...paginate(sortItems(filtered, sort), page, limit), provinces }
+  },
+
+  async getDiscoveryCounts() {
+    const [artisans, villages] = await Promise.all([
+      apiClient.get('/artisans'),
+      apiClient.get('/craft-villages'),
+    ])
+    return {
+      artisans: Array.isArray(artisans) ? artisans.length : 0,
+      villages: Array.isArray(villages) ? villages.length : 0,
+    }
+  },
+
+  async getCraftVillageBySlug(slugOrId) {
+    if (!slugOrId) return null
+    try {
+      const data = await apiClient.get(
+        `/craft-villages/${encodeURIComponent(String(slugOrId))}`,
+      )
+      return data?.id ? mapVillage(data) : null
+    } catch (error) {
+      if (error?.status === 404) return null
+      throw error
+    }
+  },
+
+  async getArtisans() {
+    return apiClient.get('/artisans')
+  },
+
+  async getAdminArtisans() {
+    return apiClient.get('/admin/artisans')
+  },
+
+  async getArtisanDetail(id) {
+    return apiClient.get(`/admin/artisans/${id}`)
+  },
+
+  async createArtisan(payload) {
+    return apiClient.post('/admin/artisans', payload)
+  },
+
+  async updateArtisan(id, payload) {
+    return apiClient.put(`/admin/artisans/${id}`, payload)
+  },
+
+  async deleteArtisan(id) {
+    return apiClient.delete(`/admin/artisans/${id}`)
+  },
+})
 
 export default artisanService

@@ -4,14 +4,14 @@ import useToast from '../../components/ui/useToast.js'
 import orderService from '../../services/orderService.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import {
-  IconArrowRight,
-  IconChevronRight,
-  IconClose,
-  IconInstrument,
-  IconPackage,
-  IconAlertCircle,
-  IconCheck,
-} from '../../components/ui/Icons.jsx'
+  ArrowRight,
+  ChevronRight,
+  X,
+  Package,
+  CircleAlert,
+  Check,
+} from 'lucide-react'
+import { IconInstrument } from '../../components/ui/Icons.jsx'
 
 const STATUS_TABS = [
   { id: 'ALL', label: 'Tất cả đơn' },
@@ -203,7 +203,7 @@ function CustomerOrdersPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border/80">
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-ink font-sans">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans">
                 Đơn hàng của tôi
               </h2>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-soft text-brand border border-brand-border">
@@ -221,7 +221,7 @@ function CustomerOrdersPage() {
             className="self-start sm:self-center inline-flex items-center gap-1.5 text-xs font-bold text-brand hover:underline cursor-pointer"
           >
             <span>Khám phá nhạc cụ mới</span>
-            <IconArrowRight size={13} />
+            <ArrowRight size={13} />
           </button>
         </div>
 
@@ -276,9 +276,9 @@ function CustomerOrdersPage() {
         ) : filteredOrders.length === 0 ? (
           <div className="rounded-3xl bg-white border border-border/80 p-12 text-center shadow-xs space-y-4 max-w-lg mx-auto">
             <div className="w-14 h-14 rounded-2xl bg-surface-secondary text-subtle flex items-center justify-center mx-auto">
-              <IconPackage size={26} />
+              <Package size={26} />
             </div>
-            <h3 className="text-lg font-black text-ink">
+            <h3 className="text-lg font-bold text-ink">
               {activeFilter === 'ALL'
                 ? 'Quý khách chưa có đơn hàng nào'
                 : 'Không có đơn hàng nào trong mục này'}
@@ -292,7 +292,7 @@ function CustomerOrdersPage() {
               className="inline-flex items-center gap-2 h-11 px-6 rounded-xl bg-brand hover:bg-brand-hover text-white text-xs font-bold shadow-md shadow-brand/20 transition-all cursor-pointer"
             >
               <span>Xem danh mục nhạc cụ</span>
-              <IconArrowRight size={14} />
+              <ArrowRight size={14} />
             </button>
           </div>
         ) : (
@@ -361,7 +361,7 @@ function CustomerOrdersPage() {
                           className="px-3 py-1.5 rounded-xl bg-surface-secondary hover:bg-border/60 text-ink text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <span>Chi tiết</span>
-                          <IconChevronRight size={13} />
+                          <ChevronRight size={13} />
                         </button>
                       </div>
                     </div>
@@ -381,7 +381,7 @@ function CustomerOrdersPage() {
             <div className="p-6 border-b border-border/60 flex items-center justify-between bg-surface-secondary/40">
               <div>
                 <div className="flex items-center gap-2.5">
-                  <h3 className="text-lg font-black text-ink font-mono">
+                  <h3 className="text-lg font-bold text-ink font-mono">
                     {orderDetail?.orderCode || 'Chi tiết đơn hàng'}
                   </h3>
                   {orderDetail && (
@@ -400,7 +400,7 @@ function CustomerOrdersPage() {
                 onClick={handleCloseDetail}
                 className="w-9 h-9 rounded-xl text-muted hover:text-ink hover:bg-surface-secondary flex items-center justify-center cursor-pointer transition-all"
               >
-                <IconClose size={18} />
+                <X size={18} />
               </button>
             </div>
 
@@ -429,7 +429,7 @@ function CustomerOrdersPage() {
                         {/* Step 1 */}
                         <div className="space-y-1">
                           <div className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center mx-auto text-xs font-bold">
-                            <IconCheck size={14} className="stroke-[2.5]" />
+                            <Check size={14} className="stroke-[2.5]" />
                           </div>
                           <span className="font-semibold text-ink block text-xs">Đã đặt hàng</span>
                         </div>
@@ -441,7 +441,7 @@ function CustomerOrdersPage() {
                               : 'bg-amber-100 text-amber-800 ring-2 ring-amber-400'
                           }`}>
                             {orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED' ? (
-                              <IconCheck size={14} className="stroke-[2.5]" />
+                              <Check size={14} className="stroke-[2.5]" />
                             ) : (
                               '2'
                             )}
@@ -458,7 +458,7 @@ function CustomerOrdersPage() {
                               : 'bg-surface-secondary text-muted'
                           }`}>
                             {orderDetail.status === 'COMPLETED' ? (
-                              <IconCheck size={14} className="stroke-[2.5]" />
+                              <Check size={14} className="stroke-[2.5]" />
                             ) : (
                               '3'
                             )}
@@ -508,8 +508,20 @@ function CustomerOrdersPage() {
                             <h5 className="font-bold text-ink line-clamp-1">{it.productName}</h5>
                             <span className="text-xs text-muted">Mã: {it.productCode} &bull; SL: {it.quantity}</span>
                           </div>
-                          <div className="text-right font-bold text-ink">
-                            {it.lineTotalDisplay}
+                          <div className="flex items-center gap-3 text-right">
+                            {orderDetail.status === 'COMPLETED' && it.productId && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleCloseDetail()
+                                  navigateTo(CUSTOMER_ROUTES.productDetail(it.productId))
+                                }}
+                                className="px-2.5 py-1 text-[11px] rounded-lg border border-teal-300 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold transition-colors cursor-pointer"
+                              >
+                                Đánh giá
+                              </button>
+                            )}
+                            <span className="font-bold text-ink">{it.lineTotalDisplay}</span>
                           </div>
                         </div>
                       ))}
@@ -543,8 +555,8 @@ function CustomerOrdersPage() {
                     </div>
 
                     <div className="pt-2 border-t border-border/60 flex justify-between items-baseline">
-                      <span className="text-sm font-black text-ink">Tổng thanh toán:</span>
-                      <span className="text-lg font-black text-brand font-sans">{orderDetail.finalAmountDisplay}</span>
+                      <span className="text-sm font-bold text-ink">Tổng thanh toán:</span>
+                      <span className="text-lg font-bold text-brand font-sans">{orderDetail.finalAmountDisplay}</span>
                     </div>
                   </div>
                 </>
@@ -580,11 +592,11 @@ function CustomerOrdersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-border p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center">
-              <IconAlertCircle size={24} />
+              <CircleAlert size={24} />
             </div>
 
             <div>
-              <h3 className="text-lg font-black text-ink">
+              <h3 className="text-lg font-bold text-ink">
                 Xác nhận hủy đơn hàng?
               </h3>
               <p className="text-xs text-muted mt-1 leading-relaxed">

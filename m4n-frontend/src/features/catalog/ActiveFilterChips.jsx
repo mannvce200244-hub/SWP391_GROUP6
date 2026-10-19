@@ -1,4 +1,4 @@
-import { IconX } from '../../components/ui/Icons.jsx'
+import { X } from 'lucide-react'
 import { formatCurrencyVND } from '../../utils/currency.js'
 
 function ActiveFilterChips({ className = '', filters, onClearAll, onRemoveFilter }) {
@@ -83,7 +83,7 @@ function ActiveFilterChips({ className = '', filters, onClearAll, onRemoveFilter
             onClick={() => onRemoveFilter(chip.key)}
             type="button"
           >
-            <IconX size={13} />
+            <X size={13} />
           </button>
         </span>
       ))}

@@ -1,16 +1,16 @@
 import useAuth from '../features/auth/useAuth.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import {
-  IconInstrument,
-  IconUser,
-  IconLock,
-  IconStore,
-  IconChevronRight,
-  IconPackage,
-  IconCheck,
-  IconAlertCircle,
-  IconBookOpen,
-} from '../components/ui/Icons.jsx'
+  UserRound,
+  Lock,
+  Store,
+  ChevronRight,
+  Package,
+  Check,
+  CircleAlert,
+  BookOpen,
+} from 'lucide-react'
+import { IconInstrument } from '../components/ui/Icons.jsx'
 import StaffChatWorkspace from '../features/chat/StaffChatWorkspace.jsx'
 
 function StaffDashboardPage() {
@@ -30,7 +30,7 @@ function StaffDashboardPage() {
       title: 'Xem website mua sắm',
       description: 'Trải nghiệm giao diện và quy trình đặt hàng dưới góc nhìn của khách hàng trực tuyến.',
       path: CUSTOMER_ROUTES.home,
-      Icon: IconStore,
+      Icon: Store,
       badge: 'Khách hàng',
       accentColor: 'text-[#0D9488]',
       accentBg: 'bg-teal-50',
@@ -39,7 +39,7 @@ function StaffDashboardPage() {
       title: 'Hồ sơ nhân viên',
       description: 'Cập nhật số điện thoại và thông tin liên lạc nội bộ của bạn trong hệ thống.',
       path: CUSTOMER_ROUTES.profile,
-      Icon: IconUser,
+      Icon: UserRound,
       badge: 'Cá nhân',
       accentColor: 'text-sky-600',
       accentBg: 'bg-sky-50',
@@ -48,7 +48,7 @@ function StaffDashboardPage() {
       title: 'Bảo mật ca làm việc',
       description: 'Đổi mật khẩu định kỳ và quản trị phiên đăng nhập an toàn theo tiêu chuẩn bảo mật.',
       path: CUSTOMER_ROUTES.security,
-      Icon: IconLock,
+      Icon: Lock,
       badge: 'Bảo mật',
       accentColor: 'text-indigo-600',
       accentBg: 'bg-indigo-50',
@@ -118,7 +118,7 @@ function StaffDashboardPage() {
             <span className="text-xs text-emerald-700 font-medium mt-0.5">Tiếp nhận yêu cầu tư vấn</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-[#1F6B5A] flex items-center justify-center shrink-0">
-            <IconCheck size={20} />
+            <Check size={20} />
           </div>
         </div>
 
@@ -129,7 +129,7 @@ function StaffDashboardPage() {
             <span className="text-xs text-zinc-500 mt-0.5">Làng Đào Xá, Trúc Sơn, Đọi Tam</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0">
-            <IconPackage size={20} />
+            <Package size={20} />
           </div>
         </div>
 
@@ -140,7 +140,7 @@ function StaffDashboardPage() {
             <span className="text-xs text-amber-600 font-medium mt-0.5">Lưu ý trước khi chốt đơn</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
-            <IconAlertCircle size={20} />
+            <CircleAlert size={20} />
           </div>
         </div>
 
@@ -151,7 +151,7 @@ function StaffDashboardPage() {
             <span className="text-xs text-zinc-500 mt-0.5">Xác thực token JWT an toàn</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0">
-            <IconLock size={20} />
+            <Lock size={20} />
           </div>
         </div>
       </div>
@@ -194,7 +194,7 @@ function StaffDashboardPage() {
                 </p>
                 <div className="mt-auto pt-3 border-t border-border/80 flex items-center justify-between text-xs font-semibold text-[#1F6B5A] w-full">
                   <span>Mở chức năng</span>
-                  <IconChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </div>
               </button>
             )
@@ -206,7 +206,7 @@ function StaffDashboardPage() {
       <div className="bg-white rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-4">
         <div className="flex items-center gap-2">
           <span className="w-7 h-7 rounded-lg bg-surface-secondary text-[#1F6B5A] border border-border/80 flex items-center justify-center font-bold text-xs">
-            <IconBookOpen size={16} />
+            <BookOpen size={16} />
           </span>
           <h2 className="text-base font-bold text-ink">
             Quy chuẩn tư vấn & Lưu ý nhạc cụ truyền thống

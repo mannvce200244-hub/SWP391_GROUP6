@@ -1,5 +1,5 @@
 import Button from './Button.jsx'
-import { IconTriangleAlert } from './Icons.jsx'
+import { TriangleAlert } from 'lucide-react'
 
 function ErrorState({ message, onRetry, title = 'Không thể tải dữ liệu' }) {
   return (
@@ -8,7 +8,7 @@ function ErrorState({ message, onRetry, title = 'Không thể tải dữ liệu'
       role="alert"
     >
       <div className="w-12 h-12 rounded-xl bg-danger-soft border border-danger-border flex items-center justify-center text-danger mb-3.5">
-        <IconTriangleAlert size={26} />
+        <TriangleAlert size={26} />
       </div>
       <h2 className="text-base sm:text-lg font-semibold text-ink mb-1">{title}</h2>
       {message && <p className="text-sm text-muted mb-4 max-w-sm">{message}</p>}

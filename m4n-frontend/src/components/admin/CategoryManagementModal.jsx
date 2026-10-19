@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import categoryService from '../../services/categoryService.js'
 import useToast from '../ui/useToast.js'
-import { IconLayers, IconX } from '../ui/Icons.jsx'
+import { ConfirmDialog } from '../ui/ConfirmDialog.jsx'
+import { Layers, X } from 'lucide-react'
 
 export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) {
   const { addToast } = useToast()
@@ -17,6 +18,9 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
   const [description, setDescription] = useState('')
   const [formErrors, setFormErrors] = useState({})
   const [serverError, setServerError] = useState('')
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [catToDelete, setCatToDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const resetForm = useCallback(() => {
     setEditingCategory(null)
@@ -133,7 +137,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
     }
   }
 
-  const handleDelete = async (cat) => {
+  const handleDelete = (cat) => {
     if (cat.productCount > 0) {
       addToast({
         message: `Không thể xóa danh mục "${cat.name}" vì đang có ${cat.productCount} sản phẩm liên kết.`,
@@ -141,18 +145,22 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
       })
       return
     }
+    setCatToDelete(cat)
+    setDeleteConfirmOpen(true)
+  }
 
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa danh mục "${cat.name}"?`)) {
-      return
-    }
-
+  const handleConfirmDelete = async () => {
+    if (!catToDelete) return
+    setDeleting(true)
     try {
-      await categoryService.deleteCategory(cat.id)
+      await categoryService.deleteCategory(catToDelete.id)
       addToast({
-        message: `Đã xóa danh mục "${cat.name}".`,
+        message: `Đã xóa danh mục "${catToDelete.name}".`,
         type: 'success',
       })
-      if (editingCategory?.id === cat.id) resetForm()
+      if (editingCategory?.id === catToDelete.id) resetForm()
+      setDeleteConfirmOpen(false)
+      setCatToDelete(null)
       await fetchCategories()
       if (onSuccess) onSuccess()
     } catch (err) {
@@ -160,6 +168,8 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
         message: err.message || 'Không thể xóa danh mục này',
         type: 'error',
       })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -183,7 +193,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
         <div className="px-6 py-4 border-b border-[#E5E8EB] flex items-center justify-between bg-[#FFFFFF]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center font-bold text-sm">
-              <IconLayers size={20} />
+              <Layers size={20} />
             </div>
             <div>
               <h2 id="category-modal-title" className="text-lg font-bold text-[#17191B]">
@@ -200,7 +210,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
             className="w-9 h-9 rounded-xl flex items-center justify-center text-secondary hover:text-[#17191B] hover:bg-[#F2F4F5] transition-colors cursor-pointer"
             aria-label="Đóng"
           >
-            <IconX size={18} />
+            <X size={18} />
           </button>
         </div>
 
@@ -363,7 +373,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
                           <button
                             type="button"
                             onClick={() => startEdit(cat)}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-xs font-medium transition-colors cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-[13px] font-medium transition-colors cursor-pointer"
                           >
                             Sửa
                           </button>
@@ -376,7 +386,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
                                 ? 'Không thể xóa danh mục đang có sản phẩm'
                                 : 'Xóa danh mục'
                             }
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
                               cat.productCount > 0
                                 ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400'
                                 : 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer'
@@ -405,6 +415,23 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        title="Xóa danh mục nhạc cụ?"
+        description={`Bạn có chắc chắn muốn xóa danh mục "${catToDelete?.name}"? Thao tác này sẽ xóa vĩnh viễn danh mục khỏi hệ thống.`}
+        confirmLabel="Xóa danh mục"
+        cancelLabel="Hủy"
+        variant="danger"
+        isLoading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          if (!deleting) {
+            setDeleteConfirmOpen(false)
+            setCatToDelete(null)
+          }
+        }}
+      />
     </div>
   )
 }

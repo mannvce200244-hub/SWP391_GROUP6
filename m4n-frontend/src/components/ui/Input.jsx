@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import FormField from './FormField.jsx'
 import getFieldDescription from './fieldDescription.js'
-import { IconEye, IconEyeOff } from './Icons.jsx'
+import { Eye, EyeOff } from 'lucide-react'
 
 function Input({
   'aria-describedby': describedBy,
@@ -69,7 +69,7 @@ function Input({
             aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
             tabIndex={0}
           >
-            {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
       </div>

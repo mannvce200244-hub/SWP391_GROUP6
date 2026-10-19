@@ -2,19 +2,23 @@ import { useState, useRef, useEffect } from 'react'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
-  IconDashboard,
-  IconInstrument,
-  IconStore,
-  IconUser,
-  IconLock,
-  IconLogOut,
-  IconChevronDown,
-  IconX,
-  IconChevronsLeft,
-  IconChevronsRight,
-} from '../components/ui/Icons.jsx'
+  LayoutDashboard,
+  Store,
+  UserRound,
+  Lock,
+  LogOut,
+  ChevronDown,
+  Menu,
+  X,
+  ExternalLink,
+  ChevronsLeft,
+  ChevronsRight,
+  Package,
+} from 'lucide-react'
+import { IconInstrument } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
 import BrandLogo from '../components/common/BrandLogo.jsx'
+import NotificationBell from '../components/common/NotificationBell.jsx'
 
 function StaffLayout({ children, pathname }) {
   const { user, logout } = useAuth()
@@ -49,23 +53,24 @@ function StaffLayout({ children, pathname }) {
 
   const navSections = [
     {
-      title: 'TỔNG QUAN',
+      title: 'TỔNG QUAN & VẬN HÀNH',
       items: [
-        { label: 'Bàn làm việc', path: CUSTOMER_ROUTES.staff, Icon: IconDashboard },
+        { label: 'Hỗ trợ khách hàng', path: CUSTOMER_ROUTES.staff, Icon: LayoutDashboard },
+        { label: 'Đơn hàng online', path: CUSTOMER_ROUTES.staffOrders, Icon: Package },
       ],
     },
     {
-      title: 'VẬN HÀNH & KHO',
+      title: 'TRA CỨU DI SẢN',
       items: [
         { label: 'Kho & Tra cứu nhạc cụ', path: CUSTOMER_ROUTES.products, Icon: IconInstrument },
-        { label: 'Website khách hàng', path: CUSTOMER_ROUTES.home, Icon: IconStore },
+        { label: 'Website khách hàng', path: CUSTOMER_ROUTES.home, Icon: Store },
       ],
     },
     {
       title: 'TÀI KHOẢN',
       items: [
-        { label: 'Hồ sơ cá nhân', path: CUSTOMER_ROUTES.profile, Icon: IconUser },
-        { label: 'Bảo mật tài khoản', path: CUSTOMER_ROUTES.security, Icon: IconLock },
+        { label: 'Hồ sơ cá nhân', path: CUSTOMER_ROUTES.profile, Icon: UserRound },
+        { label: 'Bảo mật tài khoản', path: CUSTOMER_ROUTES.security, Icon: Lock },
       ],
     },
   ]
@@ -125,7 +130,7 @@ function StaffLayout({ children, pathname }) {
               title="Thu gọn thanh điều hướng"
               aria-label="Thu gọn thanh điều hướng"
             >
-              <IconChevronsLeft size={16} />
+              <ChevronsLeft size={16} />
             </button>
           )}
 
@@ -136,7 +141,7 @@ function StaffLayout({ children, pathname }) {
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Đóng menu"
           >
-            <IconX size={18} />
+            <X size={18} />
           </button>
         </div>
 
@@ -150,7 +155,7 @@ function StaffLayout({ children, pathname }) {
               title="Mở rộng thanh điều hướng"
               aria-label="Mở rộng thanh điều hướng"
             >
-              <IconChevronsRight size={16} className="transition-transform group-hover:scale-110" />
+              <ChevronsRight size={16} className="transition-transform group-hover:scale-110" />
             </button>
           </div>
         )}
@@ -251,9 +256,7 @@ function StaffLayout({ children, pathname }) {
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Mở menu di động"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu size={20} />
             </button>
 
             {/* Title and Context */}
@@ -281,8 +284,12 @@ function StaffLayout({ children, pathname }) {
               className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-border bg-zinc-50 hover:bg-zinc-100 text-xs font-semibold text-zinc-700 transition-colors cursor-pointer"
               title="Mở giao diện khách hàng mua sắm"
             >
-              <span>Xem Website ↗</span>
+              <span>Xem Website</span>
+              <ExternalLink size={13} className="shrink-0 text-zinc-500" />
             </button>
+
+            {/* Notification Bell */}
+            <NotificationBell />
 
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
@@ -304,7 +311,7 @@ function StaffLayout({ children, pathname }) {
                     {user?.role || 'ONLINE_STAFF'}
                   </span>
                 </div>
-                <IconChevronDown size={14} className="text-zinc-400" />
+                <ChevronDown size={14} className="text-zinc-400" />
               </button>
 
               {dropdownOpen && (
@@ -324,27 +331,27 @@ function StaffLayout({ children, pathname }) {
 
                   <button
                     type="button"
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-ink hover:bg-zinc-100 hover:text-[#1F6B5A] transition-colors w-full text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-ink hover:bg-zinc-100 hover:text-[#1F6B5A] transition-colors w-full text-left cursor-pointer"
                     role="menuitem"
                     onClick={() => {
                       setDropdownOpen(false)
                       navigateTo(CUSTOMER_ROUTES.profile)
                     }}
                   >
-                    <IconUser size={16} />
+                    <UserRound size={16} />
                     <span>Hồ sơ nhân viên</span>
                   </button>
 
                   <button
                     type="button"
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-ink hover:bg-zinc-100 hover:text-[#1F6B5A] transition-colors w-full text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-ink hover:bg-zinc-100 hover:text-[#1F6B5A] transition-colors w-full text-left cursor-pointer"
                     role="menuitem"
                     onClick={() => {
                       setDropdownOpen(false)
                       navigateTo(CUSTOMER_ROUTES.security)
                     }}
                   >
-                    <IconLock size={16} />
+                    <Lock size={16} />
                     <span>Bảo mật tài khoản</span>
                   </button>
 
@@ -352,11 +359,11 @@ function StaffLayout({ children, pathname }) {
 
                   <button
                     type="button"
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors w-full text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-rose-600 hover:bg-rose-50 transition-colors w-full text-left cursor-pointer"
                     role="menuitem"
                     onClick={handleLogout}
                   >
-                    <IconLogOut size={16} />
+                    <LogOut size={16} />
                     <span>Đăng xuất ca trực</span>
                   </button>
                 </div>

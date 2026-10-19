@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import { MessageSquare, X, UserRound } from 'lucide-react'
 import chatService from '../../services/chatService.js'
 import useAuth from '../../features/auth/useAuth.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
-import { IconMessageSquare, IconX, IconUser } from '../../components/ui/Icons.jsx'
 import BrandLogo from '../../components/common/BrandLogo.jsx'
 
 export function CustomerChatWidget() {
@@ -105,7 +105,7 @@ export function CustomerChatWidget() {
           className="group relative flex items-center gap-2 px-4 py-3 rounded-full bg-[#0D9488] text-white font-semibold text-xs sm:text-sm shadow-xl hover:bg-[#0F766E] hover:scale-105 transition-all cursor-pointer"
           aria-label="Mở cửa sổ trò chuyện hỗ trợ trực tuyến"
         >
-          <IconMessageSquare size={18} />
+          <MessageSquare size={18} />
           <span className="hidden sm:inline">Tư vấn nhạc cụ</span>
           {unreadIncoming > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">
@@ -124,9 +124,9 @@ export function CustomerChatWidget() {
               <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
                 <BrandLogo variant="dark" collapsed={true} />
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold leading-tight">Hỗ trợ Trực tuyến M4N</span>
-                <span className="text-xs text-emerald-400 flex items-center gap-1">
+              <div>
+                <div className="text-xs font-bold leading-tight">M4N Hỗ Trợ</div>
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-zinc-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Nhân viên sẵn sàng tư vấn
                 </span>
@@ -139,7 +139,7 @@ export function CustomerChatWidget() {
               onClick={() => setIsOpen(false)}
               aria-label="Đóng cửa sổ trò chuyện"
             >
-              <IconX size={16} />
+              <X size={16} />
             </button>
           </div>
 
@@ -148,7 +148,7 @@ export function CustomerChatWidget() {
             {!isAuthenticated ? (
               <div className="my-auto text-center p-6 flex flex-col items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-[#0D9488]/10 flex items-center justify-center text-[#0D9488]">
-                  <IconUser size={24} />
+                  <UserRound size={24} />
                 </div>
                 <p className="text-xs text-zinc-600 leading-relaxed">
                   Vui lòng đăng nhập tài khoản khách hàng để kết nối trực tiếp với nhân viên tư vấn nhạc cụ M4N.
@@ -168,7 +168,7 @@ export function CustomerChatWidget() {
             ) : messages.length === 0 ? (
               <div className="my-auto text-center p-4 flex flex-col items-center gap-2 text-zinc-500">
                 <div className="w-10 h-10 rounded-full bg-surface-secondary flex items-center justify-center text-muted">
-                  <IconMessageSquare size={20} />
+                  <MessageSquare size={20} />
                 </div>
                 <p className="text-xs font-medium">
                   Chào bạn! Bạn cần tư vấn thông số nhạc cụ, âm sắc đàn hay quy trình đặt hàng?

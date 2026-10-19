@@ -1,6 +1,6 @@
 import EditorialEyebrow from '../../components/common/EditorialEyebrow.jsx'
 
-function ArtisansHero({ stats = { artisans: 8, crafts: 6, villages: 8 } }) {
+function ArtisansHero({ stats = { artisans: 0, villages: 0 } }) {
   return (
     <section
       aria-labelledby="artisans-hero-title"
@@ -29,23 +29,16 @@ function ArtisansHero({ stats = { artisans: 8, crafts: 6, villages: 8 } }) {
           <div className="pt-3 flex flex-wrap items-center gap-6 sm:gap-8 border-t border-border/70 max-w-lg">
             <div className="flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-extrabold text-ink font-sans">
-                {String(stats.artisans).padStart(2, '0')}+
+                {String(stats.artisans).padStart(2, '0')}
               </span>
               <span className="text-xs text-muted font-medium">Nghệ nhân</span>
             </div>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-extrabold text-brand font-sans">
-                {String(stats.villages).padStart(2, '0')}+
+                {String(stats.villages).padStart(2, '0')}
               </span>
               <span className="text-xs text-muted font-medium">Làng nghề</span>
-            </div>
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-extrabold text-jade font-sans">
-                {String(stats.crafts).padStart(2, '0')}
-              </span>
-              <span className="text-xs text-muted font-medium">Ngành nghề</span>
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import useAuth from './useAuth.js'
 import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { IconAlertCircle } from '../../components/ui/Icons.jsx'
+import { CircleAlert } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 
 function LoginPage() {
@@ -20,6 +20,7 @@ function LoginPage() {
   if (isAuthenticated && user) {
     switch (user.role) {
       case 'ADMIN':
+      case 'SUPER_ADMIN':
         navigateTo(CUSTOMER_ROUTES.admin)
         break
       case 'ONLINE_STAFF':
@@ -76,6 +77,7 @@ function LoginPage() {
 
       switch (authenticatedUser.role) {
         case 'ADMIN':
+        case 'SUPER_ADMIN':
           navigateTo(CUSTOMER_ROUTES.admin)
           break
         case 'ONLINE_STAFF':
@@ -116,7 +118,7 @@ function LoginPage() {
           className="flex items-start gap-2.5 p-3.5 rounded-lg border border-brand-border bg-brand-soft text-brand text-sm leading-snug"
           aria-live="assertive"
         >
-          <IconAlertCircle size={18} className="shrink-0 mt-0.5" />
+          <CircleAlert size={18} className="shrink-0 mt-0.5" />
           <span>{generalError}</span>
         </div>
       )}

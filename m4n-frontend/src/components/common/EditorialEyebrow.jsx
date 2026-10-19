@@ -11,7 +11,7 @@ function EditorialEyebrow({
 
   return (
     <div
-      className={`inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-ink select-none ${className}`}
+      className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ink select-none ${className}`}
     >
       {showResonance && (
         <span className="resonance-motif" aria-hidden="true">

@@ -2,9 +2,11 @@ package com.m4n.backend.repository;
 
 import com.m4n.backend.entity.Order;
 import com.m4n.backend.entity.OrderStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,6 +18,15 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+
+    /**
+     * Pessimistic lock for state-transitioning operations (confirm/complete/cancel) so the
+     * status check-then-act sequence is serialized against concurrent transitions on the
+     * same order and cannot double-deduct or lose inventory restoration (BR-INVENTORY-01/03).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT o FROM Order o WHERE o.id = :id")
+    Optional<Order> findByIdWithLock(@Param("id") Long id);
 
     List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
 
@@ -57,4 +68,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     );
 
     List<Order> findTop5ByOrderByCreatedAtDesc();
+
+    boolean existsByVoucherCodeIgnoreCase(String voucherCode);
 }

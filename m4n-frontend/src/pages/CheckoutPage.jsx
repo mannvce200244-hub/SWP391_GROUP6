@@ -3,16 +3,15 @@ import useAuth from '../features/auth/useAuth.js'
 import useCart from '../features/cart/useCart.js'
 import useToast from '../components/ui/useToast.js'
 import orderService from '../services/orderService.js'
-import voucherService from '../services/voucherService.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import {
-  IconArrowRight,
-  IconCheck,
-  IconChevronRight,
-  IconInstrument,
-  IconShield,
-  IconShoppingBag,
-} from '../components/ui/Icons.jsx'
+  ArrowRight,
+  Check,
+  ChevronRight,
+  Shield,
+  ShoppingBag,
+} from 'lucide-react'
+import { IconInstrument } from '../components/ui/Icons.jsx'
 
 function CheckoutPage() {
   const { user, isAuthenticated } = useAuth()
@@ -109,18 +108,25 @@ function CheckoutPage() {
       setVoucherLoading(true)
       setVoucherFeedback(null)
 
-      const subtotal = preview?.subtotal || cart?.totalAmount || 0
-      const res = await voucherService.validateVoucher(voucherCodeInput, subtotal)
+      const res = await orderService.previewCheckout(voucherCodeInput.trim())
 
-      if (res.isValid) {
-        setAppliedVoucher(res)
-        setVoucherFeedback({ type: 'success', message: res.message })
+      if (res.voucherApplied) {
+        const applied = {
+          code: res.voucherCode,
+          message: res.voucherMessage || 'Mã giảm giá hợp lệ',
+        }
+        setAppliedVoucher(applied)
+        setPreview(res)
+        setVoucherFeedback({ type: 'success', message: applied.message })
         addToast({
-          message: `Đã áp dụng mã giảm giá: ${res.code}`,
+          message: `Đã áp dụng mã giảm giá: ${applied.code}`,
           type: 'success',
         })
       } else {
-        setVoucherFeedback({ type: 'error', message: res.message })
+        setVoucherFeedback({
+          type: 'error',
+          message: res.voucherMessage || 'Mã voucher không hợp lệ hoặc đã hết hạn',
+        })
       }
     } catch (err) {
       setVoucherFeedback({
@@ -226,7 +232,7 @@ function CheckoutPage() {
       <div className="w-full bg-surface-secondary/40 min-h-[calc(100vh-80px)] py-12">
         <div className="max-w-md mx-auto px-4 text-center bg-white rounded-3xl p-8 border border-border/80 shadow-sm space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-brand-soft text-brand flex items-center justify-center mx-auto">
-            <IconShoppingBag size={28} />
+            <ShoppingBag size={28} />
           </div>
           <h2 className="text-xl font-bold text-ink">Vui lòng đăng nhập để thanh toán</h2>
           <p className="text-xs text-muted">
@@ -286,9 +292,9 @@ function CheckoutPage() {
         {!hasItems && !previewLoading ? (
           <div className="rounded-[32px] bg-white border border-border/80 p-12 text-center shadow-sm max-w-lg mx-auto space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-surface-secondary text-subtle flex items-center justify-center mx-auto border border-border">
-              <IconShoppingBag size={28} />
+              <ShoppingBag size={28} />
             </div>
-            <h3 className="text-xl font-black text-ink">
+            <h3 className="text-xl font-bold text-ink">
               Giỏ hàng của bạn đang trống
             </h3>
             <p className="text-xs text-muted max-w-sm mx-auto">
@@ -300,7 +306,7 @@ function CheckoutPage() {
               className="inline-flex items-center gap-2 h-12 px-8 rounded-2xl bg-brand hover:bg-brand-hover text-white text-sm font-bold shadow-md shadow-brand/20 transition-all cursor-pointer"
             >
               <span>Khám phá nhạc cụ</span>
-              <IconArrowRight size={15} />
+              <ArrowRight size={15} />
             </button>
           </div>
         ) : (
@@ -436,7 +442,7 @@ function CheckoutPage() {
               {/* Card 2: Voucher Application */}
               <div className="rounded-[28px] bg-white border border-border/80 p-6 sm:p-7 shadow-xs space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-border/60">
-                  <h2 className="text-base sm:text-lg font-black text-ink font-sans flex items-center gap-2.5">
+                  <h2 className="text-base sm:text-lg font-bold text-ink font-sans flex items-center gap-2.5">
                     <span className="w-6 h-6 rounded-full bg-brand text-white text-xs font-bold flex items-center justify-center">2</span>
                     <span>Mã ưu đãi / Voucher M4N</span>
                   </h2>
@@ -446,7 +452,7 @@ function CheckoutPage() {
                   <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                        <IconCheck size={18} />
+                        <Check size={18} />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -670,7 +676,7 @@ function CheckoutPage() {
                   ) : (
                     <>
                       <span>Đặt hàng ngay</span>
-                      <IconChevronRight size={18} />
+                      <ChevronRight size={18} />
                     </>
                   )}
                 </button>
@@ -678,12 +684,12 @@ function CheckoutPage() {
                 {/* Security and Packaging Assurance */}
                 <div className="pt-2 flex flex-col gap-2 text-xs text-muted">
                   <div className="flex items-center gap-2">
-                    <IconCheck size={14} className="text-brand shrink-0" />
+                    <Check size={14} className="text-brand shrink-0" />
                     <span>Kiểm tra hàng trước khi thanh toán tiền mặt</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <IconShield size={14} className="text-brand shrink-0" />
-                    <span>Cam kết bảo hành âm thanh nứt gãy 12 tháng</span>
+                    <Shield size={14} className="text-brand shrink-0" />
+                    <span>Tồn kho được xác nhận khi nhân viên xử lý đơn hàng.</span>
                   </div>
                 </div>
 

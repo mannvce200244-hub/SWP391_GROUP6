@@ -185,7 +185,7 @@ class CrossChannelInventoryIntegrationTest {
                 .build();
         pendingOrder.getItems().add(orderItem);
 
-        when(orderRepository.findById(50L)).thenReturn(Optional.of(pendingOrder));
+        when(orderRepository.findByIdWithLock(50L)).thenReturn(Optional.of(pendingOrder));
 
         // Online confirmation re-checks inventory with lock:
         OrderConfirmResultResponse confirmResult = orderService.confirmOrder(50L);
@@ -250,7 +250,7 @@ class CrossChannelInventoryIntegrationTest {
         assertThat(sharedInventoryA.getQuantity()).isEqualTo(4);
 
         // 4. Online Order confirmed by Staff
-        when(orderRepository.findById(77L)).thenReturn(Optional.of(onlineOrder));
+        when(orderRepository.findByIdWithLock(77L)).thenReturn(Optional.of(onlineOrder));
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
         OrderConfirmResultResponse confirmResult = orderService.confirmOrder(77L);

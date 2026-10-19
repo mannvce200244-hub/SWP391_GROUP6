@@ -4,12 +4,14 @@ import useAuth from '../auth/useAuth.js'
 import { CartContext } from './cartContext.js'
 
 export function CartProvider({ children }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  const canUseCart = isAuthenticated && user?.role === 'CUSTOMER'
   const [cart, setCart] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const refreshCart = useCallback(async () => {
-    if (!isAuthenticated) {
+    if (!canUseCart) {
+      setCart(null)
       return
     }
 
@@ -22,13 +24,14 @@ export function CartProvider({ children }) {
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated])
+  }, [canUseCart])
 
   useEffect(() => {
     let active = true
 
     async function loadCartOnAuth() {
-      if (!isAuthenticated) {
+      if (!canUseCart) {
+        setCart(null)
         return
       }
 
@@ -47,12 +50,18 @@ export function CartProvider({ children }) {
     return () => {
       active = false
     }
-  }, [isAuthenticated])
+  }, [canUseCart])
 
   const addToCart = useCallback(
     async (productId, quantity = 1) => {
       if (!isAuthenticated) {
         return { success: false, requireAuth: true }
+      }
+      if (!canUseCart) {
+        return {
+          success: false,
+          message: 'Chỉ tài khoản khách hàng mới có thể sử dụng giỏ hàng',
+        }
       }
 
       try {
@@ -69,7 +78,7 @@ export function CartProvider({ children }) {
         setLoading(false)
       }
     },
-    [isAuthenticated],
+    [canUseCart, isAuthenticated],
   )
 
   const updateCartItem = useCallback(async (itemId, quantity) => {
@@ -120,7 +129,7 @@ export function CartProvider({ children }) {
     }
   }, [])
 
-  const effectiveCart = isAuthenticated ? cart : null
+  const effectiveCart = canUseCart ? cart : null
   const cartItemCount = effectiveCart?.totalItems || 0
 
   const value = {

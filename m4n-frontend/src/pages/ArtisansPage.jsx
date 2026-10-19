@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import EmptyState from '../components/ui/EmptyState.jsx'
+import ErrorState from '../components/ui/ErrorState.jsx'
 import Pagination from '../features/catalog/Pagination.jsx'
 import ArtisanCard from '../features/artisans/ArtisanCard.jsx'
 import ArtisanFilters from '../features/artisans/ArtisanFilters.jsx'
@@ -37,12 +38,16 @@ function parseQueryParams() {
 function ArtisansPage() {
   const [params, setParams] = useState(parseQueryParams)
   const [data, setData] = useState({
+    error: false,
     items: [],
     loading: true,
     page: 1,
+    provinces: [],
     total: 0,
     totalPages: 1,
   })
+  const [summary, setSummary] = useState({ artisans: 0, villages: 0 })
+  const [retryKey, setRetryKey] = useState(0)
 
   // Sync state with browser back/forward history
   useEffect(() => {
@@ -118,22 +123,43 @@ function ArtisansPage() {
             sort: params.sort,
           })
 
-    fetchPromise.then((result) => {
-      if (active) {
-        setData({
-          items: result.items,
-          loading: false,
-          page: result.page,
-          total: result.total,
-          totalPages: result.totalPages,
-        })
-      }
-    })
+    fetchPromise
+      .then((result) => {
+        if (active) {
+          setData({
+            error: false,
+            items: result.items,
+            loading: false,
+            page: result.page,
+            provinces: result.provinces || [],
+            total: result.total,
+            totalPages: result.totalPages,
+          })
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setData((prev) => ({ ...prev, error: true, loading: false }))
+        }
+      })
 
     return () => {
       active = false
     }
-  }, [params])
+  }, [params, retryKey])
+
+  useEffect(() => {
+    let active = true
+    artisanService
+      .getDiscoveryCounts()
+      .then((counts) => {
+        if (active) setSummary(counts)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [retryKey])
 
   // Document Title
   useEffect(() => {
@@ -143,11 +169,6 @@ function ArtisansPage() {
       document.title = originalTitle
     }
   }, [])
-
-  // Filter options derived from dataset
-  const { crafts: craftOptions, provinces: provinceOptions } = useMemo(() => {
-    return artisanService.getFilterOptions(params.tab)
-  }, [params.tab])
 
   // Tab change handler
   const handleTabChange = (newTab) => {
@@ -187,9 +208,8 @@ function ArtisansPage() {
       {/* 1. COMPACT EDITORIAL HERO */}
       <ArtisansHero
         stats={{
-          artisans: 8,
-          crafts: 6,
-          villages: 8,
+          artisans: summary.artisans,
+          villages: summary.villages,
         }}
       />
 
@@ -219,20 +239,20 @@ function ArtisansPage() {
             {/* Dual Tabs: [ Nghệ nhân (8) ] [ Làng nghề (8) ] */}
             <ArtisanVillageTabs
               activeTab={params.tab}
-              artisanCount={8}
+              artisanCount={summary.artisans}
               onChangeTab={handleTabChange}
-              villageCount={8}
+              villageCount={summary.villages}
             />
           </div>
 
           {/* Search Bar and Dropdown Filters */}
           <ArtisanFilters
             activeTab={params.tab}
-            craftOptions={craftOptions}
+            craftOptions={[]}
             filters={params}
             onClearFilters={handleClearFilters}
             onFilterChange={handleFilterChange}
-            provinceOptions={provinceOptions}
+            provinceOptions={data.provinces}
             totalResults={data.total}
           />
 
@@ -246,6 +266,15 @@ function ArtisansPage() {
                 />
               ))}
             </div>
+          ) : data.error ? (
+            <ErrorState
+              message="Không thể tải dữ liệu nghệ nhân và làng nghề. Vui lòng thử lại."
+              onRetry={() => {
+                setData((prev) => ({ ...prev, error: false, loading: true }))
+                setRetryKey((key) => key + 1)
+              }}
+              title="Lỗi tải dữ liệu"
+            />
           ) : data.items.length === 0 ? (
             <div className="py-12">
               <EmptyState

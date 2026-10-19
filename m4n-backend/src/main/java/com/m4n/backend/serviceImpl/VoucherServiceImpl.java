@@ -1,9 +1,15 @@
 package com.m4n.backend.serviceImpl;
 
-import com.m4n.backend.dto.request.ApplyVoucherRequest;
+import com.m4n.backend.dto.request.CreateVoucherRequest;
+import com.m4n.backend.dto.request.UpdateVoucherRequest;
+import com.m4n.backend.dto.response.VoucherResponse;
 import com.m4n.backend.dto.response.VoucherValidationResponse;
 import com.m4n.backend.entity.Voucher;
+import com.m4n.backend.exception.ResourceInUseException;
+import com.m4n.backend.exception.ResourceNotFoundException;
 import com.m4n.backend.mapper.CartMapper;
+import com.m4n.backend.repository.InvoiceRepository;
+import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.repository.VoucherRepository;
 import com.m4n.backend.service.VoucherService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -20,21 +27,9 @@ import java.util.Optional;
 public class VoucherServiceImpl implements VoucherService {
 
     private final VoucherRepository voucherRepository;
+    private final OrderRepository orderRepository;
+    private final InvoiceRepository invoiceRepository;
     private final CartMapper cartMapper;
-
-    @Override
-    public VoucherValidationResponse validateAndCalculate(ApplyVoucherRequest request) {
-        if (request == null) {
-            return new VoucherValidationResponse(
-                    null, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                    cartMapper.formatPriceDisplay(BigDecimal.ZERO),
-                    BigDecimal.ZERO,
-                    cartMapper.formatPriceDisplay(BigDecimal.ZERO),
-                    false, "Yêu cầu kiểm tra mã voucher không hợp lệ"
-            );
-        }
-        return validateAndCalculate(request.voucherCode(), request.orderAmount());
-    }
 
     @Override
     public VoucherValidationResponse validateAndCalculate(String voucherCode, BigDecimal orderAmount) {
@@ -128,5 +123,81 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         return voucher;
+    }
+
+    @Override
+    public List<VoucherResponse> getAllVouchers() {
+        return voucherRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(this::mapToVoucherResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public VoucherResponse createVoucher(CreateVoucherRequest request) {
+        String code = request.code().trim().toUpperCase();
+        if (voucherRepository.existsByCodeIgnoreCase(code)) {
+            throw new IllegalArgumentException("Mã voucher đã tồn tại: " + code);
+        }
+
+        Voucher voucher = Voucher.builder()
+                .code(code)
+                .discountRate(request.discountRate())
+                .minimumOrderValue(request.minimumOrderValue())
+                .description(request.description() != null ? request.description().trim() : null)
+                .isActive(request.isActive() == null || request.isActive())
+                .build();
+
+        Voucher saved = voucherRepository.save(voucher);
+        return mapToVoucherResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public VoucherResponse updateVoucher(Long id, UpdateVoucherRequest request) {
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Voucher không tồn tại: " + id));
+
+        voucher.setDiscountRate(request.discountRate());
+        voucher.setMinimumOrderValue(request.minimumOrderValue());
+        if (request.description() != null) {
+            voucher.setDescription(request.description().trim());
+        }
+        if (request.isActive() != null) {
+            voucher.setActive(request.isActive());
+        }
+
+        Voucher updated = voucherRepository.save(voucher);
+        return mapToVoucherResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public void deleteVoucher(Long id) {
+        Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Voucher không tồn tại: " + id));
+
+        boolean inUseInOrders = orderRepository.existsByVoucherCodeIgnoreCase(voucher.getCode());
+        boolean inUseInInvoices = invoiceRepository.existsByVoucherCodeIgnoreCase(voucher.getCode());
+        if (inUseInOrders || inUseInInvoices) {
+            throw new ResourceInUseException("Không thể xóa mã giảm giá '" + voucher.getCode() +
+                    "' vì đã từng được áp dụng trong đơn hàng hoặc hóa đơn. Vui lòng chuyển sang trạng thái ngưng kích hoạt.");
+        }
+
+        voucherRepository.delete(voucher);
+    }
+
+    private VoucherResponse mapToVoucherResponse(Voucher v) {
+        return new VoucherResponse(
+                v.getId(),
+                v.getCode(),
+                v.getDiscountRate(),
+                v.getMinimumOrderValue(),
+                v.isActive(),
+                v.getDescription(),
+                v.getCreatedAt(),
+                v.getUpdatedAt()
+        );
     }
 }

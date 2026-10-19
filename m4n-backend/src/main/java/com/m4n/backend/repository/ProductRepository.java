@@ -36,6 +36,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     long countByCategoryId(Long categoryId);
 
+    @Query("SELECT p.category.id, COUNT(p) FROM Product p WHERE p.category.id IS NOT NULL GROUP BY p.category.id")
+    List<Object[]> countProductsGroupedByCategoryId();
+
     long countByArtisanId(Long artisanId);
 
     long countByCraftVillageId(Long craftVillageId);
@@ -46,7 +49,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByBarcodeIgnoreCaseAndIdNot(String barcode, Long id);
 
-    @Query("SELECT p FROM Product p WHERE p.isActive = true AND " +
+    @Query("SELECT p FROM Product p WHERE p.isActive    = true AND " +
             "(LOWER(p.code) = LOWER(:term) OR LOWER(p.barcode) = LOWER(:term))")
     Optional<Product> findByCodeOrBarcode(@Param("term") String term);
 

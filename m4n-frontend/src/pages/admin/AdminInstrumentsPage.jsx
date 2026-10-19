@@ -12,19 +12,19 @@ import CategoryManagementModal from '../../components/admin/CategoryManagementMo
 import ArtisanManagementModal from '../../components/admin/ArtisanManagementModal.jsx'
 import CraftVillageManagementModal from '../../components/admin/CraftVillageManagementModal.jsx'
 import {
-  IconPlus,
-  IconSearch,
-  IconPackage,
-  IconAlertCircle,
-  IconLayers,
-  IconLandmark,
-  IconUser,
-  IconInstrument,
-  IconCheckCircle,
-  IconX,
-  IconEye,
-  IconPencil,
-} from '../../components/ui/Icons.jsx'
+  Plus,
+  Search,
+  Package,
+  CircleAlert,
+  Layers,
+  Landmark,
+  UserRound,
+  CircleCheck,
+  X,
+  Eye,
+  Pencil,
+} from 'lucide-react'
+import { IconInstrument } from '../../components/ui/Icons.jsx'
 
 export default function AdminInstrumentsPage() {
   const { addToast } = useToast()
@@ -279,10 +279,10 @@ export default function AdminInstrumentsPage() {
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
             type="button"
-            onClick={() => setCategoryModalOpen(true)}
+            onClick={() => navigateTo(CUSTOMER_ROUTES.adminCategories)}
             className="px-3.5 py-2.5 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] hover:bg-[#F6F7F8] hover:border-zinc-300 text-sm font-medium text-[#17191B] transition-colors cursor-pointer shadow-2xs flex items-center gap-2"
           >
-            <IconLayers size={16} className="text-secondary" />
+            <Layers size={16} className="text-secondary" />
             <span>Danh mục</span>
           </button>
 
@@ -291,7 +291,7 @@ export default function AdminInstrumentsPage() {
             onClick={() => setArtisanModalOpen(true)}
             className="px-3.5 py-2.5 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] hover:bg-[#F6F7F8] hover:border-zinc-300 text-sm font-medium text-[#17191B] transition-colors cursor-pointer shadow-2xs flex items-center gap-2"
           >
-            <IconUser size={16} className="text-secondary" />
+            <UserRound size={16} className="text-secondary" />
             <span>Nghệ nhân</span>
           </button>
 
@@ -300,7 +300,7 @@ export default function AdminInstrumentsPage() {
             onClick={() => setVillageModalOpen(true)}
             className="px-3.5 py-2.5 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] hover:bg-[#F6F7F8] hover:border-zinc-300 text-sm font-medium text-[#17191B] transition-colors cursor-pointer shadow-2xs flex items-center gap-2"
           >
-            <IconLandmark size={16} className="text-secondary" />
+            <Landmark size={16} className="text-secondary" />
             <span>Làng nghề</span>
           </button>
 
@@ -309,7 +309,7 @@ export default function AdminInstrumentsPage() {
             onClick={handleOpenCreateProduct}
             className="px-4 py-2.5 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-semibold transition-all shadow-xs flex items-center gap-2 cursor-pointer"
           >
-            <IconPlus size={16} />
+            <Plus size={16} />
             <span>Thêm mới nhạc cụ</span>
           </button>
         </div>
@@ -319,7 +319,7 @@ export default function AdminInstrumentsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E5E8EB] shadow-2xs flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center font-bold text-lg shrink-0">
-            <IconPackage size={22} />
+            <Package size={22} />
           </div>
           <div>
             <span className="text-xs font-medium text-secondary block">
@@ -333,7 +333,7 @@ export default function AdminInstrumentsPage() {
 
         <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E5E8EB] shadow-2xs flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <IconCheckCircle size={22} />
+            <CircleCheck size={22} />
           </div>
           <div>
             <span className="text-xs font-medium text-secondary block">
@@ -347,7 +347,7 @@ export default function AdminInstrumentsPage() {
 
         <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E5E8EB] shadow-2xs flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-            <IconAlertCircle size={22} />
+            <CircleAlert size={22} />
           </div>
           <div>
             <span className="text-xs font-medium text-secondary block">
@@ -361,7 +361,7 @@ export default function AdminInstrumentsPage() {
 
         <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E5E8EB] shadow-2xs flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <IconLayers size={22} />
+            <Layers size={22} />
           </div>
           <div>
             <span className="text-xs font-medium text-secondary block">
@@ -380,7 +380,7 @@ export default function AdminInstrumentsPage() {
           {/* Search box */}
           <div className="lg:col-span-4 relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary">
-              <IconSearch size={16} />
+              <Search size={16} />
             </div>
             <input
               type="text"
@@ -476,7 +476,7 @@ export default function AdminInstrumentsPage() {
               onClick={handleResetFilters}
               className="text-[#0D9488] hover:underline font-semibold cursor-pointer inline-flex items-center gap-1"
             >
-              <IconX size={13} />
+              <X size={13} />
               <span>Đặt lại bộ lọc</span>
             </button>
           </div>
@@ -487,7 +487,7 @@ export default function AdminInstrumentsPage() {
       <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E8EB] shadow-2xs overflow-hidden flex flex-col">
         {error && (
           <div className="p-4 bg-rose-50 border-b border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-            <IconAlertCircle size={16} />
+            <CircleAlert size={16} />
             <span>{error}</span>
           </div>
         )}
@@ -524,7 +524,7 @@ export default function AdminInstrumentsPage() {
                 onClick={handleOpenCreateProduct}
                 className="mt-2 px-4 py-2.5 rounded-xl bg-[#0D9488] text-white text-sm font-semibold hover:bg-[#0F766E] transition-colors cursor-pointer flex items-center gap-1.5"
               >
-                <IconPlus size={16} />
+                <Plus size={16} />
                 <span>Thêm mới nhạc cụ đầu tiên</span>
               </button>
             )}
@@ -602,13 +602,13 @@ export default function AdminInstrumentsPage() {
                           </span>
                           {p.artisanName && (
                             <span className="text-xs text-secondary truncate max-w-[180px] flex items-center gap-1">
-                              <IconUser size={13} className="text-secondary shrink-0" />
+                              <UserRound size={14} className="text-secondary shrink-0" />
                               <span>{p.artisanName}</span>
                             </span>
                           )}
                           {p.craftVillageName && (
                             <span className="text-xs text-muted truncate max-w-[180px] flex items-center gap-1">
-                              <IconLandmark size={13} className="text-muted shrink-0" />
+                              <Landmark size={14} className="text-muted shrink-0" />
                               <span>{p.craftVillageName}</span>
                             </span>
                           )}
@@ -666,30 +666,30 @@ export default function AdminInstrumentsPage() {
                             onClick={() =>
                               navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(p.id))
                             }
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-[#FFFFFF] hover:bg-[#F2F4F5] text-[#17191B] font-medium text-xs transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-[#FFFFFF] hover:bg-[#F2F4F5] text-[#17191B] font-medium text-sm transition-colors cursor-pointer"
                             title="Xem trang chi tiết nhạc cụ"
                           >
-                            <IconEye size={13} />
+                            <Eye size={15} />
                             <span>Chi tiết</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handleOpenImportModal(p)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium text-xs transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium text-sm transition-colors cursor-pointer"
                             title="Nhập thêm số lượng tồn kho"
                           >
-                            <IconPackage size={13} />
+                            <Package size={15} />
                             <span>Nhập kho</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => handleOpenEditProduct(p.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0D9488]/10 hover:bg-[#0D9488]/20 text-[#0D9488] font-medium text-xs transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0D9488]/10 hover:bg-[#0D9488]/20 text-[#0D9488] font-medium text-sm transition-colors cursor-pointer"
                             title="Chỉnh sửa thông số sản phẩm"
                           >
-                            <IconPencil size={13} />
+                            <Pencil size={15} />
                             <span>Sửa</span>
                           </button>
                         </div>
@@ -792,7 +792,7 @@ export default function AdminInstrumentsPage() {
                 className="text-secondary hover:text-[#17191B] cursor-pointer p-1 rounded-lg hover:bg-zinc-100 transition-colors"
                 aria-label="Đóng"
               >
-                <IconX size={18} />
+                <X size={18} />
               </button>
             </div>
 

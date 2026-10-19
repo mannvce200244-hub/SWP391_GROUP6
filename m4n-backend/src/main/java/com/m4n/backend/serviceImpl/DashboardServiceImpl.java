@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,7 @@ import java.util.Map;
 public class DashboardServiceImpl implements DashboardService {
 
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final Set<String> ALLOWED_PERIODS = Set.of("day", "week", "month", "quarter");
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -50,6 +52,10 @@ public class DashboardServiceImpl implements DashboardService {
         String normalizedPeriod = (period == null || period.trim().isEmpty())
                 ? "month"
                 : period.trim().toLowerCase();
+
+        if (!ALLOWED_PERIODS.contains(normalizedPeriod)) {
+            normalizedPeriod = "month";
+        }
 
         // 1. KPI Cards (authoritative database aggregation per BR-REVENUE-01: Online Completed + Finalized POS Invoices)
         BigDecimal onlineRevenue = orderRepository.sumFinalAmountByStatus(OrderStatus.COMPLETED);

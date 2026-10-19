@@ -31,7 +31,7 @@ public class InventoryController {
     private final InventoryService inventoryService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN', 'POS_STAFF', 'ONLINE_STAFF')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     @Operation(summary = "List and search inventory items", description = "Returns paginated list of products with current sellable inventory and stock status.")
     public ResponseEntity<Page<InventoryItemResponse>> listInventory(
             @RequestParam(required = false) String keyword,

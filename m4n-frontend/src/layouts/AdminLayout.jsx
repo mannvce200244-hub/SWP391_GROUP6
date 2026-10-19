@@ -1,20 +1,38 @@
 import { useState, useRef, useEffect } from 'react'
-import { CUSTOMER_ROUTES, navigateTo, matchAdminInstrumentDetailPath } from '../routes/customerRoutes.js'
-import useAuth from '../features/auth/useAuth.js'
 import {
-  IconDashboard,
-  IconInstrument,
-  IconStore,
-  IconUser,
-  IconLock,
-  IconLogOut,
-  IconChevronDown,
-  IconMenu,
-  IconX,
-  IconExternalLink,
-  IconChevronsLeft,
-  IconChevronsRight,
-} from '../components/ui/Icons.jsx'
+  CUSTOMER_ROUTES,
+  navigateTo,
+  matchAdminInstrumentDetailPath,
+  ROUTE_CHANGE_EVENT,
+} from '../routes/customerRoutes.js'
+import useAuth from '../features/auth/useAuth.js'
+import notificationService from '../services/notificationService.js'
+import {
+  LayoutDashboard,
+  Store,
+  UserRound,
+  Lock,
+  LogOut,
+  ChevronDown,
+  Menu,
+  ExternalLink,
+  ChevronsLeft,
+  ChevronsRight,
+  X,
+  Layers,
+  MapPin,
+  Boxes,
+  PackagePlus,
+  ClipboardList,
+  Receipt,
+  TicketPercent,
+  Users,
+  UserCog,
+  Shield,
+  Bell,
+  Check,
+} from 'lucide-react'
+import { IconInstrument } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
 import BrandLogo from '../components/common/BrandLogo.jsx'
 
@@ -26,15 +44,95 @@ function AdminLayout({ children, pathname }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const dropdownRef = useRef(null)
 
+  // Notifications
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notifications, setNotifications] = useState([])
+  const [loadingNotifications, setLoadingNotifications] = useState(false)
+  const notificationRef = useRef(null)
+
+  // Track search query parameter (for ?tab=customers etc.)
+  const [activeSearch, setActiveSearch] = useState(() =>
+    typeof window !== 'undefined' ? window.location.search : ''
+  )
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      setActiveSearch(window.location.search)
+    }
+    window.addEventListener('popstate', handleUrlChange)
+    window.addEventListener(ROUTE_CHANGE_EVENT, handleUrlChange)
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange)
+      window.removeEventListener(ROUTE_CHANGE_EVENT, handleUrlChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+    notificationService
+      .getUnreadCount()
+      .then((count) => {
+        if (mounted) setUnreadCount(count || 0)
+      })
+      .catch(() => {})
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setDropdownOpen(false)
       }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setNotificationsOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const handleToggleNotifications = async () => {
+    const nextState = !notificationsOpen
+    setNotificationsOpen(nextState)
+    if (nextState) {
+      setLoadingNotifications(true)
+      try {
+        const data = await notificationService.getRecentNotifications()
+        setNotifications(Array.isArray(data) ? data : data?.content || [])
+      } catch {
+        setNotifications([])
+      } finally {
+        setLoadingNotifications(false)
+      }
+    }
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      setUnreadCount(0)
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true, isRead: true })))
+      addToast({ message: 'Đã đánh dấu tất cả thông báo là đã đọc.', type: 'info' })
+    } catch (err) {
+      addToast({ message: err.message || 'Lỗi khi cập nhật thông báo.', type: 'error' })
+    }
+  }
+
+  const handleMarkNotificationRead = async (notif) => {
+    if (notif.read || notif.isRead) return
+    try {
+      await notificationService.markAsRead(notif.id)
+      setUnreadCount((c) => Math.max(0, c - 1))
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notif.id ? { ...n, read: true, isRead: true } : n))
+      )
+    } catch {
+      // ignore
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -53,37 +151,90 @@ function AdminLayout({ children, pathname }) {
     {
       title: 'TỔNG QUAN',
       items: [
-        { label: 'Dashboard', path: CUSTOMER_ROUTES.admin, Icon: IconDashboard },
+        { label: 'Dashboard', path: CUSTOMER_ROUTES.admin, Icon: LayoutDashboard },
       ],
     },
     {
       title: 'SẢN PHẨM & KHO',
       items: [
-        { label: 'Nhạc cụ & Tồn kho', path: CUSTOMER_ROUTES.adminInstruments, Icon: IconInstrument },
+        { label: 'Sản phẩm', path: CUSTOMER_ROUTES.adminInstruments, Icon: IconInstrument },
+        { label: 'Danh mục nhạc cụ', path: CUSTOMER_ROUTES.adminCategories, Icon: Layers },
+        { label: 'Nghệ nhân', path: CUSTOMER_ROUTES.adminArtisans, Icon: UserRound },
+        { label: 'Làng nghề', path: CUSTOMER_ROUTES.adminCraftVillages, Icon: MapPin },
+        { label: 'Kho hàng', path: CUSTOMER_ROUTES.adminInventory, Icon: Boxes },
+        { label: 'Nhập kho', path: CUSTOMER_ROUTES.adminStockImport, Icon: PackagePlus },
       ],
     },
     {
-      title: 'VẬN HÀNH',
+      title: 'BÁN HÀNG',
       items: [
-        { label: 'Đơn hàng & Cửa hàng', path: CUSTOMER_ROUTES.adminStore, Icon: IconStore },
+        { label: 'Đơn hàng online', path: CUSTOMER_ROUTES.adminOrders, Icon: ClipboardList },
+        { label: 'Hóa đơn (POS)', path: CUSTOMER_ROUTES.adminInvoices, Icon: Receipt },
+        { label: 'Voucher', path: CUSTOMER_ROUTES.adminVouchers, Icon: TicketPercent },
       ],
     },
     {
-      title: 'HỆ THỐNG',
+      title: 'QUẢN LÝ NGƯỜI DÙNG',
       items: [
-        { label: 'Quản lý tài khoản', path: CUSTOMER_ROUTES.adminUsers, Icon: IconUser },
-        { label: 'Hồ sơ cá nhân', path: CUSTOMER_ROUTES.adminProfile, Icon: IconUser },
-        { label: 'Bảo mật tài khoản', path: CUSTOMER_ROUTES.adminSecurity, Icon: IconLock },
+        {
+          label: 'Khách hàng',
+          path: `${CUSTOMER_ROUTES.adminUsers}?tab=customers`,
+          matchPath: CUSTOMER_ROUTES.adminUsers,
+          tabParam: 'customers',
+          Icon: Users,
+        },
+        {
+          label: 'Nhân viên',
+          path: `${CUSTOMER_ROUTES.adminUsers}?tab=staff`,
+          matchPath: CUSTOMER_ROUTES.adminUsers,
+          tabParam: 'staff',
+          Icon: UserCog,
+        },
+        {
+          label: 'Tất cả tài khoản',
+          path: CUSTOMER_ROUTES.adminUsers,
+          matchPath: CUSTOMER_ROUTES.adminUsers,
+          tabParam: 'all',
+          Icon: Shield,
+        },
       ],
     },
   ]
 
   const isInstrumentDetail = Boolean(matchAdminInstrumentDetailPath(pathname))
-  const allNavItems = navSections.flatMap((s) => s.items)
-  const currentNavItem = allNavItems.find((item) => item.path === pathname)
-  const pageTitle = isInstrumentDetail
-    ? 'Chi tiết sản phẩm'
-    : (currentNavItem ? currentNavItem.label : 'Dashboard Quản trị')
+  const searchParams = new URLSearchParams(activeSearch)
+  const currentTab = searchParams.get('tab')
+
+  let pageTitle = 'Dashboard Quản trị'
+  if (isInstrumentDetail) {
+    pageTitle = 'Chi tiết sản phẩm'
+  } else if (pathname === CUSTOMER_ROUTES.adminInstruments) {
+    pageTitle = 'Quản lý Sản phẩm'
+  } else if (pathname === CUSTOMER_ROUTES.adminCategories) {
+    pageTitle = 'Danh mục nhạc cụ'
+  } else if (pathname === CUSTOMER_ROUTES.adminArtisans) {
+    pageTitle = 'Quản lý Nghệ nhân'
+  } else if (pathname === CUSTOMER_ROUTES.adminCraftVillages) {
+    pageTitle = 'Quản lý Làng nghề truyền thống'
+  } else if (pathname === CUSTOMER_ROUTES.adminInventory) {
+    pageTitle = 'Quản lý Kho hàng'
+  } else if (pathname === CUSTOMER_ROUTES.adminStockImport) {
+    pageTitle = 'Nhập kho sản phẩm'
+  } else if (pathname === CUSTOMER_ROUTES.adminOrders) {
+    pageTitle = 'Quản lý Đơn hàng Online'
+  } else if (pathname === CUSTOMER_ROUTES.adminInvoices) {
+    pageTitle = 'Hóa đơn bán tại quầy (POS)'
+  } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
+    pageTitle = 'Quản lý Mã giảm giá (Voucher)'
+  } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
+    if (currentTab === 'customers') pageTitle = 'Quản lý Khách hàng'
+    else if (currentTab === 'staff') pageTitle = 'Quản lý Nhân sự & Phân quyền'
+    else pageTitle = 'Quản lý Tài khoản & Phân quyền'
+  } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
+    pageTitle = 'Hồ sơ cá nhân'
+  } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
+    pageTitle = 'Bảo mật tài khoản'
+  }
 
   return (
     <div className="min-h-screen flex bg-[#F5F7FA] text-[#17191B]">
@@ -104,9 +255,15 @@ function AdminLayout({ children, pathname }) {
         aria-label="Thanh điều hướng chính"
       >
         {/* Sidebar Brand Header */}
-        <div className={`h-16 px-4 border-b border-[#22262A] flex items-center justify-between ${sidebarCollapsed ? 'justify-center' : ''}`}>
+        <div
+          className={`h-16 px-4 border-b border-[#22262A] flex items-center justify-between ${
+            sidebarCollapsed ? 'justify-center' : ''
+          }`}
+        >
           <div
-            className={`flex items-center gap-3 cursor-pointer group min-w-0 ${sidebarCollapsed ? 'justify-center w-full' : ''}`}
+            className={`flex items-center gap-3 cursor-pointer group min-w-0 ${
+              sidebarCollapsed ? 'justify-center w-full' : ''
+            }`}
             onClick={() => {
               if (sidebarCollapsed) {
                 setSidebarCollapsed(false)
@@ -136,7 +293,7 @@ function AdminLayout({ children, pathname }) {
               title="Thu gọn menu điều hướng"
               aria-label="Thu gọn menu điều hướng"
             >
-              <IconChevronsLeft size={16} />
+              <ChevronsLeft size={16} />
             </button>
           )}
 
@@ -147,7 +304,7 @@ function AdminLayout({ children, pathname }) {
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Đóng menu"
           >
-            <IconX size={18} />
+            <X size={18} />
           </button>
         </div>
 
@@ -161,7 +318,7 @@ function AdminLayout({ children, pathname }) {
               title="Mở rộng menu điều hướng"
               aria-label="Mở rộng menu điều hướng"
             >
-              <IconChevronsRight size={16} className="transition-transform group-hover:scale-110" />
+              <ChevronsRight size={16} className="transition-transform group-hover:scale-110" />
             </button>
           </div>
         )}
@@ -179,9 +336,24 @@ function AdminLayout({ children, pathname }) {
               )}
 
               {section.items.map((item) => {
-                const isActive =
-                  pathname === item.path ||
-                  (item.path === CUSTOMER_ROUTES.adminInstruments && isInstrumentDetail)
+                const isUserRoute = item.matchPath === CUSTOMER_ROUTES.adminUsers
+                let isActive = false
+                if (isUserRoute) {
+                  if (pathname === CUSTOMER_ROUTES.adminUsers) {
+                    if (item.tabParam === 'customers') {
+                      isActive = currentTab === 'customers'
+                    } else if (item.tabParam === 'staff') {
+                      isActive = currentTab === 'staff'
+                    } else if (item.tabParam === 'all') {
+                      isActive = !currentTab || (currentTab !== 'customers' && currentTab !== 'staff')
+                    }
+                  }
+                } else {
+                  isActive =
+                    pathname === item.path ||
+                    (item.path === CUSTOMER_ROUTES.adminInstruments && isInstrumentDetail)
+                }
+
                 const ItemIcon = item.Icon
                 return (
                   <button
@@ -249,7 +421,7 @@ function AdminLayout({ children, pathname }) {
               title="Đăng xuất"
               aria-label="Đăng xuất"
             >
-              <IconLogOut size={16} />
+              <LogOut size={16} />
             </button>
           </div>
         </div>
@@ -272,7 +444,7 @@ function AdminLayout({ children, pathname }) {
               onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-label="Mở menu điều hướng"
             >
-              <IconMenu size={20} />
+              <Menu size={20} />
             </button>
 
             {/* Breadcrumb & Page Title */}
@@ -290,8 +462,8 @@ function AdminLayout({ children, pathname }) {
             </div>
           </div>
 
-          {/* Right: Storefront shortcut & Profile Menu */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Right: Storefront shortcut, Notifications, Profile Menu */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Storefront Link Shortcut */}
             <button
               type="button"
@@ -299,15 +471,108 @@ function AdminLayout({ children, pathname }) {
               onClick={() => navigateTo(CUSTOMER_ROUTES.home)}
               title="Xem cửa hàng khách hàng"
             >
-              <IconStore size={16} className="text-secondary" />
+              <Store size={16} className="text-secondary" />
               <span>Xem Cửa hàng</span>
-              <IconExternalLink size={14} className="text-secondary" />
+              <ExternalLink size={14} className="text-secondary" />
             </button>
 
             {/* System Status Pill */}
             <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium shadow-2xs">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Hệ thống: Sẵn sàng</span>
+            </div>
+
+            {/* Notification Bell */}
+            <div className="relative" ref={notificationRef}>
+              <button
+                type="button"
+                className="relative p-2 rounded-xl text-zinc-600 hover:text-[#17191B] hover:bg-[#F2F4F5] border border-transparent hover:border-[#E5E8EB] transition-colors cursor-pointer"
+                onClick={handleToggleNotifications}
+                title="Thông báo hệ thống"
+                aria-label="Thông báo hệ thống"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse shadow-sm">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[#FFFFFF] rounded-2xl border border-[#E5E8EB] shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95"
+                  role="region"
+                  aria-label="Danh sách thông báo"
+                >
+                  <div className="px-4 py-2.5 border-b border-[#E5E8EB] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-[#17191B]">Thông báo</span>
+                      {unreadCount > 0 && (
+                        <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+                          {unreadCount} mới
+                        </span>
+                      )}
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllRead}
+                        className="text-xs text-[#0D9488] hover:text-[#0F766E] font-medium transition-colors flex items-center gap-1"
+                      >
+                        <Check size={13} />
+                        Đã đọc tất cả
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-zinc-100 text-xs">
+                    {loadingNotifications ? (
+                      <div className="py-8 text-center text-zinc-400">
+                        <div className="w-5 h-5 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                        <p>Đang tải thông báo...</p>
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="py-8 text-center text-zinc-400">
+                        <Bell className="w-8 h-8 mx-auto mb-1 text-zinc-300 stroke-[1.5]" />
+                        <p className="text-zinc-600 font-medium">Không có thông báo nào</p>
+                      </div>
+                    ) : (
+                      notifications.map((n) => {
+                        const isRead = n.read || n.isRead
+                        return (
+                          <div
+                            key={n.id}
+                            onClick={() => handleMarkNotificationRead(n)}
+                            className={`p-3.5 cursor-pointer transition-colors hover:bg-zinc-50 flex items-start gap-2.5 ${
+                              !isRead ? 'bg-[#F0FDF4]/60' : ''
+                            }`}
+                          >
+                            <span
+                              className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
+                                !isRead ? 'bg-[#0D9488]' : 'bg-transparent'
+                              }`}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className={`font-medium ${!isRead ? 'text-zinc-900 font-semibold' : 'text-zinc-700'}`}>
+                                {n.title || n.message || 'Thông báo mới'}
+                              </p>
+                              {n.title && n.message && (
+                                <p className="text-zinc-500 mt-0.5 line-clamp-2 leading-relaxed">
+                                  {n.message}
+                                </p>
+                              )}
+                              <span className="text-[11px] text-zinc-400 mt-1 block">
+                                {n.createdAt ? new Date(n.createdAt).toLocaleString('vi-VN') : ''}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* User Dropdown */}
@@ -330,7 +595,7 @@ function AdminLayout({ children, pathname }) {
                     {user?.role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : 'ADMIN'}
                   </span>
                 </div>
-                <IconChevronDown size={14} className="text-zinc-400" />
+                <ChevronDown size={14} className="text-zinc-400" />
               </button>
 
               {dropdownOpen && (
@@ -350,27 +615,27 @@ function AdminLayout({ children, pathname }) {
 
                   <button
                     type="button"
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#17191B] hover:bg-[#F2F4F5] hover:text-[#0D9488] transition-colors w-full text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-[#17191B] hover:bg-[#F2F4F5] hover:text-[#0D9488] transition-colors w-full text-left cursor-pointer"
                     role="menuitem"
                     onClick={() => {
                       setDropdownOpen(false)
                       navigateTo(CUSTOMER_ROUTES.adminProfile)
                     }}
                   >
-                    <IconUser size={16} />
+                    <UserRound size={16} />
                     <span>Hồ sơ cá nhân</span>
                   </button>
 
                   <button
                     type="button"
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[#17191B] hover:bg-[#F2F4F5] hover:text-[#0D9488] transition-colors w-full text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-[#17191B] hover:bg-[#F2F4F5] hover:text-[#0D9488] transition-colors w-full text-left cursor-pointer"
                     role="menuitem"
                     onClick={() => {
                       setDropdownOpen(false)
                       navigateTo(CUSTOMER_ROUTES.adminSecurity)
                     }}
                   >
-                    <IconLock size={16} />
+                    <Lock size={16} />
                     <span>Bảo mật tài khoản</span>
                   </button>
 
@@ -378,11 +643,11 @@ function AdminLayout({ children, pathname }) {
 
                   <button
                     type="button"
-                    className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors w-full text-left cursor-pointer"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-rose-600 hover:bg-rose-50 transition-colors w-full text-left cursor-pointer"
                     role="menuitem"
                     onClick={handleLogout}
                   >
-                    <IconLogOut size={16} />
+                    <LogOut size={16} />
                     <span>Đăng xuất</span>
                   </button>
                 </div>

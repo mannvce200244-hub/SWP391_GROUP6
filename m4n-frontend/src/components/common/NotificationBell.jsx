@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import notificationService from '../../services/notificationService.js'
 import useAuth from '../../features/auth/useAuth.js'
 import {
-  IconBell,
-  IconMessageSquare,
-  IconPackage,
-  IconShield,
-} from '../ui/Icons.jsx'
+  Bell,
+  MessageSquare,
+  Package,
+  Shield,
+} from 'lucide-react'
 
 export function NotificationBell() {
   const { isAuthenticated } = useAuth()
@@ -121,7 +121,7 @@ export function NotificationBell() {
         aria-label={`Thông báo hệ thống, ${unreadCount} chưa đọc`}
         title="Thông báo"
       >
-        <IconBell size={20} className="w-5 h-5" />
+        <Bell size={20} />
 
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none shadow-xs">
@@ -159,19 +159,19 @@ export function NotificationBell() {
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-8 text-center text-xs text-muted flex flex-col items-center gap-2">
-                <IconBell size={24} className="text-muted/70" />
+                <Bell size={24} className="text-muted/70" />
                 <span>Bạn không có thông báo mới nào.</span>
               </div>
             ) : (
               notifications.map((n) => {
                 const ItemIcon =
                   n.type === 'CHAT'
-                    ? IconMessageSquare
+                    ? MessageSquare
                     : n.type === 'ORDER'
-                    ? IconPackage
+                    ? Package
                     : n.type === 'SECURITY'
-                    ? IconShield
-                    : IconBell
+                    ? Shield
+                    : Bell
                 return (
                   <div
                     key={n.id}

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { X, ChevronDown } from 'lucide-react'
 import PRODUCT_GROUPS from '../../constants/productGroups.js'
+import categoryService from '../../services/categoryService.js'
 import Button from '../../components/ui/Button.jsx'
-import { IconX } from '../../components/ui/Icons.jsx'
 import validateProductFilters from './productFilterValidation.js'
 
 const EDITABLE_FILTERS = new Set([
@@ -35,6 +36,25 @@ function ProductFilters({
   value,
 }) {
   const [errors, setErrors] = useState({})
+  const [categories, setCategories] = useState([])
+
+  useEffect(() => {
+    let active = true
+    categoryService.getCategories()
+      .then((data) => {
+        if (active && Array.isArray(data) && data.length > 0) {
+          setCategories(data)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const groupOptions = categories.length > 0
+    ? categories.map((c) => ({ value: c.code, label: c.name }))
+    : PRODUCT_GROUPS
 
   const handleChange = (name, nextValue) => {
     if (!EDITABLE_FILTERS.has(name)) return
@@ -134,16 +154,14 @@ function ProductFilters({
             className="w-full appearance-none bg-white border border-border hover:border-border-strong rounded-lg px-3 py-2 text-xs font-medium text-ink focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand cursor-pointer transition-all pr-8 shadow-2xs disabled:bg-surface-secondary disabled:cursor-not-allowed"
           >
             <option value="">Tất cả dòng nhạc cụ</option>
-            {PRODUCT_GROUPS.map((group) => (
+            {groupOptions.map((group) => (
               <option key={group.value} value={group.value}>
                 {group.label}
               </option>
             ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDown size={16} />
           </div>
         </div>
       </div>
@@ -265,7 +283,7 @@ function ProductFilters({
               onClick={() => handleChange('craftVillage', '')}
               type="button"
             >
-              <IconX size={13} />
+              <X size={13} />
             </button>
           ) : null}
         </div>
@@ -314,7 +332,7 @@ function ProductFilters({
               onClick={() => handleChange('artisan', '')}
               type="button"
             >
-              <IconX size={13} />
+              <X size={13} />
             </button>
           ) : null}
         </div>

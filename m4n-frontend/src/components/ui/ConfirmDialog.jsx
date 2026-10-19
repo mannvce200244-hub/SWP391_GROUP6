@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import Button from './Button.jsx'
-import { IconAlertCircle } from './Icons.jsx'
+import { TriangleAlert } from 'lucide-react'
 
 /**
  * Accessible confirmation modal replacing window.confirm().
@@ -62,8 +62,8 @@ export function ConfirmDialog({
         ref={dialogRef}
       >
         <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-brand-soft text-brand">
-            <IconAlertCircle size={22} />
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${variant === 'danger' ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-brand-soft text-brand border border-brand-border'}`}>
+            <TriangleAlert size={20} />
           </div>
           <div className="flex flex-col gap-1.5 flex-grow">
             <h2 id="confirm-dialog-title" className="text-base font-bold text-ink">

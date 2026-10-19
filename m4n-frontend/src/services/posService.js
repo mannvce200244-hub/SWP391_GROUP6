@@ -49,9 +49,26 @@ export async function getInvoice(id) {
   return apiClient.get(`/pos/invoices/${encodeURIComponent(id)}`)
 }
 
-export function getInvoicePdfUrl(id) {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
-  return `${baseUrl}/pos/invoices/${encodeURIComponent(id)}/pdf`
+export async function downloadInvoicePdf(id) {
+  const blob = await apiClient.getBlob(`/pos/invoices/${encodeURIComponent(id)}/pdf`)
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `Invoice-${id}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+export async function listInvoices({ page = 0, size = 15, search = '' } = {}) {
+  const params = new URLSearchParams()
+  params.append('page', page)
+  params.append('size', size)
+  if (search && search.trim()) {
+    params.append('search', search.trim())
+  }
+  return apiClient.get(`/pos/invoices?${params.toString()}`)
 }
 
 export default {
@@ -60,5 +77,6 @@ export default {
   previewSale,
   finalizeSale,
   getInvoice,
-  getInvoicePdfUrl,
+  downloadInvoicePdf,
+  listInvoices,
 }
