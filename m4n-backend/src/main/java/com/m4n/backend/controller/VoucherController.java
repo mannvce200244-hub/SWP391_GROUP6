@@ -26,6 +26,6 @@ public class VoucherController {
     @PostMapping("/validate")
     @Operation(summary = "Validate voucher code against order amount", description = "Checks minimum order value and computes discount rate authoritative on backend.")
     public ResponseEntity<VoucherValidationResponse> validateVoucher(@Valid @RequestBody ApplyVoucherRequest request) {
-        return ResponseEntity.ok(voucherService.validateAndCalculate(request));
+        return ResponseEntity.ok(voucherService.validateAndCalculate(request.voucherCode(), request.orderAmount()));
     }
 }
