@@ -1,17 +1,21 @@
 package com.m4n.backend.exception;
 
 import com.m4n.backend.config.OpenApiConfig;
+import com.m4n.backend.security.CustomUserDetailsService;
+import com.m4n.backend.security.JwtAccessDeniedHandler;
+import com.m4n.backend.security.JwtAuthenticationEntryPoint;
+import com.m4n.backend.security.JwtAuthenticationFilter;
+import com.m4n.backend.security.JwtService;
 import com.m4n.backend.security.SecurityConfig;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,17 +28,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest
-@Import({SecurityConfig.class, OpenApiConfig.class, GlobalExceptionHandler.class, GlobalExceptionHandlerTest.TestConfig.class})
+@WebMvcTest(controllers = GlobalExceptionHandlerTest.TestValidationController.class)
+@Import({
+        GlobalExceptionHandlerTest.TestValidationController.class,
+        SecurityConfig.class,
+        OpenApiConfig.class,
+        JwtAuthenticationFilter.class,
+        JwtService.class,
+        JwtAuthenticationEntryPoint.class,
+        JwtAccessDeniedHandler.class,
+        GlobalExceptionHandler.class
+})
 class GlobalExceptionHandlerTest {
-
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        public TestValidationController testValidationController() {
-            return new TestValidationController();
-        }
-    }
 
     @RestController
     @RequestMapping("/api/v1/test-exceptions")
@@ -55,6 +60,9 @@ class GlobalExceptionHandlerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private CustomUserDetailsService userDetailsService;
 
     @Test
     @WithMockUser

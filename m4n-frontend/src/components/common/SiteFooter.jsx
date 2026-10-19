@@ -2,81 +2,68 @@ import RouterLink from '../../routes/RouterLink.jsx'
 import BrandLogo from './BrandLogo.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 
+const DISCOVER_LINKS = Object.freeze([
+  { label: 'Tất cả sản phẩm', href: CUSTOMER_ROUTES.products },
+  { label: 'Nghệ nhân & Làng nghề', href: CUSTOMER_ROUTES.artisans },
+  { label: 'Nhạc cụ dây', href: `${CUSTOMER_ROUTES.products}?group=DAY` },
+  { label: 'Nhạc cụ hơi', href: `${CUSTOMER_ROUTES.products}?group=HOI` },
+  { label: 'Nhạc cụ gõ', href: `${CUSTOMER_ROUTES.products}?group=GO` },
+])
+
 function SiteFooter() {
   return (
-    <footer className="site-footer">
-      <div className="site-footer__inner">
+    <footer className="bg-footer text-white border-t border-neutral-800 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
         {/* Column 1: Brand intro */}
-        <div className="site-footer__col site-footer__col--brand">
+        <div className="lg:col-span-2 flex flex-col gap-4">
           <BrandLogo variant="dark" />
-          <p className="footer-brand__desc">
-            Nền tảng mua sắm và giới thiệu nhạc cụ truyền thống Việt Nam chất lượng
-            cao, kết nối trực tiếp với nghệ nhân và làng nghề chế tác thủ công.
+          <p className="text-sm text-neutral-400 leading-relaxed max-w-sm">
+            Nền tảng mua sắm nhạc cụ truyền thống với thông tin sản phẩm, nghệ nhân,
+            làng nghề và hỗ trợ trực tuyến trong cùng một hệ thống.
           </p>
         </div>
 
         {/* Column 2: Discover */}
-        <div className="site-footer__col">
-          <h3 className="footer-heading">Khám phá</h3>
-          <ul className="footer-nav">
-            <li>
-              <RouterLink href={CUSTOMER_ROUTES.products}>
-                Tất cả sản phẩm
-              </RouterLink>
-            </li>
-            <li>
-              <RouterLink href={CUSTOMER_ROUTES.products}>
-                Nhạc cụ dây
-              </RouterLink>
-            </li>
-            <li>
-              <RouterLink href={CUSTOMER_ROUTES.products}>
-                Nhạc cụ hơi
-              </RouterLink>
-            </li>
-            <li>
-              <RouterLink href={CUSTOMER_ROUTES.products}>
-                Nhạc cụ gõ
-              </RouterLink>
-            </li>
+        <nav aria-label="Khám phá danh mục" className="flex flex-col gap-1">
+          <h3 className="text-xs font-semibold tracking-wider text-neutral-400 uppercase">Khám phá</h3>
+          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 mt-3">
+            {DISCOVER_LINKS.map((link) => (
+              <li key={link.label}>
+                <RouterLink href={link.href} className="text-sm text-neutral-300 hover:text-white transition-colors">
+                  {link.label}
+                </RouterLink>
+              </li>
+            ))}
           </ul>
-        </div>
+        </nav>
 
         {/* Column 3: Account */}
-        <div className="site-footer__col">
-          <h3 className="footer-heading">Tài khoản</h3>
-          <ul className="footer-nav">
+        <nav aria-label="Tài khoản" className="flex flex-col gap-1">
+          <h3 className="text-xs font-semibold tracking-wider text-neutral-400 uppercase">Tài khoản</h3>
+          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 mt-3">
             <li>
-              <RouterLink href={CUSTOMER_ROUTES.home}>
-                Đơn hàng của tôi
-              </RouterLink>
-            </li>
-            <li>
-              <RouterLink href={CUSTOMER_ROUTES.home}>
+              <RouterLink href={CUSTOMER_ROUTES.profile} className="text-sm text-neutral-300 hover:text-white transition-colors">
                 Hồ sơ cá nhân
               </RouterLink>
             </li>
           </ul>
-        </div>
+        </nav>
 
         {/* Column 4: Support */}
-        <div className="site-footer__col">
-          <h3 className="footer-heading">Hỗ trợ</h3>
-          <ul className="footer-nav">
+        <nav aria-label="Hỗ trợ" className="flex flex-col gap-1">
+          <h3 className="text-xs font-semibold tracking-wider text-neutral-400 uppercase">Hỗ trợ</h3>
+          <ul className="flex flex-col gap-2.5 list-none p-0 m-0 mt-3">
             <li>
-              <RouterLink href={CUSTOMER_ROUTES.home}>
-                Chat với nhân viên trực tuyến
+              <RouterLink href={CUSTOMER_ROUTES.login} className="text-sm text-neutral-300 hover:text-white transition-colors">
+                Chat với nhân viên
               </RouterLink>
             </li>
           </ul>
-          <p className="footer-support-note">
-            Đội ngũ tư vấn trực tuyến hỗ trợ thông tin chi tiết về từng nhạc cụ và kỹ thuật chơi.
-          </p>
-        </div>
+        </nav>
       </div>
 
-      <div className="site-footer__bottom">
-        <p>© {new Date().getFullYear()} M4N · Nhạc cụ truyền thống Việt Nam. Bảo lưu mọi quyền.</p>
+      <div className="border-t border-neutral-800/80 py-6 text-center text-xs text-neutral-500">
+        <p>© {new Date().getFullYear()} M4N · Nhạc cụ truyền thống Việt Nam.</p>
       </div>
     </footer>
   )

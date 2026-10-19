@@ -1,11 +1,22 @@
 import Button from './Button.jsx'
+import { TriangleAlert } from 'lucide-react'
 
 function ErrorState({ message, onRetry, title = 'Không thể tải dữ liệu' }) {
   return (
-    <div className="state-panel state-panel--error" role="alert">
-      <h2>{title}</h2>
-      <p>{message}</p>
-      {onRetry ? <Button onClick={onRetry}>Thử lại</Button> : null}
+    <div
+      className="flex flex-col items-center justify-center text-center p-8 sm:p-12 rounded-xl border border-border bg-surface shadow-2xs max-w-lg mx-auto my-6"
+      role="alert"
+    >
+      <div className="w-12 h-12 rounded-xl bg-danger-soft border border-danger-border flex items-center justify-center text-danger mb-3.5">
+        <TriangleAlert size={26} />
+      </div>
+      <h2 className="text-base sm:text-lg font-semibold text-ink mb-1">{title}</h2>
+      {message && <p className="text-sm text-muted mb-4 max-w-sm">{message}</p>}
+      {onRetry ? (
+        <Button variant="secondary" onClick={onRetry}>
+          Thử lại
+        </Button>
+      ) : null}
     </div>
   )
 }

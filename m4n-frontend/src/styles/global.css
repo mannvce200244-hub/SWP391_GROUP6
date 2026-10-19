@@ -1,39 +1,128 @@
+@import "tailwindcss";
+
+@theme {
+  /* ==================================================
+     TYPOGRAPHY SYSTEM
+     ================================================== */
+  --font-sans: "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Lora", Georgia, "Times New Roman", serif;
+
+  /* ==================================================
+     M4N PALETTE — Contemporary Vietnamese Craft Commerce
+     Approved: DESIGN_SYSTEM.md cool-neutral foundation
+     ================================================== */
+
+  /* PRIMARY: Deep Emerald Teal (fresh, elegant, soothing, artisan nature) */
+  --color-brand: #0D9488;
+  --color-brand-hover: #0F766E;
+  --color-brand-active: #115E59;
+  --color-brand-deep: #115E59;
+  --color-brand-soft: #F0FDFA;
+  --color-brand-border: #CCFBF1;
+
+  /* SECONDARY: Deep Jade (approved #2F5A50) */
+  --color-jade: #2F5A50;
+  --color-jade-hover: #24483F;
+  --color-jade-active: #1D3B34;
+  --color-jade-soft: #EDF4F1;
+  --color-jade-border: #D5E5E0;
+
+  /* ACCENT: Warm Gold Highlight */
+  --color-gold: #C28B2C;
+  --color-gold-hover: #A57323;
+  --color-gold-soft: #FDF8ED;
+  --color-gold-border: #F5E8C7;
+
+  /* ACCENT: Muted Coral Warm Touch */
+  --color-coral: #D96B5F;
+  --color-coral-hover: #C5594E;
+  --color-coral-soft: #FDF2F1;
+  --color-coral-border: #F7D9D5;
+
+  /* BACKGROUND & SURFACES — Approved cool-neutral foundation */
+  --color-background: #FFFFFF;
+  --color-canvas: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #FFFFFF;
+  --color-surface-muted: #F6F7F8;
+  --color-surface-subtle: #F2F4F5;
+  --color-surface-secondary: #F6F7F8;
+
+  /* INK & TYPOGRAPHY — Approved charcoal */
+  --color-foreground: #17191B;
+  --color-foreground-secondary: #2C3033;
+  --color-ink: #17191B;
+  --color-ink-secondary: #2C3033;
+  --color-muted: #5F646A;
+  --color-subtle: #7D8389;
+  --color-faint: #CDD2D5;
+
+  /* BORDERS — Approved cool neutral */
+  --color-border: #E3E6E8;
+  --color-border-subtle: #F2F4F5;
+  --color-border-strong: #CDD2D5;
+  --color-control-border: #CDD2D5;
+
+  /* SEMANTIC SHORTCUTS */
+  --color-primary: #0D9488;
+  --color-primary-hover: #0F766E;
+  --color-primary-soft: #F0FDFA;
+  --color-primary-border: #CCFBF1;
+
+  --color-danger: #EF4444;
+  --color-danger-soft: #FEF2F2;
+  --color-danger-border: #FECACA;
+
+  --color-success: #0D9488;
+  --color-success-soft: #F0FDFA;
+  --color-success-border: #CCFBF1;
+
+  --color-warning: #856404;
+  --color-warning-soft: #FFF9E6;
+  --color-warning-border: #FFEBAA;
+
+  --color-footer: #17191B;
+
+  /* RADII */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* SHADOWS — Clean Neutral Crisp Elevation */
+  --shadow-2xs: 0 1px 2px rgb(0 0 0 / 0.03);
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.03);
+}
+
 :root {
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
-  color: #1a1a1a;
-  background: #ffffff;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  --color-ink: #1a1a1a;
-  --color-muted: #6b6b67;
-  --color-surface: #ffffff;
-  --color-surface-secondary: #f6f6f4;
-  --color-surface-muted: #f4f4f1;
-  --color-canvas: #ffffff;
-  --color-footer: #171717;
-  --color-border: #e5e5e2;
-  --color-border-subtle: #eeeee9;
-  --color-accent: #8a4028;
-  --color-accent-strong: #69301e;
-  --color-accent-subtle: #ab5d43;
-  --color-accent-soft: #f8f6f3;
-  --shadow-soft: 0 1px 3px rgb(0 0 0 / 4%);
-  --shadow-hover: 0 4px 14px rgb(0 0 0 / 7%);
-  --radius-small: 0.25rem;
-  --radius-medium: 0.25rem;
-  --radius-large: 0.35rem;
-  --content-width: 88rem;
+  --background: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-muted: #F6F7F8;
+  --surface-subtle: #F2F4F5;
+  --foreground: #17191B;
+  --foreground-secondary: #2C3033;
+  --muted: #5F646A;
+  --border: #E3E6E8;
+  --border-strong: #CDD2D5;
+  --brand: #0D9488;
+  --brand-hover: #0F766E;
+  --brand-active: #115E59;
+  --brand-soft: #F0FDFA;
+  --jade: #2F5A50;
+  --jade-hover: #24483F;
+  --jade-soft: #EDF4F1;
+  --gold: #C28B2C;
+  --gold-soft: #FDF8ED;
+  --coral: #D96B5F;
+  --coral-soft: #FDF2F1;
 }
 
-* {
-  box-sizing: border-box;
-}
-
+/* Base Document Styles */
 html {
   scroll-behavior: smooth;
 }
@@ -42,64 +131,76 @@ body {
   margin: 0;
   min-width: 20rem;
   min-height: 100vh;
-  background: var(--color-canvas);
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-body,
-button,
-input,
-select {
-  font: inherit;
-}
-
-button,
-input,
-select {
-  color: inherit;
-}
-
+/* Interactive elements default tap/touch behavior */
 button,
 a,
 input,
 select,
-summary {
+summary,
+textarea {
   -webkit-tap-highlight-color: transparent;
-}
-
-button,
-a,
-summary {
   touch-action: manipulation;
-}
-
-a {
-  color: inherit;
+  font-family: inherit;
 }
 
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible,
-summary:focus-visible {
-  outline: 3px solid #b6764f;
-  outline-offset: 3px;
+textarea:focus-visible,
+summary:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }
 
-h1,
-h2,
-p {
-  margin-top: 0;
+/* ==================================================
+   RESONANCE MOTIF & ACOUSTIC WAVEFORMS
+   Acoustic string vibrations in authentic lacquer red
+   ================================================== */
+.resonance-motif {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 12px;
+  vertical-align: middle;
+  color: var(--color-brand);
+  flex-shrink: 0;
 }
 
-h1,
-h2 {
-  text-wrap: balance;
+.resonance-motif span {
+  display: block;
+  width: 1.5px;
+  border-radius: 0.75px;
+  background: currentColor;
 }
 
-p {
-  line-height: 1.7;
+.resonance-motif span:nth-child(1) { height: 7px; }
+.resonance-motif span:nth-child(2) { height: 12px; }
+.resonance-motif span:nth-child(3) { height: 9px; }
+.resonance-motif span:nth-child(4) { height: 5px; }
+
+/* Clean subtle hover elevation for products and cards */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
 }
 
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-border-strong);
+}
+
+/* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -110,3 +211,4 @@ p {
     transition-duration: 0.01ms !important;
   }
 }
+
