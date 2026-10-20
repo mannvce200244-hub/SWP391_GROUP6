@@ -3,13 +3,37 @@ import productCatalogAdapter from '../api/productCatalogAdapter.js'
 function createProductService(adapter) {
   return Object.freeze({
     async listProducts(filters) {
-      const products = await adapter.listProducts(filters)
-
-      if (!Array.isArray(products)) {
-        throw new Error('Product catalog response must be an array.')
+      const result = await adapter.listProducts(filters)
+      if (Array.isArray(result)) {
+        return result
       }
+      if (result && Array.isArray(result.products)) {
+        return result.products
+      }
+      return []
+    },
 
-      return products
+    async listProductsPage(filters) {
+      const result = await adapter.listProducts(filters)
+      if (result && Array.isArray(result.products)) {
+        return result
+      }
+      if (Array.isArray(result)) {
+        return {
+          products: result,
+          totalPages: 1,
+          totalElements: result.length,
+          page: 1,
+          size: result.length,
+        }
+      }
+      return {
+        products: [],
+        totalPages: 1,
+        totalElements: 0,
+        page: 1,
+        size: 9,
+      }
     },
 
     async getProductById(productId) {
@@ -23,6 +47,10 @@ function createProductService(adapter) {
       }
 
       return product
+    },
+
+    async getCategories() {
+      return adapter.getCategories()
     },
   })
 }

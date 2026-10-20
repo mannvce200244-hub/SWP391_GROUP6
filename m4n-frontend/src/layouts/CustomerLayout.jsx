@@ -1,5 +1,6 @@
 import SiteFooter from '../components/common/SiteFooter.jsx'
 import SiteHeader from '../components/common/SiteHeader.jsx'
+import CustomerChatWidget from '../features/chat/CustomerChatWidget.jsx'
 
 function CustomerLayout({ children, pathname }) {
   return (
@@ -15,6 +16,7 @@ function CustomerLayout({ children, pathname }) {
         {children}
       </main>
       <SiteFooter />
+      <CustomerChatWidget />
     </div>
   )
 }

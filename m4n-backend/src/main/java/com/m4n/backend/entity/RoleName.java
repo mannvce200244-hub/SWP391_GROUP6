@@ -4,5 +4,6 @@ public enum RoleName {
     CUSTOMER,
     ONLINE_STAFF,
     POS_STAFF,
-    ADMIN
+    ADMIN,
+    SUPER_ADMIN
 }

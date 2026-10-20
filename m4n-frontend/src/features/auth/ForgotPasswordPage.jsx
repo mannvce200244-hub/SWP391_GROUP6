@@ -4,7 +4,7 @@ import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import useAuth from './useAuth.js'
 import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { IconCheckCircle } from '../../components/ui/Icons.jsx'
+import { CircleCheck } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 
 function ForgotPasswordPage() {
@@ -58,7 +58,7 @@ function ForgotPasswordPage() {
       {isSubmitted ? (
         <div className="flex flex-col items-center text-center py-6 px-4 gap-3 bg-jade-soft/30 border border-jade-border rounded-xl" role="status">
           <div className="w-14 h-14 rounded-full bg-jade-soft flex items-center justify-center text-jade mb-2">
-            <IconCheckCircle size={32} />
+            <CircleCheck size={32} />
           </div>
           <h2 className="text-xl font-bold text-ink">Đã gửi hướng dẫn</h2>
           <p className="text-sm text-muted leading-relaxed max-w-sm">

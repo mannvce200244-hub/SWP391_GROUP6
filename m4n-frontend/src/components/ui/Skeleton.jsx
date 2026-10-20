@@ -34,14 +34,18 @@ export function Skeleton({
 
 export function ProductCardSkeleton() {
   return (
-    <div className="flex flex-col rounded-lg border border-border bg-surface overflow-hidden shadow-xs" aria-hidden="true">
-      <div className="aspect-square w-full bg-surface-secondary">
+    <div className="flex flex-col h-full" aria-hidden="true">
+      <div className="aspect-square w-full rounded-xl overflow-hidden bg-surface-secondary/70 border border-border/40">
         <Skeleton height="100%" variant="rect" width="100%" />
       </div>
-      <div className="p-4 flex flex-col gap-2.5">
-        <Skeleton height="0.875rem" variant="text" width="40%" />
-        <Skeleton height="1.25rem" variant="text" width="85%" />
-        <Skeleton height="1.125rem" variant="text" width="50%" />
+      <div className="pt-3 pb-1 flex flex-col flex-1 gap-2">
+        <Skeleton height="0.75rem" variant="text" width="30%" />
+        <Skeleton height="1.125rem" variant="text" width="85%" />
+        <Skeleton height="0.875rem" variant="text" width="50%" />
+        <div className="mt-auto pt-2 flex items-center justify-between">
+          <Skeleton height="1.125rem" variant="text" width="40%" />
+          <Skeleton height="0.875rem" variant="text" width="20%" />
+        </div>
       </div>
     </div>
   )
@@ -49,7 +53,11 @@ export function ProductCardSkeleton() {
 
 export function ProductGridSkeleton({ count = 6 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy="true" aria-label="Đang tải danh sách sản phẩm">
+    <div
+      aria-busy="true"
+      aria-label="Đang tải danh sách sản phẩm"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8"
+    >
       {Array.from({ length: count }).map((_, idx) => (
         <ProductCardSkeleton key={idx} />
       ))}
@@ -59,18 +67,29 @@ export function ProductGridSkeleton({ count = 6 }) {
 
 export function ProductDetailSkeleton() {
   return (
-    <article className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12" aria-hidden="true">
-      <div className="aspect-square w-full rounded-xl overflow-hidden bg-surface-secondary border border-border">
-        <Skeleton height="100%" variant="rect" width="100%" />
+    <article className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start" aria-hidden="true">
+      <div className="lg:col-span-7 flex flex-col gap-3.5">
+        <div className="aspect-4/3 sm:aspect-square w-full rounded-2xl overflow-hidden bg-surface-secondary/70 border border-border/40">
+          <Skeleton height="100%" variant="rect" width="100%" />
+        </div>
+        <div className="flex gap-2.5">
+          <Skeleton className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl" variant="rect" />
+          <Skeleton className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl" variant="rect" />
+          <Skeleton className="w-18 h-18 sm:w-20 sm:h-20 rounded-xl" variant="rect" />
+        </div>
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="lg:col-span-5 flex flex-col gap-5 bg-surface p-6 sm:p-8 rounded-2xl border border-border/80 shadow-xs">
         <Skeleton height="0.875rem" variant="text" width="30%" />
-        <Skeleton height="2rem" variant="text" width="80%" />
-        <Skeleton height="1.75rem" variant="text" width="45%" />
-        <div className="mt-6 flex flex-col gap-3">
-          <Skeleton height="1.25rem" variant="text" width="100%" />
-          <Skeleton height="1.25rem" variant="text" width="90%" />
-          <Skeleton height="1.25rem" variant="text" width="70%" />
+        <Skeleton height="2.5rem" variant="text" width="85%" />
+        <Skeleton height="2rem" variant="text" width="45%" />
+        <div className="h-px bg-border/60 my-1" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-14 rounded-lg" variant="rect" />
+          <Skeleton className="h-14 rounded-lg" variant="rect" />
+        </div>
+        <div className="mt-2 flex gap-3.5">
+          <Skeleton className="h-11 w-32 rounded-lg" variant="rect" />
+          <Skeleton className="h-11 flex-1 rounded-lg" variant="rect" />
         </div>
       </div>
     </article>

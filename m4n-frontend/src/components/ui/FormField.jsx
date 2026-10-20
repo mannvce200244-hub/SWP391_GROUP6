@@ -11,7 +11,7 @@ function FormField({
   return (
     <div className={`flex flex-col gap-1.5 w-full ${className}`.trim()}>
       {label && (
-        <div className="flex items-center justify-between text-xs font-semibold text-ink uppercase tracking-wider">
+        <div className="flex items-center justify-between text-sm font-medium text-ink">
           <label htmlFor={id} className="cursor-pointer">
             {label}
             {required && (

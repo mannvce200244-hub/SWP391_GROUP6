@@ -1,6 +1,39 @@
 import { useState, useCallback } from 'react'
 import { ToastContext } from './ToastContext.js'
-import { IconCheckCircle, IconAlertCircle, IconX } from './Icons.jsx'
+import {
+  CircleCheck,
+  CircleX,
+  TriangleAlert,
+  Info,
+  X,
+} from 'lucide-react'
+
+const TOAST_THEMES = {
+  success: {
+    border: 'border-jade-border/80',
+    bg: 'bg-jade-soft/40',
+    text: 'text-jade',
+    Icon: CircleCheck,
+  },
+  error: {
+    border: 'border-danger-border',
+    bg: 'bg-danger-soft/40',
+    text: 'text-danger',
+    Icon: CircleX,
+  },
+  warning: {
+    border: 'border-warning-border',
+    bg: 'bg-warning-soft/40',
+    text: 'text-warning',
+    Icon: TriangleAlert,
+  },
+  info: {
+    border: 'border-border',
+    bg: 'bg-surface-secondary',
+    text: 'text-secondary',
+    Icon: Info,
+  },
+}
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
@@ -29,22 +62,15 @@ export function ToastProvider({ children }) {
         role="status"
       >
         {toasts.map((toast) => {
-          const isSuccess = toast.type === 'success'
+          const theme = TOAST_THEMES[toast.type] || TOAST_THEMES.info
+          const ToastIcon = theme.Icon
           return (
             <div
               key={toast.id}
-              className={`pointer-events-auto flex items-center gap-3 p-3.5 rounded-lg border shadow-md bg-surface text-ink text-sm ${
-                isSuccess
-                  ? 'border-jade-border/80 bg-jade-soft/30'
-                  : 'border-brand-border/80 bg-brand-soft/30'
-              }`}
+              className={`pointer-events-auto flex items-center gap-3 p-3.5 rounded-lg border shadow-md bg-surface text-ink text-sm ${theme.border} ${theme.bg}`}
             >
-              <span className={`shrink-0 ${isSuccess ? 'text-jade' : 'text-brand'}`}>
-                {isSuccess ? (
-                  <IconCheckCircle size={18} />
-                ) : (
-                  <IconAlertCircle size={18} />
-                )}
+              <span className={`shrink-0 ${theme.text}`}>
+                <ToastIcon size={18} />
               </span>
               <span className="flex-1 font-medium text-ink leading-snug">{toast.message}</span>
               <button
@@ -53,7 +79,7 @@ export function ToastProvider({ children }) {
                 onClick={() => removeToast(toast.id)}
                 aria-label="Đóng thông báo"
               >
-                <IconX size={16} />
+                <X size={16} />
               </button>
             </div>
           )
