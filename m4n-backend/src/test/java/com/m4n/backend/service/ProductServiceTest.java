@@ -356,6 +356,39 @@ class ProductServiceTest {
     }
 
     @Test
+    @DisplayName("Should update owned product media metadata and display order")
+    void shouldUpdateOwnedProductMediaAndDisplayOrder() {
+        Product product = Product.builder().id(100L).build();
+        ProductMedia media = ProductMedia.builder()
+                .id(10L)
+                .product(product)
+                .url("/img/old.jpg")
+                .mediaType(MediaType.IMAGE)
+                .altText("Old")
+                .sortOrder(3)
+                .build();
+
+        when(productRepository.existsById(100L)).thenReturn(true);
+        when(productMediaRepository.findByIdAndProductId(10L, 100L)).thenReturn(Optional.of(media));
+        when(productMediaRepository.save(media)).thenReturn(media);
+
+        var request = new com.m4n.backend.dto.request.UpdateProductMediaRequest(
+                MediaType.VIDEO,
+                "/video/demo.mp4",
+                "Video demo",
+                0
+        );
+
+        var response = productService.updateProductMedia(100L, 10L, request);
+
+        assertThat(response.id()).isEqualTo(10L);
+        assertThat(response.type()).isEqualTo("VIDEO");
+        assertThat(response.url()).isEqualTo("/video/demo.mp4");
+        assertThat(response.alt()).isEqualTo("Video demo");
+        assertThat(response.sortOrder()).isZero();
+    }
+
+    @Test
     @DisplayName("Should delete product media item when owned by product")
     void shouldDeleteProductMediaWhenOwnedByProduct() {
         ProductMedia media = ProductMedia.builder()

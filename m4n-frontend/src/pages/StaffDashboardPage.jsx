@@ -1,72 +1,40 @@
 import useAuth from '../features/auth/useAuth.js'
-import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
+import RouterLink from '../routes/RouterLink.jsx'
+import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
 import {
-  UserRound,
-  Lock,
-  Store,
   ChevronRight,
   Package,
-  Check,
-  CircleAlert,
-  BookOpen,
+  MessageCircle,
+  Search,
 } from 'lucide-react'
-import { IconInstrument } from '../components/ui/Icons.jsx'
-import StaffChatWorkspace from '../features/chat/StaffChatWorkspace.jsx'
 
 function StaffDashboardPage() {
   const { user } = useAuth()
 
-  const staffModules = [
+  const quickActions = [
     {
-      title: 'Tra cứu danh mục sản phẩm',
-      description: 'Kiểm tra thông số kỹ thuật, âm sắc, chất liệu và nghệ nhân để tư vấn khách mua đàn.',
-      path: CUSTOMER_ROUTES.products,
-      Icon: IconInstrument,
-      badge: 'Kho di sản',
+      title: 'Đơn hàng online',
+      description: 'Xem, xác nhận và xử lý đơn hàng trực tuyến từ khách hàng.',
+      path: CUSTOMER_ROUTES.staffOrders,
+      Icon: Package,
       accentColor: 'text-[#1F6B5A]',
       accentBg: 'bg-emerald-50',
     },
     {
-      title: 'Xem website mua sắm',
-      description: 'Trải nghiệm giao diện và quy trình đặt hàng dưới góc nhìn của khách hàng trực tuyến.',
-      path: CUSTOMER_ROUTES.home,
-      Icon: Store,
-      badge: 'Khách hàng',
-      accentColor: 'text-[#0D9488]',
-      accentBg: 'bg-teal-50',
-    },
-    {
-      title: 'Hồ sơ nhân viên',
-      description: 'Cập nhật số điện thoại và thông tin liên lạc nội bộ của bạn trong hệ thống.',
-      path: CUSTOMER_ROUTES.profile,
-      Icon: UserRound,
-      badge: 'Cá nhân',
+      title: 'Hỗ trợ khách hàng',
+      description: 'Tiếp nhận và phản hồi tin nhắn hỗ trợ từ khách hàng.',
+      path: CUSTOMER_ROUTES.staffChat,
+      Icon: MessageCircle,
       accentColor: 'text-sky-600',
       accentBg: 'bg-sky-50',
     },
     {
-      title: 'Bảo mật ca làm việc',
-      description: 'Đổi mật khẩu định kỳ và quản trị phiên đăng nhập an toàn theo tiêu chuẩn bảo mật.',
-      path: CUSTOMER_ROUTES.security,
-      Icon: Lock,
-      badge: 'Bảo mật',
+      title: 'Tra cứu sản phẩm',
+      description: 'Tra cứu thông tin sản phẩm để hỗ trợ xử lý đơn và tư vấn.',
+      path: CUSTOMER_ROUTES.staffProducts,
+      Icon: Search,
       accentColor: 'text-indigo-600',
       accentBg: 'bg-indigo-50',
-    },
-  ]
-
-  const operationalGuidelines = [
-    {
-      title: 'Quy chuẩn đóng gói & Bảo hiểm nhạc cụ',
-      desc: 'Mọi nhạc cụ dây (Đàn Tranh, Đàn Bầu, Đàn Nguyệt) đều phải bọc 3 lớp chống sốc và kèm phiếu bảo hành nghệ nhân.',
-    },
-    {
-      title: 'Tư vấn nhiệt độ & Độ ẩm bảo quản gỗ',
-      desc: 'Nhắc khách hàng giữ đàn ở độ ẩm 50%–65%, tránh ánh nắng trực tiếp hoặc để quá gần luồng gió điều hòa mạnh.',
-    },
-    {
-      title: 'Chính sách thẩm định âm sắc làng nghề',
-      desc: 'Khách hàng được hỗ trợ đổi trả trong 7 ngày nếu âm sắc không đạt chuẩn hoặc có vết nứt vỡ do vận chuyển.',
     },
   ]
 
@@ -79,19 +47,17 @@ function StaffDashboardPage() {
             <span className="text-xs font-semibold uppercase tracking-wider text-[#1F6B5A]">
               Bàn Làm Việc Online
             </span>
-            <span className="text-zinc-300">/</span>
-            <span className="text-xs text-muted font-medium">Bán lẻ & Tư vấn di sản</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight font-sans">
             Xin chào, {user?.fullName || 'Nhân viên'}
           </h1>
           <p className="text-xs sm:text-sm text-muted">
-            Khu vực thao tác và quản lý danh mục dành cho nhân viên bán lẻ trực tuyến M4N.
+            Tổng hợp công việc và truy cập nhanh các chức năng vận hành.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <div className="flex flex-col px-4 py-2 rounded-xl bg-[#F5F7FA] border border-border text-xs">
+          <div className="flex flex-col px-4 py-2 rounded-xl bg-[#F6F7F8] border border-border text-xs">
             <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
               Tài khoản ca trực
             </span>
@@ -109,82 +75,22 @@ function StaffDashboardPage() {
         </div>
       </div>
 
-      {/* Staff Operational Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Kênh hỗ trợ online</span>
-            <p className="text-2xl font-bold text-[#1F6B5A]">Sẵn sàng</p>
-            <span className="text-xs text-emerald-700 font-medium mt-0.5">Tiếp nhận yêu cầu tư vấn</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-[#1F6B5A] flex items-center justify-center shrink-0">
-            <Check size={20} />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Mẫu nhạc cụ hiển thị</span>
-            <p className="text-2xl font-bold text-ink">8 mẫu di sản</p>
-            <span className="text-xs text-zinc-500 mt-0.5">Làng Đào Xá, Trúc Sơn, Đọi Tam</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0">
-            <Package size={20} />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Cảnh báo tồn kho</span>
-            <p className="text-2xl font-bold text-amber-600">3 mẫu</p>
-            <span className="text-xs text-amber-600 font-medium mt-0.5">Lưu ý trước khi chốt đơn</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
-            <CircleAlert size={20} />
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Phiên đăng nhập</span>
-            <p className="text-2xl font-bold text-ink">Bảo mật cao</p>
-            <span className="text-xs text-zinc-500 mt-0.5">Xác thực token JWT an toàn</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0">
-            <Lock size={20} />
-          </div>
-        </div>
-      </div>
-
-      {/* Customer Support Chat Workspace */}
-      <div className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-base font-bold text-ink">Bàn tư vấn & Hỗ trợ khách hàng trực tuyến</h2>
-          <p className="text-xs text-muted">Tiếp nhận tin nhắn tư vấn và phản hồi khách hàng trong thời gian thực.</p>
-        </div>
-        <StaffChatWorkspace />
-      </div>
-
       {/* Quick Action Modules */}
       <div className="flex flex-col gap-4">
-        <h2 className="text-base font-bold text-ink">Chức năng làm việc nội bộ</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {staffModules.map((item) => {
+        <h2 className="text-base font-bold text-ink">Chức năng vận hành</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {quickActions.map((item) => {
             const ItemIcon = item.Icon
             return (
-              <button
+              <RouterLink
                 key={item.path}
-                type="button"
-                className="flex flex-col rounded-2xl bg-white border border-border p-5 shadow-xs hover:shadow-md hover:border-zinc-300 transition-all duration-200 text-left group cursor-pointer"
-                onClick={() => navigateTo(item.path)}
+                href={item.path}
+                className="flex flex-col rounded-2xl bg-white border border-border p-5 shadow-xs hover:shadow-md hover:border-zinc-300 transition-[border-color,box-shadow] duration-200 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
               >
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <div className={`w-10 h-10 rounded-xl ${item.accentBg} ${item.accentColor} flex items-center justify-center transition-colors`}>
                     <ItemIcon size={20} />
                   </div>
-                  <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-zinc-100 text-zinc-600 uppercase tracking-wider">
-                    {item.badge}
-                  </span>
                 </div>
                 <h3 className="text-sm font-bold text-ink group-hover:text-[#1F6B5A] transition-colors mb-1.5">
                   {item.title}
@@ -196,30 +102,9 @@ function StaffDashboardPage() {
                   <span>Mở chức năng</span>
                   <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </div>
-              </button>
+              </RouterLink>
             )
           })}
-        </div>
-      </div>
-
-      {/* Guidelines & Cultural Knowledge Section */}
-      <div className="bg-white rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-surface-secondary text-[#1F6B5A] border border-border/80 flex items-center justify-center font-bold text-xs">
-            <BookOpen size={16} />
-          </span>
-          <h2 className="text-base font-bold text-ink">
-            Quy chuẩn tư vấn & Lưu ý nhạc cụ truyền thống
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {operationalGuidelines.map((g, idx) => (
-            <div key={idx} className="p-4 rounded-xl bg-[#F5F7FA] border border-border flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-ink">{g.title}</span>
-              <p className="text-xs text-muted leading-relaxed">{g.desc}</p>
-            </div>
-          ))}
         </div>
       </div>
     </div>

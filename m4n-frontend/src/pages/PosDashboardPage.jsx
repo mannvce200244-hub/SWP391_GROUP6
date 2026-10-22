@@ -483,7 +483,7 @@ function PosDashboardPage() {
                             prod.quantity > 5
                               ? 'bg-emerald-600/90 text-white'
                               : prod.quantity > 0
-                              ? 'bg-amber-600/90 text-white'
+                              ? 'bg-brand text-white'
                               : 'bg-rose-600/90 text-white'
                           }`}
                         >
@@ -802,7 +802,7 @@ function PosDashboardPage() {
               )}
 
               {!scannerSupported && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                <div className="p-3 rounded-xl bg-[#F6F7F8] border border-amber-200 text-amber-800 text-xs">
                   Trình duyệt chưa hỗ trợ tự động BarcodeDetector. Bạn có thể nhập mã vạch bằng tay bên dưới hoặc dùng máy quét USB / Bluetooth cầm tay.
                 </div>
               )}

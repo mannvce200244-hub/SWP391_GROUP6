@@ -15,7 +15,7 @@ function getStockBadge(status) {
     case 'IN_STOCK':
       return { label: 'Còn hàng', className: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
     case 'LOW_STOCK':
-      return { label: 'Sắp hết', className: 'text-amber-700 bg-amber-50 border-amber-200' }
+      return { label: 'Sắp hết', className: 'text-amber-800 bg-[#F6F7F8] border-amber-200' }
     case 'OUT_OF_STOCK':
       return { label: 'Hết hàng', className: 'text-rose-700 bg-rose-50 border-rose-200' }
     default:

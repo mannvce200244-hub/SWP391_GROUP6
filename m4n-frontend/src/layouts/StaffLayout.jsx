@@ -3,7 +3,6 @@ import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
   LayoutDashboard,
-  Store,
   UserRound,
   Lock,
   LogOut,
@@ -14,8 +13,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Package,
+  MessageCircle,
+  Bell,
+  Search,
 } from 'lucide-react'
-import { IconInstrument } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
 import BrandLogo from '../components/common/BrandLogo.jsx'
 import NotificationBell from '../components/common/NotificationBell.jsx'
@@ -53,31 +54,42 @@ function StaffLayout({ children, pathname }) {
 
   const navSections = [
     {
-      title: 'TỔNG QUAN & VẬN HÀNH',
+      title: 'TỔNG QUAN',
       items: [
-        { label: 'Hỗ trợ khách hàng', path: CUSTOMER_ROUTES.staff, Icon: LayoutDashboard },
+        { label: 'Công việc hôm nay', path: CUSTOMER_ROUTES.staff, Icon: LayoutDashboard },
+      ],
+    },
+    {
+      title: 'VẬN HÀNH',
+      items: [
         { label: 'Đơn hàng online', path: CUSTOMER_ROUTES.staffOrders, Icon: Package },
+        { label: 'Hỗ trợ khách hàng', path: CUSTOMER_ROUTES.staffChat, Icon: MessageCircle },
       ],
     },
     {
-      title: 'TRA CỨU DI SẢN',
+      title: 'TRA CỨU',
       items: [
-        { label: 'Kho & Tra cứu nhạc cụ', path: CUSTOMER_ROUTES.products, Icon: IconInstrument },
-        { label: 'Website khách hàng', path: CUSTOMER_ROUTES.home, Icon: Store },
+        { label: 'Tra cứu sản phẩm', path: CUSTOMER_ROUTES.staffProducts, Icon: Search },
       ],
     },
     {
-      title: 'TÀI KHOẢN',
+      title: 'THÔNG BÁO',
       items: [
-        { label: 'Hồ sơ cá nhân', path: CUSTOMER_ROUTES.profile, Icon: UserRound },
-        { label: 'Bảo mật tài khoản', path: CUSTOMER_ROUTES.security, Icon: Lock },
+        { label: 'Thông báo', path: CUSTOMER_ROUTES.staffNotifications, Icon: Bell },
       ],
     },
   ]
 
   const allNavItems = navSections.flatMap((s) => s.items)
   const currentNavItem = allNavItems.find((item) => item.path === pathname)
-  const pageTitle = currentNavItem ? currentNavItem.label : 'Bàn làm việc Online Staff'
+  let pageTitle = 'Bàn làm việc Online Staff'
+  if (currentNavItem) {
+    pageTitle = currentNavItem.label
+  } else if (pathname === CUSTOMER_ROUTES.staffProfile) {
+    pageTitle = 'Hồ sơ nhân viên'
+  } else if (pathname === CUSTOMER_ROUTES.staffSecurity) {
+    pageTitle = 'Bảo mật tài khoản'
+  }
 
   return (
     <div className="min-h-screen flex bg-[#F5F7FA] text-[#17191B]">
@@ -335,7 +347,7 @@ function StaffLayout({ children, pathname }) {
                     role="menuitem"
                     onClick={() => {
                       setDropdownOpen(false)
-                      navigateTo(CUSTOMER_ROUTES.profile)
+                      navigateTo(CUSTOMER_ROUTES.staffProfile)
                     }}
                   >
                     <UserRound size={16} />
@@ -348,7 +360,7 @@ function StaffLayout({ children, pathname }) {
                     role="menuitem"
                     onClick={() => {
                       setDropdownOpen(false)
-                      navigateTo(CUSTOMER_ROUTES.security)
+                      navigateTo(CUSTOMER_ROUTES.staffSecurity)
                     }}
                   >
                     <Lock size={16} />
@@ -373,7 +385,7 @@ function StaffLayout({ children, pathname }) {
         </header>
 
         {/* Main Content Workspace */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 w-full min-w-0">
           {children}
         </main>
       </div>

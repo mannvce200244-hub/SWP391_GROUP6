@@ -56,7 +56,7 @@ function BrandLogo({ variant = 'default', className = '', collapsed = false }) {
           <span className={`text-lg font-extrabold tracking-tight font-sans ${isDark ? 'text-white' : 'text-ink'}`}>
             M4N
           </span>
-          <span className={`text-[9px] font-semibold tracking-wider font-sans uppercase mt-0.5 ${isDark ? 'text-white/60' : 'text-muted'}`}>
+          <span className={`text-[9px] font-semibold tracking-wider font-sans uppercase mt-0.5 max-[420px]:hidden ${isDark ? 'text-white/60' : 'text-muted'}`}>
             NHẠC CỤ TRUYỀN THỐNG
           </span>
         </div>

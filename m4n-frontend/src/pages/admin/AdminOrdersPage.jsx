@@ -24,11 +24,11 @@ const ADMIN_STATUS_TABS = [
 function getStatusBadge(status) {
   switch (status) {
     case 'PENDING_CONFIRMATION':
-      return { label: 'Chờ xác nhận', className: 'text-amber-700 bg-amber-50 border-amber-200' }
+      return { label: 'Chờ xác nhận', className: 'text-amber-800 bg-[#F6F7F8] border-amber-200' }
     case 'CONFIRMED':
       return { label: 'Đã xác nhận', className: 'text-teal-700 bg-teal-50 border-teal-200' }
     case 'OUT_OF_STOCK_WAITING':
-      return { label: 'Chờ xử lý tồn kho', className: 'text-orange-700 bg-orange-50 border-orange-200' }
+      return { label: 'Chờ xử lý tồn kho', className: 'text-orange-800 bg-[#F6F7F8] border-orange-200' }
     case 'COMPLETED':
       return { label: 'Hoàn thành', className: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
     case 'CANCELLED':

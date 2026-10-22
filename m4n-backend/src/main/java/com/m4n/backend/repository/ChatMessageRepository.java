@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
@@ -17,6 +18,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     List<ChatMessage> findByConversationIdOrderByCreatedAtAscIdAsc(Long conversationId);
 
     Page<ChatMessage> findByConversationIdOrderByCreatedAtAscIdAsc(Long conversationId, Pageable pageable);
+
+    Optional<ChatMessage> findFirstByConversationIdOrderByCreatedAtDescIdDesc(Long conversationId);
 
     @Modifying
     @Query("UPDATE ChatMessage m SET m.isRead = true WHERE m.conversation.id = :conversationId AND m.sender.id <> :readerId AND m.isRead = false")

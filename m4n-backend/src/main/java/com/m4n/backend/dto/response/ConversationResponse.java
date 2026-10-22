@@ -14,6 +14,8 @@ public record ConversationResponse(
         ConversationStatus status,
         Instant createdAt,
         Instant updatedAt,
+        Instant lastMessageAt,
+        Instant closedAt,
         long unreadCount,
         ChatMessageResponse lastMessage
 ) {}

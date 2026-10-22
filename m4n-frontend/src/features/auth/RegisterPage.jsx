@@ -4,7 +4,7 @@ import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import useAuth from './useAuth.js'
 import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { CircleAlert, CircleCheck } from 'lucide-react'
+import { CircleX, CircleCheck } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 
 function RegisterPage() {
@@ -124,10 +124,10 @@ function RegisterPage() {
           {generalError && (
             <div
               role="alert"
-              className="flex items-start gap-2.5 p-3.5 rounded-lg border border-brand-border bg-brand-soft text-brand text-sm leading-snug"
+              className="flex items-start gap-2.5 p-3.5 rounded-lg border border-danger-border bg-danger-soft text-danger text-sm leading-snug"
               aria-live="assertive"
             >
-              <CircleAlert size={18} className="shrink-0 mt-0.5" />
+              <CircleX size={18} className="shrink-0 mt-0.5" />
               <span>{generalError}</span>
             </div>
           )}

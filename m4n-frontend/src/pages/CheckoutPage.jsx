@@ -550,7 +550,7 @@ function CheckoutPage() {
                         </span>
                       </div>
                       <p className="text-xs text-muted mt-1">
-                        Quý khách kiểm tra nhạc cụ, phiếu bảo hành và thanh toán tiền mặt trực tiếp cho nhân viên vận chuyển khi nhận hàng.
+                        Quý khách kiểm tra thông tin đơn hàng và thanh toán tiền mặt trực tiếp cho nhân viên vận chuyển khi nhận hàng.
                       </p>
                     </div>
                   </label>
@@ -656,7 +656,7 @@ function CheckoutPage() {
                 </div>
 
                 {/* Business Explanation Note per Rule 34 */}
-                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 space-y-1">
+                <div className="p-3.5 rounded-2xl bg-[#F6F7F8] border border-amber-200/80 text-xs text-amber-900 space-y-1">
                   <p className="font-bold flex items-center gap-1.5">
                     <span>Lưu ý về đơn hàng trực tuyến:</span>
                   </p>

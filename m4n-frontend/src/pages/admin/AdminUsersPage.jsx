@@ -14,7 +14,7 @@ import {
 const ROLE_DEFINITIONS = Object.freeze({
   CUSTOMER: { label: 'Khách hàng', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' },
   ONLINE_STAFF: { label: 'Nhân viên Online', bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
-  POS_STAFF: { label: 'Nhân viên POS', bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200' },
+  POS_STAFF: { label: 'Nhân viên POS', bg: 'bg-[#F6F7F8]', text: 'text-amber-800', border: 'border-amber-200' },
   ADMIN: { label: 'Quản trị viên', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
   SUPER_ADMIN: { label: 'Super Admin', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
 })
@@ -348,8 +348,8 @@ export function AdminUsersPage() {
   const isSelf = selectedUser?.id === currentUser?.id
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full">
-      {/* Page Header */}
+    <div className="flex flex-col gap-6 w-full">
+      {/* 1. Header Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-[#E5E8EB] shadow-2xs">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#17191B] tracking-tight">
@@ -421,7 +421,7 @@ export function AdminUsersPage() {
           }}
           className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
             roleFilter === 'POS_STAFF'
-              ? 'bg-amber-600 text-white shadow-xs'
+              ? 'bg-brand text-white shadow-xs'
               : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
           }`}
         >
@@ -868,7 +868,7 @@ export function AdminUsersPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-xs text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-center gap-2">
+                  <div className="text-xs text-amber-800 bg-[#F6F7F8] p-3 rounded-xl border border-amber-200 flex items-center gap-2">
                     <CircleAlert size={15} className="shrink-0 text-amber-700" />
                     <span>Chỉ Super Admin mới có thẩm quyền sửa đổi vai trò của tài khoản Quản trị viên.</span>
                   </div>
@@ -927,7 +927,7 @@ export function AdminUsersPage() {
               {conflictMessage}
             </p>
 
-            <div className="bg-amber-50 p-3.5 rounded-xl border border-amber-200 text-xs text-amber-800 mb-5">
+            <div className="bg-[#F6F7F8] p-3.5 rounded-xl border border-amber-200 text-xs text-amber-800 mb-5">
               Để bảo vệ tính toàn vẹn dữ liệu, các thay đổi vừa rồi chưa được lưu đè. Vui lòng tải lại dữ liệu mới nhất trước khi chỉnh sửa tiếp.
             </div>
 

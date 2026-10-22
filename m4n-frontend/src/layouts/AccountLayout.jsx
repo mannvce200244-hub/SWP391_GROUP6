@@ -1,4 +1,9 @@
-import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
+import {
+  CUSTOMER_ROUTES,
+  getProfileRouteForRole,
+  getSecurityRouteForRole,
+  navigateTo,
+} from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
   UserRound,
@@ -91,7 +96,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                       ? 'bg-brand text-white shadow-md shadow-brand/20'
                       : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                   }`}
-                  onClick={() => navigateTo(CUSTOMER_ROUTES.profile)}
+                  onClick={() => navigateTo(getProfileRouteForRole(user?.role))}
                 >
                   <span className="flex items-center gap-3">
                     <UserRound
@@ -115,7 +120,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                       ? 'bg-brand text-white shadow-md shadow-brand/20'
                       : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                   }`}
-                  onClick={() => navigateTo(CUSTOMER_ROUTES.security)}
+                  onClick={() => navigateTo(getSecurityRouteForRole(user?.role))}
                 >
                   <span className="flex items-center gap-3">
                     <Shield
@@ -132,29 +137,31 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                   />
                 </button>
 
-                <button
-                  type="button"
-                  className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
-                    activeTab === 'orders'
-                      ? 'bg-brand text-white shadow-md shadow-brand/20'
-                      : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
-                  }`}
-                  onClick={() => navigateTo(CUSTOMER_ROUTES.orders)}
-                >
-                  <span className="flex items-center gap-3">
-                    <Package
-                      size={18}
-                      className={activeTab === 'orders' ? 'text-white' : 'text-subtle group-hover:text-ink'}
-                    />
-                    <span>Đơn hàng của tôi</span>
-                  </span>
-                  <ChevronRight
-                    size={16}
-                    className={`transition-transform ${
-                      activeTab === 'orders' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
+                {user?.role === 'CUSTOMER' && (
+                  <button
+                    type="button"
+                    className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
+                      activeTab === 'orders'
+                        ? 'bg-brand text-white shadow-md shadow-brand/20'
+                        : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                     }`}
-                  />
-                </button>
+                    onClick={() => navigateTo(CUSTOMER_ROUTES.orders)}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Package
+                        size={18}
+                        className={activeTab === 'orders' ? 'text-white' : 'text-subtle group-hover:text-ink'}
+                      />
+                      <span>Đơn hàng của tôi</span>
+                    </span>
+                    <ChevronRight
+                      size={16}
+                      className={`transition-transform ${
+                        activeTab === 'orders' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
+                      }`}
+                    />
+                  </button>
+                )}
               </nav>
 
               {/* Logout Action */}

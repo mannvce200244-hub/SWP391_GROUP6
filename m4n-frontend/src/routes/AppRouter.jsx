@@ -36,9 +36,10 @@ import AdminOrdersPage from '../pages/admin/AdminOrdersPage.jsx'
 import AdminInvoicesPage from '../pages/admin/AdminInvoicesPage.jsx'
 import AdminVouchersPage from '../pages/admin/AdminVouchersPage.jsx'
 import AdminProductDetailPage from '../pages/admin/AdminProductDetailPage.jsx'
-import AdminProfilePage from '../pages/admin/AdminProfilePage.jsx'
-import AdminSecurityPage from '../pages/admin/AdminSecurityPage.jsx'
 import AdminUsersPage from '../pages/admin/AdminUsersPage.jsx'
+import StaffChatPage from '../pages/staff/StaffChatPage.jsx'
+import StaffProductsPage from '../pages/staff/StaffProductsPage.jsx'
+import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage.jsx'
 
 import RequireAuth from './RequireAuth.jsx'
 import RequireRole from './RequireRole.jsx'
@@ -128,9 +129,9 @@ function AppRouter() {
     } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
       adminContent = <AdminVouchersPage />
     } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
-      adminContent = <AdminProfilePage />
+      adminContent = <ProfilePage />
     } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
-      adminContent = <AdminSecurityPage />
+      adminContent = <AccountSecurityPage />
     } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
       adminContent = <AdminUsersPage />
     }
@@ -145,10 +146,28 @@ function AppRouter() {
   }
 
   // 3. Online Staff shell using StaffLayout
-  if (pathname === CUSTOMER_ROUTES.staff || pathname === CUSTOMER_ROUTES.staffOrders) {
+  if (
+    pathname === CUSTOMER_ROUTES.staff ||
+    pathname === CUSTOMER_ROUTES.staffOrders ||
+    pathname === CUSTOMER_ROUTES.staffChat ||
+    pathname === CUSTOMER_ROUTES.staffProducts ||
+    pathname === CUSTOMER_ROUTES.staffNotifications ||
+    pathname === CUSTOMER_ROUTES.staffProfile ||
+    pathname === CUSTOMER_ROUTES.staffSecurity
+  ) {
     let staffContent = <StaffDashboardPage />
     if (pathname === CUSTOMER_ROUTES.staffOrders) {
       staffContent = <AdminOrdersPage />
+    } else if (pathname === CUSTOMER_ROUTES.staffChat) {
+      staffContent = <StaffChatPage />
+    } else if (pathname === CUSTOMER_ROUTES.staffProducts) {
+      staffContent = <StaffProductsPage />
+    } else if (pathname === CUSTOMER_ROUTES.staffNotifications) {
+      staffContent = <StaffNotificationsPage />
+    } else if (pathname === CUSTOMER_ROUTES.staffProfile) {
+      staffContent = <ProfilePage />
+    } else if (pathname === CUSTOMER_ROUTES.staffSecurity) {
+      staffContent = <AccountSecurityPage />
     }
 
     return (

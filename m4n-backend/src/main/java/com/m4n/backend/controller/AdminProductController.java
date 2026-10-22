@@ -97,7 +97,7 @@ public class AdminProductController {
     }
 
     @PutMapping("/{id}/media/{mediaId}")
-    @Operation(summary = "Update product media item", description = "Updates media metadata, primary flag, or display order.")
+    @Operation(summary = "Update product media item", description = "Updates media metadata or display order. The lowest display order is the primary media item.")
     public ResponseEntity<ProductMediaResponse> updateProductMedia(
             @PathVariable Long id,
             @PathVariable Long mediaId,

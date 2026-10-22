@@ -46,6 +46,7 @@ export default function ProductFormModal({
 
   // Media items state
   const [mediaList, setMediaList] = useState([])
+  const [removedMediaIds, setRemovedMediaIds] = useState([])
   const [newMediaUrl, setNewMediaUrl] = useState('')
   const [newMediaType, setNewMediaType] = useState('IMAGE')
   const [newMediaAlt, setNewMediaAlt] = useState('')
@@ -70,6 +71,7 @@ export default function ProductFormModal({
     setDescription('')
     setIsActive(true)
     setMediaList([])
+    setRemovedMediaIds([])
     setFormErrors({})
     setServerError('')
   }, [])
@@ -123,16 +125,20 @@ export default function ProductFormModal({
             setOrigin(p.origin || '')
             setDescription(p.description || '')
             setIsActive(Boolean(p.isActive))
+            const sortedMedia = [...(p.media || [])].sort(
+              (left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0),
+            )
             setMediaList(
-              (p.media || []).map((m) => ({
+              sortedMedia.map((m, index) => ({
                 id: m.id,
                 url: m.url,
-                mediaType: m.mediaType,
-                altText: m.altText || '',
-                isPrimary: Boolean(m.isPrimary),
-                sortOrder: m.sortOrder || 0,
+                mediaType: m.type || 'IMAGE',
+                altText: m.alt || '',
+                isPrimary: index === 0,
+                sortOrder: index,
               }))
             )
+            setRemovedMediaIds([])
             setLoading(false)
           }
         })
@@ -181,27 +187,32 @@ export default function ProductFormModal({
     setNewMediaAlt('')
   }
 
-  const handleRemoveMedia = async (index) => {
+  const handleRemoveMedia = (index) => {
     const item = mediaList[index]
     if (isEdit && item.id) {
-      try {
-        await adminProductService.deleteMedia(productId, item.id)
-        addToast({ message: 'Đã xóa ảnh khỏi thư viện.', type: 'info' })
-      } catch (err) {
-        addToast({ message: err.message || 'Không thể xóa ảnh', type: 'error' })
-        return
-      }
+      setRemovedMediaIds((prev) => [...prev, item.id])
     }
-    setMediaList((prev) => prev.filter((_, i) => i !== index))
+    setMediaList((prev) =>
+      prev
+        .filter((_, i) => i !== index)
+        .map((media, i) => ({
+          ...media,
+          isPrimary: i === 0,
+          sortOrder: i,
+        })),
+    )
   }
 
   const handleSetPrimaryMedia = (index) => {
-    setMediaList((prev) =>
-      prev.map((m, i) => ({
-        ...m,
-        isPrimary: i === index,
+    setMediaList((prev) => {
+      const selected = prev[index]
+      const reordered = [selected, ...prev.filter((_, i) => i !== index)]
+      return reordered.map((media, i) => ({
+        ...media,
+        isPrimary: i === 0,
+        sortOrder: i,
       }))
-    )
+    })
   }
 
   const validate = () => {
@@ -254,14 +265,26 @@ export default function ProductFormModal({
 
         await adminProductService.updateProduct(productId, updatePayload)
 
-        // Upload any newly added media that doesn't have an ID
+        for (const mediaId of removedMediaIds) {
+          await adminProductService.deleteMedia(productId, mediaId)
+        }
+
+        const existingMediaItems = mediaList.filter((m) => m.id)
+        for (const m of existingMediaItems) {
+          await adminProductService.updateMedia(productId, m.id, {
+            mediaType: m.mediaType,
+            url: m.url,
+            altText: m.altText || null,
+            sortOrder: m.sortOrder,
+          })
+        }
+
         const newMediaItems = mediaList.filter((m) => !m.id)
         for (const m of newMediaItems) {
           await adminProductService.addMedia(productId, {
             url: m.url,
             mediaType: m.mediaType,
             altText: m.altText || null,
-            isPrimary: Boolean(m.isPrimary),
             sortOrder: m.sortOrder || 0,
           })
         }
@@ -290,7 +313,6 @@ export default function ProductFormModal({
             url: m.url,
             mediaType: m.mediaType,
             altText: m.altText || null,
-            isPrimary: Boolean(m.isPrimary),
             sortOrder: idx,
           })),
         }

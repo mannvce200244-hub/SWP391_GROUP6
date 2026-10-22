@@ -27,7 +27,7 @@ function getStatusBadge(status) {
     case 'PENDING_CONFIRMATION':
       return {
         label: 'Chờ xác nhận',
-        className: 'text-amber-700 bg-amber-50 border-amber-200',
+        className: 'text-amber-800 bg-[#F6F7F8] border-amber-200',
       }
     case 'CONFIRMED':
       return {
@@ -37,7 +37,7 @@ function getStatusBadge(status) {
     case 'OUT_OF_STOCK_WAITING':
       return {
         label: 'Chờ xử lý tồn kho',
-        className: 'text-orange-700 bg-orange-50 border-orange-200',
+        className: 'text-orange-800 bg-[#F6F7F8] border-orange-200',
       }
     case 'COMPLETED':
       return {
@@ -421,7 +421,7 @@ function CustomerOrdersPage() {
                         Đơn hàng này đã bị hủy.
                       </div>
                     ) : orderDetail.status === 'OUT_OF_STOCK_WAITING' ? (
-                      <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 text-orange-800 text-xs font-medium">
+                      <div className="p-3 rounded-xl bg-[#F6F7F8] border border-orange-200 text-orange-800 text-xs font-medium">
                         Sản phẩm hiện đang tạm hết tồn kho sẵn sàng. Đơn hàng chuyển sang hàng đợi chế tác/nhập kho từ làng nghề.
                       </div>
                     ) : (
@@ -438,7 +438,7 @@ function CustomerOrdersPage() {
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
                             orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED'
                               ? 'bg-brand text-white'
-                              : 'bg-amber-100 text-amber-800 ring-2 ring-amber-400'
+                              : 'bg-[#F6F7F8] text-amber-800 ring-2 ring-amber-400'
                           }`}>
                             {orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED' ? (
                               <Check size={14} className="stroke-[2.5]" />

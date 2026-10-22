@@ -1,14 +1,29 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import useAuth from './useAuth.js'
 import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { CircleAlert } from 'lucide-react'
+import { CircleX } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
+import AppLoadingScreen from '../../components/ui/AppLoadingScreen.jsx'
+
+function getRoleHome(role) {
+  switch (role) {
+    case 'ADMIN':
+    case 'SUPER_ADMIN':
+      return CUSTOMER_ROUTES.admin
+    case 'ONLINE_STAFF':
+      return CUSTOMER_ROUTES.staff
+    case 'POS_STAFF':
+      return CUSTOMER_ROUTES.pos
+    default:
+      return CUSTOMER_ROUTES.home
+  }
+}
 
 function LoginPage() {
-  const { login, isAuthenticated, user } = useAuth()
+  const { login, isAuthenticated, isLoading, user } = useAuth()
   const { addToast } = useToast()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -16,24 +31,14 @@ function LoginPage() {
   const [generalError, setGeneralError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Role-based redirection if already logged in
-  if (isAuthenticated && user) {
-    switch (user.role) {
-      case 'ADMIN':
-      case 'SUPER_ADMIN':
-        navigateTo(CUSTOMER_ROUTES.admin)
-        break
-      case 'ONLINE_STAFF':
-        navigateTo(CUSTOMER_ROUTES.staff)
-        break
-      case 'POS_STAFF':
-        navigateTo(CUSTOMER_ROUTES.pos)
-        break
-      default:
-        navigateTo(CUSTOMER_ROUTES.home)
-        break
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigateTo(getRoleHome(user.role))
     }
-    return null
+  }, [isAuthenticated, user])
+
+  if (isLoading || (isAuthenticated && user)) {
+    return <AppLoadingScreen message="Đang chuyển đến khu vực làm việc…" />
   }
 
   const validate = () => {
@@ -75,21 +80,7 @@ function LoginPage() {
         type: 'success',
       })
 
-      switch (authenticatedUser.role) {
-        case 'ADMIN':
-        case 'SUPER_ADMIN':
-          navigateTo(CUSTOMER_ROUTES.admin)
-          break
-        case 'ONLINE_STAFF':
-          navigateTo(CUSTOMER_ROUTES.staff)
-          break
-        case 'POS_STAFF':
-          navigateTo(CUSTOMER_ROUTES.pos)
-          break
-        default:
-          navigateTo(CUSTOMER_ROUTES.home)
-          break
-      }
+      navigateTo(getRoleHome(authenticatedUser.role))
     } catch (err) {
       const message =
         err?.status === 401
@@ -115,10 +106,10 @@ function LoginPage() {
       {generalError && (
         <div
           role="alert"
-          className="flex items-start gap-2.5 p-3.5 rounded-lg border border-brand-border bg-brand-soft text-brand text-sm leading-snug"
+          className="flex items-start gap-2.5 p-3.5 rounded-lg border border-danger-border bg-danger-soft text-danger text-sm leading-snug"
           aria-live="assertive"
         >
-          <CircleAlert size={18} className="shrink-0 mt-0.5" />
+          <CircleX size={18} className="shrink-0 mt-0.5" />
           <span>{generalError}</span>
         </div>
       )}

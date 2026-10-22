@@ -18,6 +18,10 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     Optional<User> findByEmailIgnoreCase(String email);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email)")
+    Optional<User> findByEmailIgnoreCaseWithLock(@Param("email") String email);
+
     boolean existsByEmailIgnoreCase(String email);
 
     /**

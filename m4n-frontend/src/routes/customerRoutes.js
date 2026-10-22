@@ -38,6 +38,11 @@ export const CUSTOMER_ROUTES = Object.freeze({
   adminUsers: '/admin/users',
   staffChat: '/staff/chat',
   staffOrders: '/staff/orders',
+  staffProducts: '/staff/products',
+  staffInventory: '/staff/inventory',
+  staffNotifications: '/staff/notifications',
+  staffProfile: '/staff/profile',
+  staffSecurity: '/staff/security',
 })
 
 const ARTISAN_SECTION_ID = 'artisans'
@@ -48,6 +53,18 @@ export const HOME_ARTISAN_SECTION = Object.freeze({
 })
 
 export const ROUTE_CHANGE_EVENT = 'm4n:navigate'
+
+export function getProfileRouteForRole(role) {
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return CUSTOMER_ROUTES.adminProfile
+  if (role === 'ONLINE_STAFF') return CUSTOMER_ROUTES.staffProfile
+  return CUSTOMER_ROUTES.profile
+}
+
+export function getSecurityRouteForRole(role) {
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return CUSTOMER_ROUTES.adminSecurity
+  if (role === 'ONLINE_STAFF') return CUSTOMER_ROUTES.staffSecurity
+  return CUSTOMER_ROUTES.security
+}
 
 export function navigateTo(pathname) {
   if (typeof window === 'undefined') return
@@ -130,4 +147,3 @@ export function matchAdminInstrumentDetailPath(pathname) {
     return null
   }
 }
-

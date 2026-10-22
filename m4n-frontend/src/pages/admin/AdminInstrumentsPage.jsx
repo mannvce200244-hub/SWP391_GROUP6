@@ -360,7 +360,7 @@ export default function AdminInstrumentsPage() {
         </div>
 
         <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E5E8EB] shadow-2xs flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-[#F6F7F8] text-amber-700 flex items-center justify-center shrink-0">
             <Layers size={22} />
           </div>
           <div>
@@ -633,7 +633,7 @@ export default function AdminInstrumentsPage() {
                               isOutOfStock
                                 ? 'bg-rose-50 text-rose-600 border border-rose-200'
                                 : isLowStock
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                ? 'bg-[#F6F7F8] text-amber-800 border border-amber-200'
                                 : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             }`}
                           >
