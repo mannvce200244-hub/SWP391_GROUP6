@@ -187,6 +187,7 @@ export default function AdminCategoriesPage() {
       addToast({
         message: `Không thể xóa danh mục "${cat.name}" vì đang có ${cat.productCount} sản phẩm liên kết. Vui lòng chuyển sản phẩm sang danh mục khác trước.`,
         type: 'error',
+        duration: 5000,
       })
       return
     }
@@ -442,7 +443,7 @@ export default function AdminCategoriesPage() {
                           onClick={() => handleRequestDelete(cat)}
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             cat.productCount > 0
-                              ? 'text-zinc-300 hover:text-rose-500 hover:bg-rose-50 cursor-not-allowed'
+                              ? 'text-zinc-300 hover:text-zinc-500 hover:bg-[#F6F7F8]'
                               : 'text-secondary hover:text-rose-600 hover:bg-rose-50'
                           }`}
                           aria-label={`Xóa danh mục ${cat.name}`}

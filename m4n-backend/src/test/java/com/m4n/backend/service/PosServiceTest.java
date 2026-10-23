@@ -30,6 +30,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -312,5 +314,35 @@ class PosServiceTest {
         posService.assertCanAccessInvoice(500L, "pos@m4n.vn");
 
         verify(invoiceRepository).findWithDetailsById(500L);
+    }
+
+    @Test
+    @DisplayName("POS staff invoice history is restricted to invoices created by that cashier")
+    void listInvoices_posStaff_returnsOnlyOwnedInvoices() {
+        Invoice ownedInvoice = Invoice.builder()
+                .id(500L)
+                .invoiceCode("HD-2026-500")
+                .staff(staffUser)
+                .customerName("Khách lẻ")
+                .subtotal(new BigDecimal("8500000"))
+                .discount(BigDecimal.ZERO)
+                .finalAmount(new BigDecimal("8500000"))
+                .paymentMethod("CASH")
+                .amountReceived(new BigDecimal("8500000"))
+                .amountChange(BigDecimal.ZERO)
+                .createdAt(Instant.now())
+                .items(new ArrayList<>())
+                .build();
+        PageRequest pageable = PageRequest.of(0, 15);
+        when(userRepository.findByEmailIgnoreCase("pos@m4n.vn")).thenReturn(Optional.of(staffUser));
+        when(invoiceRepository.findByStaffIdOrderByCreatedAtDesc(staffUser.getId(), pageable))
+                .thenReturn(new PageImpl<>(List.of(ownedInvoice), pageable, 1));
+
+        var result = posService.listInvoices(null, pageable, "pos@m4n.vn");
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().getFirst().getInvoiceCode()).isEqualTo("HD-2026-500");
+        verify(invoiceRepository).findByStaffIdOrderByCreatedAtDesc(staffUser.getId(), pageable);
+        verify(invoiceRepository, never()).findAllByOrderByCreatedAtDesc(any());
     }
 }

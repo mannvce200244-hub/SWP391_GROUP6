@@ -6,8 +6,10 @@ import com.m4n.backend.dto.request.UpdateUserRequest;
 import com.m4n.backend.dto.request.UserStatusUpdateRequest;
 import com.m4n.backend.dto.response.UserDetailResponse;
 import com.m4n.backend.dto.response.UserSummaryResponse;
+import com.m4n.backend.dto.response.OrderResponse;
 import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.service.AdminUserService;
+import com.m4n.backend.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -37,9 +39,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final OrderService orderService;
 
-    public AdminUserController(AdminUserService adminUserService) {
+    public AdminUserController(AdminUserService adminUserService, OrderService orderService) {
         this.adminUserService = adminUserService;
+        this.orderService = orderService;
     }
 
     @GetMapping
@@ -59,6 +63,15 @@ public class AdminUserController {
     public ResponseEntity<UserDetailResponse> getUserById(@PathVariable Long id) {
         UserDetailResponse response = adminUserService.getUserById(id);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/orders")
+    @Operation(summary = "Get customer order history", description = "Returns a paginated, read-only order history for a customer account.")
+    public ResponseEntity<Page<OrderResponse>> getCustomerOrderHistory(
+            @PathVariable Long id,
+            @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(orderService.getCustomerOrderHistory(id, pageable));
     }
 
     @PostMapping("/staff")

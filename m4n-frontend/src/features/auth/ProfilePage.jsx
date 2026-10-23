@@ -16,7 +16,10 @@ import {
 import useToast from '../../components/ui/useToast.js'
 import { getSecurityRouteForRole, navigateTo } from '../../routes/customerRoutes.js'
 
-function ProfilePage() {
+function ProfilePage({
+  profileRoute = CUSTOMER_ROUTES.profile,
+  securityRoute = CUSTOMER_ROUTES.security,
+}) {
   const { user, updateProfile } = useAuth()
   const { addToast } = useToast()
 
@@ -100,7 +103,11 @@ function ProfilePage() {
     address.trim() !== (user?.address || '').trim()
 
   return (
-    <AccountLayout activeTab="profile">
+    <AccountLayout
+      activeTab="profile"
+      profileRoute={profileRoute}
+      securityRoute={securityRoute}
+    >
       <div className="space-y-8">
         
         {/* Profile Hero Section */}
@@ -156,7 +163,10 @@ function ProfilePage() {
           {/* Quick Security Action Shortcut */}
           <button
             type="button"
+ feature/product-master-data
+            onClick={() => navigateTo(securityRoute)}
             onClick={() => navigateTo(getSecurityRouteForRole(user?.role))}
+ main
             className="self-start sm:self-center inline-flex items-center gap-2 px-4 py-2.5 rounded-[16px] text-xs font-bold text-brand bg-brand-soft/70 hover:bg-brand-soft border border-brand-border transition-all cursor-pointer"
           >
             <Shield size={15} />

@@ -36,6 +36,8 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
     Page<Invoice> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    Page<Invoice> findByStaffIdOrderByCreatedAtDesc(Long staffId, Pageable pageable);
+
     @EntityGraph(attributePaths = {"staff"})
     @Query("""
         SELECT inv FROM Invoice inv
@@ -46,6 +48,21 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
         ORDER BY inv.createdAt DESC
         """)
     Page<Invoice> searchInvoices(@Param("search") String search, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"staff"})
+    @Query("""
+        SELECT inv FROM Invoice inv
+        WHERE inv.staff.id = :staffId
+          AND (:search IS NULL OR :search = ''
+               OR LOWER(inv.invoiceCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+               OR LOWER(inv.customerName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
+        ORDER BY inv.createdAt DESC
+        """)
+    Page<Invoice> searchInvoicesByStaff(
+            @Param("staffId") Long staffId,
+            @Param("search") String search,
+            Pageable pageable
+    );
 
     boolean existsByVoucherCodeIgnoreCase(String voucherCode);
 }

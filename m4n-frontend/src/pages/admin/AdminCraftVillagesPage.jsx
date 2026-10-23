@@ -60,12 +60,28 @@ export default function AdminCraftVillagesPage() {
     }
   }
 
+  const requestDelete = (village) => {
+    const artisanCount = village.artisanCount ?? 0
+    const productCount = village.productCount ?? 0
+
+    if (artisanCount > 0 || productCount > 0) {
+      addToast({
+        message: `Không thể xóa làng nghề "${village.name}" vì đang liên kết ${artisanCount} nghệ nhân và ${productCount} sản phẩm. Vui lòng gỡ các liên kết trước.`,
+        type: 'error',
+        duration: 5000,
+      })
+      return
+    }
+
+    setDeleteTarget(village)
+  }
+
   const filtered = villages.filter((v) => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
       (v.name && v.name.toLowerCase().includes(q)) ||
-      (v.province && v.province.toLowerCase().includes(q)) ||
+      (v.location && v.location.toLowerCase().includes(q)) ||
       (v.description && v.description.toLowerCase().includes(q))
     )
   })
@@ -189,11 +205,20 @@ export default function AdminCraftVillagesPage() {
                         </button>
                         <button
                           type="button"
-                          title="Xóa"
-                          onClick={() => setDeleteTarget(village)}
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title={
+                            (village.artisanCount ?? 0) > 0 || (village.productCount ?? 0) > 0
+                              ? `Không thể xóa: đang liên kết ${village.artisanCount ?? 0} nghệ nhân và ${village.productCount ?? 0} sản phẩm`
+                              : 'Xóa làng nghề'
+                          }
+                          aria-label={`Xóa làng nghề ${village.name}`}
+                          onClick={() => requestDelete(village)}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            (village.artisanCount ?? 0) > 0 || (village.productCount ?? 0) > 0
+                              ? 'text-zinc-300 hover:text-zinc-500 hover:bg-[#F6F7F8]'
+                              : 'text-zinc-400 hover:text-rose-600 hover:bg-rose-50'
+                          }`}
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={15} aria-hidden="true" />
                         </button>
                       </div>
                     </td>
@@ -207,10 +232,11 @@ export default function AdminCraftVillagesPage() {
 
       {deleteTarget && (
         <ConfirmDialog
+          isOpen
           title="Xóa làng nghề"
-          message={`Bạn có chắc muốn xóa làng nghề "${deleteTarget.name}"? Hành động này không thể hoàn tác.`}
+          description={`Bạn có chắc muốn xóa làng nghề "${deleteTarget.name}"? Hành động này không thể hoàn tác.`}
           confirmLabel="Xóa"
-          isDestructive
+          variant="danger"
           isLoading={deleting}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}

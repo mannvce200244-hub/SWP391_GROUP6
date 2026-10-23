@@ -88,9 +88,9 @@ export default function AdminInventoryPage() {
 
   const handleImportStock = async () => {
     if (!importTarget) return
-    const qty = parseInt(importQuantity, 10)
-    if (!qty || qty <= 0) {
-      addToast({ message: 'Số lượng nhập phải lớn hơn 0.', type: 'error' })
+    const qty = Number(importQuantity)
+    if (!Number.isInteger(qty) || qty <= 0) {
+      addToast({ message: 'Số lượng nhập phải là số nguyên lớn hơn 0.', type: 'error' })
       return
     }
     setImporting(true)
@@ -127,7 +127,9 @@ export default function AdminInventoryPage() {
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-bold text-[#17191B]">Kho hàng</h2>
-        <p className="text-sm text-secondary mt-0.5">Tổng quan tồn kho sản phẩm</p>
+        <p className="text-sm text-secondary mt-0.5">
+          Theo dõi tồn kho và nhập thêm sản phẩm trực tiếp tại đây
+        </p>
       </div>
 
       {/* Filters */}
@@ -187,7 +189,7 @@ export default function AdminInventoryPage() {
               </thead>
               <tbody>
                 {items.map((item) => {
-                  const badge = getStockBadge(item.stockStatus)
+                  const badge = getStockBadge(item.status)
                   return (
                     <tr key={item.productId} className="border-b border-[#F2F4F5] hover:bg-[#F6F7F8]/50 transition-colors">
                       <td className="px-4 py-3 font-medium text-[#17191B]">{item.productName}</td>
@@ -216,27 +218,30 @@ export default function AdminInventoryPage() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E3E6E8]">
+          {items.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[#E3E6E8] bg-white">
               <span className="text-xs text-secondary">
-                Trang {page + 1} / {totalPages}
+                Hiển thị <strong>{items.length}</strong> mặt hàng kho · Trang <strong className="text-[#17191B]">{page + 1}</strong> / {totalPages || 1}
               </span>
-              <div className="flex gap-1.5">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   disabled={page === 0}
                   onClick={() => setPage((p) => Math.max(0, p - 1))}
-                  className="p-1.5 rounded-lg border border-[#E3E6E8] hover:bg-[#F6F7F8] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E3E6E8] text-xs font-medium hover:bg-[#F6F7F8] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={14} /> Trước
                 </button>
+                <span className="px-2 text-xs font-semibold text-[#17191B]">
+                  Trang {page + 1} / {totalPages || 1}
+                </span>
                 <button
                   type="button"
                   disabled={page >= totalPages - 1}
                   onClick={() => setPage((p) => p + 1)}
-                  className="p-1.5 rounded-lg border border-[#E3E6E8] hover:bg-[#F6F7F8] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[#E3E6E8] text-xs font-medium hover:bg-[#F6F7F8] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                 >
-                  <ChevronRight size={16} />
+                  Sau <ChevronRight size={14} />
                 </button>
               </div>
             </div>
@@ -246,13 +251,23 @@ export default function AdminInventoryPage() {
 
       {/* Stock Import Modal */}
       {importTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="stock-import-title"
+        >
           <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setImportTarget(null)} aria-hidden="true" />
           <div className="relative bg-white rounded-2xl border border-[#E3E6E8] shadow-xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#17191B]">Nhập kho</h3>
-              <button type="button" onClick={() => setImportTarget(null)} className="p-1 rounded-lg hover:bg-[#F6F7F8] cursor-pointer">
-                <X size={18} className="text-zinc-400" />
+              <h3 id="stock-import-title" className="text-lg font-bold text-[#17191B]">Nhập kho</h3>
+              <button
+                type="button"
+                aria-label="Đóng hộp thoại nhập kho"
+                onClick={() => setImportTarget(null)}
+                className="p-1 rounded-lg hover:bg-[#F6F7F8] cursor-pointer"
+              >
+                <X size={18} className="text-zinc-400" aria-hidden="true" />
               </button>
             </div>
             <p className="text-sm text-secondary">
@@ -262,10 +277,14 @@ export default function AdminInventoryPage() {
               Tồn kho hiện tại: <strong>{importTarget.quantity}</strong>
             </p>
             <div>
-              <label className="block text-sm font-medium text-[#17191B] mb-1">Số lượng nhập thêm</label>
+              <label htmlFor="stock-import-quantity" className="block text-sm font-medium text-[#17191B] mb-1">Số lượng nhập thêm</label>
               <input
+                id="stock-import-quantity"
+                name="stockImportQuantity"
                 type="number"
                 min="1"
+                step="1"
+                inputMode="numeric"
                 value={importQuantity}
                 onChange={(e) => setImportQuantity(e.target.value)}
                 placeholder="VD: 10"
@@ -273,9 +292,12 @@ export default function AdminInventoryPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#17191B] mb-1">Ghi chú (tùy chọn)</label>
+              <label htmlFor="stock-import-notes" className="block text-sm font-medium text-[#17191B] mb-1">Ghi chú (tùy chọn)</label>
               <input
+                id="stock-import-notes"
+                name="stockImportNotes"
                 type="text"
+                autoComplete="off"
                 value={importNotes}
                 onChange={(e) => setImportNotes(e.target.value)}
                 placeholder="VD: Nhập lô mới từ xưởng…"

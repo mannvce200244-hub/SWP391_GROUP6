@@ -24,5 +24,5 @@ public interface PosService {
 
     void assertCanAccessInvoice(Long invoiceId, String actorEmail);
 
-    Page<PosSaleResponse> listInvoices(String search, Pageable pageable);
+    Page<PosSaleResponse> listInvoices(String search, Pageable pageable, String actorEmail);
 }

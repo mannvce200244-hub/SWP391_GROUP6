@@ -3,6 +3,7 @@ import adminUserService from '../../services/adminUserService.js'
 import useAuth from '../../features/auth/useAuth.js'
 import useToast from '../../components/ui/useToast.js'
 import { ROUTE_CHANGE_EVENT } from '../../routes/customerRoutes.js'
+import CustomerOrderHistory from '../../components/admin/CustomerOrderHistory.jsx'
 import {
   ChevronDown,
   Search,
@@ -468,8 +469,11 @@ export function AdminUsersPage() {
           </div>
           <input
             type="text"
-            className="w-full pl-10 pr-4 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-sm text-[#17191B] placeholder-muted focus:bg-white focus:outline-none focus:border-[#0D9488] transition-all"
-            placeholder="Tìm theo họ tên hoặc email..."
+            name="userSearch"
+            aria-label="Tìm tài khoản"
+            autoComplete="off"
+            className="box-border w-full min-w-0 pl-10 pr-4 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-sm text-[#17191B] placeholder-muted focus:bg-white focus:outline-none focus:border-[#0D9488] transition-[background-color,border-color,box-shadow]"
+            placeholder="Tìm theo họ tên hoặc email…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -826,6 +830,10 @@ export function AdminUsersPage() {
                 </p>
               )}
             </form>
+
+            {selectedUser.role === 'CUSTOMER' && (
+              <CustomerOrderHistory customerId={selectedUser.id} />
+            )}
 
             {/* Privileged Role & Status Section */}
             <div className="mt-6 pt-5 border-t border-[#E5E8EB] flex flex-col gap-4 text-sm">

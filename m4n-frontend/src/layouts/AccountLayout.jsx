@@ -1,7 +1,10 @@
 import {
   CUSTOMER_ROUTES,
+ feature/product-master-data
+=======
   getProfileRouteForRole,
   getSecurityRouteForRole,
+ main
   navigateTo,
 } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
@@ -14,7 +17,12 @@ import {
 } from 'lucide-react'
 import useToast from '../components/ui/useToast.js'
 
-function AccountLayout({ children, activeTab = 'profile' }) {
+function AccountLayout({
+  children,
+  activeTab = 'profile',
+  profileRoute = CUSTOMER_ROUTES.profile,
+  securityRoute = CUSTOMER_ROUTES.security,
+}) {
   const { user, logout } = useAuth()
   const { addToast } = useToast()
 
@@ -91,12 +99,17 @@ function AccountLayout({ children, activeTab = 'profile' }) {
               <nav className="flex flex-col gap-1.5" aria-label="Điều hướng tài khoản">
                 <button
                   type="button"
-                  className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
+                  aria-current={activeTab === 'profile' ? 'page' : undefined}
+                  className={`group relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-[color,background-color,box-shadow] motion-reduce:transition-none ${
                     activeTab === 'profile'
                       ? 'bg-brand text-white shadow-md shadow-brand/20'
                       : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                   }`}
+ feature/product-master-data
+                  onClick={() => navigateTo(profileRoute)}
+
                   onClick={() => navigateTo(getProfileRouteForRole(user?.role))}
+ main
                 >
                   <span className="flex items-center gap-3">
                     <UserRound
@@ -107,7 +120,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                   </span>
                   <ChevronRight
                     size={16}
-                    className={`transition-transform ${
+                    className={`transition-transform motion-reduce:transform-none motion-reduce:transition-none ${
                       activeTab === 'profile' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
                     }`}
                   />
@@ -115,12 +128,17 @@ function AccountLayout({ children, activeTab = 'profile' }) {
 
                 <button
                   type="button"
-                  className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
+                  aria-current={activeTab === 'security' ? 'page' : undefined}
+                  className={`group relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-[color,background-color,box-shadow] motion-reduce:transition-none ${
                     activeTab === 'security'
                       ? 'bg-brand text-white shadow-md shadow-brand/20'
                       : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                   }`}
+ feature/product-master-data
+                  onClick={() => navigateTo(securityRoute)}
+
                   onClick={() => navigateTo(getSecurityRouteForRole(user?.role))}
+ main
                 >
                   <span className="flex items-center gap-3">
                     <Shield
@@ -131,7 +149,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                   </span>
                   <ChevronRight
                     size={16}
-                    className={`transition-transform ${
+                    className={`transition-transform motion-reduce:transform-none motion-reduce:transition-none ${
                       activeTab === 'security' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
                     }`}
                   />
@@ -140,7 +158,12 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                 {user?.role === 'CUSTOMER' && (
                   <button
                     type="button"
+ feature/product-master-data
+                    aria-current={activeTab === 'orders' ? 'page' : undefined}
+                    className={`group relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-[color,background-color,box-shadow] motion-reduce:transition-none ${
+=======
                     className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
+ main
                       activeTab === 'orders'
                         ? 'bg-brand text-white shadow-md shadow-brand/20'
                         : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
@@ -156,7 +179,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                     </span>
                     <ChevronRight
                       size={16}
-                      className={`transition-transform ${
+                      className={`transition-transform motion-reduce:transform-none motion-reduce:transition-none ${
                         activeTab === 'orders' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
                       }`}
                     />

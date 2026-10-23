@@ -25,14 +25,24 @@ const orderService = Object.freeze({
     })
   },
 
-  async getAdminOrders({ status, search, page = 0, size = 10 } = {}) {
+  async confirmReceived(orderId) {
+    return apiClient.post(`/orders/${orderId}/confirm-received`, {})
+  },
+
+  async getAdminOrders({ status, isPaid, paymentMethod, search, page = 0, size = 10 } = {}) {
     const params = new URLSearchParams()
     if (status) params.append('status', status)
+    if (isPaid !== undefined && isPaid !== null && isPaid !== '') params.append('isPaid', String(isPaid))
+    if (paymentMethod) params.append('paymentMethod', paymentMethod)
     if (search) params.append('search', search)
     params.append('page', String(page))
     params.append('size', String(size))
 
     return apiClient.get(`/admin/orders?${params.toString()}`)
+  },
+
+  async getOrderStatusCounts() {
+    return apiClient.get('/admin/orders/status-counts')
   },
 
   async getAdminOrderDetail(orderId) {
@@ -43,8 +53,16 @@ const orderService = Object.freeze({
     return apiClient.post(`/admin/orders/${orderId}/confirm`, {})
   },
 
-  async completeOrder(orderId) {
-    return apiClient.post(`/admin/orders/${orderId}/complete`, {})
+  async retryOrderConfirmation(orderId) {
+    return apiClient.post(`/admin/orders/${orderId}/retry-confirmation`, {})
+  },
+
+  async markOrderShipping(orderId) {
+    return apiClient.post(`/admin/orders/${orderId}/ship`, {})
+  },
+
+  async markOrderDelivered(orderId) {
+    return apiClient.post(`/admin/orders/${orderId}/mark-delivered`, {})
   },
 
   async staffCancelOrder(orderId, reason) {

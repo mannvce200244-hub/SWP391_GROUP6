@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
   LayoutDashboard,
+ feature/product-master-data
+=======
   UserRound,
   Lock,
+ main
   LogOut,
-  ChevronDown,
   Menu,
   X,
   ExternalLink,
@@ -20,24 +22,13 @@ import {
 import useToast from '../components/ui/useToast.js'
 import BrandLogo from '../components/common/BrandLogo.jsx'
 import NotificationBell from '../components/common/NotificationBell.jsx'
+import RouterLink from '../routes/RouterLink.jsx'
 
 function StaffLayout({ children, pathname }) {
   const { user, logout } = useAuth()
   const { addToast } = useToast()
-  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const dropdownRef = useRef(null)
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   const handleLogout = async () => {
     try {
@@ -111,27 +102,15 @@ function StaffLayout({ children, pathname }) {
       >
         {/* Sidebar Brand Header */}
         <div className={`h-16 px-4 border-b border-[#22262A] flex items-center justify-between ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <div
-            className={`flex items-center gap-3 cursor-pointer group min-w-0 ${sidebarCollapsed ? 'justify-center w-full' : ''}`}
-            onClick={() => {
-              if (sidebarCollapsed) {
-                setSidebarCollapsed(false)
-              } else {
-                navigateTo(CUSTOMER_ROUTES.staff)
-              }
-            }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (sidebarCollapsed) setSidebarCollapsed(false)
-                else navigateTo(CUSTOMER_ROUTES.staff)
-              }
-            }}
-            title={sidebarCollapsed ? 'Nhấn để mở rộng thanh bên' : 'M4N Staff'}
+          <RouterLink
+            href={CUSTOMER_ROUTES.home}
+            className={`flex items-center gap-3 cursor-pointer group min-w-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2EA083] ${sidebarCollapsed ? 'justify-center w-full' : ''}`}
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Về trang chủ"
+            title="Về trang chủ"
           >
             <BrandLogo variant="dark" collapsed={sidebarCollapsed} />
-          </div>
+          </RouterLink>
 
           {/* Desktop collapse toggle on sidebar header */}
           {!sidebarCollapsed && (
@@ -192,10 +171,11 @@ function StaffLayout({ children, pathname }) {
                     key={item.path}
                     type="button"
                     title={sidebarCollapsed ? item.label : undefined}
-                    className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full text-left cursor-pointer group ${
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`relative flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] group motion-reduce:transition-none ${
                       isActive
-                        ? 'text-white bg-[#1F6B5A]/25 font-semibold shadow-xs border border-[#1F6B5A]/40'
-                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800/70'
+                        ? 'border-[#1F6B5A]/40 bg-[#1F6B5A]/25 text-white shadow-xs'
+                        : 'border-transparent text-zinc-400 hover:bg-zinc-800/70 hover:text-white'
                     } ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
                     onClick={() => {
                       setMobileMenuOpen(false)
@@ -227,8 +207,8 @@ function StaffLayout({ children, pathname }) {
           ))}
         </nav>
 
-        {/* Sidebar Footer User Info */}
-        <div className="p-3 border-t border-[#22262A]">
+        {/* Sidebar Footer User Info and Logout */}
+        <div className="p-3 border-t border-[#22262A] bg-[#0E1012]">
           <div
             className={`flex items-center gap-3 p-2 rounded-xl bg-zinc-900/60 border border-zinc-800/80 ${
               sidebarCollapsed ? 'justify-center' : ''
@@ -248,6 +228,19 @@ function StaffLayout({ children, pathname }) {
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            className={`mt-2 flex min-h-10 w-full items-center rounded-xl border border-transparent text-zinc-400 transition-colors hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3 text-left text-xs font-semibold'
+            }`}
+            onClick={handleLogout}
+            title={sidebarCollapsed ? 'Đăng xuất ca trực' : undefined}
+            aria-label="Đăng xuất ca trực"
+          >
+            <LogOut size={17} className="shrink-0" aria-hidden="true" />
+            {!sidebarCollapsed && <span>Đăng xuất ca trực</span>}
+          </button>
         </div>
       </aside>
 
@@ -281,7 +274,7 @@ function StaffLayout({ children, pathname }) {
             </div>
           </div>
 
-          {/* Right: Operational Status, Storefront Link, Profile Dropdown */}
+          {/* Right: Operational Status, Storefront Link, Notifications */}
           <div className="flex items-center gap-3">
             {/* System Status Pill */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800">
@@ -302,6 +295,8 @@ function StaffLayout({ children, pathname }) {
 
             {/* Notification Bell */}
             <NotificationBell />
+ feature/product-master-data
+=======
 
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
@@ -381,6 +376,7 @@ function StaffLayout({ children, pathname }) {
                 </div>
               )}
             </div>
+ main
           </div>
         </header>
 

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 
 public interface OrderService {
 
@@ -24,13 +25,23 @@ public interface OrderService {
 
     OrderDetailResponse customerCancelOrder(Long orderId, String reason);
 
-    Page<OrderResponse> getAdminOrders(OrderStatus status, String search, Pageable pageable);
+    OrderDetailResponse customerConfirmReceived(Long orderId);
+
+    Page<OrderResponse> getAdminOrders(OrderStatus status, Boolean isPaid, String paymentMethod, String search, Pageable pageable);
+
+    Map<String, Long> getOrderStatusCounts();
 
     OrderDetailResponse getAdminOrderDetail(Long orderId);
 
     OrderConfirmResultResponse confirmOrder(Long orderId);
 
-    OrderDetailResponse completeOrder(Long orderId);
+    OrderConfirmResultResponse retryOrderConfirmation(Long orderId);
+
+    OrderDetailResponse markOrderShipping(Long orderId);
+
+    OrderDetailResponse markOrderDelivered(Long orderId);
 
     OrderDetailResponse staffCancelOrder(Long orderId, String reason);
+
+    Page<OrderResponse> getCustomerOrderHistory(Long customerId, Pageable pageable);
 }

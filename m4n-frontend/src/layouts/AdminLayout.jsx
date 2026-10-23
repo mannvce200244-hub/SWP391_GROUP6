@@ -3,7 +3,6 @@ import {
   CUSTOMER_ROUTES,
   navigateTo,
   matchAdminInstrumentDetailPath,
-  ROUTE_CHANGE_EVENT,
 } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import notificationService from '../services/notificationService.js'
@@ -11,9 +10,7 @@ import {
   LayoutDashboard,
   Store,
   UserRound,
-  Lock,
   LogOut,
-  ChevronDown,
   Menu,
   ExternalLink,
   ChevronsLeft,
@@ -22,27 +19,23 @@ import {
   Layers,
   MapPin,
   Boxes,
-  PackagePlus,
   ClipboardList,
   Receipt,
   TicketPercent,
   Users,
-  UserCog,
-  Shield,
   Bell,
   Check,
 } from 'lucide-react'
 import { IconInstrument } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
 import BrandLogo from '../components/common/BrandLogo.jsx'
+import RouterLink from '../routes/RouterLink.jsx'
 
 function AdminLayout({ children, pathname }) {
   const { user, logout } = useAuth()
   const { addToast } = useToast()
-  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const dropdownRef = useRef(null)
 
   // Notifications
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -50,23 +43,6 @@ function AdminLayout({ children, pathname }) {
   const [notifications, setNotifications] = useState([])
   const [loadingNotifications, setLoadingNotifications] = useState(false)
   const notificationRef = useRef(null)
-
-  // Track search query parameter (for ?tab=customers etc.)
-  const [activeSearch, setActiveSearch] = useState(() =>
-    typeof window !== 'undefined' ? window.location.search : ''
-  )
-
-  useEffect(() => {
-    const handleUrlChange = () => {
-      setActiveSearch(window.location.search)
-    }
-    window.addEventListener('popstate', handleUrlChange)
-    window.addEventListener(ROUTE_CHANGE_EVENT, handleUrlChange)
-    return () => {
-      window.removeEventListener('popstate', handleUrlChange)
-      window.removeEventListener(ROUTE_CHANGE_EVENT, handleUrlChange)
-    }
-  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -83,9 +59,6 @@ function AdminLayout({ children, pathname }) {
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false)
-      }
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setNotificationsOpen(false)
       }
@@ -162,7 +135,6 @@ function AdminLayout({ children, pathname }) {
         { label: 'Nghệ nhân', path: CUSTOMER_ROUTES.adminArtisans, Icon: UserRound },
         { label: 'Làng nghề', path: CUSTOMER_ROUTES.adminCraftVillages, Icon: MapPin },
         { label: 'Kho hàng', path: CUSTOMER_ROUTES.adminInventory, Icon: Boxes },
-        { label: 'Nhập kho', path: CUSTOMER_ROUTES.adminStockImport, Icon: PackagePlus },
       ],
     },
     {
@@ -174,36 +146,18 @@ function AdminLayout({ children, pathname }) {
       ],
     },
     {
-      title: 'QUẢN LÝ NGƯỜI DÙNG',
+      title: 'HỆ THỐNG',
       items: [
         {
-          label: 'Khách hàng',
-          path: `${CUSTOMER_ROUTES.adminUsers}?tab=customers`,
-          matchPath: CUSTOMER_ROUTES.adminUsers,
-          tabParam: 'customers',
-          Icon: Users,
-        },
-        {
-          label: 'Nhân viên',
-          path: `${CUSTOMER_ROUTES.adminUsers}?tab=staff`,
-          matchPath: CUSTOMER_ROUTES.adminUsers,
-          tabParam: 'staff',
-          Icon: UserCog,
-        },
-        {
-          label: 'Tất cả tài khoản',
+          label: 'Quản lý người dùng',
           path: CUSTOMER_ROUTES.adminUsers,
-          matchPath: CUSTOMER_ROUTES.adminUsers,
-          tabParam: 'all',
-          Icon: Shield,
+          Icon: Users,
         },
       ],
     },
   ]
 
   const isInstrumentDetail = Boolean(matchAdminInstrumentDetailPath(pathname))
-  const searchParams = new URLSearchParams(activeSearch)
-  const currentTab = searchParams.get('tab')
 
   let pageTitle = 'Dashboard Quản trị'
   if (isInstrumentDetail) {
@@ -218,8 +172,6 @@ function AdminLayout({ children, pathname }) {
     pageTitle = 'Quản lý Làng nghề truyền thống'
   } else if (pathname === CUSTOMER_ROUTES.adminInventory) {
     pageTitle = 'Quản lý Kho hàng'
-  } else if (pathname === CUSTOMER_ROUTES.adminStockImport) {
-    pageTitle = 'Nhập kho sản phẩm'
   } else if (pathname === CUSTOMER_ROUTES.adminOrders) {
     pageTitle = 'Quản lý Đơn hàng Online'
   } else if (pathname === CUSTOMER_ROUTES.adminInvoices) {
@@ -227,9 +179,7 @@ function AdminLayout({ children, pathname }) {
   } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
     pageTitle = 'Quản lý Mã giảm giá (Voucher)'
   } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
-    if (currentTab === 'customers') pageTitle = 'Quản lý Khách hàng'
-    else if (currentTab === 'staff') pageTitle = 'Quản lý Nhân sự & Phân quyền'
-    else pageTitle = 'Quản lý Tài khoản & Phân quyền'
+    pageTitle = 'Quản lý Người dùng & Phân quyền'
   } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
     pageTitle = 'Hồ sơ cá nhân'
   } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
@@ -260,29 +210,17 @@ function AdminLayout({ children, pathname }) {
             sidebarCollapsed ? 'justify-center' : ''
           }`}
         >
-          <div
+          <RouterLink
+            href={CUSTOMER_ROUTES.home}
             className={`flex items-center gap-3 cursor-pointer group min-w-0 ${
               sidebarCollapsed ? 'justify-center w-full' : ''
-            }`}
-            onClick={() => {
-              if (sidebarCollapsed) {
-                setSidebarCollapsed(false)
-              } else {
-                navigateTo(CUSTOMER_ROUTES.admin)
-              }
-            }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (sidebarCollapsed) setSidebarCollapsed(false)
-                else navigateTo(CUSTOMER_ROUTES.admin)
-              }
-            }}
-            title={sidebarCollapsed ? 'Nhấn để mở rộng thanh bên' : 'M4N Admin'}
+            } rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D9488]`}
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Về trang chủ"
+            title="Về trang chủ"
           >
             <BrandLogo variant="dark" collapsed={sidebarCollapsed} />
-          </div>
+          </RouterLink>
 
           {/* Desktop collapse toggle on sidebar header */}
           {!sidebarCollapsed && (
@@ -336,23 +274,9 @@ function AdminLayout({ children, pathname }) {
               )}
 
               {section.items.map((item) => {
-                const isUserRoute = item.matchPath === CUSTOMER_ROUTES.adminUsers
-                let isActive = false
-                if (isUserRoute) {
-                  if (pathname === CUSTOMER_ROUTES.adminUsers) {
-                    if (item.tabParam === 'customers') {
-                      isActive = currentTab === 'customers'
-                    } else if (item.tabParam === 'staff') {
-                      isActive = currentTab === 'staff'
-                    } else if (item.tabParam === 'all') {
-                      isActive = !currentTab || (currentTab !== 'customers' && currentTab !== 'staff')
-                    }
-                  }
-                } else {
-                  isActive =
-                    pathname === item.path ||
-                    (item.path === CUSTOMER_ROUTES.adminInstruments && isInstrumentDetail)
-                }
+                const isActive =
+                  pathname === item.path ||
+                  (item.path === CUSTOMER_ROUTES.adminInstruments && isInstrumentDetail)
 
                 const ItemIcon = item.Icon
                 return (
@@ -360,10 +284,11 @@ function AdminLayout({ children, pathname }) {
                     key={item.path}
                     type="button"
                     title={sidebarCollapsed ? item.label : undefined}
-                    className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all w-full text-left cursor-pointer group ${
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`relative flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] group motion-reduce:transition-none ${
                       isActive
-                        ? 'text-white bg-[#0D9488]/20 font-semibold shadow-xs border border-[#0D9488]/35'
-                        : 'text-zinc-400 hover:text-white hover:bg-zinc-800/70'
+                        ? 'border-[#0D9488]/35 bg-[#0D9488]/20 text-white shadow-xs'
+                        : 'border-transparent text-zinc-400 hover:bg-zinc-800/70 hover:text-white'
                     } ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
                     onClick={() => {
                       setMobileMenuOpen(false)
@@ -380,7 +305,7 @@ function AdminLayout({ children, pathname }) {
 
                     <ItemIcon
                       size={19}
-                      className={`shrink-0 transition-transform group-hover:scale-105 ${
+                      className={`shrink-0 transition-transform group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none ${
                         isActive ? 'text-[#0D9488]' : 'text-zinc-400 group-hover:text-white'
                       }`}
                     />
@@ -395,9 +320,9 @@ function AdminLayout({ children, pathname }) {
           ))}
         </nav>
 
-        {/* Sidebar Footer: Compact User Profile Card */}
+        {/* Sidebar Footer: User Profile and Logout */}
         <div className="p-3 border-t border-[#22262A] bg-[#0E1012]">
-          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-[#16181A] border border-[#272B30]">
+          <div className={`flex items-center gap-2.5 p-2 rounded-xl bg-[#16181A] border border-[#272B30] ${sidebarCollapsed ? 'justify-center' : ''}`}>
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-[#0D9488]/25 text-[#0D9488] font-bold text-xs flex items-center justify-center border border-[#0D9488]/40 shrink-0">
                 {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'A'}
@@ -413,17 +338,20 @@ function AdminLayout({ children, pathname }) {
                 </div>
               )}
             </div>
-
-            <button
-              type="button"
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-[#0D9488] hover:bg-zinc-800/80 transition-colors shrink-0 cursor-pointer"
-              onClick={handleLogout}
-              title="Đăng xuất"
-              aria-label="Đăng xuất"
-            >
-              <LogOut size={16} />
-            </button>
           </div>
+
+          <button
+            type="button"
+            className={`mt-2 flex min-h-10 w-full items-center rounded-xl border border-transparent text-zinc-400 transition-colors hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 cursor-pointer ${
+              sidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3 text-left text-xs font-semibold'
+            }`}
+            onClick={handleLogout}
+            title={sidebarCollapsed ? 'Đăng xuất' : undefined}
+            aria-label="Đăng xuất"
+          >
+            <LogOut size={17} className="shrink-0" aria-hidden="true" />
+            {!sidebarCollapsed && <span>Đăng xuất</span>}
+          </button>
         </div>
       </aside>
 
@@ -462,7 +390,7 @@ function AdminLayout({ children, pathname }) {
             </div>
           </div>
 
-          {/* Right: Storefront shortcut, Notifications, Profile Menu */}
+          {/* Right: Storefront shortcut, System Status, Notifications */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Storefront Link Shortcut */}
             <button
@@ -575,84 +503,6 @@ function AdminLayout({ children, pathname }) {
               )}
             </div>
 
-            {/* User Dropdown */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                type="button"
-                className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-[#F2F4F5] border border-transparent hover:border-[#E5E8EB] transition-colors cursor-pointer text-left"
-                onClick={() => setDropdownOpen((prev) => !prev)}
-                aria-expanded={dropdownOpen}
-                aria-haspopup="true"
-              >
-                <div className="w-8 h-8 rounded-full bg-[#0D9488]/15 text-[#0D9488] font-bold text-xs flex items-center justify-center border border-[#0D9488]/30 shadow-2xs">
-                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'A'}
-                </div>
-                <div className="hidden sm:flex flex-col leading-tight">
-                  <span className="text-xs font-bold text-[#17191B] truncate max-w-[120px]">
-                    {user?.fullName || 'Quản trị viên'}
-                  </span>
-                  <span className="text-xs text-[#0D9488] font-medium">
-                    {user?.role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : 'ADMIN'}
-                  </span>
-                </div>
-                <ChevronDown size={14} className="text-zinc-400" />
-              </button>
-
-              {dropdownOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-60 bg-[#FFFFFF] rounded-2xl border border-[#E5E8EB] shadow-xl py-2 z-50 animate-in fade-in zoom-in-95"
-                  role="menu"
-                >
-                  <div className="px-4 py-2.5 border-b border-[#E5E8EB] bg-[#F6F7F8]/80 flex flex-col mb-1 text-xs">
-                    <strong className="text-[#17191B] text-sm truncate">
-                      {user?.fullName || 'Quản trị viên'}
-                    </strong>
-                    <span className="text-zinc-500 truncate">{user?.email}</span>
-                    <span className="inline-block mt-1.5 px-2 py-0.5 text-xs font-medium rounded-md bg-[#0D9488]/10 text-[#0D9488] border border-[#0D9488]/20 self-start">
-                      {user?.role === 'SUPER_ADMIN' ? 'Super Admin (SUPER_ADMIN)' : 'Quản trị viên (ADMIN)'}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-[#17191B] hover:bg-[#F2F4F5] hover:text-[#0D9488] transition-colors w-full text-left cursor-pointer"
-                    role="menuitem"
-                    onClick={() => {
-                      setDropdownOpen(false)
-                      navigateTo(CUSTOMER_ROUTES.adminProfile)
-                    }}
-                  >
-                    <UserRound size={16} />
-                    <span>Hồ sơ cá nhân</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-[#17191B] hover:bg-[#F2F4F5] hover:text-[#0D9488] transition-colors w-full text-left cursor-pointer"
-                    role="menuitem"
-                    onClick={() => {
-                      setDropdownOpen(false)
-                      navigateTo(CUSTOMER_ROUTES.adminSecurity)
-                    }}
-                  >
-                    <Lock size={16} />
-                    <span>Bảo mật tài khoản</span>
-                  </button>
-
-                  <div className="my-1 border-t border-[#E5E8EB]" />
-
-                  <button
-                    type="button"
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-rose-600 hover:bg-rose-50 transition-colors w-full text-left cursor-pointer"
-                    role="menuitem"
-                    onClick={handleLogout}
-                  >
-                    <LogOut size={16} />
-                    <span>Đăng xuất</span>
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </header>
 

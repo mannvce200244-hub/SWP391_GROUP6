@@ -1,6 +1,7 @@
 package com.m4n.backend.repository;
 
 import com.m4n.backend.entity.ChatMessage;
+import com.m4n.backend.entity.ConversationStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,4 +27,12 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     void markMessagesAsRead(@Param("conversationId") Long conversationId, @Param("readerId") Long readerId);
 
     long countByConversationIdAndSenderIdNotAndIsReadFalse(Long conversationId, Long readerId);
+
+    @Query("SELECT COUNT(m) FROM ChatMessage m WHERE m.conversation.status = :status " +
+            "AND m.conversation.assignedStaff.id = :staffId " +
+            "AND m.sender.id <> :staffId AND m.isRead = false")
+    long countUnreadAssignedToStaff(
+            @Param("status") ConversationStatus status,
+            @Param("staffId") Long staffId
+    );
 }

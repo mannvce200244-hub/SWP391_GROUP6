@@ -10,27 +10,27 @@ import {
 
 const TOAST_THEMES = {
   success: {
-    border: 'border-jade-border/80',
-    bg: 'bg-jade-soft/40',
-    text: 'text-jade',
+    border: 'border-success-border',
+    accent: 'bg-success',
+    text: 'text-success',
     Icon: CircleCheck,
   },
   error: {
     border: 'border-danger-border',
-    bg: 'bg-danger-soft/40',
+    accent: 'bg-danger',
     text: 'text-danger',
     Icon: CircleX,
   },
   warning: {
-    border: 'border-warning-border',
-    bg: 'bg-warning-soft/40',
-    text: 'text-warning',
+    border: 'border-coral-border',
+    accent: 'bg-coral',
+    text: 'text-coral',
     Icon: TriangleAlert,
   },
   info: {
-    border: 'border-border',
-    bg: 'bg-surface-secondary',
-    text: 'text-secondary',
+    border: 'border-brand-border',
+    accent: 'bg-brand',
+    text: 'text-brand',
     Icon: Info,
   },
 }
@@ -57,9 +57,8 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
       <div
-        className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm w-[calc(100%-3rem)] pointer-events-none"
-        aria-live="polite"
-        role="status"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col gap-2.5 max-w-sm w-[calc(100%-2rem)] sm:w-[calc(100%-3rem)] pointer-events-none"
+        aria-label="Thông báo hệ thống"
       >
         {toasts.map((toast) => {
           const theme = TOAST_THEMES[toast.type] || TOAST_THEMES.info
@@ -67,9 +66,16 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={toast.id}
-              className={`pointer-events-auto flex items-center gap-3 p-3.5 rounded-lg border shadow-md bg-surface text-ink text-sm ${theme.border} ${theme.bg}`}
+              role={toast.type === 'error' ? 'alert' : 'status'}
+              aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+              aria-atomic="true"
+              className={`pointer-events-auto relative flex items-center gap-3 overflow-hidden rounded-lg border bg-white px-3.5 pb-3.5 pt-4 text-sm text-ink shadow-md ${theme.border}`}
             >
-              <span className={`shrink-0 ${theme.text}`}>
+              <span
+                className={`absolute inset-x-0 top-0 h-1 ${theme.accent}`}
+                aria-hidden="true"
+              />
+              <span className={`shrink-0 ${theme.text}`} aria-hidden="true">
                 <ToastIcon size={18} />
               </span>
               <span className="flex-1 font-medium text-ink leading-snug">{toast.message}</span>
@@ -79,7 +85,7 @@ export function ToastProvider({ children }) {
                 onClick={() => removeToast(toast.id)}
                 aria-label="Đóng thông báo"
               >
-                <X size={16} />
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
           )

@@ -7,6 +7,8 @@ public enum OrderStatus {
     PENDING_CONFIRMATION,
     CONFIRMED,
     OUT_OF_STOCK_WAITING,
+    SHIPPING,
+    DELIVERED,
     COMPLETED,
     CANCELLED
 }

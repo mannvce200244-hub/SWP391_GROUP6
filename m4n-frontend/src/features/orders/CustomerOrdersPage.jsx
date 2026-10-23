@@ -10,6 +10,7 @@ import {
   Package,
   CircleAlert,
   Check,
+  PackageCheck,
 } from 'lucide-react'
 import { IconInstrument } from '../../components/ui/Icons.jsx'
 
@@ -18,6 +19,8 @@ const STATUS_TABS = [
   { id: 'PENDING_CONFIRMATION', label: 'Chờ xác nhận' },
   { id: 'CONFIRMED', label: 'Đã xác nhận' },
   { id: 'OUT_OF_STOCK_WAITING', label: 'Chờ xử lý tồn kho' },
+  { id: 'SHIPPING', label: 'Đang giao' },
+  { id: 'DELIVERED', label: 'Đã giao' },
   { id: 'COMPLETED', label: 'Đã hoàn thành' },
   { id: 'CANCELLED', label: 'Đã hủy' },
 ]
@@ -38,6 +41,18 @@ function getStatusBadge(status) {
       return {
         label: 'Chờ xử lý tồn kho',
         className: 'text-orange-800 bg-[#F6F7F8] border-orange-200',
+ feature/product-master-data
+      }
+    case 'SHIPPING':
+      return {
+        label: 'Đang giao hàng',
+        className: 'text-blue-700 bg-blue-50 border-blue-200',
+      }
+    case 'DELIVERED':
+      return {
+        label: 'Đã giao hàng',
+        className: 'text-violet-700 bg-violet-50 border-violet-200',
+ main
       }
     case 'COMPLETED':
       return {
@@ -88,6 +103,8 @@ function CustomerOrdersPage() {
   const [cancelModalOrder, setCancelModalOrder] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelling, setCancelling] = useState(false)
+  const [receiveModalOrder, setReceiveModalOrder] = useState(null)
+  const [receivingOrderId, setReceivingOrderId] = useState(null)
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -190,6 +207,47 @@ function CustomerOrdersPage() {
       setCancelling(false)
     }
   }
+
+  const handleOpenReceiveConfirmation = (order, event) => {
+    if (event) event.stopPropagation()
+    setReceiveModalOrder(order)
+  }
+
+  const handleConfirmReceived = async () => {
+    const order = receiveModalOrder
+    if (!order || receivingOrderId) return
+
+    try {
+      setReceivingOrderId(order.id)
+      const fresh = await orderService.confirmReceived(order.id)
+      addToast({
+        message: `Cảm ơn bạn đã xác nhận nhận đơn ${order.orderCode}.`,
+        type: 'success',
+      })
+      setOrderDetail((current) => current?.id === order.id ? fresh : current)
+      setReceiveModalOrder(null)
+      await fetchOrders()
+    } catch (err) {
+      addToast({
+        message: err.message || 'Không thể xác nhận đã nhận hàng',
+        type: 'error',
+      })
+    } finally {
+      setReceivingOrderId(null)
+    }
+  }
+
+  useEffect(() => {
+    if (!receiveModalOrder) return undefined
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape' && !receivingOrderId) {
+        setReceiveModalOrder(null)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [receiveModalOrder, receivingOrderId])
 
   const filteredOrders = useMemo(() => {
     if (activeFilter === 'ALL') return orders
@@ -300,6 +358,7 @@ function CustomerOrdersPage() {
             {filteredOrders.map((order) => {
               const badge = getStatusBadge(order.status)
               const isPending = order.status === 'PENDING_CONFIRMATION'
+              const canConfirmReceived = order.status === 'DELIVERED'
 
               return (
                 <div
@@ -352,6 +411,17 @@ function CustomerOrdersPage() {
                             className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-all cursor-pointer"
                           >
                             Hủy đơn
+                          </button>
+                        )}
+
+                        {canConfirmReceived && (
+                          <button
+                            type="button"
+                            disabled={receivingOrderId === order.id}
+                            onClick={(event) => handleOpenReceiveConfirmation(order, event)}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-60"
+                          >
+                            {receivingOrderId === order.id ? 'Đang xác nhận…' : 'Đã nhận được hàng'}
                           </button>
                         )}
 
@@ -425,6 +495,31 @@ function CustomerOrdersPage() {
                         Sản phẩm hiện đang tạm hết tồn kho sẵn sàng. Đơn hàng chuyển sang hàng đợi chế tác/nhập kho từ làng nghề.
                       </div>
                     ) : (
+ feature/product-master-data
+                      <div className="grid grid-cols-5 gap-1 text-center pt-2">
+                        {[
+                          ['PENDING_CONFIRMATION', 'Đã đặt'],
+                          ['CONFIRMED', 'Đã xác nhận'],
+                          ['SHIPPING', 'Đang giao'],
+                          ['DELIVERED', 'Đã giao'],
+                          ['COMPLETED', 'Hoàn thành'],
+                        ].map(([status, label], index, steps) => {
+                          const currentIndex = steps.findIndex(([stepStatus]) => stepStatus === orderDetail.status)
+                          const isReached = index <= currentIndex
+                          const isCurrent = index === currentIndex
+                          return (
+                            <div key={status} className="space-y-1 min-w-0">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
+                                isReached
+                                  ? isCurrent ? 'bg-brand text-white ring-2 ring-brand/20' : 'bg-emerald-600 text-white'
+                                  : 'bg-surface-secondary text-muted'
+                              }`}>
+                                {isReached && !isCurrent ? <Check size={14} className="stroke-[2.5]" /> : index + 1}
+                              </div>
+                              <span className="font-semibold text-ink block text-[10px] sm:text-xs leading-tight">{label}</span>
+                            </div>
+                          )
+                        })}
                       <div className="grid grid-cols-3 gap-2 text-center pt-2">
                         {/* Step 1 */}
                         <div className="space-y-1">
@@ -467,6 +562,7 @@ function CustomerOrdersPage() {
                             {orderDetail.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã xác nhận'}
                           </span>
                         </div>
+ main
                       </div>
                     )}
                   </div>
@@ -575,12 +671,82 @@ function CustomerOrdersPage() {
                 </button>
               )}
 
+              {orderDetail?.status === 'DELIVERED' && (
+                <button
+                  type="button"
+                  disabled={receivingOrderId === orderDetail.id}
+                  onClick={() => handleOpenReceiveConfirmation(orderDetail)}
+                  className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  {receivingOrderId === orderDetail.id ? 'Đang xác nhận…' : 'Đã nhận được hàng'}
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleCloseDetail}
                 className="ml-auto px-5 py-2.5 rounded-xl bg-charcoal hover:bg-black text-white text-xs font-bold transition-all cursor-pointer"
               >
                 Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Confirmation Modal */}
+      {receiveModalOrder && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Đóng hộp xác nhận nhận hàng"
+            disabled={Boolean(receivingOrderId)}
+            onClick={() => setReceiveModalOrder(null)}
+            className="absolute inset-0 bg-black/50 backdrop-blur-xs cursor-pointer disabled:cursor-wait"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="receive-order-title"
+            aria-describedby="receive-order-description"
+            className="relative w-full max-w-md rounded-3xl border border-border bg-white p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+              <PackageCheck size={24} aria-hidden="true" />
+            </div>
+
+            <div>
+              <h3 id="receive-order-title" className="text-lg font-bold text-ink">
+                Xác nhận đã nhận được hàng?
+              </h3>
+              <p id="receive-order-description" className="mt-1.5 text-sm leading-relaxed text-muted">
+                Chỉ xác nhận khi bạn đã nhận và kiểm tra đủ sản phẩm trong đơn{' '}
+                <strong className="text-ink">{receiveModalOrder.orderCode}</strong>. Sau bước này,
+                đơn hàng sẽ hoàn tất và có thể được đánh giá.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-[#F6F7F8] p-3 text-xs text-muted">
+              Nếu hàng chưa đến, thiếu hoặc có vấn đề, chưa xác nhận và hãy liên hệ M4N để được hỗ trợ.
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                autoFocus
+                disabled={Boolean(receivingOrderId)}
+                onClick={() => setReceiveModalOrder(null)}
+                className="min-h-11 rounded-xl border border-border px-4 text-sm font-bold text-ink hover:bg-[#F6F7F8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 cursor-pointer disabled:opacity-60"
+              >
+                Chưa, để tôi kiểm tra lại
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(receivingOrderId)}
+                onClick={handleConfirmReceived}
+                className="min-h-11 rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 cursor-pointer disabled:cursor-wait disabled:opacity-60"
+              >
+                {receivingOrderId ? 'Đang xác nhận…' : 'Tôi đã nhận đủ hàng'}
               </button>
             </div>
           </div>

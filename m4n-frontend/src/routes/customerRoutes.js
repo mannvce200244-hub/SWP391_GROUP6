@@ -21,6 +21,7 @@ export const CUSTOMER_ROUTES = Object.freeze({
   forbidden: '/403',
   staff: '/staff',
   pos: '/pos',
+  posHistory: '/pos/history',
   admin: '/admin',
   adminInstruments: '/admin/instruments',
   adminInstrumentDetail: (id) =>
@@ -29,7 +30,7 @@ export const CUSTOMER_ROUTES = Object.freeze({
   adminArtisans: '/admin/artisans',
   adminCraftVillages: '/admin/craft-villages',
   adminInventory: '/admin/inventory',
-  adminStockImport: '/admin/stock-import',
+  legacyAdminStockImport: '/admin/stock-import',
   adminOrders: '/admin/orders',
   adminInvoices: '/admin/invoices',
   adminVouchers: '/admin/vouchers',

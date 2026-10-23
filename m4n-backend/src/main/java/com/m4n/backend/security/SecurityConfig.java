@@ -91,7 +91,7 @@ public class SecurityConfig {
                         // Online Staff only has access to orders back-office endpoints, while /admin/** is strictly ADMIN & SUPER_ADMIN.
                         .requestMatchers("/api/v1/admin/orders/**").hasAnyRole("ONLINE_STAFF", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/pos/invoices").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/pos/invoices").hasAnyRole("POS_STAFF", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/v1/pos/invoices/**").hasAnyRole("POS_STAFF", "ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/pos/**").hasRole("POS_STAFF")
                         .requestMatchers("/api/v1/inventory/**").hasAnyRole("ADMIN", "SUPER_ADMIN")

@@ -7,13 +7,25 @@ import {
   Shield,
 } from 'lucide-react'
 import { IconInstrument } from '../components/ui/Icons.jsx'
+import useToast from '../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 
 function CartPage() {
   const { cart, cartItemCount, updateCartItem, removeCartItem, loading } = useCart()
   const { isAuthenticated } = useAuth()
+  const { addToast } = useToast()
 
   const items = cart?.items || []
+
+  const handleRemoveItem = async (item) => {
+    const result = await removeCartItem(item.id)
+    addToast({
+      message: result.success
+        ? `Đã xóa "${item.productName}" khỏi giỏ hàng.`
+        : result.message || 'Không thể xóa sản phẩm khỏi giỏ hàng.',
+      type: result.success ? 'success' : 'error',
+    })
+  }
 
   return (
     <div className="w-full bg-surface-secondary/40 min-h-[calc(100vh-80px)] py-8 sm:py-12">
@@ -178,7 +190,7 @@ function CartPage() {
                       <button
                         type="button"
                         disabled={loading}
-                        onClick={() => removeCartItem(item.id)}
+                        onClick={() => handleRemoveItem(item)}
                         className="text-xs text-subtle hover:text-danger font-medium transition-colors cursor-pointer mt-1"
                       >
                         Xóa

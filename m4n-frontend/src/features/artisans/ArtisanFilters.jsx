@@ -35,7 +35,7 @@ function ArtisanFilters({
           </div>
           <input
             autoComplete="off"
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-control-border text-ink placeholder:text-muted/70 text-sm transition-all focus:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/15 shadow-2xs"
+            className="box-border w-full min-w-0 pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-control-border text-ink placeholder:text-muted/70 text-sm transition-[border-color,box-shadow] focus:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/15 shadow-2xs"
             id="artisan-search-input"
             onChange={(e) => onFilterChange('search', e.target.value)}
             placeholder={searchPlaceholder}

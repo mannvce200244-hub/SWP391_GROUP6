@@ -25,13 +25,13 @@ import ForbiddenPage from '../pages/ForbiddenPage.jsx'
 
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import PosDashboardPage from '../pages/PosDashboardPage.jsx'
+import PosTransactionHistoryPage from '../pages/PosTransactionHistoryPage.jsx'
 import AdminDashboardPage from '../pages/AdminDashboardPage.jsx'
 import AdminInstrumentsPage from '../pages/admin/AdminInstrumentsPage.jsx'
 import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage.jsx'
 import AdminArtisansPage from '../pages/admin/AdminArtisansPage.jsx'
 import AdminCraftVillagesPage from '../pages/admin/AdminCraftVillagesPage.jsx'
 import AdminInventoryPage from '../pages/admin/AdminInventoryPage.jsx'
-import AdminStockImportPage from '../pages/admin/AdminStockImportPage.jsx'
 import AdminOrdersPage from '../pages/admin/AdminOrdersPage.jsx'
 import AdminInvoicesPage from '../pages/admin/AdminInvoicesPage.jsx'
 import AdminVouchersPage from '../pages/admin/AdminVouchersPage.jsx'
@@ -52,18 +52,27 @@ import {
   ROUTE_CHANGE_EVENT,
 } from './customerRoutes.js'
 
+function readCurrentPathname() {
+  const currentPathname = normalizePathname(window.location.pathname)
+  return currentPathname === CUSTOMER_ROUTES.legacyAdminStockImport
+    ? CUSTOMER_ROUTES.adminInventory
+    : currentPathname
+}
+
 function AppRouter() {
-  const [pathname, setPathname] = useState(() =>
-    normalizePathname(window.location.pathname),
-  )
+  const [pathname, setPathname] = useState(readCurrentPathname)
 
   useEffect(() => {
     const updatePathname = () => {
-      setPathname(normalizePathname(window.location.pathname))
+      setPathname(readCurrentPathname())
     }
 
     window.addEventListener('popstate', updatePathname)
     window.addEventListener(ROUTE_CHANGE_EVENT, updatePathname)
+
+    if (normalizePathname(window.location.pathname) === CUSTOMER_ROUTES.legacyAdminStockImport) {
+      window.history.replaceState(null, '', CUSTOMER_ROUTES.adminInventory)
+    }
 
     return () => {
       window.removeEventListener('popstate', updatePathname)
@@ -99,7 +108,6 @@ function AppRouter() {
     pathname === CUSTOMER_ROUTES.adminArtisans ||
     pathname === CUSTOMER_ROUTES.adminCraftVillages ||
     pathname === CUSTOMER_ROUTES.adminInventory ||
-    pathname === CUSTOMER_ROUTES.adminStockImport ||
     pathname === CUSTOMER_ROUTES.adminOrders ||
     pathname === CUSTOMER_ROUTES.adminInvoices ||
     pathname === CUSTOMER_ROUTES.adminVouchers ||
@@ -120,8 +128,6 @@ function AppRouter() {
       adminContent = <AdminCraftVillagesPage />
     } else if (pathname === CUSTOMER_ROUTES.adminInventory) {
       adminContent = <AdminInventoryPage />
-    } else if (pathname === CUSTOMER_ROUTES.adminStockImport) {
-      adminContent = <AdminStockImportPage />
     } else if (pathname === CUSTOMER_ROUTES.adminOrders) {
       adminContent = <AdminOrdersPage />
     } else if (pathname === CUSTOMER_ROUTES.adminInvoices) {
@@ -129,9 +135,25 @@ function AppRouter() {
     } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
       adminContent = <AdminVouchersPage />
     } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
+ feature/product-master-data
+      adminContent = (
+        <ProfilePage
+          profileRoute={CUSTOMER_ROUTES.adminProfile}
+          securityRoute={CUSTOMER_ROUTES.adminSecurity}
+        />
+      )
+    } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
+      adminContent = (
+        <AccountSecurityPage
+          profileRoute={CUSTOMER_ROUTES.adminProfile}
+          securityRoute={CUSTOMER_ROUTES.adminSecurity}
+        />
+      )
+=======
       adminContent = <ProfilePage />
     } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
       adminContent = <AccountSecurityPage />
+ main
     } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
       adminContent = <AdminUsersPage />
     }
@@ -165,9 +187,25 @@ function AppRouter() {
     } else if (pathname === CUSTOMER_ROUTES.staffNotifications) {
       staffContent = <StaffNotificationsPage />
     } else if (pathname === CUSTOMER_ROUTES.staffProfile) {
+ feature/product-master-data
+      staffContent = (
+        <ProfilePage
+          profileRoute={CUSTOMER_ROUTES.staffProfile}
+          securityRoute={CUSTOMER_ROUTES.staffSecurity}
+        />
+      )
+    } else if (pathname === CUSTOMER_ROUTES.staffSecurity) {
+      staffContent = (
+        <AccountSecurityPage
+          profileRoute={CUSTOMER_ROUTES.staffProfile}
+          securityRoute={CUSTOMER_ROUTES.staffSecurity}
+        />
+      )
+=======
       staffContent = <ProfilePage />
     } else if (pathname === CUSTOMER_ROUTES.staffSecurity) {
       staffContent = <AccountSecurityPage />
+ main
     }
 
     return (
@@ -180,11 +218,13 @@ function AppRouter() {
   }
 
   // 4. POS showroom shell using PosLayout
-  if (pathname === CUSTOMER_ROUTES.pos) {
+  if (pathname === CUSTOMER_ROUTES.pos || pathname === CUSTOMER_ROUTES.posHistory) {
     return (
       <RequireRole allowedRoles={['POS_STAFF']}>
         <PosLayout pathname={pathname}>
-          <PosDashboardPage />
+          {pathname === CUSTOMER_ROUTES.posHistory
+            ? <PosTransactionHistoryPage />
+            : <PosDashboardPage />}
         </PosLayout>
       </RequireRole>
     )

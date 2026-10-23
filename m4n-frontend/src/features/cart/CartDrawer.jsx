@@ -8,11 +8,23 @@ import {
 import { IconInstrument } from '../../components/ui/Icons.jsx'
 import useCart from './useCart.js'
 import useAuth from '../auth/useAuth.js'
+import useToast from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 
 function CartDrawer({ isOpen, onClose }) {
   const { cart, cartItemCount, updateCartItem, removeCartItem, loading } = useCart()
   const { isAuthenticated } = useAuth()
+  const { addToast } = useToast()
+
+  const handleRemoveItem = async (item) => {
+    const result = await removeCartItem(item.id)
+    addToast({
+      message: result.success
+        ? `Đã xóa "${item.productName}" khỏi giỏ hàng.`
+        : result.message || 'Không thể xóa sản phẩm khỏi giỏ hàng.',
+      type: result.success ? 'success' : 'error',
+    })
+  }
 
   // Close on Escape key
   useEffect(() => {
@@ -207,7 +219,7 @@ function CartDrawer({ isOpen, onClose }) {
                         <button
                           type="button"
                           disabled={loading}
-                          onClick={() => removeCartItem(item.id)}
+                          onClick={() => handleRemoveItem(item)}
                           className="text-xs text-subtle hover:text-danger font-medium transition-colors cursor-pointer"
                         >
                           Xóa
