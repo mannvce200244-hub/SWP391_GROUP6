@@ -41,6 +41,7 @@ function getStatusBadge(status) {
       return {
         label: 'Chờ xử lý tồn kho',
         className: 'text-orange-800 bg-[#F6F7F8] border-orange-200',
+ feature/product-master-data
       }
     case 'SHIPPING':
       return {
@@ -51,6 +52,7 @@ function getStatusBadge(status) {
       return {
         label: 'Đã giao hàng',
         className: 'text-violet-700 bg-violet-50 border-violet-200',
+ main
       }
     case 'COMPLETED':
       return {
@@ -493,6 +495,7 @@ function CustomerOrdersPage() {
                         Sản phẩm hiện đang tạm hết tồn kho sẵn sàng. Đơn hàng chuyển sang hàng đợi chế tác/nhập kho từ làng nghề.
                       </div>
                     ) : (
+ feature/product-master-data
                       <div className="grid grid-cols-5 gap-1 text-center pt-2">
                         {[
                           ['PENDING_CONFIRMATION', 'Đã đặt'],
@@ -517,6 +520,49 @@ function CustomerOrdersPage() {
                             </div>
                           )
                         })}
+                      <div className="grid grid-cols-3 gap-2 text-center pt-2">
+                        {/* Step 1 */}
+                        <div className="space-y-1">
+                          <div className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center mx-auto text-xs font-bold">
+                            <Check size={14} className="stroke-[2.5]" />
+                          </div>
+                          <span className="font-semibold text-ink block text-xs">Đã đặt hàng</span>
+                        </div>
+                        {/* Step 2 */}
+                        <div className="space-y-1">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
+                            orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED'
+                              ? 'bg-brand text-white'
+                              : 'bg-[#F6F7F8] text-amber-800 ring-2 ring-amber-400'
+                          }`}>
+                            {orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED' ? (
+                              <Check size={14} className="stroke-[2.5]" />
+                            ) : (
+                              '2'
+                            )}
+                          </div>
+                          <span className="font-semibold text-ink block text-xs">Chờ xác nhận</span>
+                        </div>
+                        {/* Step 3 */}
+                        <div className="space-y-1">
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
+                            orderDetail.status === 'COMPLETED'
+                              ? 'bg-emerald-600 text-white'
+                              : orderDetail.status === 'CONFIRMED'
+                              ? 'bg-teal-600 text-white'
+                              : 'bg-surface-secondary text-muted'
+                          }`}>
+                            {orderDetail.status === 'COMPLETED' ? (
+                              <Check size={14} className="stroke-[2.5]" />
+                            ) : (
+                              '3'
+                            )}
+                          </div>
+                          <span className="font-semibold text-ink block text-xs">
+                            {orderDetail.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã xác nhận'}
+                          </span>
+                        </div>
+ main
                       </div>
                     )}
                   </div>

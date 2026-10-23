@@ -52,3 +52,13 @@ lerna-debug.log*
 Thumbs.db
 ehthumbs.db
 [Dd]esktop.ini
+
+# Local scripts & tool files
+push.ps1
+.agents/
+AGENTS.md
+**/AGENTS.md
+CLAUDE.md
+GEMINI.md
+skills-lock.json
+*.backup

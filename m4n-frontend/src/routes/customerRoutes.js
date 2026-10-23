@@ -55,6 +55,18 @@ export const HOME_ARTISAN_SECTION = Object.freeze({
 
 export const ROUTE_CHANGE_EVENT = 'm4n:navigate'
 
+export function getProfileRouteForRole(role) {
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return CUSTOMER_ROUTES.adminProfile
+  if (role === 'ONLINE_STAFF') return CUSTOMER_ROUTES.staffProfile
+  return CUSTOMER_ROUTES.profile
+}
+
+export function getSecurityRouteForRole(role) {
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return CUSTOMER_ROUTES.adminSecurity
+  if (role === 'ONLINE_STAFF') return CUSTOMER_ROUTES.staffSecurity
+  return CUSTOMER_ROUTES.security
+}
+
 export function navigateTo(pathname) {
   if (typeof window === 'undefined') return
   window.history.pushState(null, '', pathname)

@@ -3,6 +3,11 @@ import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import {
   LayoutDashboard,
+ feature/product-master-data
+=======
+  UserRound,
+  Lock,
+ main
   LogOut,
   Menu,
   X,
@@ -290,6 +295,88 @@ function StaffLayout({ children, pathname }) {
 
             {/* Notification Bell */}
             <NotificationBell />
+ feature/product-master-data
+=======
+
+            {/* Profile Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-zinc-100 transition-colors cursor-pointer text-left"
+                onClick={() => setDropdownOpen((prev) => !prev)}
+                aria-expanded={dropdownOpen}
+                aria-haspopup="true"
+              >
+                <div className="w-8 h-8 rounded-xl bg-[#1F6B5A] text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'S'}
+                </div>
+                <div className="hidden sm:flex flex-col">
+                  <span className="text-xs font-bold text-ink leading-tight">
+                    {user?.fullName || 'Nhân viên Online'}
+                  </span>
+                  <span className="text-xs text-zinc-500 font-medium">
+                    {user?.role || 'ONLINE_STAFF'}
+                  </span>
+                </div>
+                <ChevronDown size={14} className="text-zinc-400" />
+              </button>
+
+              {dropdownOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl border border-border shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95"
+                  role="menu"
+                >
+                  <div className="px-4 py-2.5 border-b border-border/80 bg-zinc-50/60 flex flex-col mb-1 text-xs">
+                    <strong className="text-ink truncate font-bold">
+                      {user?.fullName || 'Nhân viên'}
+                    </strong>
+                    <span className="text-zinc-500 truncate mt-0.5">{user?.email}</span>
+                    <span className="inline-block mt-1 text-xs font-semibold uppercase tracking-wider text-[#1F6B5A]">
+                      Nhân viên tư vấn
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-ink hover:bg-zinc-100 hover:text-[#1F6B5A] transition-colors w-full text-left cursor-pointer"
+                    role="menuitem"
+                    onClick={() => {
+                      setDropdownOpen(false)
+                      navigateTo(CUSTOMER_ROUTES.staffProfile)
+                    }}
+                  >
+                    <UserRound size={16} />
+                    <span>Hồ sơ nhân viên</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-ink hover:bg-zinc-100 hover:text-[#1F6B5A] transition-colors w-full text-left cursor-pointer"
+                    role="menuitem"
+                    onClick={() => {
+                      setDropdownOpen(false)
+                      navigateTo(CUSTOMER_ROUTES.staffSecurity)
+                    }}
+                  >
+                    <Lock size={16} />
+                    <span>Bảo mật tài khoản</span>
+                  </button>
+
+                  <div className="my-1 border-t border-border" />
+
+                  <button
+                    type="button"
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-medium text-rose-600 hover:bg-rose-50 transition-colors w-full text-left cursor-pointer"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={16} />
+                    <span>Đăng xuất ca trực</span>
+                  </button>
+                </div>
+              )}
+            </div>
+ main
           </div>
         </header>
 

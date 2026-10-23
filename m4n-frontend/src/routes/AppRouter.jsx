@@ -135,6 +135,7 @@ function AppRouter() {
     } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
       adminContent = <AdminVouchersPage />
     } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
+ feature/product-master-data
       adminContent = (
         <ProfilePage
           profileRoute={CUSTOMER_ROUTES.adminProfile}
@@ -148,6 +149,11 @@ function AppRouter() {
           securityRoute={CUSTOMER_ROUTES.adminSecurity}
         />
       )
+=======
+      adminContent = <ProfilePage />
+    } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
+      adminContent = <AccountSecurityPage />
+ main
     } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
       adminContent = <AdminUsersPage />
     }
@@ -181,6 +187,7 @@ function AppRouter() {
     } else if (pathname === CUSTOMER_ROUTES.staffNotifications) {
       staffContent = <StaffNotificationsPage />
     } else if (pathname === CUSTOMER_ROUTES.staffProfile) {
+ feature/product-master-data
       staffContent = (
         <ProfilePage
           profileRoute={CUSTOMER_ROUTES.staffProfile}
@@ -194,6 +201,11 @@ function AppRouter() {
           securityRoute={CUSTOMER_ROUTES.staffSecurity}
         />
       )
+=======
+      staffContent = <ProfilePage />
+    } else if (pathname === CUSTOMER_ROUTES.staffSecurity) {
+      staffContent = <AccountSecurityPage />
+ main
     }
 
     return (

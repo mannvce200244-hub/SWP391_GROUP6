@@ -225,6 +225,7 @@ export default function ProductFormModal({
         sortOrder: i,
       }))
     })
+ feature/product-master-data
   }
 
   const handleMoveMedia = (index, direction) => {
@@ -242,6 +243,7 @@ export default function ProductFormModal({
         sortOrder: mediaIndex,
       }))
     })
+ main
   }
 
   const validate = () => {

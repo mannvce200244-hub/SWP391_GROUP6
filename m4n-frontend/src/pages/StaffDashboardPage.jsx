@@ -1,3 +1,9 @@
+ feature/product-master-data
+
+import useAuth from '../features/auth/useAuth.js'
+import RouterLink from '../routes/RouterLink.jsx'
+import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
+ main
 import {
   ChevronRight,
   CircleCheckBig,
@@ -6,6 +12,7 @@ import {
   MessageCircle,
   MessagesSquare,
   Package,
+ feature/product-master-data
   Search,
 } from 'lucide-react'
 import ErrorState from '../components/ui/ErrorState.jsx'
@@ -40,6 +47,11 @@ const QUICK_ACTIONS = Object.freeze([
     accentColor: 'text-zinc-700',
   }),
 ])
+
+  MessageCircle,
+  Search,
+} from 'lucide-react'
+ main
 
 function DashboardSkeleton() {
   return (
@@ -103,6 +115,7 @@ function StaffDashboardPage() {
       ]
     : []
 
+ feature/product-master-data
   const attentionItems = kpi
     ? [
         {
@@ -122,11 +135,40 @@ function StaffDashboardPage() {
         },
       ]
     : []
+=======
+  const quickActions = [
+    {
+      title: 'Đơn hàng online',
+      description: 'Xem, xác nhận và xử lý đơn hàng trực tuyến từ khách hàng.',
+      path: CUSTOMER_ROUTES.staffOrders,
+      Icon: Package,
+      accentColor: 'text-[#1F6B5A]',
+      accentBg: 'bg-emerald-50',
+    },
+    {
+      title: 'Hỗ trợ khách hàng',
+      description: 'Tiếp nhận và phản hồi tin nhắn hỗ trợ từ khách hàng.',
+      path: CUSTOMER_ROUTES.staffChat,
+      Icon: MessageCircle,
+      accentColor: 'text-sky-600',
+      accentBg: 'bg-sky-50',
+    },
+    {
+      title: 'Tra cứu sản phẩm',
+      description: 'Tra cứu thông tin sản phẩm để hỗ trợ xử lý đơn và tư vấn.',
+      path: CUSTOMER_ROUTES.staffProducts,
+      Icon: Search,
+      accentColor: 'text-indigo-600',
+      accentBg: 'bg-indigo-50',
+    },
+  ]
+ main
 
   return (
     <div className="flex flex-col gap-8 pb-10">
       <section className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-border bg-white p-6 shadow-xs sm:p-8 md:flex-row md:items-center">
         <div className="flex flex-col gap-1.5">
+ feature/product-master-data
           <span className="text-xs font-semibold uppercase tracking-wider text-brand">
             Bàn làm việc Online
           </span>
@@ -134,13 +176,29 @@ function StaffDashboardPage() {
             Xin chào, {user?.fullName || 'Nhân viên'}
           </h1>
           <p className="text-xs text-muted sm:text-sm">
+=======
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#1F6B5A]">
+              Bàn Làm Việc Online
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight font-sans">
+            Xin chào, {user?.fullName || 'Nhân viên'}
+          </h1>
+          <p className="text-xs sm:text-sm text-muted">
+ main
             Tổng hợp công việc và truy cập nhanh các chức năng vận hành.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
+ feature/product-master-data
           <div className="flex flex-col rounded-xl border border-border bg-canvas px-4 py-2 text-xs">
             <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+=======
+          <div className="flex flex-col px-4 py-2 rounded-xl bg-[#F6F7F8] border border-border text-xs">
+            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+>>>>>>> main
               Tài khoản ca trực
             </span>
             <span className="mt-0.5 break-all font-mono font-bold text-ink">{user?.email}</span>
@@ -157,6 +215,7 @@ function StaffDashboardPage() {
         </div>
       </section>
 
+<<<<<<< feature/product-master-data
       {dashboardState.status === 'loading' && <DashboardSkeleton />}
 
       {dashboardState.status === 'error' && (
@@ -249,15 +308,31 @@ function StaffDashboardPage() {
         <h2 id="quick-actions-heading" className="text-base font-bold text-ink">Chức năng vận hành</h2>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {QUICK_ACTIONS.map((item) => {
+
+      {/* Quick Action Modules */}
+      <div className="flex flex-col gap-4">
+        <h2 className="text-base font-bold text-ink">Chức năng vận hành</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {quickActions.map((item) => {
+ main
             const ItemIcon = item.Icon
             return (
               <RouterLink
                 key={item.path}
                 href={item.path}
+ feature/product-master-data
                 className="group flex flex-col rounded-2xl border border-border bg-white p-5 text-left shadow-xs transition-[border-color,box-shadow] duration-200 hover:border-zinc-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 motion-reduce:transition-none"
               >
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-canvas">
                   <ItemIcon aria-hidden="true" className={item.accentColor} size={20} />
+
+                className="flex flex-col rounded-2xl bg-white border border-border p-5 shadow-xs hover:shadow-md hover:border-zinc-300 transition-[border-color,box-shadow] duration-200 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+              >
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <div className={`w-10 h-10 rounded-xl ${item.accentBg} ${item.accentColor} flex items-center justify-center transition-colors`}>
+                    <ItemIcon size={20} />
+                  </div>
+ main
                 </div>
                 <h3 className="mb-1.5 text-sm font-bold text-ink transition-colors group-hover:text-brand">
                   {item.title}
@@ -271,7 +346,11 @@ function StaffDashboardPage() {
             )
           })}
         </div>
+ feature/product-master-data
       </section>
+=======
+      </div>
+ main
     </div>
   )
 }

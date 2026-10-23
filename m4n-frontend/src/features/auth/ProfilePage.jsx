@@ -14,7 +14,7 @@ import {
   LoaderCircle,
 } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
-import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
+import { getSecurityRouteForRole, navigateTo } from '../../routes/customerRoutes.js'
 
 function ProfilePage({
   profileRoute = CUSTOMER_ROUTES.profile,
@@ -163,7 +163,10 @@ function ProfilePage({
           {/* Quick Security Action Shortcut */}
           <button
             type="button"
+ feature/product-master-data
             onClick={() => navigateTo(securityRoute)}
+            onClick={() => navigateTo(getSecurityRouteForRole(user?.role))}
+ main
             className="self-start sm:self-center inline-flex items-center gap-2 px-4 py-2.5 rounded-[16px] text-xs font-bold text-brand bg-brand-soft/70 hover:bg-brand-soft border border-brand-border transition-all cursor-pointer"
           >
             <Shield size={15} />
