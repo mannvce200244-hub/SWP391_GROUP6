@@ -16,7 +16,10 @@ import {
 import useToast from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 
-function ProfilePage() {
+function ProfilePage({
+  profileRoute = CUSTOMER_ROUTES.profile,
+  securityRoute = CUSTOMER_ROUTES.security,
+}) {
   const { user, updateProfile } = useAuth()
   const { addToast } = useToast()
 
@@ -28,6 +31,7 @@ function ProfilePage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [generalError, setGeneralError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const isCustomer = user?.role === 'CUSTOMER'
 
   // Synchronize state if user updates externally
   if (user !== prevUser) {
@@ -99,7 +103,11 @@ function ProfilePage() {
     address.trim() !== (user?.address || '').trim()
 
   return (
-    <AccountLayout activeTab="profile">
+    <AccountLayout
+      activeTab="profile"
+      profileRoute={profileRoute}
+      securityRoute={securityRoute}
+    >
       <div className="space-y-8">
         
         {/* Profile Hero Section */}
@@ -130,8 +138,10 @@ function ProfilePage() {
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-jade-soft px-3 py-1 text-xs font-bold text-jade border border-jade-border">
                   <span className="w-1.5 h-1.5 rounded-full bg-jade animate-pulse" />
-                  {user?.role === 'ADMIN'
-                    ? 'Quản trị viên'
+                  {user?.role === 'SUPER_ADMIN'
+                    ? 'Super Admin'
+                    : user?.role === 'ADMIN'
+                      ? 'Quản trị viên'
                     : user?.role === 'ONLINE_STAFF'
                       ? 'Nhân viên Online'
                       : user?.role === 'POS_STAFF'
@@ -153,7 +163,7 @@ function ProfilePage() {
           {/* Quick Security Action Shortcut */}
           <button
             type="button"
-            onClick={() => navigateTo(CUSTOMER_ROUTES.security)}
+            onClick={() => navigateTo(securityRoute)}
             className="self-start sm:self-center inline-flex items-center gap-2 px-4 py-2.5 rounded-[16px] text-xs font-bold text-brand bg-brand-soft/70 hover:bg-brand-soft border border-brand-border transition-all cursor-pointer"
           >
             <Shield size={15} />
@@ -261,7 +271,9 @@ function ProfilePage() {
                 </p>
               ) : (
                 <p className="mt-1.5 text-xs text-muted">
-                  Dùng để xác nhận đơn hàng và điều phối giao nhận nhạc cụ.
+                  {isCustomer
+                    ? 'Dùng để xác nhận đơn hàng và điều phối giao nhận nhạc cụ.'
+                    : 'Dùng làm thông tin liên hệ của tài khoản.'}
                 </p>
               )}
             </div>
@@ -292,7 +304,7 @@ function ProfilePage() {
                 />
               </div>
               <p className="mt-1.5 text-xs text-muted">
-                Email tài khoản được dùng để đăng nhập và gửi thông báo đơn hàng điện tử.
+                Email tài khoản được dùng để đăng nhập và nhận thông báo trong hệ thống.
               </p>
             </div>
 
@@ -302,7 +314,7 @@ function ProfilePage() {
                 htmlFor="profile-address"
                 className="mb-2 block text-sm font-bold text-ink"
               >
-                Địa chỉ giao nhận mặc định
+                {isCustomer ? 'Địa chỉ giao nhận mặc định' : 'Địa chỉ liên hệ'}
               </label>
               <div className="relative flex">
                 <div className="pointer-events-none absolute left-4 top-4 text-subtle transition-colors group-focus-within:text-brand">
@@ -320,7 +332,9 @@ function ProfilePage() {
                 />
               </div>
               <p className="mt-1.5 text-xs text-muted">
-                Địa chỉ này sẽ được ưu tiên tự động điền khi bạn đặt làm hoặc mua nhạc cụ tại M4N.
+                {isCustomer
+                  ? 'Địa chỉ này sẽ được ưu tiên tự động điền khi bạn mua nhạc cụ tại M4N.'
+                  : 'Thông tin địa chỉ liên hệ của tài khoản.'}
               </p>
             </div>
 

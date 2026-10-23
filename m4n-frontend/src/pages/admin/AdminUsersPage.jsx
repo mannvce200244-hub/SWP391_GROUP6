@@ -3,6 +3,7 @@ import adminUserService from '../../services/adminUserService.js'
 import useAuth from '../../features/auth/useAuth.js'
 import useToast from '../../components/ui/useToast.js'
 import { ROUTE_CHANGE_EVENT } from '../../routes/customerRoutes.js'
+import CustomerOrderHistory from '../../components/admin/CustomerOrderHistory.jsx'
 import {
   ChevronDown,
   Search,
@@ -14,7 +15,7 @@ import {
 const ROLE_DEFINITIONS = Object.freeze({
   CUSTOMER: { label: 'Khách hàng', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' },
   ONLINE_STAFF: { label: 'Nhân viên Online', bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
-  POS_STAFF: { label: 'Nhân viên POS', bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200' },
+  POS_STAFF: { label: 'Nhân viên POS', bg: 'bg-[#F6F7F8]', text: 'text-amber-800', border: 'border-amber-200' },
   ADMIN: { label: 'Quản trị viên', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
   SUPER_ADMIN: { label: 'Super Admin', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
 })
@@ -348,8 +349,8 @@ export function AdminUsersPage() {
   const isSelf = selectedUser?.id === currentUser?.id
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full">
-      {/* Page Header */}
+    <div className="flex flex-col gap-6 w-full">
+      {/* 1. Header Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-[#E5E8EB] shadow-2xs">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#17191B] tracking-tight">
@@ -421,7 +422,7 @@ export function AdminUsersPage() {
           }}
           className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
             roleFilter === 'POS_STAFF'
-              ? 'bg-amber-600 text-white shadow-xs'
+              ? 'bg-brand text-white shadow-xs'
               : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
           }`}
         >
@@ -468,8 +469,11 @@ export function AdminUsersPage() {
           </div>
           <input
             type="text"
-            className="w-full pl-10 pr-4 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-sm text-[#17191B] placeholder-muted focus:bg-white focus:outline-none focus:border-[#0D9488] transition-all"
-            placeholder="Tìm theo họ tên hoặc email..."
+            name="userSearch"
+            aria-label="Tìm tài khoản"
+            autoComplete="off"
+            className="box-border w-full min-w-0 pl-10 pr-4 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-sm text-[#17191B] placeholder-muted focus:bg-white focus:outline-none focus:border-[#0D9488] transition-[background-color,border-color,box-shadow]"
+            placeholder="Tìm theo họ tên hoặc email…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -827,6 +831,10 @@ export function AdminUsersPage() {
               )}
             </form>
 
+            {selectedUser.role === 'CUSTOMER' && (
+              <CustomerOrderHistory customerId={selectedUser.id} />
+            )}
+
             {/* Privileged Role & Status Section */}
             <div className="mt-6 pt-5 border-t border-[#E5E8EB] flex flex-col gap-4 text-sm">
               <h3 className="font-bold text-xs uppercase tracking-wider text-secondary">
@@ -868,7 +876,7 @@ export function AdminUsersPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="text-xs text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-center gap-2">
+                  <div className="text-xs text-amber-800 bg-[#F6F7F8] p-3 rounded-xl border border-amber-200 flex items-center gap-2">
                     <CircleAlert size={15} className="shrink-0 text-amber-700" />
                     <span>Chỉ Super Admin mới có thẩm quyền sửa đổi vai trò của tài khoản Quản trị viên.</span>
                   </div>
@@ -927,7 +935,7 @@ export function AdminUsersPage() {
               {conflictMessage}
             </p>
 
-            <div className="bg-amber-50 p-3.5 rounded-xl border border-amber-200 text-xs text-amber-800 mb-5">
+            <div className="bg-[#F6F7F8] p-3.5 rounded-xl border border-amber-200 text-xs text-amber-800 mb-5">
               Để bảo vệ tính toàn vẹn dữ liệu, các thay đổi vừa rồi chưa được lưu đè. Vui lòng tải lại dữ liệu mới nhất trước khi chỉnh sửa tiếp.
             </div>
 

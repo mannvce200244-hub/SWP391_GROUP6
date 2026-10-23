@@ -20,7 +20,7 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
     /**
-     * Pessimistic lock for state-transitioning operations (confirm/complete/cancel) so the
+     * Pessimistic lock for state-transitioning operations (confirm/ship/deliver/cancel) so the
      * status check-then-act sequence is serialized against concurrent transitions on the
      * same order and cannot double-deduct or lose inventory restoration (BR-INVENTORY-01/03).
      */
@@ -29,6 +29,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByIdWithLock(@Param("id") Long id);
 
     List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    Page<Order> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     Optional<Order> findByIdAndUserId(Long id, Long userId);
 
@@ -40,6 +42,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT o FROM Order o WHERE " +
             "(:status IS NULL OR o.status = :status) AND " +
+            "(:isPaid IS NULL OR o.isPaid = :isPaid) AND " +
+            "(:paymentMethod IS NULL OR :paymentMethod = '' OR o.paymentMethod = :paymentMethod) AND " +
             "(:search IS NULL OR :search = '' OR " +
             "LOWER(o.orderCode) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(o.customerName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
@@ -47,6 +51,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             "LOWER(o.customerEmail) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Order> searchOrders(
             @Param("status") OrderStatus status,
+            @Param("isPaid") Boolean isPaid,
+            @Param("paymentMethod") String paymentMethod,
             @Param("search") String search,
             Pageable pageable
     );

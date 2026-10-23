@@ -15,7 +15,7 @@ function ForbiddenPage() {
   return (
     <div className="min-h-[70vh] flex items-center justify-center p-4 sm:p-8">
       <div className="max-w-lg w-full bg-surface rounded-2xl border border-border p-6 sm:p-10 text-center shadow-md flex flex-col items-center gap-4">
-        <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 uppercase tracking-wider">
+        <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#F6F7F8] text-amber-800 border border-amber-200 uppercase tracking-wider">
           403 - Quyền truy cập bị từ chối
         </span>
         <h1 className="text-2xl font-bold tracking-tight text-ink font-sans">Bạn không có quyền truy cập trang này</h1>

@@ -39,7 +39,7 @@ function InventoryDonutChart({ inventory = {} }) {
       count: lowStock,
       color: '#D97706',
       bgColor: 'bg-amber-500',
-      tagColor: 'text-amber-700 bg-amber-50 border-amber-200',
+      tagColor: 'text-amber-800 bg-[#F6F7F8] border-amber-200',
       pct: pctLowStock,
     },
     {

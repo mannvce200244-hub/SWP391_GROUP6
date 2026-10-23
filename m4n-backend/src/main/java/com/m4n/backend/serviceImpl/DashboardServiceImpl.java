@@ -247,6 +247,8 @@ public class DashboardServiceImpl implements DashboardService {
             case PENDING_CONFIRMATION -> "Chờ xác nhận";
             case CONFIRMED -> "Đã xác nhận";
             case OUT_OF_STOCK_WAITING -> "Chờ bổ sung kho";
+            case SHIPPING -> "Đang giao hàng";
+            case DELIVERED -> "Đã giao hàng";
             case COMPLETED -> "Đã hoàn thành";
             case CANCELLED -> "Đã hủy";
         };

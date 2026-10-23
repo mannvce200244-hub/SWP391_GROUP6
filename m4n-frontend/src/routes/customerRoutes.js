@@ -21,6 +21,7 @@ export const CUSTOMER_ROUTES = Object.freeze({
   forbidden: '/403',
   staff: '/staff',
   pos: '/pos',
+  posHistory: '/pos/history',
   admin: '/admin',
   adminInstruments: '/admin/instruments',
   adminInstrumentDetail: (id) =>
@@ -29,7 +30,7 @@ export const CUSTOMER_ROUTES = Object.freeze({
   adminArtisans: '/admin/artisans',
   adminCraftVillages: '/admin/craft-villages',
   adminInventory: '/admin/inventory',
-  adminStockImport: '/admin/stock-import',
+  legacyAdminStockImport: '/admin/stock-import',
   adminOrders: '/admin/orders',
   adminInvoices: '/admin/invoices',
   adminVouchers: '/admin/vouchers',
@@ -38,6 +39,11 @@ export const CUSTOMER_ROUTES = Object.freeze({
   adminUsers: '/admin/users',
   staffChat: '/staff/chat',
   staffOrders: '/staff/orders',
+  staffProducts: '/staff/products',
+  staffInventory: '/staff/inventory',
+  staffNotifications: '/staff/notifications',
+  staffProfile: '/staff/profile',
+  staffSecurity: '/staff/security',
 })
 
 const ARTISAN_SECTION_ID = 'artisans'
@@ -130,4 +136,3 @@ export function matchAdminInstrumentDetailPath(pathname) {
     return null
   }
 }
-

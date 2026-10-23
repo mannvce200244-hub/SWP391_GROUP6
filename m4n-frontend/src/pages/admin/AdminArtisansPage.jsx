@@ -60,13 +60,28 @@ export default function AdminArtisansPage() {
     }
   }
 
+  const requestDelete = (artisan) => {
+    const productCount = artisan.productCount ?? 0
+
+    if (productCount > 0) {
+      addToast({
+        message: `Không thể xóa nghệ nhân "${artisan.name}" vì đang liên kết ${productCount} sản phẩm. Vui lòng gỡ các liên kết trước.`,
+        type: 'error',
+        duration: 5000,
+      })
+      return
+    }
+
+    setDeleteTarget(artisan)
+  }
+
   const filtered = artisans.filter((a) => {
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (
       (a.name && a.name.toLowerCase().includes(q)) ||
-      (a.villageName && a.villageName.toLowerCase().includes(q)) ||
-      (a.craft && a.craft.toLowerCase().includes(q))
+      (a.craftVillageName && a.craftVillageName.toLowerCase().includes(q)) ||
+      (a.biography && a.biography.toLowerCase().includes(q))
     )
   })
 
@@ -167,17 +182,17 @@ export default function AdminArtisansPage() {
                         )}
                         <div>
                           <p className="font-medium text-[#17191B]">{artisan.name}</p>
-                          {artisan.craft && (
-                            <p className="text-xs text-secondary">{artisan.craft}</p>
+                          {artisan.biography && (
+                            <p className="max-w-xs truncate text-xs text-secondary">{artisan.biography}</p>
                           )}
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {artisan.villageName ? (
+                      {artisan.craftVillageName ? (
                         <span className="inline-flex items-center gap-1 text-secondary">
-                          <Landmark size={13} className="text-zinc-400" />
-                          {artisan.villageName}
+                          <Landmark size={13} className="text-zinc-400" aria-hidden="true" />
+                          {artisan.craftVillageName}
                         </span>
                       ) : (
                         <span className="text-zinc-400">—</span>
@@ -191,21 +206,29 @@ export default function AdminArtisansPage() {
                         <button
                           type="button"
                           title="Chỉnh sửa"
+                          aria-label={`Chỉnh sửa nghệ nhân ${artisan.name}`}
                           onClick={() => {
                             setSelectedArtisan(artisan)
                             setIsModalOpen(true)
                           }}
                           className="p-1.5 rounded-lg text-zinc-400 hover:text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors cursor-pointer"
                         >
-                          <Pencil size={15} />
+                          <Pencil size={15} aria-hidden="true" />
                         </button>
                         <button
                           type="button"
-                          title="Xóa"
-                          onClick={() => setDeleteTarget(artisan)}
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title={(artisan.productCount ?? 0) > 0
+                            ? `Không thể xóa: đang liên kết ${artisan.productCount} sản phẩm`
+                            : 'Xóa nghệ nhân'}
+                          aria-label={`Xóa nghệ nhân ${artisan.name}`}
+                          onClick={() => requestDelete(artisan)}
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                            (artisan.productCount ?? 0) > 0
+                              ? 'text-zinc-300 hover:text-zinc-500 hover:bg-[#F6F7F8]'
+                              : 'text-zinc-400 hover:text-rose-600 hover:bg-rose-50'
+                          }`}
                         >
-                          <Trash2 size={15} />
+                          <Trash2 size={15} aria-hidden="true" />
                         </button>
                       </div>
                     </td>
@@ -220,10 +243,11 @@ export default function AdminArtisansPage() {
       {/* Delete Confirmation */}
       {deleteTarget && (
         <ConfirmDialog
+          isOpen
           title="Xóa nghệ nhân"
-          message={`Bạn có chắc muốn xóa nghệ nhân "${deleteTarget.name}"? Hành động này không thể hoàn tác.`}
+          description={`Bạn có chắc muốn xóa nghệ nhân "${deleteTarget.name}"? Hành động này không thể hoàn tác.`}
           confirmLabel="Xóa"
-          isDestructive
+          variant="danger"
           isLoading={deleting}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}

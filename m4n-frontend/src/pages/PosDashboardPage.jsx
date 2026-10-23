@@ -129,8 +129,9 @@ function PosDashboardPage() {
   }
 
   // 4. Remove item from Bill
-  const handleRemoveItem = (productId) => {
-    setBillItems((prev) => prev.filter((item) => item.productId !== productId))
+  const handleRemoveItem = (item) => {
+    setBillItems((prev) => prev.filter((billItem) => billItem.productId !== item.productId))
+    addToast({ message: `Đã xóa "${item.name}" khỏi đơn hàng.`, type: 'success' })
   }
 
   // 5. Clear entire Bill
@@ -140,6 +141,7 @@ function PosDashboardPage() {
     setVoucherCode('')
     setVoucherState({ applied: false, discount: 0, message: '', loading: false })
     setAmountReceived('')
+    addToast({ message: 'Đã xóa toàn bộ sản phẩm khỏi đơn hàng.', type: 'success' })
   }
 
   // 6. Manual Barcode / SKU Submission
@@ -380,10 +382,13 @@ function PosDashboardPage() {
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
-            placeholder="Tìm nhạc cụ (tên, mã sản phẩm, phân loại)..."
+            name="posProductSearch"
+            aria-label="Tìm nhạc cụ tại quầy"
+            autoComplete="off"
+            placeholder="Tìm nhạc cụ (tên, mã sản phẩm, phân loại)…"
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            className="w-full pl-9.5 pr-4 py-2 text-xs rounded-xl border border-border bg-canvas focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-all text-ink placeholder:text-muted"
+            className="box-border w-full min-w-0 pl-9.5 pr-4 py-2 text-xs rounded-xl border border-border bg-canvas focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-[border-color,box-shadow] text-ink placeholder:text-muted"
           />
           {searchKeyword && (
             <button
@@ -483,7 +488,7 @@ function PosDashboardPage() {
                             prod.quantity > 5
                               ? 'bg-emerald-600/90 text-white'
                               : prod.quantity > 0
-                              ? 'bg-amber-600/90 text-white'
+                              ? 'bg-brand text-white'
                               : 'bg-rose-600/90 text-white'
                           }`}
                         >
@@ -594,7 +599,7 @@ function PosDashboardPage() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveItem(item.productId)}
+                      onClick={() => handleRemoveItem(item)}
                       className="text-muted hover:text-rose-600 transition-colors p-1 cursor-pointer"
                     >
                       <Trash2 size={14} />
@@ -802,7 +807,7 @@ function PosDashboardPage() {
               )}
 
               {!scannerSupported && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                <div className="p-3 rounded-xl bg-[#F6F7F8] border border-amber-200 text-amber-800 text-xs">
                   Trình duyệt chưa hỗ trợ tự động BarcodeDetector. Bạn có thể nhập mã vạch bằng tay bên dưới hoặc dùng máy quét USB / Bluetooth cầm tay.
                 </div>
               )}

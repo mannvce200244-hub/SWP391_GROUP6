@@ -1,5 +1,6 @@
 package com.m4n.backend.security;
 
+import com.m4n.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,9 @@ public class RbacSecurityAuthorizationIntegrationTest {
 
     @Autowired
     private WebApplicationContext context;
+
+    @Autowired
+    private UserRepository userRepository;
 
     private MockMvc mockMvc;
 
@@ -46,7 +50,10 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/craft-villages")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/vouchers")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/orders")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/orders/1/ship")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/orders/1/mark-delivered")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/users")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/users/1/orders")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isForbidden());
     }
 
@@ -84,6 +91,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
     @WithMockUser(username = "staff@m4n.vn", roles = {"ONLINE_STAFF"})
     void onlineStaff_shouldBeAllowedToViewOrdersAndInventory() throws Exception {
         mockMvc.perform(get("/api/v1/admin/orders")).andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/orders/1/confirm-received")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/inventory")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/cart")).andExpect(status().isForbidden());
     }
@@ -99,6 +107,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/craft-villages")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/vouchers")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/users")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/users/1/orders")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isForbidden());
     }
 
@@ -129,6 +138,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
     @WithMockUser(username = "pos@m4n.vn", roles = {"POS_STAFF"})
     void posStaff_shouldBeAllowedToUsePos() throws Exception {
         mockMvc.perform(get("/api/v1/pos/products/search")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/pos/invoices")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/inventory")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/cart")).andExpect(status().isForbidden());
     }
@@ -138,6 +148,8 @@ public class RbacSecurityAuthorizationIntegrationTest {
     @WithMockUser(username = "pos@m4n.vn", roles = {"POS_STAFF"})
     void posStaff_shouldBeDeniedFromAdminOrders() throws Exception {
         mockMvc.perform(get("/api/v1/admin/orders")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/orders/1/ship")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/orders/1/mark-delivered")).andExpect(status().isForbidden());
     }
 
     @Test
@@ -160,6 +172,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/craft-villages")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/vouchers")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/users")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/users/1/orders")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isForbidden());
     }
 
@@ -178,6 +191,8 @@ public class RbacSecurityAuthorizationIntegrationTest {
     @DisplayName("ADMIN is ALLOWED to access Back Office modules")
     @WithMockUser(username = "admin@m4n.vn", roles = {"ADMIN"})
     void admin_shouldBeAllowedToAccessBackOffice() throws Exception {
+        long customerId = userRepository.findByEmailIgnoreCase("customer@m4n.vn").orElseThrow().getId();
+
         mockMvc.perform(get("/api/v1/admin/products")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/categories")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/artisans")).andExpect(status().isOk());
@@ -185,6 +200,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/vouchers")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/orders")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/users")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/admin/users/{id}/orders", customerId)).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/pos/invoices")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/pos/products/search")).andExpect(status().isForbidden());
@@ -200,9 +216,12 @@ public class RbacSecurityAuthorizationIntegrationTest {
     @DisplayName("SUPER_ADMIN is ALLOWED to access all Back Office modules and User Management")
     @WithMockUser(username = "superadmin@m4n.vn", roles = {"SUPER_ADMIN"})
     void superAdmin_shouldBeAllowedToAccessAllModules() throws Exception {
+        long customerId = userRepository.findByEmailIgnoreCase("customer@m4n.vn").orElseThrow().getId();
+
         mockMvc.perform(get("/api/v1/admin/products")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/categories")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/users")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/admin/users/{id}/orders", customerId)).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/pos/invoices")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/pos/products/search")).andExpect(status().isForbidden());

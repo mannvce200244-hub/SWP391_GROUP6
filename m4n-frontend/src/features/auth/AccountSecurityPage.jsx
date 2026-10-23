@@ -14,7 +14,10 @@ import {
 import useToast from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 
-function AccountSecurityPage() {
+function AccountSecurityPage({
+  profileRoute = CUSTOMER_ROUTES.profile,
+  securityRoute = CUSTOMER_ROUTES.security,
+}) {
   const { changePassword, logoutAll } = useAuth()
   const { addToast } = useToast()
 
@@ -108,7 +111,11 @@ function AccountSecurityPage() {
   }
 
   return (
-    <AccountLayout activeTab="security">
+    <AccountLayout
+      activeTab="security"
+      profileRoute={profileRoute}
+      securityRoute={securityRoute}
+    >
       <div className="space-y-8">
         
         {/* General Error Alert */}

@@ -360,7 +360,7 @@ export default function AdminInstrumentsPage() {
         </div>
 
         <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E5E8EB] shadow-2xs flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-[#F6F7F8] text-amber-700 flex items-center justify-center shrink-0">
             <Layers size={22} />
           </div>
           <div>
@@ -556,9 +556,9 @@ export default function AdminInstrumentsPage() {
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-[#E5E8EB] overflow-hidden shrink-0 flex items-center justify-center">
-                            {p.primaryImageUrl ? (
-                              <img
-                                src={p.primaryImageUrl}
+                          {p.primaryImage ? (
+                            <img
+                                src={p.primaryImage}
                                 alt={p.name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -598,18 +598,18 @@ export default function AdminInstrumentsPage() {
                       <td className="py-3.5 px-4">
                         <div className="flex flex-col gap-1">
                           <span className="inline-block px-2 py-0.5 rounded-md text-xs font-semibold bg-[#0D9488]/10 text-[#0D9488] self-start">
-                            {p.categoryName || 'Chưa phân loại'}
+                            {p.category?.name || 'Chưa phân loại'}
                           </span>
-                          {p.artisanName && (
+                          {p.artisan?.name && (
                             <span className="text-xs text-secondary truncate max-w-[180px] flex items-center gap-1">
                               <UserRound size={14} className="text-secondary shrink-0" />
-                              <span>{p.artisanName}</span>
+                              <span>{p.artisan.name}</span>
                             </span>
                           )}
-                          {p.craftVillageName && (
+                          {p.craftVillage?.name && (
                             <span className="text-xs text-muted truncate max-w-[180px] flex items-center gap-1">
                               <Landmark size={14} className="text-muted shrink-0" />
-                              <span>{p.craftVillageName}</span>
+                              <span>{p.craftVillage.name}</span>
                             </span>
                           )}
                         </div>
@@ -633,7 +633,7 @@ export default function AdminInstrumentsPage() {
                               isOutOfStock
                                 ? 'bg-rose-50 text-rose-600 border border-rose-200'
                                 : isLowStock
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                ? 'bg-[#F6F7F8] text-amber-800 border border-amber-200'
                                 : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             }`}
                           >
@@ -703,7 +703,7 @@ export default function AdminInstrumentsPage() {
         )}
 
         {/* Pagination Bar */}
-        {!loading && totalPages > 1 && (
+        {!loading && products.length > 0 && (
           <div className="p-4 border-t border-[#E5E8EB] flex items-center justify-between text-sm bg-[#FFFFFF]">
             <span className="text-secondary">
               Hiển thị <strong>{products.length}</strong> / <strong>{totalElements}</strong> nhạc cụ
@@ -720,7 +720,7 @@ export default function AdminInstrumentsPage() {
               </button>
 
               <span className="px-3 py-2 font-semibold text-[#17191B] text-sm">
-                Trang {page + 1} / {totalPages}
+                Trang {page + 1} / {totalPages || 1}
               </span>
 
               <button

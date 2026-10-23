@@ -18,6 +18,11 @@ export const adminUserService = Object.freeze({
     return apiClient.get(`/admin/users/${id}`)
   },
 
+  async getCustomerOrderHistory(id, { page = 0, size = 5 } = {}) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) })
+    return apiClient.get(`/admin/users/${id}/orders?${params.toString()}`)
+  },
+
   async createStaff(payload) {
     return apiClient.post('/admin/users/staff', payload)
   },

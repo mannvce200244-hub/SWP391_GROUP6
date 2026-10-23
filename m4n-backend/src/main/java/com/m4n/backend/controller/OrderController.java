@@ -84,19 +84,35 @@ public class OrderController {
         return ResponseEntity.ok(orderService.customerCancelOrder(id, reason));
     }
 
+    @PostMapping("/orders/{id}/confirm-received")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Customer confirms receipt", description = "The order owner confirms receipt when the order is DELIVERED, completing the order and recording COD payment.")
+    public ResponseEntity<OrderDetailResponse> customerConfirmReceived(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.customerConfirmReceived(id));
+    }
+
     // ==========================================
     // STAFF & ADMIN BACK-OFFICE ENDPOINTS
     // ==========================================
 
     @GetMapping("/admin/orders")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ONLINE_STAFF', 'ADMIN')")
-    @Operation(summary = "List all orders for back-office", description = "Returns paginated orders with optional status and search filters.")
+    @Operation(summary = "List all orders for back-office", description = "Returns paginated orders with optional status, payment status, payment method and search filters.")
     public ResponseEntity<Page<OrderResponse>> getAdminOrders(
             @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) Boolean isPaid,
+            @RequestParam(required = false) String paymentMethod,
             @RequestParam(required = false) String search,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return ResponseEntity.ok(orderService.getAdminOrders(status, search, pageable));
+        return ResponseEntity.ok(orderService.getAdminOrders(status, isPaid, paymentMethod, search, pageable));
+    }
+
+    @GetMapping("/admin/orders/status-counts")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ONLINE_STAFF', 'ADMIN')")
+    @Operation(summary = "Get order counts by status", description = "Returns order counts grouped by status for back-office overview tabs.")
+    public ResponseEntity<Map<String, Long>> getOrderStatusCounts() {
+        return ResponseEntity.ok(orderService.getOrderStatusCounts());
     }
 
     @GetMapping("/admin/orders/{id}")
@@ -113,16 +129,30 @@ public class OrderController {
         return ResponseEntity.ok(orderService.confirmOrder(id));
     }
 
-    @PostMapping("/admin/orders/{id}/complete")
+    @PostMapping("/admin/orders/{id}/retry-confirmation")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ONLINE_STAFF', 'ADMIN')")
-    @Operation(summary = "Complete order", description = "Marks a confirmed order as COMPLETED.")
-    public ResponseEntity<OrderDetailResponse> completeOrder(@PathVariable Long id) {
-        return ResponseEntity.ok(orderService.completeOrder(id));
+    @Operation(summary = "Retry confirmation for an out-of-stock order", description = "Re-checks and atomically deducts all required inventory only when the order is OUT_OF_STOCK_WAITING.")
+    public ResponseEntity<OrderConfirmResultResponse> retryOrderConfirmation(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.retryOrderConfirmation(id));
+    }
+
+    @PostMapping("/admin/orders/{id}/ship")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ONLINE_STAFF', 'ADMIN')")
+    @Operation(summary = "Start shipping an order", description = "Moves a CONFIRMED order to SHIPPING.")
+    public ResponseEntity<OrderDetailResponse> markOrderShipping(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.markOrderShipping(id));
+    }
+
+    @PostMapping("/admin/orders/{id}/mark-delivered")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ONLINE_STAFF', 'ADMIN')")
+    @Operation(summary = "Mark order as delivered", description = "Moves a SHIPPING order to DELIVERED so the customer can confirm receipt.")
+    public ResponseEntity<OrderDetailResponse> markOrderDelivered(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.markOrderDelivered(id));
     }
 
     @PostMapping("/admin/orders/{id}/cancel")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ONLINE_STAFF', 'ADMIN')")
-    @Operation(summary = "Staff cancel order", description = "Cancels order and atomically restores inventory if it was previously confirmed.")
+    @Operation(summary = "Staff cancel order", description = "Cancels order and atomically restores inventory if stock was previously deducted.")
     public ResponseEntity<OrderDetailResponse> staffCancelOrder(
             @PathVariable Long id,
             @RequestBody(required = false) Map<String, String> body

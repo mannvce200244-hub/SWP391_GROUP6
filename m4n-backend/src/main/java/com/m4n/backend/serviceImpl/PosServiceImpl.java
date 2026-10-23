@@ -336,11 +336,24 @@ public class PosServiceImpl implements PosService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PosSaleResponse> listInvoices(String search, Pageable pageable) {
+    public Page<PosSaleResponse> listInvoices(String search, Pageable pageable, String actorEmail) {
         String trimmedSearch = (search != null && !search.isBlank()) ? search.trim() : null;
-        Page<Invoice> invoicePage = (trimmedSearch == null)
-                ? invoiceRepository.findAllByOrderByCreatedAtDesc(pageable)
-                : invoiceRepository.searchInvoices(trimmedSearch, pageable);
+        User actor = userRepository.findByEmailIgnoreCase(actorEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin tài khoản nhân viên."));
+        RoleName actorRole = actor.getRole().getName();
+
+        Page<Invoice> invoicePage;
+        if (actorRole == RoleName.ADMIN || actorRole == RoleName.SUPER_ADMIN) {
+            invoicePage = (trimmedSearch == null)
+                    ? invoiceRepository.findAllByOrderByCreatedAtDesc(pageable)
+                    : invoiceRepository.searchInvoices(trimmedSearch, pageable);
+        } else if (actorRole == RoleName.POS_STAFF) {
+            invoicePage = (trimmedSearch == null)
+                    ? invoiceRepository.findByStaffIdOrderByCreatedAtDesc(actor.getId(), pageable)
+                    : invoiceRepository.searchInvoicesByStaff(actor.getId(), trimmedSearch, pageable);
+        } else {
+            throw new AccessDeniedException("Bạn không có quyền xem lịch sử giao dịch POS.");
+        }
         return invoicePage.map(this::mapToPosSaleResponse);
     }
 

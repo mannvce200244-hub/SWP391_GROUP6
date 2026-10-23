@@ -262,10 +262,11 @@ export default function AdminVouchersPage() {
 
       {deleteTarget && (
         <ConfirmDialog
+          isOpen
           title="Xóa voucher"
-          message={`Bạn có chắc muốn xóa voucher "${deleteTarget.code}"?`}
+          description={`Bạn có chắc muốn xóa voucher "${deleteTarget.code}"?`}
           confirmLabel="Xóa"
-          isDestructive
+          variant="danger"
           isLoading={deleting}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}

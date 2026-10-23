@@ -1,227 +1,277 @@
-import useAuth from '../features/auth/useAuth.js'
-import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import {
-  UserRound,
-  Lock,
-  Store,
   ChevronRight,
+  CircleCheckBig,
+  Clock3,
+  MailWarning,
+  MessageCircle,
+  MessagesSquare,
   Package,
-  Check,
-  CircleAlert,
-  BookOpen,
+  Search,
 } from 'lucide-react'
-import { IconInstrument } from '../components/ui/Icons.jsx'
-import StaffChatWorkspace from '../features/chat/StaffChatWorkspace.jsx'
+import ErrorState from '../components/ui/ErrorState.jsx'
+import { Skeleton } from '../components/ui/Skeleton.jsx'
+import useAuth from '../features/auth/useAuth.js'
+import StaffOrderStatusChart from '../features/staff/StaffOrderStatusChart.jsx'
+import StaffOrderTrendPanel from '../features/staff/StaffOrderTrendPanel.jsx'
+import useStaffDashboard from '../features/staff/useStaffDashboard.js'
+import RouterLink from '../routes/RouterLink.jsx'
+import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
 
+const QUICK_ACTIONS = Object.freeze([
+  Object.freeze({
+    title: 'Đơn hàng online',
+    description: 'Xem, xác nhận và xử lý đơn hàng trực tuyến từ khách hàng.',
+    path: CUSTOMER_ROUTES.staffOrders,
+    Icon: Package,
+    accentColor: 'text-brand',
+  }),
+  Object.freeze({
+    title: 'Hỗ trợ khách hàng',
+    description: 'Tiếp nhận và phản hồi tin nhắn hỗ trợ từ khách hàng.',
+    path: CUSTOMER_ROUTES.staffChat,
+    Icon: MessageCircle,
+    accentColor: 'text-jade',
+  }),
+  Object.freeze({
+    title: 'Tra cứu sản phẩm',
+    description: 'Tra cứu thông tin sản phẩm để hỗ trợ xử lý đơn và tư vấn.',
+    path: CUSTOMER_ROUTES.staffProducts,
+    Icon: Search,
+    accentColor: 'text-zinc-700',
+  }),
+])
+
+function DashboardSkeleton() {
+  return (
+    <div
+      aria-label="Đang tải tổng quan công việc"
+      aria-busy="true"
+      className="flex flex-col gap-6"
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-32 w-full rounded-2xl" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+        <Skeleton className="h-[22rem] w-full rounded-2xl xl:col-span-7" />
+        <Skeleton className="h-[22rem] w-full rounded-2xl xl:col-span-5" />
+      </div>
+    </div>
+  )
+}
 function StaffDashboardPage() {
   const { user } = useAuth()
+  const {
+    dashboardState,
+    retryDashboard,
+    trendFilters,
+    updateTrendFilters,
+  } = useStaffDashboard()
+  const dashboard = dashboardState.data
+  const kpi = dashboard?.kpi
+  const kpiCards = kpi
+    ? [
+        {
+          label: 'Đơn chờ xác nhận',
+          value: kpi.pendingOrders,
+          helper: 'Cần kiểm tra và phản hồi',
+          Icon: Clock3,
+          iconClassName: 'text-brand',
+        },
+        {
+          label: 'Đơn đã xác nhận',
+          value: kpi.confirmedOrders,
+          helper: 'Đang tiếp tục xử lý',
+          Icon: CircleCheckBig,
+          iconClassName: 'text-jade',
+        },
+        {
+          label: 'Hội thoại đang chờ',
+          value: kpi.waitingConversations,
+          helper: 'Chưa có nhân viên tiếp nhận',
+          Icon: MessagesSquare,
+          iconClassName: 'text-sky-600',
+        },
+        {
+          label: 'Tin nhắn chưa đọc',
+          value: kpi.unreadMessages,
+          helper: 'Trong hội thoại của bạn',
+          Icon: MailWarning,
+          iconClassName: 'text-rose-600',
+        },
+      ]
+    : []
 
-  const staffModules = [
-    {
-      title: 'Tra cứu danh mục sản phẩm',
-      description: 'Kiểm tra thông số kỹ thuật, âm sắc, chất liệu và nghệ nhân để tư vấn khách mua đàn.',
-      path: CUSTOMER_ROUTES.products,
-      Icon: IconInstrument,
-      badge: 'Kho di sản',
-      accentColor: 'text-[#1F6B5A]',
-      accentBg: 'bg-emerald-50',
-    },
-    {
-      title: 'Xem website mua sắm',
-      description: 'Trải nghiệm giao diện và quy trình đặt hàng dưới góc nhìn của khách hàng trực tuyến.',
-      path: CUSTOMER_ROUTES.home,
-      Icon: Store,
-      badge: 'Khách hàng',
-      accentColor: 'text-[#0D9488]',
-      accentBg: 'bg-teal-50',
-    },
-    {
-      title: 'Hồ sơ nhân viên',
-      description: 'Cập nhật số điện thoại và thông tin liên lạc nội bộ của bạn trong hệ thống.',
-      path: CUSTOMER_ROUTES.profile,
-      Icon: UserRound,
-      badge: 'Cá nhân',
-      accentColor: 'text-sky-600',
-      accentBg: 'bg-sky-50',
-    },
-    {
-      title: 'Bảo mật ca làm việc',
-      description: 'Đổi mật khẩu định kỳ và quản trị phiên đăng nhập an toàn theo tiêu chuẩn bảo mật.',
-      path: CUSTOMER_ROUTES.security,
-      Icon: Lock,
-      badge: 'Bảo mật',
-      accentColor: 'text-indigo-600',
-      accentBg: 'bg-indigo-50',
-    },
-  ]
-
-  const operationalGuidelines = [
-    {
-      title: 'Quy chuẩn đóng gói & Bảo hiểm nhạc cụ',
-      desc: 'Mọi nhạc cụ dây (Đàn Tranh, Đàn Bầu, Đàn Nguyệt) đều phải bọc 3 lớp chống sốc và kèm phiếu bảo hành nghệ nhân.',
-    },
-    {
-      title: 'Tư vấn nhiệt độ & Độ ẩm bảo quản gỗ',
-      desc: 'Nhắc khách hàng giữ đàn ở độ ẩm 50%–65%, tránh ánh nắng trực tiếp hoặc để quá gần luồng gió điều hòa mạnh.',
-    },
-    {
-      title: 'Chính sách thẩm định âm sắc làng nghề',
-      desc: 'Khách hàng được hỗ trợ đổi trả trong 7 ngày nếu âm sắc không đạt chuẩn hoặc có vết nứt vỡ do vận chuyển.',
-    },
-  ]
+  const attentionItems = kpi
+    ? [
+        {
+          label: 'Đơn hàng chờ xác nhận',
+          value: kpi.pendingOrders,
+          path: CUSTOMER_ROUTES.staffOrders,
+        },
+        {
+          label: 'Hội thoại chưa được tiếp nhận',
+          value: kpi.waitingConversations,
+          path: CUSTOMER_ROUTES.staffChat,
+        },
+        {
+          label: 'Tin nhắn khách hàng chưa đọc',
+          value: kpi.unreadMessages,
+          path: CUSTOMER_ROUTES.staffChat,
+        },
+      ]
+    : []
 
   return (
     <div className="flex flex-col gap-8 pb-10">
-      {/* Greeting & Shift Status Banner */}
-      <div className="bg-white rounded-2xl border border-border p-6 sm:p-8 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <section className="flex flex-col items-start justify-between gap-6 rounded-2xl border border-border bg-white p-6 shadow-xs sm:p-8 md:flex-row md:items-center">
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#1F6B5A]">
-              Bàn Làm Việc Online
-            </span>
-            <span className="text-zinc-300">/</span>
-            <span className="text-xs text-muted font-medium">Bán lẻ & Tư vấn di sản</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight font-sans">
+          <span className="text-xs font-semibold uppercase tracking-wider text-brand">
+            Bàn làm việc Online
+          </span>
+          <h1 className="text-balance font-sans text-2xl font-bold tracking-tight text-ink sm:text-3xl">
             Xin chào, {user?.fullName || 'Nhân viên'}
           </h1>
-          <p className="text-xs sm:text-sm text-muted">
-            Khu vực thao tác và quản lý danh mục dành cho nhân viên bán lẻ trực tuyến M4N.
+          <p className="text-xs text-muted sm:text-sm">
+            Tổng hợp công việc và truy cập nhanh các chức năng vận hành.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <div className="flex flex-col px-4 py-2 rounded-xl bg-[#F5F7FA] border border-border text-xs">
-            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
+          <div className="flex flex-col rounded-xl border border-border bg-canvas px-4 py-2 text-xs">
+            <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
               Tài khoản ca trực
             </span>
-            <span className="font-bold text-ink mt-0.5 font-mono">{user?.email}</span>
+            <span className="mt-0.5 break-all font-mono font-bold text-ink">{user?.email}</span>
           </div>
-          <div className="flex flex-col px-4 py-2 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs">
-            <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider">
+          <div className="flex flex-col rounded-xl border border-border bg-white px-4 py-2 text-xs">
+            <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
               Trạng thái
             </span>
-            <span className="font-bold text-[#1F6B5A] mt-0.5 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="mt-0.5 flex items-center gap-1.5 font-bold text-jade">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-jade" />
               Đang trong ca trực
             </span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Staff Operational Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Kênh hỗ trợ online</span>
-            <p className="text-2xl font-bold text-[#1F6B5A]">Sẵn sàng</p>
-            <span className="text-xs text-emerald-700 font-medium mt-0.5">Tiếp nhận yêu cầu tư vấn</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-[#1F6B5A] flex items-center justify-center shrink-0">
-            <Check size={20} />
-          </div>
-        </div>
+      {dashboardState.status === 'loading' && <DashboardSkeleton />}
 
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Mẫu nhạc cụ hiển thị</span>
-            <p className="text-2xl font-bold text-ink">8 mẫu di sản</p>
-            <span className="text-xs text-zinc-500 mt-0.5">Làng Đào Xá, Trúc Sơn, Đọi Tam</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-700 flex items-center justify-center shrink-0">
-            <Package size={20} />
-          </div>
-        </div>
+      {dashboardState.status === 'error' && (
+        <ErrorState
+          title="Chưa thể tải tổng quan công việc"
+          message="Dữ liệu vận hành đang tạm thời chưa sẵn sàng. Vui lòng thử lại."
+          onRetry={retryDashboard}
+        />
+      )}
 
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Cảnh báo tồn kho</span>
-            <p className="text-2xl font-bold text-amber-600">3 mẫu</p>
-            <span className="text-xs text-amber-600 font-medium mt-0.5">Lưu ý trước khi chốt đơn</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center shrink-0">
-            <CircleAlert size={20} />
-          </div>
-        </div>
+      {dashboard && dashboardState.status !== 'error' && (
+        <>
+          <section aria-labelledby="staff-kpi-heading" className="flex flex-col gap-4">
+            <div>
+              <h2 id="staff-kpi-heading" className="text-base font-bold text-ink">
+                Tổng quan hôm nay
+              </h2>
+              <p className="mt-1 text-xs text-muted">Các đầu việc cần theo dõi trong ca trực hiện tại.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {kpiCards.map((item) => {
+                const ItemIcon = item.Icon
+                return (
+                  <article key={item.label} className="rounded-2xl border border-border bg-white p-5 shadow-xs">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-semibold text-muted">{item.label}</p>
+                        <p className="mt-2 font-mono text-3xl font-bold tabular-nums text-ink">
+                          {item.value}
+                        </p>
+                      </div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-canvas">
+                        <ItemIcon aria-hidden="true" className={item.iconClassName} size={20} />
+                      </div>
+                    </div>
+                    <p className="mt-4 text-xs text-muted">{item.helper}</p>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
 
-        <div className="p-5 rounded-2xl bg-white border border-border shadow-xs flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold text-muted uppercase tracking-wider">Phiên đăng nhập</span>
-            <p className="text-2xl font-bold text-ink">Bảo mật cao</p>
-            <span className="text-xs text-zinc-500 mt-0.5">Xác thực token JWT an toàn</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0">
-            <Lock size={20} />
-          </div>
-        </div>
-      </div>
+          <section aria-label="Biểu đồ vận hành" className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+            <StaffOrderTrendPanel
+              appliedFilters={dashboardState.appliedFilters}
+              data={dashboard.orderTrend}
+              filterError={dashboardState.filterError}
+              filters={trendFilters}
+              isRefreshing={dashboardState.status === 'refreshing'}
+              onFilterChange={updateTrendFilters}
+            />
 
-      {/* Customer Support Chat Workspace */}
-      <div className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-base font-bold text-ink">Bàn tư vấn & Hỗ trợ khách hàng trực tuyến</h2>
-          <p className="text-xs text-muted">Tiếp nhận tin nhắn tư vấn và phản hồi khách hàng trong thời gian thực.</p>
-        </div>
-        <StaffChatWorkspace />
-      </div>
+            <article className="rounded-2xl border border-border bg-white p-5 shadow-xs sm:p-6 xl:col-span-5">
+              <h2 className="text-base font-bold text-ink">Phân bổ trạng thái đơn</h2>
+              <p className="mt-1 text-xs text-muted">Số lượng đơn hiện có theo từng trạng thái.</p>
+              <div className="mt-6">
+                <StaffOrderStatusChart data={dashboard.orderStatusCounts} />
+              </div>
+            </article>
+          </section>
 
-      {/* Quick Action Modules */}
-      <div className="flex flex-col gap-4">
-        <h2 className="text-base font-bold text-ink">Chức năng làm việc nội bộ</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {staffModules.map((item) => {
+          <section aria-labelledby="attention-heading" className="overflow-hidden rounded-2xl border border-border bg-white shadow-xs">
+            <div className="border-b border-border bg-canvas px-5 py-4 sm:px-6">
+              <h2 id="attention-heading" className="text-base font-bold text-ink">Cần xử lý ngay</h2>
+              <p className="mt-1 text-xs text-muted">Mở đúng hàng đợi để bắt đầu công việc.</p>
+            </div>
+            <div className="grid grid-cols-1 divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
+              {attentionItems.map((item) => (
+                <RouterLink
+                  key={item.label}
+                  href={item.path}
+                  className="group flex items-center justify-between gap-4 p-5 text-left transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40 motion-reduce:transition-none sm:p-6"
+                >
+                  <div>
+                    <p className="text-xs font-semibold text-muted">{item.label}</p>
+                    <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-ink">{item.value}</p>
+                  </div>
+                  <span className="flex items-center gap-1 text-xs font-semibold text-brand">
+                    Mở hàng đợi
+                    <ChevronRight aria-hidden="true" className="transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" size={14} />
+                  </span>
+                </RouterLink>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      <section aria-labelledby="quick-actions-heading" className="flex flex-col gap-4">
+        <h2 id="quick-actions-heading" className="text-base font-bold text-ink">Chức năng vận hành</h2>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {QUICK_ACTIONS.map((item) => {
             const ItemIcon = item.Icon
             return (
-              <button
+              <RouterLink
                 key={item.path}
-                type="button"
-                className="flex flex-col rounded-2xl bg-white border border-border p-5 shadow-xs hover:shadow-md hover:border-zinc-300 transition-all duration-200 text-left group cursor-pointer"
-                onClick={() => navigateTo(item.path)}
+                href={item.path}
+                className="group flex flex-col rounded-2xl border border-border bg-white p-5 text-left shadow-xs transition-[border-color,box-shadow] duration-200 hover:border-zinc-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 motion-reduce:transition-none"
               >
-                <div className="flex items-center justify-between gap-2 mb-4">
-                  <div className={`w-10 h-10 rounded-xl ${item.accentBg} ${item.accentColor} flex items-center justify-center transition-colors`}>
-                    <ItemIcon size={20} />
-                  </div>
-                  <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-zinc-100 text-zinc-600 uppercase tracking-wider">
-                    {item.badge}
-                  </span>
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-canvas">
+                  <ItemIcon aria-hidden="true" className={item.accentColor} size={20} />
                 </div>
-                <h3 className="text-sm font-bold text-ink group-hover:text-[#1F6B5A] transition-colors mb-1.5">
+                <h3 className="mb-1.5 text-sm font-bold text-ink transition-colors group-hover:text-brand">
                   {item.title}
                 </h3>
-                <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-4">
-                  {item.description}
-                </p>
-                <div className="mt-auto pt-3 border-t border-border/80 flex items-center justify-between text-xs font-semibold text-[#1F6B5A] w-full">
+                <p className="mb-4 line-clamp-2 text-xs leading-relaxed text-muted">{item.description}</p>
+                <div className="mt-auto flex w-full items-center justify-between border-t border-border/80 pt-3 text-xs font-semibold text-brand">
                   <span>Mở chức năng</span>
-                  <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight aria-hidden="true" className="transition-transform group-hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" size={14} />
                 </div>
-              </button>
+              </RouterLink>
             )
           })}
         </div>
-      </div>
-
-      {/* Guidelines & Cultural Knowledge Section */}
-      <div className="bg-white rounded-2xl border border-border p-6 shadow-xs flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-surface-secondary text-[#1F6B5A] border border-border/80 flex items-center justify-center font-bold text-xs">
-            <BookOpen size={16} />
-          </span>
-          <h2 className="text-base font-bold text-ink">
-            Quy chuẩn tư vấn & Lưu ý nhạc cụ truyền thống
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {operationalGuidelines.map((g, idx) => (
-            <div key={idx} className="p-4 rounded-xl bg-[#F5F7FA] border border-border flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-ink">{g.title}</span>
-              <p className="text-xs text-muted leading-relaxed">{g.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

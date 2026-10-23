@@ -10,11 +10,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  User,
-  CreditCard,
-  Calendar,
   Phone,
-  FileText,
 } from 'lucide-react'
 
 function formatDate(isoString) {
@@ -282,23 +278,28 @@ export default function AdminInvoicesPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {invoices.length > 0 && (
           <div className="px-5 py-3.5 border-t border-zinc-200 bg-zinc-50/50 flex items-center justify-between text-xs text-zinc-500">
             <div>
-              Trang <span className="font-medium text-zinc-700">{page + 1}</span> / {totalPages}
+              Hiển thị <strong className="text-zinc-800">{invoices.length}</strong> / <strong className="text-zinc-800">{totalElements}</strong> hóa đơn · Trang <span className="font-medium text-zinc-700">{page + 1}</span> / {totalPages || 1}
             </div>
             <div className="flex items-center gap-1">
               <button
                 disabled={page <= 0}
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                title="Trang trước"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
+              <span className="px-2 font-semibold text-zinc-700">
+                {page + 1} / {totalPages || 1}
+              </span>
               <button
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                title="Trang sau"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -309,161 +310,187 @@ export default function AdminInvoicesPage() {
 
       {/* Invoice Detail Modal */}
       {selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-zinc-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 bg-zinc-50">
-              <div className="flex items-center gap-3">
-                <Receipt className="w-5 h-5 text-red-600" />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 p-3 backdrop-blur-sm animate-fade-in sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invoice-detail-title"
+        >
+          <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[#E3E6E8] bg-[#F6F7F8] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#E3E6E8] bg-white px-4 py-3.5 sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                  <Receipt className="h-5 w-5" aria-hidden="true" />
+                </span>
                 <div>
-                  <h3 className="font-bold text-zinc-900">Chi tiết hóa đơn {selectedInvoice.invoiceCode}</h3>
-                  <p className="text-xs text-zinc-500">Mã giao dịch POS #{selectedInvoice.invoiceId}</p>
+                  <h3 id="invoice-detail-title" className="truncate font-semibold text-ink">
+                    Chi tiết hóa đơn {selectedInvoice.invoiceCode}
+                  </h3>
+                  <p className="text-xs text-secondary">Bản xem trước hóa đơn bán hàng</p>
                 </div>
               </div>
-              <button
-                onClick={() => setSelectedInvoice(null)}
-                className="p-1.5 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-200/60 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6">
-              {/* Meta Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-zinc-50 border border-zinc-200 text-xs">
-                <div>
-                  <span className="text-zinc-400 block mb-1 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5" /> Thời gian
-                  </span>
-                  <span className="font-medium text-zinc-800">{formatDate(selectedInvoice.createdAt)}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block mb-1 flex items-center gap-1">
-                    <User className="w-3.5 h-3.5" /> Thu ngân
-                  </span>
-                  <span className="font-medium text-zinc-800">{selectedInvoice.staffName || '—'}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block mb-1 flex items-center gap-1">
-                    <CreditCard className="w-3.5 h-3.5" /> Thanh toán
-                  </span>
-                  <span className="font-medium text-zinc-800">
-                    {getPaymentBadge(selectedInvoice.paymentMethod).label}
-                  </span>
-                </div>
-                <div className="col-span-2 sm:col-span-3 pt-2 border-t border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-zinc-400">Khách hàng: </span>
-                    <span className="font-semibold text-zinc-800">{selectedInvoice.customerName || 'Khách vãng lai'}</span>
-                    {selectedInvoice.customerPhone && (
-                      <span className="text-zinc-500 ml-2">({selectedInvoice.customerPhone})</span>
-                    )}
-                  </div>
-                  {selectedInvoice.voucherCode && (
-                    <div className="text-xs">
-                      <span className="text-zinc-400">Voucher áp dụng: </span>
-                      <span className="font-mono font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
-                        {selectedInvoice.voucherCode}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <div>
-                <h4 className="text-xs font-semibold uppercase text-zinc-500 tracking-wider mb-2 flex items-center gap-1.5">
-                  <FileText className="w-4 h-4 text-zinc-400" /> Danh sách sản phẩm
-                </h4>
-                <div className="border border-zinc-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-zinc-50 text-zinc-500 border-b border-zinc-200">
-                      <tr>
-                        <th className="px-4 py-2.5">Sản phẩm</th>
-                        <th className="px-4 py-2.5 text-center">Số lượng</th>
-                        <th className="px-4 py-2.5 text-right">Đơn giá</th>
-                        <th className="px-4 py-2.5 text-right">Thành tiền</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-200">
-                      {selectedInvoice.items && selectedInvoice.items.length > 0 ? (
-                        selectedInvoice.items.map((item, idx) => (
-                          <tr key={item.id || idx} className="hover:bg-zinc-50/50">
-                            <td className="px-4 py-2.5">
-                              <div className="font-medium text-zinc-900">{item.productName}</div>
-                              {item.productCode && (
-                                <div className="text-[11px] text-zinc-400 font-mono">{item.productCode}</div>
-                              )}
-                            </td>
-                            <td className="px-4 py-2.5 text-center font-medium text-zinc-800">{item.quantity}</td>
-                            <td className="px-4 py-2.5 text-right text-zinc-600">
-                              {item.formattedUnitPrice || formatCurrencyVND(item.unitPrice)}
-                            </td>
-                            <td className="px-4 py-2.5 text-right font-semibold text-zinc-900">
-                              {item.formattedLineAmount || formatCurrencyVND(item.lineAmount)}
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={4} className="px-4 py-6 text-center text-zinc-400">
-                            Không có thông tin chi tiết các món
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Price Calculation Summary */}
-              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2 text-sm">
-                <div className="flex justify-between text-zinc-600">
-                  <span>Tạm tính:</span>
-                  <span>{selectedInvoice.formattedSubtotal || formatCurrencyVND(selectedInvoice.subtotal)}</span>
-                </div>
-                {selectedInvoice.discount && selectedInvoice.discount > 0 && (
-                  <div className="flex justify-between text-emerald-600 font-medium">
-                    <span>Giảm giá:</span>
-                    <span>-{selectedInvoice.formattedDiscount || formatCurrencyVND(selectedInvoice.discount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-base font-bold text-zinc-900 pt-2 border-t border-zinc-200">
-                  <span>Tổng tiền thanh toán:</span>
-                  <span className="text-red-600">
-                    {selectedInvoice.formattedFinalAmount || formatCurrencyVND(selectedInvoice.finalAmount)}
-                  </span>
-                </div>
-                {selectedInvoice.amountReceived != null && (
-                  <div className="flex justify-between text-xs text-zinc-500 pt-1">
-                    <span>Tiền khách đưa:</span>
-                    <span>{selectedInvoice.formattedAmountReceived || formatCurrencyVND(selectedInvoice.amountReceived)}</span>
-                  </div>
-                )}
-                {selectedInvoice.amountChange != null && (
-                  <div className="flex justify-between text-xs text-zinc-500">
-                    <span>Tiền thối lại:</span>
-                    <span>{selectedInvoice.formattedAmountChange || formatCurrencyVND(selectedInvoice.amountChange)}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Notes if any */}
-              {selectedInvoice.notes && (
-                <div className="text-xs text-zinc-500 bg-zinc-50 p-3 rounded-lg border border-zinc-200">
-                  <span className="font-semibold text-zinc-700">Ghi chú: </span>
-                  {selectedInvoice.notes}
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-zinc-200 bg-zinc-50">
               <button
                 type="button"
                 onClick={() => setSelectedInvoice(null)}
-                className="px-4 py-2 text-sm text-zinc-600 hover:text-zinc-800 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+                className="cursor-pointer rounded-lg p-2 text-secondary transition-colors hover:bg-[#F6F7F8] hover:text-ink"
+                aria-label="Đóng chi tiết hóa đơn"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto overscroll-contain p-3 sm:p-6">
+              <article className="mx-auto w-full max-w-xl border border-[#CDD2D5] bg-white px-5 py-7 text-ink shadow-lg sm:px-8 sm:py-9">
+                <header className="text-center">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">
+                    M4N · Nhạc cụ truyền thống
+                  </p>
+                  <h4 className="mt-2 text-xl font-bold tracking-wide sm:text-2xl">HÓA ĐƠN BÁN HÀNG</h4>
+                  <p className="mt-2 font-mono text-sm font-semibold">{selectedInvoice.invoiceCode}</p>
+                  <p className="mt-1 text-xs text-secondary">Mã giao dịch POS #{selectedInvoice.invoiceId}</p>
+                </header>
+
+                <div className="my-6 border-t border-dashed border-[#AEB5B9]" />
+
+                <dl className="space-y-2.5 text-sm">
+                  <div className="flex items-start justify-between gap-5">
+                    <dt className="shrink-0 text-secondary">Thời gian</dt>
+                    <dd className="text-right font-medium">{formatDate(selectedInvoice.createdAt)}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-5">
+                    <dt className="shrink-0 text-secondary">Thu ngân</dt>
+                    <dd className="text-right font-medium">{selectedInvoice.staffName || '—'}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-5">
+                    <dt className="shrink-0 text-secondary">Thanh toán</dt>
+                    <dd className="text-right font-medium">
+                      {getPaymentBadge(selectedInvoice.paymentMethod).label}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-5">
+                    <dt className="shrink-0 text-secondary">Khách hàng</dt>
+                    <dd className="text-right font-medium">
+                      {selectedInvoice.customerName || 'Khách vãng lai'}
+                      {selectedInvoice.customerPhone && (
+                        <span className="mt-0.5 block font-normal text-secondary">{selectedInvoice.customerPhone}</span>
+                      )}
+                    </dd>
+                  </div>
+                  {selectedInvoice.voucherCode && (
+                    <div className="flex items-start justify-between gap-5">
+                      <dt className="shrink-0 text-secondary">Voucher</dt>
+                      <dd className="font-mono text-right font-semibold">{selectedInvoice.voucherCode}</dd>
+                    </div>
+                  )}
+                </dl>
+
+                <div className="my-6 border-t border-dashed border-[#AEB5B9]" />
+
+                <section aria-labelledby="invoice-items-title">
+                  <h5 id="invoice-items-title" className="mb-3 text-xs font-bold uppercase tracking-[0.14em]">
+                    Danh sách sản phẩm
+                  </h5>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[440px] table-fixed text-left text-xs">
+                      <thead className="border-y border-ink">
+                        <tr>
+                          <th scope="col" className="w-[42%] py-2 pr-2 font-semibold">Sản phẩm</th>
+                          <th scope="col" className="w-[10%] px-1 py-2 text-center font-semibold">SL</th>
+                          <th scope="col" className="w-[22%] px-1 py-2 text-right font-semibold">Đơn giá</th>
+                          <th scope="col" className="w-[26%] py-2 pl-2 text-right font-semibold">Thành tiền</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-dashed divide-[#CDD2D5]">
+                        {selectedInvoice.items && selectedInvoice.items.length > 0 ? (
+                          selectedInvoice.items.map((item, idx) => (
+                            <tr key={item.id || idx}>
+                              <td className="py-3 pr-2 align-top">
+                                <div className="font-semibold">{item.productName}</div>
+                                {item.productCode && (
+                                  <div className="mt-0.5 font-mono text-[11px] text-secondary">{item.productCode}</div>
+                                )}
+                              </td>
+                              <td className="px-1 py-3 text-center align-top font-medium tabular-nums">{item.quantity}</td>
+                              <td className="px-1 py-3 text-right align-top text-secondary tabular-nums">
+                                {item.formattedUnitPrice || formatCurrencyVND(item.unitPrice)}
+                              </td>
+                              <td className="py-3 pl-2 text-right align-top font-semibold tabular-nums">
+                                {item.formattedLineAmount || formatCurrencyVND(item.lineAmount)}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} className="py-6 text-center text-secondary">
+                              Không có thông tin chi tiết các món
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <div className="my-6 border-t border-dashed border-[#AEB5B9]" />
+
+                <section className="ml-auto max-w-sm space-y-2.5 text-sm" aria-label="Tổng kết thanh toán">
+                  <div className="flex items-baseline justify-between gap-5 text-secondary">
+                    <span>Tạm tính</span>
+                    <span className="tabular-nums">
+                      {selectedInvoice.formattedSubtotal || formatCurrencyVND(selectedInvoice.subtotal)}
+                    </span>
+                  </div>
+                  {Number(selectedInvoice.discount) > 0 && (
+                    <div className="flex items-baseline justify-between gap-5">
+                      <span>Giảm giá</span>
+                      <span className="font-medium tabular-nums">
+                        -{selectedInvoice.formattedDiscount || formatCurrencyVND(selectedInvoice.discount)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-baseline justify-between gap-5 border-y-2 border-ink py-3 text-base font-bold">
+                    <span>Tổng thanh toán</span>
+                    <span className="text-right tabular-nums">
+                      {selectedInvoice.formattedFinalAmount || formatCurrencyVND(selectedInvoice.finalAmount)}
+                    </span>
+                  </div>
+                  {selectedInvoice.amountReceived != null && (
+                    <div className="flex items-baseline justify-between gap-5 text-secondary">
+                      <span>Tiền khách đưa</span>
+                      <span className="tabular-nums">
+                        {selectedInvoice.formattedAmountReceived || formatCurrencyVND(selectedInvoice.amountReceived)}
+                      </span>
+                    </div>
+                  )}
+                  {selectedInvoice.amountChange != null && (
+                    <div className="flex items-baseline justify-between gap-5 text-secondary">
+                      <span>Tiền thối lại</span>
+                      <span className="tabular-nums">
+                        {selectedInvoice.formattedAmountChange || formatCurrencyVND(selectedInvoice.amountChange)}
+                      </span>
+                    </div>
+                  )}
+                </section>
+
+                {selectedInvoice.notes && (
+                  <div className="mt-6 border-t border-dashed border-[#AEB5B9] pt-4 text-xs text-secondary">
+                    <span className="font-semibold text-ink">Ghi chú: </span>
+                    {selectedInvoice.notes}
+                  </div>
+                )}
+
+                <footer className="mt-8 border-t border-dashed border-[#AEB5B9] pt-6 text-center">
+                  <p className="font-semibold">Cảm ơn quý khách!</p>
+                  <p className="mt-1 text-xs text-secondary">Hẹn gặp lại quý khách tại M4N.</p>
+                </footer>
+              </article>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-[#E3E6E8] bg-white px-4 py-3.5 sm:px-6">
+              <button
+                type="button"
+                onClick={() => setSelectedInvoice(null)}
+                className="cursor-pointer rounded-lg border border-[#CDD2D5] bg-white px-4 py-2 text-sm font-medium text-secondary transition-colors hover:bg-[#F6F7F8] hover:text-ink"
               >
                 Đóng
               </button>
@@ -471,10 +498,10 @@ export default function AdminInvoicesPage() {
                 type="button"
                 onClick={() => handleDownloadPdf(selectedInvoice.invoiceId)}
                 disabled={downloadingId === selectedInvoice.invoiceId}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
+                className="flex cursor-pointer items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Download className="w-4 h-4" />
-                {downloadingId === selectedInvoice.invoiceId ? 'Đang tải PDF...' : 'Tải hóa đơn PDF'}
+                <Download className="h-4 w-4" aria-hidden="true" />
+                {downloadingId === selectedInvoice.invoiceId ? 'Đang tải PDF…' : 'Tải hóa đơn PDF'}
               </button>
             </div>
           </div>

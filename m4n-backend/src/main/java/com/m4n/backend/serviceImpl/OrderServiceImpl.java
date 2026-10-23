@@ -44,11 +44,13 @@ import java.math.BigDecimal;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 import java.util.Random;
+import java.util.TreeMap;
 
 @Slf4j
 @Service
@@ -181,6 +183,12 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponse placeOrder(PlaceOrderRequest request) {
         User user = getAuthenticatedUser();
+        String paymentMethod = request.paymentMethod().trim().toUpperCase(Locale.ROOT);
+        if (!"COD".equals(paymentMethod)) {
+            throw new IllegalArgumentException(
+                    "Thanh toán trực tuyến chưa được kích hoạt. Vui lòng chọn thanh toán khi nhận hàng (COD)."
+            );
+        }
         Cart cart = cartRepository.findWithItemsByUserId(user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Giỏ hàng của bạn đang trống. Không thể đặt hàng."));
 
@@ -248,7 +256,7 @@ public class OrderServiceImpl implements OrderService {
                 .discountAmount(discount)
                 .finalAmount(finalAmount)
                 .status(OrderStatus.PENDING_CONFIRMATION)
-                .paymentMethod(request.paymentMethod().trim())
+                .paymentMethod(paymentMethod)
                 .isPaid(false)
                 .voucherCode(appliedVoucherCode)
                 .notes(request.notes() != null ? request.notes().trim() : null)
@@ -340,10 +348,56 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
+    public OrderDetailResponse customerConfirmReceived(Long orderId) {
+        User user = getAuthenticatedUser();
+        Order order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
+
+        if (order.getUser() == null || !order.getUser().getId().equals(user.getId())) {
+            throw new AccessDeniedException("Bạn không có quyền thao tác trên đơn hàng này");
+        }
+        if (order.getStatus() != OrderStatus.DELIVERED) {
+            throw new IllegalArgumentException(
+                    "Chỉ có thể xác nhận nhận hàng khi đơn ở trạng thái 'Đã giao hàng'. Trạng thái hiện tại: "
+                            + orderMapper.formatStatusLabel(order.getStatus())
+            );
+        }
+
+        Order savedOrder = completeDeliveredOrder(order);
+        log.info("Customer confirmed receipt for order {}.", savedOrder.getOrderCode());
+        return orderMapper.toOrderDetailResponse(savedOrder, true);
+    }
+
+    @Override
     @Transactional(readOnly = true)
-    public Page<OrderResponse> getAdminOrders(OrderStatus status, String search, Pageable pageable) {
-        return orderRepository.searchOrders(status, search, pageable)
+    public Page<OrderResponse> getAdminOrders(OrderStatus status, Boolean isPaid, String paymentMethod, String search, Pageable pageable) {
+        return orderRepository.searchOrders(status, isPaid, paymentMethod, search, pageable)
                 .map(orderMapper::toOrderResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> getOrderStatusCounts() {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        long pending = orderRepository.countByStatus(OrderStatus.PENDING_CONFIRMATION);
+        long confirmed = orderRepository.countByStatus(OrderStatus.CONFIRMED);
+        long outOfStock = orderRepository.countByStatus(OrderStatus.OUT_OF_STOCK_WAITING);
+        long shipping = orderRepository.countByStatus(OrderStatus.SHIPPING);
+        long delivered = orderRepository.countByStatus(OrderStatus.DELIVERED);
+        long completed = orderRepository.countByStatus(OrderStatus.COMPLETED);
+        long cancelled = orderRepository.countByStatus(OrderStatus.CANCELLED);
+        long total = pending + confirmed + outOfStock + shipping + delivered + completed + cancelled;
+
+        counts.put("ALL", total);
+        counts.put("PENDING_CONFIRMATION", pending);
+        counts.put("CONFIRMED", confirmed);
+        counts.put("OUT_OF_STOCK_WAITING", outOfStock);
+        counts.put("SHIPPING", shipping);
+        counts.put("DELIVERED", delivered);
+        counts.put("COMPLETED", completed);
+        counts.put("CANCELLED", cancelled);
+        return counts;
     }
 
     @Override
@@ -357,54 +411,73 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderConfirmResultResponse confirmOrder(Long orderId) {
+        return confirmOrderFromStatus(orderId, OrderStatus.PENDING_CONFIRMATION);
+    }
+
+    @Override
+    @Transactional
+    public OrderConfirmResultResponse retryOrderConfirmation(Long orderId) {
+        return confirmOrderFromStatus(orderId, OrderStatus.OUT_OF_STOCK_WAITING);
+    }
+
+    private OrderConfirmResultResponse confirmOrderFromStatus(Long orderId, OrderStatus expectedStatus) {
         // Lock the order row first so concurrent confirmations serialize on the status
         // check-then-act below and cannot double-deduct inventory for the same order
         // (BR-INVENTORY-01, BR-INVENTORY-02, BR-INVENTORY-03).
         Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
 
-        if (order.getStatus() != OrderStatus.PENDING_CONFIRMATION) {
-            throw new IllegalArgumentException("Chỉ có thể xác nhận đơn hàng đang ở trạng thái 'Chờ xác nhận'. Trạng thái hiện tại: " + orderMapper.formatStatusLabel(order.getStatus()));
+        if (order.getStatus() != expectedStatus) {
+            String requiredLabel = expectedStatus == OrderStatus.PENDING_CONFIRMATION
+                    ? "Chờ xác nhận"
+                    : "Chờ xử lý tồn kho";
+            throw new IllegalArgumentException("Chỉ có thể thực hiện thao tác khi đơn hàng ở trạng thái '" + requiredLabel + "'. Trạng thái hiện tại: " + orderMapper.formatStatusLabel(order.getStatus()));
         }
+
+        OrderStatus previousStatus = order.getStatus();
 
         // BR-INVENTORY-01 & BR-INVENTORY-02: Re-check inventory for ALL items using Pessimistic Lock.
         // Items are locked in ascending productId order to keep a deterministic lock ordering
         // and avoid deadlocks between two confirmations sharing overlapping products.
-        List<OrderItem> itemsInLockOrder = order.getItems().stream()
-                .sorted(Comparator.comparing(item -> item.getProduct().getId()))
-                .toList();
+        Map<Long, Integer> requiredQuantities = new TreeMap<>();
+        Map<Long, String> productNames = new HashMap<>();
+        for (OrderItem item : order.getItems()) {
+            Long productId = item.getProduct().getId();
+            requiredQuantities.merge(productId, item.getQuantity(), Integer::sum);
+            productNames.putIfAbsent(productId, item.getProductName());
+        }
 
         Map<Long, Inventory> lockedInventories = new HashMap<>();
-        boolean allSufficient = true;
-        String insufficientReason = null;
+        List<String> insufficientReasons = new ArrayList<>();
 
-        for (OrderItem item : itemsInLockOrder) {
-            Long productId = item.getProduct().getId();
+        for (Map.Entry<Long, Integer> requirement : requiredQuantities.entrySet()) {
+            Long productId = requirement.getKey();
             Inventory inventory = inventoryRepository.findByProductIdWithLock(productId)
                     .orElse(null);
 
-            if (inventory == null || inventory.getQuantity() < item.getQuantity()) {
-                allSufficient = false;
+            if (inventory == null || inventory.getQuantity() < requirement.getValue()) {
                 int available = inventory != null ? inventory.getQuantity() : 0;
-                insufficientReason = String.format("Nhạc cụ '%s' không đủ số lượng trong kho (Yêu cầu: %d, Hiện có: %d).",
-                        item.getProductName(), item.getQuantity(), available);
-                break;
+                insufficientReasons.add(String.format("Nhạc cụ '%s' không đủ số lượng trong kho (Yêu cầu: %d, Hiện có: %d).",
+                        productNames.get(productId), requirement.getValue(), available));
+            } else {
+                lockedInventories.put(productId, inventory);
             }
-
-            lockedInventories.put(productId, inventory);
         }
 
         // Concurrency / Oversale protection:
-        if (!allSufficient) {
-            // Deduct NOTHING. Move to approved OUT_OF_STOCK_WAITING
-            order.setStatus(OrderStatus.OUT_OF_STOCK_WAITING);
-            String stockNote = "[Hết hàng tại thời điểm xác nhận] " + insufficientReason;
-            order.setNotes(order.getNotes() != null ? order.getNotes() + " | " + stockNote : stockNote);
-            orderRepository.save(order);
+        if (!insufficientReasons.isEmpty()) {
+            String insufficientReason = String.join(" ", insufficientReasons);
+            if (previousStatus == OrderStatus.PENDING_CONFIRMATION) {
+                // Deduct NOTHING. Move to approved OUT_OF_STOCK_WAITING.
+                order.setStatus(OrderStatus.OUT_OF_STOCK_WAITING);
+                String stockNote = "[Hết hàng tại thời điểm xác nhận] " + insufficientReason;
+                order.setNotes(order.getNotes() != null ? order.getNotes() + " | " + stockNote : stockNote);
+                orderRepository.save(order);
 
-            notifyUser(order.getUser(), "Đơn hàng chờ xử lý kho",
-                    "Đơn hàng " + order.getOrderCode() + " tạm thời chờ xử lý bổ sung tồn kho.",
-                    NotificationType.ORDER, "/account/orders");
+                notifyUser(order.getUser(), "Đơn hàng chờ xử lý kho",
+                        "Đơn hàng " + order.getOrderCode() + " tạm thời chờ xử lý bổ sung tồn kho.",
+                        NotificationType.ORDER, "/account/orders");
+            }
 
             log.warn("Order {} could not be confirmed due to insufficient stock. Transitioned to OUT_OF_STOCK_WAITING. Reason: {}",
                     order.getOrderCode(), insufficientReason);
@@ -412,17 +485,19 @@ public class OrderServiceImpl implements OrderService {
             return new OrderConfirmResultResponse(
                     order.getId(),
                     order.getOrderCode(),
-                    OrderStatus.PENDING_CONFIRMATION,
+                    previousStatus,
                     OrderStatus.OUT_OF_STOCK_WAITING,
-                    insufficientReason + " Đơn hàng đã chuyển sang trạng thái 'Chờ xử lý tồn kho'.",
+                    insufficientReason + (previousStatus == OrderStatus.PENDING_CONFIRMATION
+                            ? " Đơn hàng đã chuyển sang trạng thái 'Chờ xử lý tồn kho'."
+                            : " Đơn hàng vẫn ở trạng thái 'Chờ xử lý tồn kho'."),
                     false
             );
         }
 
         // If ALL items are sufficient: atomically deduct inventory
-        for (OrderItem item : order.getItems()) {
-            Inventory inventory = lockedInventories.get(item.getProduct().getId());
-            inventory.setQuantity(inventory.getQuantity() - item.getQuantity());
+        for (Map.Entry<Long, Integer> requirement : requiredQuantities.entrySet()) {
+            Inventory inventory = lockedInventories.get(requirement.getKey());
+            inventory.setQuantity(inventory.getQuantity() - requirement.getValue());
             inventoryRepository.save(inventory);
         }
 
@@ -438,7 +513,7 @@ public class OrderServiceImpl implements OrderService {
         return new OrderConfirmResultResponse(
                 savedOrder.getId(),
                 savedOrder.getOrderCode(),
-                OrderStatus.PENDING_CONFIRMATION,
+                previousStatus,
                 OrderStatus.CONFIRMED,
                 "Xác nhận đơn hàng thành công và đã trừ tồn kho an toàn.",
                 true
@@ -447,26 +522,50 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderDetailResponse completeOrder(Long orderId) {
+    public OrderDetailResponse markOrderShipping(Long orderId) {
         Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
-
         if (order.getStatus() != OrderStatus.CONFIRMED) {
-            throw new IllegalArgumentException("Chỉ có thể hoàn thành đơn hàng đã được 'Đã xác nhận'. Trạng thái hiện tại: " + orderMapper.formatStatusLabel(order.getStatus()));
+            throw new IllegalArgumentException("Chỉ có thể bắt đầu giao đơn hàng đã xác nhận. Trạng thái hiện tại: " + orderMapper.formatStatusLabel(order.getStatus()));
         }
 
+        order.setStatus(OrderStatus.SHIPPING);
+        Order savedOrder = orderRepository.save(order);
+        notifyUser(savedOrder.getUser(), "Đơn hàng đang được giao",
+                "Đơn hàng " + savedOrder.getOrderCode() + " đã được bàn giao cho đơn vị vận chuyển.",
+                NotificationType.ORDER, "/account/orders");
+        log.info("Order {} moved to SHIPPING.", savedOrder.getOrderCode());
+        return orderMapper.toOrderDetailResponse(savedOrder, false);
+    }
+
+    @Override
+    @Transactional
+    public OrderDetailResponse markOrderDelivered(Long orderId) {
+        Order order = orderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
+        if (order.getStatus() != OrderStatus.SHIPPING) {
+            throw new IllegalArgumentException("Chỉ có thể xác nhận đã giao cho đơn hàng đang giao. Trạng thái hiện tại: " + orderMapper.formatStatusLabel(order.getStatus()));
+        }
+
+        order.setStatus(OrderStatus.DELIVERED);
+        Order savedOrder = orderRepository.save(order);
+        notifyUser(savedOrder.getUser(), "Đơn hàng đã được giao",
+                "Đơn hàng " + savedOrder.getOrderCode() + " đã được giao. Vui lòng xác nhận khi quý khách đã nhận đủ hàng.",
+                NotificationType.ORDER, "/account/orders");
+        log.info("Order {} moved to DELIVERED.", savedOrder.getOrderCode());
+        return orderMapper.toOrderDetailResponse(savedOrder, false);
+    }
+
+    private Order completeDeliveredOrder(Order order) {
         order.setStatus(OrderStatus.COMPLETED);
-        if (order.getPaymentMethod() != null && order.getPaymentMethod().toUpperCase().contains("COD")) {
+        if ("COD".equalsIgnoreCase(order.getPaymentMethod())) {
             order.setPaid(true);
         }
         Order savedOrder = orderRepository.save(order);
-        log.info("Order {} completed successfully.", savedOrder.getOrderCode());
-
         notifyUser(savedOrder.getUser(), "Đơn hàng hoàn thành",
                 "Đơn hàng " + savedOrder.getOrderCode() + " đã hoàn thành. Quý khách có thể đánh giá sản phẩm ngay!",
                 NotificationType.ORDER, "/account/orders");
-
-        return orderMapper.toOrderDetailResponse(savedOrder, false);
+        return savedOrder;
     }
 
     @Override
@@ -481,19 +580,32 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalArgumentException("Không thể hủy đơn hàng đã hoàn tất hoặc đã bị hủy.");
         }
 
-        // If order was already CONFIRMED, we must atomically restore deducted stock!
+        if (order.getStatus() == OrderStatus.SHIPPING || order.getStatus() == OrderStatus.DELIVERED) {
+            throw new IllegalArgumentException(
+                    "Không thể hủy đơn hàng đã bắt đầu giao. Cần hoàn tất quy trình giao nhận trước khi xử lý trả hàng."
+            );
+        }
+
+        // CONFIRMED stock is still physically controlled by M4N and can be restored once.
         if (order.getStatus() == OrderStatus.CONFIRMED) {
-            // Restore in ascending productId order for deterministic lock ordering
-            List<OrderItem> itemsInLockOrder = order.getItems().stream()
-                    .sorted(Comparator.comparing(item -> item.getProduct().getId()))
-                    .toList();
-            for (OrderItem item : itemsInLockOrder) {
-                Inventory inventory = inventoryRepository.findByProductIdWithLock(item.getProduct().getId())
-                        .orElse(null);
-                if (inventory != null) {
-                    inventory.setQuantity(inventory.getQuantity() + item.getQuantity());
-                    inventoryRepository.save(inventory);
-                }
+            Map<Long, Integer> quantitiesToRestore = new TreeMap<>();
+            for (OrderItem item : order.getItems()) {
+                quantitiesToRestore.merge(item.getProduct().getId(), item.getQuantity(), Integer::sum);
+            }
+
+            Map<Long, Inventory> inventoriesToRestore = new HashMap<>();
+            for (Long productId : quantitiesToRestore.keySet()) {
+                Inventory inventory = inventoryRepository.findByProductIdWithLock(productId)
+                        .orElseThrow(() -> new IllegalStateException(
+                                "Không thể hoàn kho vì thiếu bản ghi tồn kho cho sản phẩm ID " + productId
+                        ));
+                inventoriesToRestore.put(productId, inventory);
+            }
+
+            for (Map.Entry<Long, Integer> restoration : quantitiesToRestore.entrySet()) {
+                Inventory inventory = inventoriesToRestore.get(restoration.getKey());
+                inventory.setQuantity(inventory.getQuantity() + restoration.getValue());
+                inventoryRepository.save(inventory);
             }
             log.info("Restored inventory for cancelled confirmed order: {}", order.getOrderCode());
         }
@@ -512,6 +624,18 @@ public class OrderServiceImpl implements OrderService {
                 NotificationType.ORDER, "/account/orders");
 
         return orderMapper.toOrderDetailResponse(savedOrder, false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> getCustomerOrderHistory(Long customerId, Pageable pageable) {
+        User customer = userRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản khách hàng: " + customerId));
+        if (customer.getRole() == null || customer.getRole().getName() != RoleName.CUSTOMER) {
+            throw new IllegalArgumentException("Lịch sử đơn hàng chỉ áp dụng cho tài khoản khách hàng.");
+        }
+        return orderRepository.findByUserIdOrderByCreatedAtDesc(customerId, pageable)
+                .map(orderMapper::toOrderResponse);
     }
 
     private void notifyUser(User user, String title, String message, NotificationType type, String link) {

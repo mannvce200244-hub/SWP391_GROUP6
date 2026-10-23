@@ -146,8 +146,9 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, ini
   const handleDelete = (a) => {
     if (a.productCount > 0) {
       addToast({
-        message: `Không thể xóa nghệ nhân "${a.name}" vì đang có ${a.productCount} sản phẩm liên kết.`,
+        message: `Không thể xóa nghệ nhân "${a.name}" vì đang có ${a.productCount} sản phẩm liên kết. Vui lòng gỡ các liên kết trước.`,
         type: 'error',
+        duration: 5000,
       })
       return
     }
@@ -321,16 +322,19 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, ini
 
           {/* Right / Bottom: Artisan List */}
           <div className="lg:col-span-7 bg-[#FFFFFF] p-5 rounded-xl border border-[#E5E8EB] shadow-2xs flex flex-col">
-            <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[#E5E8EB]">
-              <h3 className="text-sm font-bold text-[#17191B]">
+            <div className="flex flex-col gap-2.5 mb-3 pb-2 border-b border-[#E5E8EB] sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="shrink-0 text-sm font-bold text-[#17191B]">
                 Danh sách ({artisans.length})
               </h3>
               <input
                 type="text"
+                name="artisanSearch"
+                aria-label="Tìm nghệ nhân"
+                autoComplete="off"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm nghệ nhân hoặc làng nghề..."
-                className="px-3.5 py-1.5 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 w-48"
+                placeholder="Tìm nghệ nhân hoặc làng nghề…"
+                className="box-border h-9 w-full min-w-0 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] px-3.5 text-sm text-[#17191B] transition-[border-color,box-shadow] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 sm:w-48 sm:min-w-48 sm:max-w-48 sm:shrink-0"
               />
             </div>
 
@@ -419,7 +423,6 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, ini
                           <button
                             type="button"
                             onClick={() => handleDelete(a)}
-                            disabled={a.productCount > 0}
                             title={
                               a.productCount > 0
                                 ? 'Không thể xóa nghệ nhân đang có sản phẩm liên kết'
@@ -427,7 +430,7 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, ini
                             }
                             className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
                               a.productCount > 0
-                                ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400'
+                                ? 'bg-[#F6F7F8] text-zinc-400 hover:bg-[#E3E6E8] cursor-pointer'
                                 : 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer'
                             }`}
                           >
@@ -457,10 +460,11 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, ini
 
       {deleteConfirmTarget && (
         <ConfirmDialog
+          isOpen
           title="Xóa nghệ nhân"
-          message={`Bạn có chắc chắn muốn xóa nghệ nhân "${deleteConfirmTarget.name}"?`}
+          description={`Bạn có chắc chắn muốn xóa nghệ nhân "${deleteConfirmTarget.name}"?`}
           confirmLabel="Xóa"
-          isDestructive
+          variant="danger"
           isLoading={modalDeleting}
           onConfirm={confirmDeleteArtisan}
           onCancel={() => setDeleteConfirmTarget(null)}

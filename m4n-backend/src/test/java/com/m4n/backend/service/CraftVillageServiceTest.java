@@ -18,6 +18,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class CraftVillageServiceTest {
@@ -124,5 +125,17 @@ class CraftVillageServiceTest {
         assertThatThrownBy(() -> craftVillageService.deleteCraftVillage(1L))
                 .isInstanceOf(com.m4n.backend.exception.ResourceInUseException.class)
                 .hasMessageContaining("7");
+    }
+
+    @Test
+    void shouldDeleteCraftVillageWhenItHasNoAssociations() {
+        CraftVillage village = CraftVillage.builder().id(1L).name("Làng chưa sử dụng").build();
+        when(craftVillageRepository.findById(1L)).thenReturn(Optional.of(village));
+        when(artisanRepository.countByCraftVillageId(1L)).thenReturn(0L);
+        when(productRepository.countByCraftVillageId(1L)).thenReturn(0L);
+
+        craftVillageService.deleteCraftVillage(1L);
+
+        verify(craftVillageRepository).delete(village);
     }
 }

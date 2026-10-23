@@ -25,20 +25,21 @@ import ForbiddenPage from '../pages/ForbiddenPage.jsx'
 
 import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
 import PosDashboardPage from '../pages/PosDashboardPage.jsx'
+import PosTransactionHistoryPage from '../pages/PosTransactionHistoryPage.jsx'
 import AdminDashboardPage from '../pages/AdminDashboardPage.jsx'
 import AdminInstrumentsPage from '../pages/admin/AdminInstrumentsPage.jsx'
 import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage.jsx'
 import AdminArtisansPage from '../pages/admin/AdminArtisansPage.jsx'
 import AdminCraftVillagesPage from '../pages/admin/AdminCraftVillagesPage.jsx'
 import AdminInventoryPage from '../pages/admin/AdminInventoryPage.jsx'
-import AdminStockImportPage from '../pages/admin/AdminStockImportPage.jsx'
 import AdminOrdersPage from '../pages/admin/AdminOrdersPage.jsx'
 import AdminInvoicesPage from '../pages/admin/AdminInvoicesPage.jsx'
 import AdminVouchersPage from '../pages/admin/AdminVouchersPage.jsx'
 import AdminProductDetailPage from '../pages/admin/AdminProductDetailPage.jsx'
-import AdminProfilePage from '../pages/admin/AdminProfilePage.jsx'
-import AdminSecurityPage from '../pages/admin/AdminSecurityPage.jsx'
 import AdminUsersPage from '../pages/admin/AdminUsersPage.jsx'
+import StaffChatPage from '../pages/staff/StaffChatPage.jsx'
+import StaffProductsPage from '../pages/staff/StaffProductsPage.jsx'
+import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage.jsx'
 
 import RequireAuth from './RequireAuth.jsx'
 import RequireRole from './RequireRole.jsx'
@@ -51,18 +52,27 @@ import {
   ROUTE_CHANGE_EVENT,
 } from './customerRoutes.js'
 
+function readCurrentPathname() {
+  const currentPathname = normalizePathname(window.location.pathname)
+  return currentPathname === CUSTOMER_ROUTES.legacyAdminStockImport
+    ? CUSTOMER_ROUTES.adminInventory
+    : currentPathname
+}
+
 function AppRouter() {
-  const [pathname, setPathname] = useState(() =>
-    normalizePathname(window.location.pathname),
-  )
+  const [pathname, setPathname] = useState(readCurrentPathname)
 
   useEffect(() => {
     const updatePathname = () => {
-      setPathname(normalizePathname(window.location.pathname))
+      setPathname(readCurrentPathname())
     }
 
     window.addEventListener('popstate', updatePathname)
     window.addEventListener(ROUTE_CHANGE_EVENT, updatePathname)
+
+    if (normalizePathname(window.location.pathname) === CUSTOMER_ROUTES.legacyAdminStockImport) {
+      window.history.replaceState(null, '', CUSTOMER_ROUTES.adminInventory)
+    }
 
     return () => {
       window.removeEventListener('popstate', updatePathname)
@@ -98,7 +108,6 @@ function AppRouter() {
     pathname === CUSTOMER_ROUTES.adminArtisans ||
     pathname === CUSTOMER_ROUTES.adminCraftVillages ||
     pathname === CUSTOMER_ROUTES.adminInventory ||
-    pathname === CUSTOMER_ROUTES.adminStockImport ||
     pathname === CUSTOMER_ROUTES.adminOrders ||
     pathname === CUSTOMER_ROUTES.adminInvoices ||
     pathname === CUSTOMER_ROUTES.adminVouchers ||
@@ -119,8 +128,6 @@ function AppRouter() {
       adminContent = <AdminCraftVillagesPage />
     } else if (pathname === CUSTOMER_ROUTES.adminInventory) {
       adminContent = <AdminInventoryPage />
-    } else if (pathname === CUSTOMER_ROUTES.adminStockImport) {
-      adminContent = <AdminStockImportPage />
     } else if (pathname === CUSTOMER_ROUTES.adminOrders) {
       adminContent = <AdminOrdersPage />
     } else if (pathname === CUSTOMER_ROUTES.adminInvoices) {
@@ -128,9 +135,19 @@ function AppRouter() {
     } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
       adminContent = <AdminVouchersPage />
     } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
-      adminContent = <AdminProfilePage />
+      adminContent = (
+        <ProfilePage
+          profileRoute={CUSTOMER_ROUTES.adminProfile}
+          securityRoute={CUSTOMER_ROUTES.adminSecurity}
+        />
+      )
     } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
-      adminContent = <AdminSecurityPage />
+      adminContent = (
+        <AccountSecurityPage
+          profileRoute={CUSTOMER_ROUTES.adminProfile}
+          securityRoute={CUSTOMER_ROUTES.adminSecurity}
+        />
+      )
     } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
       adminContent = <AdminUsersPage />
     }
@@ -145,10 +162,38 @@ function AppRouter() {
   }
 
   // 3. Online Staff shell using StaffLayout
-  if (pathname === CUSTOMER_ROUTES.staff || pathname === CUSTOMER_ROUTES.staffOrders) {
+  if (
+    pathname === CUSTOMER_ROUTES.staff ||
+    pathname === CUSTOMER_ROUTES.staffOrders ||
+    pathname === CUSTOMER_ROUTES.staffChat ||
+    pathname === CUSTOMER_ROUTES.staffProducts ||
+    pathname === CUSTOMER_ROUTES.staffNotifications ||
+    pathname === CUSTOMER_ROUTES.staffProfile ||
+    pathname === CUSTOMER_ROUTES.staffSecurity
+  ) {
     let staffContent = <StaffDashboardPage />
     if (pathname === CUSTOMER_ROUTES.staffOrders) {
       staffContent = <AdminOrdersPage />
+    } else if (pathname === CUSTOMER_ROUTES.staffChat) {
+      staffContent = <StaffChatPage />
+    } else if (pathname === CUSTOMER_ROUTES.staffProducts) {
+      staffContent = <StaffProductsPage />
+    } else if (pathname === CUSTOMER_ROUTES.staffNotifications) {
+      staffContent = <StaffNotificationsPage />
+    } else if (pathname === CUSTOMER_ROUTES.staffProfile) {
+      staffContent = (
+        <ProfilePage
+          profileRoute={CUSTOMER_ROUTES.staffProfile}
+          securityRoute={CUSTOMER_ROUTES.staffSecurity}
+        />
+      )
+    } else if (pathname === CUSTOMER_ROUTES.staffSecurity) {
+      staffContent = (
+        <AccountSecurityPage
+          profileRoute={CUSTOMER_ROUTES.staffProfile}
+          securityRoute={CUSTOMER_ROUTES.staffSecurity}
+        />
+      )
     }
 
     return (
@@ -161,11 +206,13 @@ function AppRouter() {
   }
 
   // 4. POS showroom shell using PosLayout
-  if (pathname === CUSTOMER_ROUTES.pos) {
+  if (pathname === CUSTOMER_ROUTES.pos || pathname === CUSTOMER_ROUTES.posHistory) {
     return (
       <RequireRole allowedRoles={['POS_STAFF']}>
         <PosLayout pathname={pathname}>
-          <PosDashboardPage />
+          {pathname === CUSTOMER_ROUTES.posHistory
+            ? <PosTransactionHistoryPage />
+            : <PosDashboardPage />}
         </PosLayout>
       </RequireRole>
     )

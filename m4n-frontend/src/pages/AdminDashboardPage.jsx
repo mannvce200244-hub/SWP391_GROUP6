@@ -60,9 +60,23 @@ function getStatusBadge(status, label) {
           <span>{label || 'Đã xác nhận'}</span>
         </span>
       )
+    case 'SHIPPING':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span>{label || 'Đang giao hàng'}</span>
+        </span>
+      )
+    case 'DELIVERED':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+          <span>{label || 'Đã giao hàng'}</span>
+        </span>
+      )
     case 'OUT_OF_STOCK_WAITING':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F6F7F8] text-amber-800 border border-amber-200">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
           <span>{label || 'Chờ bổ sung kho'}</span>
         </span>
@@ -77,7 +91,7 @@ function getStatusBadge(status, label) {
     case 'PENDING_CONFIRMATION':
     default:
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-300">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F6F7F8] text-amber-800 border border-amber-300">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
           <span>{label || 'Chờ xác nhận'}</span>
         </span>

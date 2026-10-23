@@ -168,8 +168,8 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
             // 6. Footer Note
             Paragraph footer = new Paragraph(
                     "Cảm ơn quý khách đã tin tưởng và đồng hành cùng M4N!\n" +
-                    "Nhạc cụ thủ công truyền thống được bảo hành 12 tháng tại hệ thống Showroom M4N.\n" +
-                    "Hóa đơn này có giá trị xác nhận mua hàng và kích hoạt bảo hành.",
+                    "Hóa đơn này ghi nhận giao dịch bán hàng tại quầy M4N.\n" +
+                    "Vui lòng đối chiếu mã hóa đơn khi cần hỗ trợ về giao dịch.",
                     footerFont
             );
             footer.setAlignment(Element.ALIGN_CENTER);

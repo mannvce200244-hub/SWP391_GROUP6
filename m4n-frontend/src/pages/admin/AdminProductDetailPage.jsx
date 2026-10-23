@@ -279,7 +279,7 @@ export default function AdminProductDetailPage({ productId }) {
             {/* Main Stage */}
             <div className="relative aspect-16/10 rounded-xl bg-[#F6F7F8] border border-[#E3E6E8] overflow-hidden flex items-center justify-center">
               {activeMedia ? (
-                activeMedia.mediaType === 'VIDEO' ? (
+                activeMedia.type === 'VIDEO' ? (
                   <video
                     src={activeMedia.url}
                     controls
@@ -288,7 +288,7 @@ export default function AdminProductDetailPage({ productId }) {
                 ) : (
                   <img
                     src={activeMedia.url}
-                    alt={activeMedia.altText || product.name}
+                    alt={activeMedia.alt || product.name}
                     className="w-full h-full object-contain"
                     onError={(e) => {
                       e.target.style.display = 'none'
@@ -311,7 +311,7 @@ export default function AdminProductDetailPage({ productId }) {
                 </div>
               )}
 
-              {activeMedia?.isPrimary && (
+              {activeMedia && activeMediaIndex === 0 && (
                 <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-brand text-white text-xs font-semibold shadow-xs">
                   Ảnh đại diện chính
                 </span>
@@ -334,7 +334,7 @@ export default function AdminProductDetailPage({ productId }) {
                   >
                     <img
                       src={m.url}
-                      alt={m.altText || 'Thumbnail'}
+                      alt={m.alt || 'Thumbnail'}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.style.display = 'none'
@@ -386,7 +386,7 @@ export default function AdminProductDetailPage({ productId }) {
                       (product.stockQuantity || 0) === 0
                         ? 'bg-rose-50 text-rose-700 border border-rose-200'
                         : (product.stockQuantity || 0) <= 5
-                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                        ? 'bg-[#F6F7F8] text-amber-800 border border-amber-200'
                         : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                     }`}
                   >

@@ -140,8 +140,9 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
   const handleDelete = (cat) => {
     if (cat.productCount > 0) {
       addToast({
-        message: `Không thể xóa danh mục "${cat.name}" vì đang có ${cat.productCount} sản phẩm liên kết.`,
+        message: `Không thể xóa danh mục "${cat.name}" vì đang có ${cat.productCount} sản phẩm liên kết. Vui lòng chuyển sản phẩm sang danh mục khác trước.`,
         type: 'error',
+        duration: 5000,
       })
       return
     }
@@ -305,18 +306,21 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
 
           {/* Right / Bottom: Category List */}
           <div className="lg:col-span-7 bg-[#FFFFFF] p-5 rounded-xl border border-[#E5E8EB] shadow-2xs flex flex-col">
-            <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[#E5E8EB]">
+            <div className="flex flex-col gap-2.5 mb-3 pb-2 border-b border-[#E5E8EB] sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-[#17191B]">
+                <h3 className="shrink-0 text-sm font-bold text-[#17191B]">
                   Danh sách ({categories.length})
                 </h3>
               </div>
               <input
                 type="text"
+                name="categorySearch"
+                aria-label="Tìm danh mục"
+                autoComplete="off"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm mã hoặc tên..."
-                className="px-3.5 py-1.5 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 w-48"
+                placeholder="Tìm mã hoặc tên…"
+                className="box-border h-9 w-full min-w-0 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] px-3.5 text-sm text-[#17191B] transition-[border-color,box-shadow] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 sm:w-48 sm:min-w-48 sm:max-w-48 sm:shrink-0"
               />
             </div>
 
@@ -380,7 +384,6 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
                           <button
                             type="button"
                             onClick={() => handleDelete(cat)}
-                            disabled={cat.productCount > 0}
                             title={
                               cat.productCount > 0
                                 ? 'Không thể xóa danh mục đang có sản phẩm'
@@ -388,7 +391,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
                             }
                             className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
                               cat.productCount > 0
-                                ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400'
+                                ? 'bg-[#F6F7F8] text-zinc-400 hover:bg-[#E3E6E8] cursor-pointer'
                                 : 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer'
                             }`}
                           >

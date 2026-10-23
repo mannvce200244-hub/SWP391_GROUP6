@@ -8,7 +8,19 @@ import CategoryManagementModal from './CategoryManagementModal.jsx'
 import ArtisanManagementModal from './ArtisanManagementModal.jsx'
 import CraftVillageManagementModal from './CraftVillageManagementModal.jsx'
 import { IconInstrument } from '../ui/Icons.jsx'
-import { X, Plus, Trash2, Image, Package } from 'lucide-react'
+import { ArrowDown, ArrowUp, X, Plus, Trash2, Image, Package } from 'lucide-react'
+
+const vndNumberFormatter = new Intl.NumberFormat('vi-VN', {
+  maximumFractionDigits: 0,
+})
+
+function normalizeVndInput(value) {
+  return value.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
+}
+
+function formatVndInput(value) {
+  return value ? vndNumberFormatter.format(Number(value)) : ''
+}
 
 export default function ProductFormModal({
   isOpen,
@@ -46,6 +58,7 @@ export default function ProductFormModal({
 
   // Media items state
   const [mediaList, setMediaList] = useState([])
+  const [removedMediaIds, setRemovedMediaIds] = useState([])
   const [newMediaUrl, setNewMediaUrl] = useState('')
   const [newMediaType, setNewMediaType] = useState('IMAGE')
   const [newMediaAlt, setNewMediaAlt] = useState('')
@@ -70,6 +83,7 @@ export default function ProductFormModal({
     setDescription('')
     setIsActive(true)
     setMediaList([])
+    setRemovedMediaIds([])
     setFormErrors({})
     setServerError('')
   }, [])
@@ -78,7 +92,7 @@ export default function ProductFormModal({
     try {
       const [cats, arts, vils] = await Promise.all([
         categoryService.getCategories().catch(() => []),
-        artisanService.getArtisans().catch(() => []),
+        artisanService.getAdminArtisans().catch(() => []),
         craftVillageService.getCraftVillages().catch(() => []),
       ])
       setCategories(cats || [])
@@ -95,7 +109,7 @@ export default function ProductFormModal({
 
     Promise.all([
       categoryService.getCategories().catch(() => []),
-      artisanService.getArtisans().catch(() => []),
+      artisanService.getAdminArtisans().catch(() => []),
       craftVillageService.getCraftVillages().catch(() => []),
     ]).then(([cats, arts, vils]) => {
       if (active) {
@@ -113,7 +127,7 @@ export default function ProductFormModal({
             setCode(p.code || '')
             setBarcode(p.barcode || '')
             setName(p.name || '')
-            setPrice(p.price ? String(p.price) : '')
+            setPrice(p.price != null ? String(Math.trunc(Number(p.price))) : '')
             setCategoryId(p.category?.id ? String(p.category.id) : '')
             setArtisanId(p.artisan?.id ? String(p.artisan.id) : '')
             setCraftVillageId(p.craftVillage?.id ? String(p.craftVillage.id) : '')
@@ -123,16 +137,20 @@ export default function ProductFormModal({
             setOrigin(p.origin || '')
             setDescription(p.description || '')
             setIsActive(Boolean(p.isActive))
+            const sortedMedia = [...(p.media || [])].sort(
+              (left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0),
+            )
             setMediaList(
-              (p.media || []).map((m) => ({
+              sortedMedia.map((m, index) => ({
                 id: m.id,
                 url: m.url,
-                mediaType: m.mediaType,
-                altText: m.altText || '',
-                isPrimary: Boolean(m.isPrimary),
-                sortOrder: m.sortOrder || 0,
+                mediaType: m.type || 'IMAGE',
+                altText: m.alt || '',
+                isPrimary: index === 0,
+                sortOrder: index,
               }))
             )
+            setRemovedMediaIds([])
             setLoading(false)
           }
         })
@@ -159,8 +177,8 @@ export default function ProductFormModal({
     setArtisanId(selectedArtisanId)
     if (selectedArtisanId && !craftVillageId) {
       const art = artisans.find((a) => String(a.id) === String(selectedArtisanId))
-      if (art?.craftVillage?.id) {
-        setCraftVillageId(String(art.craftVillage.id))
+      if (art?.craftVillageId) {
+        setCraftVillageId(String(art.craftVillageId))
       }
     }
   }
@@ -181,27 +199,49 @@ export default function ProductFormModal({
     setNewMediaAlt('')
   }
 
-  const handleRemoveMedia = async (index) => {
+  const handleRemoveMedia = (index) => {
     const item = mediaList[index]
     if (isEdit && item.id) {
-      try {
-        await adminProductService.deleteMedia(productId, item.id)
-        addToast({ message: 'Đã xóa ảnh khỏi thư viện.', type: 'info' })
-      } catch (err) {
-        addToast({ message: err.message || 'Không thể xóa ảnh', type: 'error' })
-        return
-      }
+      setRemovedMediaIds((prev) => [...prev, item.id])
     }
-    setMediaList((prev) => prev.filter((_, i) => i !== index))
+    setMediaList((prev) =>
+      prev
+        .filter((_, i) => i !== index)
+        .map((media, i) => ({
+          ...media,
+          isPrimary: i === 0,
+          sortOrder: i,
+        })),
+    )
   }
 
   const handleSetPrimaryMedia = (index) => {
-    setMediaList((prev) =>
-      prev.map((m, i) => ({
-        ...m,
-        isPrimary: i === index,
+    setMediaList((prev) => {
+      const selected = prev[index]
+      const reordered = [selected, ...prev.filter((_, i) => i !== index)]
+      return reordered.map((media, i) => ({
+        ...media,
+        isPrimary: i === 0,
+        sortOrder: i,
       }))
-    )
+    })
+  }
+
+  const handleMoveMedia = (index, direction) => {
+    setMediaList((previous) => {
+      const targetIndex = index + direction
+      if (targetIndex < 0 || targetIndex >= previous.length) return previous
+
+      const reordered = [...previous]
+      const movedMedia = reordered[index]
+      reordered[index] = reordered[targetIndex]
+      reordered[targetIndex] = movedMedia
+      return reordered.map((media, mediaIndex) => ({
+        ...media,
+        isPrimary: mediaIndex === 0,
+        sortOrder: mediaIndex,
+      }))
+    })
   }
 
   const validate = () => {
@@ -254,14 +294,26 @@ export default function ProductFormModal({
 
         await adminProductService.updateProduct(productId, updatePayload)
 
-        // Upload any newly added media that doesn't have an ID
+        for (const mediaId of removedMediaIds) {
+          await adminProductService.deleteMedia(productId, mediaId)
+        }
+
+        const existingMediaItems = mediaList.filter((m) => m.id)
+        for (const m of existingMediaItems) {
+          await adminProductService.updateMedia(productId, m.id, {
+            mediaType: m.mediaType,
+            url: m.url,
+            altText: m.altText || null,
+            sortOrder: m.sortOrder,
+          })
+        }
+
         const newMediaItems = mediaList.filter((m) => !m.id)
         for (const m of newMediaItems) {
           await adminProductService.addMedia(productId, {
             url: m.url,
             mediaType: m.mediaType,
             altText: m.altText || null,
-            isPrimary: Boolean(m.isPrimary),
             sortOrder: m.sortOrder || 0,
           })
         }
@@ -290,7 +342,6 @@ export default function ProductFormModal({
             url: m.url,
             mediaType: m.mediaType,
             altText: m.altText || null,
-            isPrimary: Boolean(m.isPrimary),
             sortOrder: idx,
           })),
         }
@@ -441,27 +492,41 @@ export default function ProductFormModal({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">
+                      <label htmlFor="product-price" className="block text-sm font-semibold text-ink mb-1.5">
                         Đơn giá niêm yết (VND) <span className="text-rose-500">*</span>
                       </label>
-                      <input
-                        type="number"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        placeholder="VD: 6500000"
-                        min="1"
-                        step="1000"
-                        className={`w-full px-3.5 py-2.5 text-sm rounded-xl border ${
-                          formErrors.price ? 'border-rose-400 bg-rose-50/30' : 'border-[#E3E6E8]'
-                        } bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono`}
-                      />
-                      {price && !isNaN(Number(price)) && (
-                        <span className="text-xs text-brand font-semibold mt-1 block">
-                          {Number(price).toLocaleString('vi-VN')} ₫
+                      <div className="relative">
+                        <input
+                          id="product-price"
+                          name="price"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="off"
+                          value={formatVndInput(price)}
+                          onChange={(e) => {
+                            setPrice(normalizeVndInput(e.target.value))
+                            if (formErrors.price) {
+                              setFormErrors((previous) => ({ ...previous, price: undefined }))
+                            }
+                          }}
+                          placeholder="VD: 6.500.000"
+                          aria-invalid={Boolean(formErrors.price)}
+                          aria-describedby={formErrors.price ? 'product-price-error' : undefined}
+                          className={`w-full rounded-xl border bg-[#FFFFFF] px-3.5 py-2.5 pr-10 text-sm font-mono text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 ${
+                            formErrors.price ? 'border-rose-400 bg-rose-50/30' : 'border-[#E3E6E8]'
+                          }`}
+                        />
+                        <span
+                          className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-sm font-semibold text-secondary"
+                          aria-hidden="true"
+                        >
+                          ₫
                         </span>
-                      )}
+                      </div>
                       {formErrors.price && (
-                        <span className="text-xs text-rose-500 mt-1 block">{formErrors.price}</span>
+                        <span id="product-price-error" className="text-xs text-rose-500 mt-1 block">
+                          {formErrors.price}
+                        </span>
                       )}
                     </div>
 
@@ -733,7 +798,7 @@ export default function ProductFormModal({
                               </span>
                             )}
                           </div>
-                          <div className="p-2 flex items-center justify-between gap-1 bg-[#FFFFFF] border-t border-[#E3E6E8]">
+                          <div className="p-2 flex items-center gap-1 bg-[#FFFFFF] border-t border-[#E3E6E8]">
                             {!m.isPrimary && (
                               <button
                                 type="button"
@@ -743,14 +808,36 @@ export default function ProductFormModal({
                                 Đặt chính
                               </button>
                             )}
+                            <div className="ml-auto flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveMedia(idx, -1)}
+                                disabled={idx === 0}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-surface-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+                                title="Di chuyển ảnh lên"
+                                aria-label={`Di chuyển media ${idx + 1} lên`}
+                              >
+                                <ArrowUp size={14} aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveMedia(idx, 1)}
+                                disabled={idx === mediaList.length - 1}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-secondary hover:bg-surface-secondary hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+                                title="Di chuyển ảnh xuống"
+                                aria-label={`Di chuyển media ${idx + 1} xuống`}
+                              >
+                                <ArrowDown size={14} aria-hidden="true" />
+                              </button>
+                            </div>
                             <button
                               type="button"
                               onClick={() => handleRemoveMedia(idx)}
-                              className="inline-flex items-center text-xs text-rose-600 hover:text-rose-800 ml-auto cursor-pointer p-0.5"
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-800 cursor-pointer"
                               title="Xóa ảnh"
                               aria-label="Xóa ảnh"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={14} aria-hidden="true" />
                             </button>
                           </div>
                         </div>

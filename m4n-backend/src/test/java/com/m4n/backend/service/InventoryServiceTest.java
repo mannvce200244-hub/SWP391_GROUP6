@@ -95,6 +95,37 @@ class InventoryServiceTest {
     }
 
     @Test
+    @DisplayName("listInventory should distinguish low-stock and out-of-stock items")
+    void shouldMapLowAndOutOfStockStatuses() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Inventory lowStock = Inventory.builder()
+                .id(101L)
+                .product(sampleProduct)
+                .quantity(5)
+                .updatedAt(Instant.now())
+                .build();
+        Inventory outOfStock = Inventory.builder()
+                .id(102L)
+                .product(sampleProduct)
+                .quantity(0)
+                .updatedAt(Instant.now())
+                .build();
+        Page<Inventory> page = new PageImpl<>(List.of(lowStock, outOfStock), pageable, 2);
+
+        when(inventoryRepository.searchInventories(eq(null), eq(null), eq(pageable)))
+                .thenReturn(page);
+
+        Page<InventoryItemResponse> result = inventoryService.listInventory(null, null, pageable);
+
+        assertThat(result.getContent())
+                .extracting(InventoryItemResponse::getStatus, InventoryItemResponse::getStatusLabel)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("LOW_STOCK", "Sắp hết hàng"),
+                        org.assertj.core.groups.Tuple.tuple("OUT_OF_STOCK", "Hết hàng")
+                );
+    }
+
+    @Test
     @DisplayName("importStock should atomically add quantity and return updated response")
     void shouldImportStockSuccessfully() {
         when(productRepository.findById(10L)).thenReturn(Optional.of(sampleProduct));

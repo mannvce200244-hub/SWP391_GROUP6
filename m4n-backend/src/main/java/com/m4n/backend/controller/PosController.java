@@ -65,13 +65,14 @@ public class PosController {
     }
 
     @GetMapping("/invoices")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
-    @Operation(summary = "List POS invoices", description = "Returns paginated list of POS invoices for admin review.")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'POS_STAFF', 'ADMIN')")
+    @Operation(summary = "List visible POS invoices", description = "Admins see all invoices; POS staff see only invoices they created.")
     public ResponseEntity<Page<PosSaleResponse>> listInvoices(
             @RequestParam(required = false) String search,
-            @PageableDefault(size = 15, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 15, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(posService.listInvoices(search, pageable));
+        return ResponseEntity.ok(posService.listInvoices(search, pageable, authentication.getName()));
     }
 
     @GetMapping("/invoices/{id}")
