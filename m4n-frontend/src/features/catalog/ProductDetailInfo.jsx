@@ -51,7 +51,6 @@ function ProductDetailInfo({ product }) {
           message: `Đã thêm ${quantity} nhạc cụ "${product.name}" vào giỏ hàng.`,
           type: 'success',
         })
-        navigateTo(CUSTOMER_ROUTES.checkout)
       } else {
         addToast({
           message: result.message || 'Không thể thêm sản phẩm vào giỏ hàng.',
@@ -89,6 +88,7 @@ function ProductDetailInfo({ product }) {
           message: `Đã chọn mua ${quantity} nhạc cụ "${product.name}".`,
           type: 'success',
         })
+        navigateTo(CUSTOMER_ROUTES.checkout)
       } else {
         addToast({
           message: result.message || 'Không thể tiến hành mua hàng.',

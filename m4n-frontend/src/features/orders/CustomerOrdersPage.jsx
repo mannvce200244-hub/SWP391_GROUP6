@@ -41,7 +41,6 @@ function getStatusBadge(status) {
       return {
         label: 'Chờ xử lý tồn kho',
         className: 'text-orange-800 bg-[#F6F7F8] border-orange-200',
- feature/product-master-data
       }
     case 'SHIPPING':
       return {
@@ -52,7 +51,6 @@ function getStatusBadge(status) {
       return {
         label: 'Đã giao hàng',
         className: 'text-violet-700 bg-violet-50 border-violet-200',
- main
       }
     case 'COMPLETED':
       return {
@@ -445,13 +443,13 @@ function CustomerOrdersPage() {
 
       {/* Order Detail Modal */}
       {selectedOrderId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-border overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/50 backdrop-blur-xs overscroll-contain">
+          <div role="dialog" aria-modal="true" aria-labelledby="order-detail-title" className="w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-border overflow-hidden max-h-[calc(100dvh-12px)] sm:max-h-[calc(100dvh-48px)] flex flex-col animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="p-6 border-b border-border/60 flex items-center justify-between bg-surface-secondary/40">
+            <div className="shrink-0 p-4 sm:p-6 border-b border-border/60 flex items-center justify-between bg-surface-secondary/40">
               <div>
                 <div className="flex items-center gap-2.5">
-                  <h3 className="text-lg font-bold text-ink font-mono">
+                  <h3 id="order-detail-title" className="text-lg font-bold text-ink font-mono">
                     {orderDetail?.orderCode || 'Chi tiết đơn hàng'}
                   </h3>
                   {orderDetail && (
@@ -467,6 +465,7 @@ function CustomerOrdersPage() {
 
               <button
                 type="button"
+                aria-label="Đóng chi tiết đơn hàng"
                 onClick={handleCloseDetail}
                 className="w-9 h-9 rounded-xl text-muted hover:text-ink hover:bg-surface-secondary flex items-center justify-center cursor-pointer transition-all"
               >
@@ -475,7 +474,7 @@ function CustomerOrdersPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+            <div className="min-h-0 p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-6 flex-1 text-xs">
               {detailLoading ? (
                 <div className="py-12 text-center text-muted">Đang tải chi tiết đơn hàng...</div>
               ) : orderDetail ? (
@@ -495,8 +494,9 @@ function CustomerOrdersPage() {
                         Sản phẩm hiện đang tạm hết tồn kho sẵn sàng. Đơn hàng chuyển sang hàng đợi chế tác/nhập kho từ làng nghề.
                       </div>
                     ) : (
- feature/product-master-data
-                      <div className="grid grid-cols-5 gap-1 text-center pt-2">
+                      <div className="relative pt-2">
+                        <div aria-hidden="true" className="absolute left-[10%] right-[10%] top-[22px] h-0.5 bg-border" />
+                        <div className="relative grid grid-cols-5 gap-1 text-center">
                         {[
                           ['PENDING_CONFIRMATION', 'Đã đặt'],
                           ['CONFIRMED', 'Đã xác nhận'],
@@ -509,7 +509,7 @@ function CustomerOrdersPage() {
                           const isCurrent = index === currentIndex
                           return (
                             <div key={status} className="space-y-1 min-w-0">
-                              <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
+                              <div className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
                                 isReached
                                   ? isCurrent ? 'bg-brand text-white ring-2 ring-brand/20' : 'bg-emerald-600 text-white'
                                   : 'bg-surface-secondary text-muted'
@@ -520,49 +520,7 @@ function CustomerOrdersPage() {
                             </div>
                           )
                         })}
-                      <div className="grid grid-cols-3 gap-2 text-center pt-2">
-                        {/* Step 1 */}
-                        <div className="space-y-1">
-                          <div className="w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center mx-auto text-xs font-bold">
-                            <Check size={14} className="stroke-[2.5]" />
-                          </div>
-                          <span className="font-semibold text-ink block text-xs">Đã đặt hàng</span>
                         </div>
-                        {/* Step 2 */}
-                        <div className="space-y-1">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
-                            orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED'
-                              ? 'bg-brand text-white'
-                              : 'bg-[#F6F7F8] text-amber-800 ring-2 ring-amber-400'
-                          }`}>
-                            {orderDetail.status === 'CONFIRMED' || orderDetail.status === 'COMPLETED' ? (
-                              <Check size={14} className="stroke-[2.5]" />
-                            ) : (
-                              '2'
-                            )}
-                          </div>
-                          <span className="font-semibold text-ink block text-xs">Chờ xác nhận</span>
-                        </div>
-                        {/* Step 3 */}
-                        <div className="space-y-1">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
-                            orderDetail.status === 'COMPLETED'
-                              ? 'bg-emerald-600 text-white'
-                              : orderDetail.status === 'CONFIRMED'
-                              ? 'bg-teal-600 text-white'
-                              : 'bg-surface-secondary text-muted'
-                          }`}>
-                            {orderDetail.status === 'COMPLETED' ? (
-                              <Check size={14} className="stroke-[2.5]" />
-                            ) : (
-                              '3'
-                            )}
-                          </div>
-                          <span className="font-semibold text-ink block text-xs">
-                            {orderDetail.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã xác nhận'}
-                          </span>
-                        </div>
- main
                       </div>
                     )}
                   </div>
@@ -660,7 +618,7 @@ function CustomerOrdersPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 sm:p-6 border-t border-border/60 bg-white flex items-center justify-between">
+            <div className="shrink-0 p-3 sm:p-5 border-t border-border/60 bg-white flex flex-wrap items-center gap-2">
               {orderDetail?.canCustomerCancel && (
                 <button
                   type="button"

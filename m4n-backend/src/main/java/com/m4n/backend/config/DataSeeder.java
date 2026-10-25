@@ -94,12 +94,25 @@ public class DataSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         initRoles();
+        synchronizeOrderStatusConstraint();
         initProducts();
         initVouchers();
         if (seedDevAccounts) {
             initDevAccounts();
             initOrders();
             printTestAccountsSummary();
+        }
+    }
+
+    private void synchronizeOrderStatusConstraint() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check");
+            jdbcTemplate.execute("ALTER TABLE orders DROP CONSTRAINT IF EXISTS order_status_check");
+            jdbcTemplate.execute("ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN "
+                    + "('PENDING_CONFIRMATION', 'CONFIRMED', 'OUT_OF_STOCK_WAITING', 'SHIPPING', "
+                    + "'DELIVERED', 'COMPLETED', 'CANCELLED'))");
+        } catch (Exception e) {
+            log.debug("Orders status check constraint update skipped or not applicable: {}", e.getMessage());
         }
     }
 
@@ -385,37 +398,44 @@ public class DataSeeder implements ApplicationRunner {
                         .build()));
 
         // 3. Artisans
-        Artisan artisanQuy = artisanRepository.findByNameIgnoreCase("Nghệ nhân Nguyễn Văn Quý")
-                .orElseGet(() -> artisanRepository.save(Artisan.builder()
-                        .name("Nghệ nhân Nguyễn Văn Quý")
-                        .craftVillage(villageDaoXa)
-                        .biography("Nghệ nhân ưu tú với hơn 40 năm gắn bó với nghề làm đàn tranh và đàn bầu, truyền nhân đời thứ 4 làng Đào Xá.")
-                        .avatarUrl(null)
-                        .build()));
+        Artisan artisanQuy = upsertSeedArtisan(
+                "Nghệ nhân Nguyễn Văn Quý",
+                "Nghệ nhân Đào Văn Soạn",
+                "Nghệ nhân Ưu tú Đào Văn Soạn thuộc gia đình bốn đời làm đàn tại làng Đào Xá. Ông có hơn 50 năm gắn bó với nghề và dành nhiều tâm huyết truyền dạy kỹ thuật chế tác nhạc cụ dân tộc.",
+                "https://cdnphoto.dantri.com.vn/rXJUZum4ZizngoqSIdYqaUXfonk=/2020/10/11/8-nghe-nhan-dao-soan-lam-dan-dan-toc-1602355642451.jpg",
+                villageDaoXa
+        );
 
-        Artisan artisanKhanh = artisanRepository.findByNameIgnoreCase("Nghệ nhân Phạm Chí Khánh")
-                .orElseGet(() -> artisanRepository.save(Artisan.builder()
-                        .name("Nghệ nhân Phạm Chí Khánh")
-                        .craftVillage(villageDaoXa)
-                        .biography("Bậc thầy chế tác độc huyền cầm, đạt nhiều giải thưởng thủ công mỹ nghệ quốc gia.")
-                        .avatarUrl(null)
-                        .build()));
+        Artisan artisanKhanh = upsertSeedArtisan(
+                "Nghệ nhân Phạm Chí Khánh",
+                "NSƯT Phạm Chí Khánh",
+                "NSƯT Phạm Chí Khánh có hơn 50 năm gắn bó với việc biểu diễn, sưu tầm và chế tác nhạc cụ dân tộc. Không gian làm nghề tại phố Hàng Nón lưu giữ khoảng 150 loại nhạc cụ truyền thống.",
+                "https://giadinh.mediacdn.vn/296230595582509056/2024/12/31/picture1-17356365726781973154359.png",
+                null
+        );
 
-        Artisan artisanPhong = artisanRepository.findByNameIgnoreCase("Nghệ nhân Trần Văn Phong")
-                .orElseGet(() -> artisanRepository.save(Artisan.builder()
-                        .name("Nghệ nhân Trần Văn Phong")
-                        .craftVillage(villageDaoXa)
-                        .biography("Chuyên gia chế tác đàn nguyệt cổ truyền và phục hồi các dòng đàn cổ.")
-                        .avatarUrl(null)
-                        .build()));
+        Artisan artisanPhong = upsertSeedArtisan(
+                "Nghệ nhân Trần Văn Phong",
+                "Nghệ nhân Đào Anh Tuấn",
+                "Nghệ nhân Đào Anh Tuấn là con trai Nghệ nhân Ưu tú Đào Văn Soạn và tiếp nối nghề làm đàn của gia đình tại Đào Xá. Anh chế tác thủ công nhiều loại đàn, trong đó có đàn tranh và đàn nguyệt.",
+                "https://nhn.1cdn.vn/2023/08/17/img_0025.jpg",
+                villageDaoXa
+        );
 
-        Artisan artisanBuiKhanh = artisanRepository.findByNameIgnoreCase("Nghệ nhân Bùi Quốc Khánh")
-                .orElseGet(() -> artisanRepository.save(Artisan.builder()
-                        .name("Nghệ nhân Bùi Quốc Khánh")
-                        .craftVillage(villageTrucSon)
-                        .biography("Nghệ nhân chế tác sáo trúc biểu diễn chuyên nghiệp cho các dàn nhạc dân tộc.")
-                        .avatarUrl(null)
-                        .build()));
+        Artisan artisanBuiKhanh = upsertSeedArtisan(
+                "Nghệ nhân Bùi Quốc Khánh",
+                "Nghệ nhân Nguyễn Văn Mão",
+                "Nghệ nhân Nguyễn Văn Mão, còn được biết đến với tên Mão Mèo, bắt đầu học thổi sáo từ năm 8 tuổi và tự nghiên cứu chế tác sáo trúc. Anh sáng lập thương hiệu Sáo Trúc Mão Mèo và xây dựng cộng đồng dành cho người yêu sáo.",
+                "https://saotrucmaomeo.com/cms/static/site/sale_saotrucmaomeo/uploads/ckeditor/plugin_ckeditor_upload.upload.b120c3a0754a9cd8.4dc3a36f204dc3a86f2e4a5047.JPG",
+                null
+        );
+        if ("https://www.thbt.vn/wp-content/uploads/2026/08/doanh-nhan-nguyen-van-mao-sao-truc-mao-meo-461977.webp"
+                .equals(artisanBuiKhanh.getAvatarUrl())) {
+            artisanBuiKhanh.setAvatarUrl("https://saotrucmaomeo.com/cms/static/site/sale_saotrucmaomeo/uploads/ckeditor/plugin_ckeditor_upload.upload.b120c3a0754a9cd8.4dc3a36f204dc3a86f2e4a5047.JPG");
+            artisanBuiKhanh.setCraftVillage(null);
+            artisanBuiKhanh = artisanRepository.save(artisanBuiKhanh);
+            log.info("Migrated verified photograph and origin for artisan: {}", artisanBuiKhanh.getName());
+        }
 
         // 4. Products & Inventories
         seedProductIfNotExists(
@@ -511,6 +531,31 @@ public class DataSeeder implements ApplicationRunner {
                 List.of(),
                 10
         );
+    }
+
+    private Artisan upsertSeedArtisan(
+            String legacyName,
+            String name,
+            String biography,
+            String avatarUrl,
+            CraftVillage craftVillage
+    ) {
+        var verifiedArtisan = artisanRepository.findByNameIgnoreCase(name);
+        if (verifiedArtisan.isPresent()) {
+            return verifiedArtisan.get();
+        }
+
+        Artisan artisan = artisanRepository.findByNameIgnoreCase(legacyName)
+                .orElseGet(Artisan::new);
+
+        artisan.setName(name);
+        artisan.setBiography(biography);
+        artisan.setAvatarUrl(avatarUrl);
+        artisan.setCraftVillage(craftVillage);
+
+        Artisan saved = artisanRepository.save(artisan);
+        log.info("Seeded verified artisan profile: {}", name);
+        return saved;
     }
 
     private void seedProductIfNotExists(
@@ -838,4 +883,3 @@ public class DataSeeder implements ApplicationRunner {
         log.info("{}", summary);
     }
 }
-

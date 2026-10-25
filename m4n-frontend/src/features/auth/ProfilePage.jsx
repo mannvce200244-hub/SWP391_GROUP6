@@ -14,7 +14,8 @@ import {
   LoaderCircle,
 } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
-import { getSecurityRouteForRole, navigateTo } from '../../routes/customerRoutes.js'
+import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
+import { isValidVietnameseMobile, VIETNAMESE_MOBILE_ERROR } from '../../utils/phone.js'
 
 function ProfilePage({
   profileRoute = CUSTOMER_ROUTES.profile,
@@ -52,8 +53,8 @@ function ProfilePage({
       errors.fullName = 'Họ và tên không được vượt quá 150 ký tự.'
     }
 
-    if (trimmedPhone && !/^[0-9+() -]{8,20}$/.test(trimmedPhone)) {
-      errors.phone = 'Số điện thoại không hợp lệ (từ 8 đến 20 số).'
+    if (trimmedPhone && !isValidVietnameseMobile(trimmedPhone)) {
+      errors.phone = VIETNAMESE_MOBILE_ERROR
     }
 
     setFieldErrors(errors)
@@ -163,10 +164,7 @@ function ProfilePage({
           {/* Quick Security Action Shortcut */}
           <button
             type="button"
- feature/product-master-data
             onClick={() => navigateTo(securityRoute)}
-            onClick={() => navigateTo(getSecurityRouteForRole(user?.role))}
- main
             className="self-start sm:self-center inline-flex items-center gap-2 px-4 py-2.5 rounded-[16px] text-xs font-bold text-brand bg-brand-soft/70 hover:bg-brand-soft border border-brand-border transition-all cursor-pointer"
           >
             <Shield size={15} />

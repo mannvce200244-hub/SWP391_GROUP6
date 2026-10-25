@@ -4,7 +4,6 @@ import AccountLayout from '../../layouts/AccountLayout.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import {
   CircleAlert,
-  Monitor,
   Key,
   Lock,
   Eye,
@@ -320,43 +319,6 @@ function AccountSecurityPage({
               </button>
             </div>
           </form>
-        </section>
-
-        {/* Active Sessions Section */}
-        <section className="bg-surface-secondary/40 border border-border/80 rounded-[28px] p-6 sm:p-8">
-          <div className="flex items-center gap-3.5 mb-5">
-            <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-brand/15 text-brand border border-brand-border">
-              <Monitor size={22} />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-ink font-sans">
-                Phiên đăng nhập hiện tại
-              </h3>
-              <p className="text-xs text-muted mt-0.5">
-                Quản lý thiết bị và trình duyệt bạn đang sử dụng.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4 p-4 sm:p-5 rounded-2xl bg-white border border-border/80 shadow-2xs">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-brand-soft text-brand border border-brand-border">
-              <Monitor size={24} />
-            </div>
-            <div className="flex flex-col gap-1 flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <h4 className="text-sm font-bold text-ink">
-                  Trình duyệt web hiện tại
-                </h4>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full text-brand bg-brand-soft border border-brand-border">
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" aria-hidden="true" />
-                  Đang hoạt động
-                </span>
-              </div>
-              <p className="text-xs text-muted">
-                Phiên làm việc bảo mật đang hoạt động an toàn trên máy tính này.
-              </p>
-            </div>
-          </div>
         </section>
 
         {/* Logout All Sessions Section */}

@@ -21,7 +21,7 @@ function VillageCard({ village }) {
           decoding="async"
           height="320"
           loading="lazy"
-          src={village.coverImage || '/assets/images/artisan-workshop.jpg'}
+          src={village.coverImage || '/assets/images/vietnamese-instrument-shop.jpg'}
           width="520"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-75 group-hover:opacity-65 transition-opacity pointer-events-none" />

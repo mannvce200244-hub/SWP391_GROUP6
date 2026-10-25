@@ -1,8 +1,10 @@
 package com.m4n.backend.controller;
 
 import com.m4n.backend.dto.request.StockImportRequest;
+import com.m4n.backend.dto.request.StockIssueRequest;
 import com.m4n.backend.dto.response.InventoryItemResponse;
 import com.m4n.backend.dto.response.StockImportResponse;
+import com.m4n.backend.dto.response.StockIssueResponse;
 import com.m4n.backend.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,5 +51,15 @@ public class InventoryController {
             @Valid @RequestBody StockImportRequest request
     ) {
         return ResponseEntity.ok(inventoryService.importStock(productId, request));
+    }
+
+    @PostMapping("/{productId}/issue")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    @Operation(summary = "Issue stock correction", description = "Reduces inventory through an audited movement; direct stock editing is not allowed.")
+    public ResponseEntity<StockIssueResponse> issueStock(
+            @PathVariable Long productId,
+            @Valid @RequestBody StockIssueRequest request
+    ) {
+        return ResponseEntity.ok(inventoryService.issueStock(productId, request));
     }
 }

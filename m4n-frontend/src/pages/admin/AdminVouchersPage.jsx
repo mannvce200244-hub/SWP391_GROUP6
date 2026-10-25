@@ -14,12 +14,43 @@ function formatCurrency(amount) {
   return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫'
 }
 
+function toLocalDateTimeInput(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  const offset = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+}
+
+function formatDateTime(value) {
+  return value ? new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : 'Không giới hạn'
+}
+
+function getVoucherState(voucher) {
+  const now = Date.now()
+  if (!voucher.isActive) return 'INACTIVE'
+  if (voucher.validFrom && now < new Date(voucher.validFrom).getTime()) return 'UPCOMING'
+  if (voucher.validUntil && now > new Date(voucher.validUntil).getTime()) return 'EXPIRED'
+  if (voucher.usageLimit != null && (voucher.usedCount || 0) >= voucher.usageLimit) return 'EXHAUSTED'
+  return 'ACTIVE'
+}
+
+const VOUCHER_STATE_META = {
+  ACTIVE: { label: 'Đang sử dụng', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  UPCOMING: { label: 'Sắp diễn ra', className: 'bg-sky-50 text-sky-700 border-sky-200' },
+  EXPIRED: { label: 'Đã hết hạn', className: 'bg-rose-50 text-rose-700 border-rose-200' },
+  EXHAUSTED: { label: 'Hết lượt', className: 'bg-rose-50 text-rose-700 border-rose-200' },
+  INACTIVE: { label: 'Đã tắt', className: 'bg-zinc-100 text-zinc-600 border-zinc-200' },
+}
+
 const EMPTY_FORM = {
   code: '',
   discountRate: '',
   minimumOrderValue: '',
   description: '',
   isActive: true,
+  validFrom: '',
+  validUntil: '',
+  usageLimit: '',
 }
 
 export default function AdminVouchersPage() {
@@ -28,6 +59,7 @@ export default function AdminVouchersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('ALL')
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Form
@@ -81,6 +113,9 @@ export default function AdminVouchersPage() {
       minimumOrderValue: voucher.minimumOrderValue ?? '',
       description: voucher.description || '',
       isActive: voucher.isActive ?? true,
+      validFrom: toLocalDateTimeInput(voucher.validFrom),
+      validUntil: toLocalDateTimeInput(voucher.validUntil),
+      usageLimit: voucher.usageLimit ?? '',
     })
     setFormOpen(true)
   }
@@ -123,6 +158,7 @@ export default function AdminVouchersPage() {
   }
 
   const filtered = vouchers.filter((v) => {
+    if (statusFilter !== 'ALL' && getVoucherState(v) !== statusFilter) return false
     if (!search.trim()) return true
     const q = search.toLowerCase()
     return (v.code && v.code.toLowerCase().includes(q)) || (v.description && v.description.toLowerCase().includes(q))
@@ -154,15 +190,19 @@ export default function AdminVouchersPage() {
         </button>
       </div>
 
-      <div className="relative max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Tìm theo mã voucher…"
-          className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm text-[#17191B] placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#A62F25]/15 focus:border-[#A62F25]/40 transition-colors"
-        />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative w-full max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo mã hoặc mô tả…" className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm text-[#17191B] placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#A62F25]/15 focus:border-[#A62F25]/40 transition-colors" />
+        </div>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="min-w-44 px-3 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm text-[#17191B]">
+          <option value="ALL">Tất cả trạng thái</option>
+          <option value="ACTIVE">Đang sử dụng</option>
+          <option value="UPCOMING">Sắp diễn ra</option>
+          <option value="EXPIRED">Đã hết hạn</option>
+          <option value="EXHAUSTED">Hết lượt</option>
+          <option value="INACTIVE">Đã tắt</option>
+        </select>
       </div>
 
       {loading ? (
@@ -184,6 +224,8 @@ export default function AdminVouchersPage() {
                   <th className="text-left px-4 py-3 font-semibold text-[#17191B]">Mã Voucher</th>
                   <th className="text-center px-4 py-3 font-semibold text-[#17191B]">Giảm</th>
                   <th className="text-right px-4 py-3 font-semibold text-[#17191B]">Đơn tối thiểu</th>
+                  <th className="text-left px-4 py-3 font-semibold text-[#17191B]">Thời gian</th>
+                  <th className="text-center px-4 py-3 font-semibold text-[#17191B]">Lượt dùng</th>
                   <th className="text-center px-4 py-3 font-semibold text-[#17191B]">Trạng thái</th>
                   <th className="text-left px-4 py-3 font-semibold text-[#17191B]">Mô tả</th>
                   <th className="text-right px-4 py-3 font-semibold text-[#17191B]">Thao tác</th>
@@ -195,14 +237,13 @@ export default function AdminVouchersPage() {
                     <td className="px-4 py-3 font-mono text-xs font-semibold text-[#17191B]">{voucher.code}</td>
                     <td className="px-4 py-3 text-center font-semibold text-[#A62F25]">{formatRate(voucher.discountRate)}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-secondary">{formatCurrency(voucher.minimumOrderValue)}</td>
+                    <td className="px-4 py-3 text-xs text-secondary whitespace-nowrap">{formatDateTime(voucher.validFrom)}<br />đến {formatDateTime(voucher.validUntil)}</td>
+                    <td className="px-4 py-3 text-center tabular-nums text-secondary">{voucher.usedCount || 0}/{voucher.usageLimit ?? '∞'}</td>
                     <td className="px-4 py-3 text-center">
-                      {voucher.isActive ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CircleCheck size={11} /> Đang hoạt động
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-500 border border-zinc-200">Tắt</span>
-                      )}
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${VOUCHER_STATE_META[getVoucherState(voucher)].className}`}>
+                        {getVoucherState(voucher) === 'ACTIVE' && <CircleCheck size={11} />}
+                        {VOUCHER_STATE_META[getVoucherState(voucher)].label}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-secondary text-xs max-w-[200px] truncate">{voucher.description || '—'}</td>
                     <td className="px-4 py-3 text-right">
@@ -223,10 +264,24 @@ export default function AdminVouchersPage() {
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-xs" onClick={() => setFormOpen(false)} aria-hidden="true" />
-          <form onSubmit={handleSubmit} className="relative bg-white rounded-2xl border border-[#E3E6E8] shadow-xl w-full max-w-md p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="relative bg-white rounded-2xl border border-[#E3E6E8] shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-[#17191B]">{editingId ? 'Sửa voucher' : 'Tạo voucher mới'}</h3>
               <button type="button" onClick={() => setFormOpen(false)} className="p-1 rounded-lg hover:bg-[#F6F7F8] cursor-pointer"><X size={18} className="text-zinc-400" /></button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-[#17191B] mb-1">Bắt đầu</label>
+                <input type="datetime-local" value={form.validFrom} onChange={(e) => setForm((f) => ({ ...f, validFrom: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#17191B] mb-1">Kết thúc</label>
+                <input type="datetime-local" value={form.validUntil} min={form.validFrom || undefined} onChange={(e) => setForm((f) => ({ ...f, validUntil: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#17191B] mb-1">Số lượt sử dụng tối đa</label>
+              <input type="number" min="1" step="1" value={form.usageLimit} onChange={(e) => setForm((f) => ({ ...f, usageLimit: e.target.value }))} placeholder="Để trống nếu không giới hạn" className="w-full px-3 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-[#17191B] mb-1">Mã voucher</label>

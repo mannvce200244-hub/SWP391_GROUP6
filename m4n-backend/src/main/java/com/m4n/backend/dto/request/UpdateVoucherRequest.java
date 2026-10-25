@@ -4,8 +4,10 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 public record UpdateVoucherRequest(
         @NotNull(message = "Tỷ lệ giảm giá không được để trống")
@@ -20,6 +22,13 @@ public record UpdateVoucherRequest(
         Boolean isActive,
 
         @Size(max = 255, message = "Mô tả không quá 255 ký tự")
-        String description
+        String description,
+
+        Instant validFrom,
+
+        Instant validUntil,
+
+        @Positive(message = "Số lượt sử dụng phải lớn hơn 0")
+        Integer usageLimit
 ) {
 }

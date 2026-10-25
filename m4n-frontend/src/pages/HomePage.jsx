@@ -3,6 +3,7 @@ import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES, HOME_ARTISAN_SECTION } from '../routes/customerRoutes.js'
 import ProductCard from '../features/catalog/ProductCard.jsx'
 import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
+import ScrollReveal from '../components/common/ScrollReveal.jsx'
 import productService from '../services/productService.js'
 import {
   ARTISAN,
@@ -153,7 +154,7 @@ function HomePage() {
         aria-label="Thông tin danh mục M4N"
         className="py-10 bg-surface-muted border-b border-border"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-bold uppercase tracking-wider text-brand">01 · Thông tin vật liệu</span>
@@ -187,7 +188,7 @@ function HomePage() {
               </p>
             </div>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -198,7 +199,7 @@ function HomePage() {
         className="py-16 sm:py-20 bg-white border-b border-border"
         id="categories"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
             <div>
               <EditorialEyebrow label="DANH MỤC NHẠC CỤ" />
@@ -318,7 +319,7 @@ function HomePage() {
               </div>
             </RouterLink>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -328,7 +329,7 @@ function HomePage() {
         aria-labelledby="featured-products-heading"
         className="py-16 sm:py-20 bg-surface-muted border-b border-border"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
             <div>
               <EditorialEyebrow label="BỘ SƯU TẬP TIÊU BIỂU" />
@@ -418,7 +419,7 @@ function HomePage() {
               <span aria-hidden="true">→</span>
             </RouterLink>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -429,7 +430,7 @@ function HomePage() {
         className="py-16 sm:py-24 bg-white border-b border-border"
         id={HOME_ARTISAN_SECTION.id}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Left: Authentic documentary photograph (6 cols) */}
             <div className="lg:col-span-6">
@@ -445,8 +446,15 @@ function HomePage() {
                   />
                 </div>
                 <div className="p-4 bg-surface-muted border-t border-border flex items-center justify-between text-xs text-muted">
-                  <span className="font-semibold text-ink">Không gian chế tác nhạc cụ truyền thống</span>
-                  <span>Việt Nam</span>
+                  <span className="font-semibold text-ink">{ARTISAN.caption}</span>
+                  <a
+                    className="transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+                    href={ARTISAN.creditUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Ảnh: {ARTISAN.credit}
+                  </a>
                 </div>
               </div>
             </div>
@@ -499,7 +507,7 @@ function HomePage() {
               </div>
             </div>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -509,7 +517,7 @@ function HomePage() {
         aria-labelledby="values-heading"
         className="py-16 sm:py-20 bg-surface-muted border-b border-border"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mb-12">
             <EditorialEyebrow label="THÔNG TIN M4N" />
             <h2
@@ -541,7 +549,7 @@ function HomePage() {
               </div>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -551,7 +559,7 @@ function HomePage() {
         aria-label="Tư vấn và trải nghiệm nhạc cụ"
         className="py-16 sm:py-20 bg-white"
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center gap-5">
+        <ScrollReveal className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center gap-5">
           <span className="text-xs font-bold uppercase tracking-wider text-brand">
             HỖ TRỢ TRỰC TUYẾN
           </span>
@@ -580,7 +588,7 @@ function HomePage() {
               <span>Tìm hiểu các nghệ nhân</span>
             </RouterLink>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
     </div>
   )

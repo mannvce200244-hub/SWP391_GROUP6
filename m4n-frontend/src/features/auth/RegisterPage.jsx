@@ -6,6 +6,7 @@ import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { CircleX, CircleCheck } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
+import { isValidVietnameseMobile, VIETNAMESE_MOBILE_ERROR } from '../../utils/phone.js'
 
 function RegisterPage() {
   const { register } = useAuth()
@@ -39,8 +40,8 @@ function RegisterPage() {
       errors.email = 'Định dạng email không hợp lệ.'
     }
 
-    if (trimmedPhone && !/^[0-9+() -]{8,20}$/.test(trimmedPhone)) {
-      errors.phone = 'Số điện thoại không hợp lệ (8 - 20 số).'
+    if (trimmedPhone && !isValidVietnameseMobile(trimmedPhone)) {
+      errors.phone = VIETNAMESE_MOBILE_ERROR
     }
 
     if (!password) {

@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -117,6 +118,44 @@ class VoucherServiceTest {
 
         assertThat(response.isValid()).isFalse();
         assertThat(response.message()).contains("không thể sử dụng");
+    }
+
+    @Test
+    @DisplayName("Should reject expired and exhausted vouchers")
+    void shouldRejectExpiredAndExhaustedVoucher() {
+        Voucher expired = Voucher.builder()
+                .code("OLD10").discountRate(new BigDecimal("0.1000"))
+                .minimumOrderValue(BigDecimal.ZERO).isActive(true)
+                .validUntil(Instant.now().minusSeconds(60)).build();
+        when(voucherRepository.findByCodeIgnoreCase("OLD10")).thenReturn(Optional.of(expired));
+        assertThat(voucherService.validateAndCalculate("OLD10", new BigDecimal("100000")))
+                .extracting(VoucherValidationResponse::isValid, VoucherValidationResponse::message)
+                .containsExactly(false, "Mã voucher đã hết hạn.");
+
+        Voucher exhausted = Voucher.builder()
+                .code("LIMIT1").discountRate(new BigDecimal("0.1000"))
+                .minimumOrderValue(BigDecimal.ZERO).isActive(true)
+                .usageLimit(1).usedCount(1).build();
+        when(voucherRepository.findByCodeIgnoreCase("LIMIT1")).thenReturn(Optional.of(exhausted));
+        assertThat(voucherService.validateAndCalculate("LIMIT1", new BigDecimal("100000")).message())
+                .contains("hết lượt");
+    }
+
+    @Test
+    @DisplayName("Voucher consumption should increment under repository lock")
+    void consumeVoucher_shouldIncrementUsage() {
+        Voucher voucher = Voucher.builder()
+                .code("LIMIT10").discountRate(new BigDecimal("0.1000"))
+                .minimumOrderValue(BigDecimal.ZERO).isActive(true)
+                .usageLimit(10).usedCount(2).build();
+        when(voucherRepository.findByCodeIgnoreCaseWithLock("LIMIT10")).thenReturn(Optional.of(voucher));
+        when(voucherRepository.save(voucher)).thenReturn(voucher);
+
+        VoucherValidationResponse response = voucherService.validateAndConsume("LIMIT10", new BigDecimal("100000"));
+
+        assertThat(response.isValid()).isTrue();
+        assertThat(voucher.getUsedCount()).isEqualTo(3);
+        org.mockito.Mockito.verify(voucherRepository).save(voucher);
     }
 
     @Test

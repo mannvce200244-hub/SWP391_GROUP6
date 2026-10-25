@@ -5,8 +5,10 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 public record CreateVoucherRequest(
         @NotBlank(message = "Mã voucher không được để trống")
@@ -25,6 +27,17 @@ public record CreateVoucherRequest(
         Boolean isActive,
 
         @Size(max = 255, message = "Mô tả không quá 255 ký tự")
-        String description
+        String description,
+
+        Instant validFrom,
+
+        Instant validUntil,
+
+        @Positive(message = "Số lượt sử dụng phải lớn hơn 0")
+        Integer usageLimit
 ) {
+    public CreateVoucherRequest(String code, BigDecimal discountRate, BigDecimal minimumOrderValue,
+                                Boolean isActive, String description) {
+        this(code, discountRate, minimumOrderValue, isActive, description, null, null, null);
+    }
 }

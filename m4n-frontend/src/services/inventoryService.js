@@ -21,7 +21,15 @@ export async function importStock(productId, { quantity, notes = '' }) {
   })
 }
 
+export async function issueStock(productId, { quantity, reason }) {
+  return apiClient.post(`/inventory/${encodeURIComponent(productId)}/issue`, {
+    quantity: Number(quantity),
+    reason: reason.trim(),
+  })
+}
+
 export default {
   getInventory,
   importStock,
+  issueStock,
 }

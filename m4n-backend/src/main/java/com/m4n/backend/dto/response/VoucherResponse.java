@@ -10,6 +10,10 @@ public record VoucherResponse(
         BigDecimal minimumOrderValue,
         boolean isActive,
         String description,
+        Instant validFrom,
+        Instant validUntil,
+        Integer usageLimit,
+        Integer usedCount,
         Instant createdAt,
         Instant updatedAt
 ) {

@@ -73,7 +73,7 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.message").value("Dữ liệu gửi lên chưa hợp lệ. Vui lòng kiểm tra các trường được báo lỗi."))
                 .andExpect(jsonPath("$.fieldErrors.name").value("Name must not be blank"))
                 .andExpect(jsonPath("$.path").value("/api/v1/test-exceptions/validate"));
     }

@@ -8,14 +8,18 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
+  Minus,
+  Plus,
   Shield,
   ShoppingBag,
+  Trash2,
 } from 'lucide-react'
 import { IconInstrument } from '../components/ui/Icons.jsx'
+import { isValidVietnameseMobile, VIETNAMESE_MOBILE_ERROR } from '../utils/phone.js'
 
 function CheckoutPage() {
   const { user, isAuthenticated } = useAuth()
-  const { cart, clearCart } = useCart()
+  const { cart, clearCart, updateCartItem, removeCartItem } = useCart()
   const { addToast } = useToast()
 
   const [formData, setFormData] = useState(() => ({
@@ -86,7 +90,25 @@ function CheckoutPage() {
     return () => {
       active = false
     }
-  }, [isAuthenticated, appliedVoucher])
+  }, [isAuthenticated, appliedVoucher, cart])
+
+  const handleQuantityChange = async (item, nextQuantity) => {
+    if (nextQuantity < 1) return
+    const result = await updateCartItem(item.id, nextQuantity)
+    if (!result.success) {
+      addToast({ message: result.message || 'Không thể cập nhật số lượng.', type: 'error' })
+    }
+  }
+
+  const handleRemoveItem = async (item) => {
+    const result = await removeCartItem(item.id)
+    addToast({
+      message: result.success
+        ? `Đã xóa “${item.productName}” khỏi đơn hàng.`
+        : result.message || 'Không thể xóa sản phẩm.',
+      type: result.success ? 'success' : 'error',
+    })
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -157,8 +179,8 @@ function CheckoutPage() {
     }
     if (!formData.customerPhone.trim()) {
       errors.customerPhone = 'Vui lòng nhập số điện thoại'
-    } else if (!/^[0-9+\s\-()]{8,20}$/.test(formData.customerPhone.trim())) {
-      errors.customerPhone = 'Số điện thoại không hợp lệ'
+    } else if (!isValidVietnameseMobile(formData.customerPhone)) {
+      errors.customerPhone = VIETNAMESE_MOBILE_ERROR
     }
     if (!formData.customerEmail.trim()) {
       errors.customerEmail = 'Vui lòng nhập email nhận thông báo'
@@ -489,7 +511,7 @@ function CheckoutPage() {
                         type="button"
                         onClick={handleApplyVoucher}
                         disabled={voucherLoading || !voucherCodeInput.trim()}
-                        className="h-11 px-5 rounded-xl bg-charcoal hover:bg-black text-white text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        className="h-11 px-5 rounded-xl bg-brand hover:bg-brand-hover text-white text-xs font-bold shadow-brand/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       >
                         {voucherLoading ? 'Đang kiểm tra...' : 'Áp dụng'}
                       </button>
@@ -616,10 +638,18 @@ function CheckoutPage() {
                         <h4 className="text-xs font-bold text-ink line-clamp-1">
                           {item.productName}
                         </h4>
-                        <div className="text-xs text-muted flex items-center gap-2 mt-0.5">
-                          <span>SL: <strong className="text-ink">{item.quantity}</strong></span>
-                          <span>&bull;</span>
-                          <span>Đơn giá: {item.unitPriceDisplay}</span>
+                        <div className="text-xs text-muted mt-0.5">Đơn giá: {item.unitPriceDisplay}</div>
+                        <div className="mt-2 flex items-center gap-1.5">
+                          <button type="button" onClick={() => handleQuantityChange(item, item.quantity - 1)} disabled={item.quantity <= 1} aria-label={`Giảm số lượng ${item.productName}`} className="h-7 w-7 rounded-lg border border-border bg-white flex items-center justify-center disabled:opacity-40">
+                            <Minus size={13} />
+                          </button>
+                          <span className="min-w-7 text-center text-xs font-bold text-ink">{item.quantity}</span>
+                          <button type="button" onClick={() => handleQuantityChange(item, item.quantity + 1)} aria-label={`Tăng số lượng ${item.productName}`} className="h-7 w-7 rounded-lg border border-border bg-white flex items-center justify-center">
+                            <Plus size={13} />
+                          </button>
+                          <button type="button" onClick={() => handleRemoveItem(item)} aria-label={`Xóa ${item.productName}`} className="ml-1 h-7 w-7 rounded-lg text-danger hover:bg-danger-soft flex items-center justify-center">
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </div>
                       <div className="text-xs font-bold text-ink text-right shrink-0">
