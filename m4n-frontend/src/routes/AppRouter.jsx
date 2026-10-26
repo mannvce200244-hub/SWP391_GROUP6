@@ -10,6 +10,7 @@ import NotFoundPage from '../pages/NotFoundPage.jsx'
 import ProductDetailPage from '../pages/ProductDetailPage.jsx'
 import ProductListPage from '../pages/ProductListPage.jsx'
 import ArtisansPage from '../pages/ArtisansPage.jsx'
+import ArtisanDetailPage from '../pages/ArtisanDetailPage.jsx'
 import CraftVillageDetailPage from '../pages/CraftVillageDetailPage.jsx'
 import CartPage from '../pages/CartPage.jsx'
 import CheckoutPage from '../pages/CheckoutPage.jsx'
@@ -45,6 +46,7 @@ import RequireAuth from './RequireAuth.jsx'
 import RequireRole from './RequireRole.jsx'
 import {
   CUSTOMER_ROUTES,
+  matchArtisanDetailPath,
   matchCraftVillageDetailPath,
   matchProductDetailPath,
   matchAdminInstrumentDetailPath,
@@ -135,7 +137,6 @@ function AppRouter() {
     } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
       adminContent = <AdminVouchersPage />
     } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
- feature/product-master-data
       adminContent = (
         <ProfilePage
           profileRoute={CUSTOMER_ROUTES.adminProfile}
@@ -149,11 +150,6 @@ function AppRouter() {
           securityRoute={CUSTOMER_ROUTES.adminSecurity}
         />
       )
-=======
-      adminContent = <ProfilePage />
-    } else if (pathname === CUSTOMER_ROUTES.adminSecurity) {
-      adminContent = <AccountSecurityPage />
- main
     } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
       adminContent = <AdminUsersPage />
     }
@@ -187,7 +183,6 @@ function AppRouter() {
     } else if (pathname === CUSTOMER_ROUTES.staffNotifications) {
       staffContent = <StaffNotificationsPage />
     } else if (pathname === CUSTOMER_ROUTES.staffProfile) {
- feature/product-master-data
       staffContent = (
         <ProfilePage
           profileRoute={CUSTOMER_ROUTES.staffProfile}
@@ -201,11 +196,6 @@ function AppRouter() {
           securityRoute={CUSTOMER_ROUTES.staffSecurity}
         />
       )
-=======
-      staffContent = <ProfilePage />
-    } else if (pathname === CUSTOMER_ROUTES.staffSecurity) {
-      staffContent = <AccountSecurityPage />
- main
     }
 
     return (
@@ -273,10 +263,13 @@ function AppRouter() {
     pageContent = <ForbiddenPage />
   } else {
     const productId = matchProductDetailPath(pathname)
+    const artisanId = matchArtisanDetailPath(pathname)
     const villageSlugOrId = matchCraftVillageDetailPath(pathname)
 
     if (productId) {
       pageContent = <ProductDetailPage key={productId} productId={productId} />
+    } else if (artisanId) {
+      pageContent = <ArtisanDetailPage artisanId={artisanId} key={artisanId} />
     } else if (villageSlugOrId) {
       pageContent = (
         <CraftVillageDetailPage

@@ -1,31 +1,51 @@
 package com.m4n.backend.serviceImpl;
 
 import com.m4n.backend.dto.request.StockImportRequest;
+import com.m4n.backend.dto.request.StockIssueRequest;
 import com.m4n.backend.dto.response.InventoryItemResponse;
 import com.m4n.backend.dto.response.StockImportResponse;
+import com.m4n.backend.dto.response.StockIssueResponse;
 import com.m4n.backend.entity.Inventory;
+import com.m4n.backend.entity.InventoryMovement;
 import com.m4n.backend.entity.Product;
 import com.m4n.backend.entity.ProductMedia;
 import com.m4n.backend.exception.ResourceNotFoundException;
 import com.m4n.backend.repository.InventoryRepository;
+import com.m4n.backend.repository.InventoryMovementRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.service.InventoryService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
+    private final InventoryMovementRepository inventoryMovementRepository;
+
+    @Autowired
+    public InventoryServiceImpl(
+            InventoryRepository inventoryRepository,
+            ProductRepository productRepository,
+            InventoryMovementRepository inventoryMovementRepository
+    ) {
+        this.inventoryRepository = inventoryRepository;
+        this.productRepository = productRepository;
+        this.inventoryMovementRepository = inventoryMovementRepository;
+    }
+
+    public InventoryServiceImpl(InventoryRepository inventoryRepository, ProductRepository productRepository) {
+        this(inventoryRepository, productRepository, null);
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -68,6 +88,9 @@ public class InventoryServiceImpl implements InventoryService {
         inventory.setUpdatedAt(Instant.now());
         Inventory saved = inventoryRepository.save(inventory);
 
+        saveMovement(product, "IMPORT", request.getQuantity(), previousQuantity, newQuantity,
+                request.getNotes() == null || request.getNotes().isBlank() ? "Nhập kho" : request.getNotes().trim());
+
         log.info("Stock imported successfully for product [{} - {}]: previous={}, imported={}, new={}",
                 product.getCode(), product.getName(), previousQuantity, request.getQuantity(), newQuantity);
 
@@ -81,6 +104,34 @@ public class InventoryServiceImpl implements InventoryService {
                 .message("Nhập kho thành công cho sản phẩm '" + product.getName() + "'.")
                 .updatedAt(saved.getUpdatedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public StockIssueResponse issueStock(Long productId, StockIssueRequest request) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm không tồn tại: " + productId));
+        Inventory inventory = inventoryRepository.findByProductIdWithLock(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Chưa có tồn kho cho sản phẩm: " + productId));
+        int previous = inventory.getQuantity() == null ? 0 : inventory.getQuantity();
+        if (request.quantity() > previous) {
+            throw new IllegalArgumentException("Số lượng xuất điều chỉnh không được vượt quá tồn kho hiện tại (" + previous + ").");
+        }
+        int next = previous - request.quantity();
+        inventory.setQuantity(next);
+        Inventory saved = inventoryRepository.save(inventory);
+        saveMovement(product, "ISSUE", request.quantity(), previous, next, request.reason().trim());
+        return new StockIssueResponse(productId, product.getCode(), product.getName(), previous,
+                request.quantity(), next, "Đã ghi nhận xuất kho điều chỉnh.", saved.getUpdatedAt());
+    }
+
+    private void saveMovement(Product product, String type, int quantity, int before, int after, String reason) {
+        if (inventoryMovementRepository == null) return;
+        String actor = SecurityContextHolder.getContext().getAuthentication() != null
+                ? SecurityContextHolder.getContext().getAuthentication().getName() : null;
+        inventoryMovementRepository.save(InventoryMovement.builder()
+                .product(product).type(type).quantity(quantity).quantityBefore(before).quantityAfter(after)
+                .reason(reason).actorEmail(actor).build());
     }
 
     private InventoryItemResponse mapToResponse(Inventory inventory) {

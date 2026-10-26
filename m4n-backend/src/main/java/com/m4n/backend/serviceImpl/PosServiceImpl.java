@@ -192,7 +192,7 @@ public class PosServiceImpl implements PosService {
         String appliedVoucherCode = null;
 
         if (request.getVoucherCode() != null && !request.getVoucherCode().isBlank()) {
-            VoucherValidationResponse voucherResult = voucherService.validateAndCalculate(request.getVoucherCode(), subtotal);
+            VoucherValidationResponse voucherResult = voucherService.validateAndConsume(request.getVoucherCode(), subtotal);
             if (!voucherResult.isValid()) {
                 throw new IllegalArgumentException("Mã giảm giá không hợp lệ tại thời điểm thanh toán: " + voucherResult.message());
             }

@@ -12,7 +12,27 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
     this.data = data
+    this.code = data && typeof data === 'object' ? data.error || null : null
+    this.fieldErrors =
+      data && typeof data === 'object' && data.fieldErrors && typeof data.fieldErrors === 'object'
+        ? data.fieldErrors
+        : {}
   }
+}
+
+function getValidationMessage(payload) {
+  if (!payload || typeof payload !== 'object' || !payload.fieldErrors) return null
+
+  const messages = [...new Set(
+    Object.values(payload.fieldErrors)
+      .filter((message) => typeof message === 'string')
+      .map((message) => message.trim())
+      .filter(Boolean)
+  )]
+
+  if (messages.length === 0) return null
+  const detail = messages.join('; ')
+  return `Vui lòng kiểm tra: ${detail}${/[.!?]$/.test(detail) ? '' : '.'}`
 }
 
 // Single in-flight refresh promise to prevent concurrent refresh stampedes
@@ -116,9 +136,11 @@ async function request(endpoint, options = {}, isRetry = false) {
         }
       }
 
+      const validationMessage = getValidationMessage(payload)
       const errorMessage =
+        validationMessage ||
         (typeof payload === 'object' && payload !== null && payload.message) ||
-        `Request failed with status ${response.status}`
+        `Yêu cầu không thành công (HTTP ${response.status}).`
       throw new ApiError(errorMessage, response.status, payload)
     }
 
@@ -127,7 +149,11 @@ async function request(endpoint, options = {}, isRetry = false) {
     if (error instanceof ApiError) {
       throw error
     }
-    throw new ApiError(error.message || 'Network error occurred', 0, null)
+    throw new ApiError(
+      error.message || 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối và thử lại.',
+      0,
+      null
+    )
   }
 }
 

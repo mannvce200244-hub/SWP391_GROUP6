@@ -75,10 +75,7 @@ M4N/
 │   │   └── styles/                 # Global styles & design system CSS
 │   ├── .env.example                # Environment variables template
 │   └── package.json                # npm scripts & dependencies
-<<<<<<< HEAD
-=======
 ├── AGENTS.md                       # AI instruction router
->>>>>>> feature/auth-user-management
 └── README.md                       # Project overview & quickstart
 ```
 

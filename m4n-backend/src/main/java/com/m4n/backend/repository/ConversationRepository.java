@@ -25,9 +25,8 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 
     List<Conversation> findByCustomerIdOrderByUpdatedAtDesc(Long customerId);
 
- feature/product-master-data
     long countByStatusAndAssignedStaffIsNull(ConversationStatus status);
- main
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Conversation c WHERE c.id = :id")
     Optional<Conversation> findByIdWithLock(@Param("id") Long id);

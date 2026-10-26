@@ -1,6 +1,7 @@
 package com.m4n.backend.service;
 
 import com.m4n.backend.dto.request.StockImportRequest;
+import com.m4n.backend.dto.request.StockIssueRequest;
 import com.m4n.backend.dto.response.InventoryItemResponse;
 import com.m4n.backend.dto.response.StockImportResponse;
 import com.m4n.backend.entity.Category;
@@ -8,6 +9,7 @@ import com.m4n.backend.entity.Inventory;
 import com.m4n.backend.entity.Product;
 import com.m4n.backend.exception.ResourceNotFoundException;
 import com.m4n.backend.repository.InventoryRepository;
+import com.m4n.backend.repository.InventoryMovementRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.serviceImpl.InventoryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +45,9 @@ class InventoryServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private InventoryMovementRepository inventoryMovementRepository;
+
     private InventoryService inventoryService;
 
     private Product sampleProduct;
@@ -50,7 +55,7 @@ class InventoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        inventoryService = new InventoryServiceImpl(inventoryRepository, productRepository);
+        inventoryService = new InventoryServiceImpl(inventoryRepository, productRepository, inventoryMovementRepository);
 
         Category category = Category.builder().id(1L).name("Nhạc cụ dây").build();
 
@@ -167,5 +172,31 @@ class InventoryServiceTest {
         assertThatThrownBy(() -> inventoryService.importStock(999L, request))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Sản phẩm không tồn tại");
+    }
+
+    @Test
+    @DisplayName("issueStock should reduce quantity and persist an audit movement")
+    void shouldIssueStockWithAuditMovement() {
+        when(productRepository.findById(10L)).thenReturn(Optional.of(sampleProduct));
+        when(inventoryRepository.findByProductIdWithLock(10L)).thenReturn(Optional.of(sampleInventory));
+        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = inventoryService.issueStock(10L, new StockIssueRequest(5, "Sửa phiếu nhập nhầm"));
+
+        assertThat(response.previousQuantity()).isEqualTo(15);
+        assertThat(response.newQuantity()).isEqualTo(10);
+        assertThat(sampleInventory.getQuantity()).isEqualTo(10);
+        verify(inventoryMovementRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("issueStock should never make inventory negative")
+    void shouldRejectIssueAboveAvailableQuantity() {
+        when(productRepository.findById(10L)).thenReturn(Optional.of(sampleProduct));
+        when(inventoryRepository.findByProductIdWithLock(10L)).thenReturn(Optional.of(sampleInventory));
+
+        assertThatThrownBy(() -> inventoryService.issueStock(10L, new StockIssueRequest(16, "Sai số")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("không được vượt quá tồn kho");
     }
 }

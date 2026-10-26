@@ -108,6 +108,14 @@ const artisanService = Object.freeze({
     }
   },
 
+  async getArtisanById(id) {
+    if (!id) return null
+
+    const response = await apiClient.get('/artisans')
+    const artisans = Array.isArray(response) ? response.map(mapArtisan) : []
+    return artisans.find((artisan) => String(artisan.id) === String(id)) || null
+  },
+
   async getArtisans() {
     return apiClient.get('/artisans')
   },

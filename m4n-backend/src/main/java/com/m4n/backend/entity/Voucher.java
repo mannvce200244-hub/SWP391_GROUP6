@@ -50,6 +50,19 @@ public class Voucher {
     @Column(length = 255)
     private String description;
 
+    @Column(name = "valid_from")
+    private Instant validFrom;
+
+    @Column(name = "valid_until")
+    private Instant validUntil;
+
+    @Column(name = "usage_limit")
+    private Integer usageLimit;
+
+    @Builder.Default
+    @Column(name = "used_count")
+    private Integer usedCount = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -64,6 +77,9 @@ public class Voucher {
         this.updatedAt = this.createdAt;
         if (this.code != null) {
             this.code = this.code.trim().toUpperCase();
+        }
+        if (this.usedCount == null) {
+            this.usedCount = 0;
         }
     }
 

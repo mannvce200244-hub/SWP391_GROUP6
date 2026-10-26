@@ -1,7 +1,6 @@
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 
 // Homepage editorial content. Transactional product data is loaded from the API.
-import authCraftShowcase from '../../assets/images/auth-craft-showcase.jpg'
 import heroDanTranh from '../../assets/images/hero-dan-tranh.jpg'
 import catNhacCuDay from '../../assets/images/cat-nhac-cu-day.jpg'
 import catNhacCuHoi from '../../assets/images/cat-nhac-cu-hoi.jpg'
@@ -48,8 +47,11 @@ export const CATEGORIES = Object.freeze([
 ])
 
 export const ARTISAN = Object.freeze({
-  image: authCraftShowcase,
-  alt: 'Xưởng chế tác nhạc cụ truyền thống của nghệ nhân làng Đào Xá với đàn tranh và đàn bầu khảm trai tinh xảo',
+  image: '/assets/images/vietnamese-instrument-shop.jpg',
+  alt: 'Không gian cửa hàng nhạc cụ thực tế tại Việt Nam với nhiều nhạc cụ truyền thống',
+  caption: 'Không gian nhạc cụ tại Việt Nam',
+  credit: 'Dianne Hope / Wikimedia Commons',
+  creditUrl: 'https://commons.wikimedia.org/wiki/File:Musical_instrument_shop_in_Vietnam_(2015-08-02_by_Dianne_Hope_@pexels_313288).jpg',
 })
 
 // Five strongest craft excellence pillars covering wood selection,

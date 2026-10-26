@@ -47,12 +47,12 @@ function ArtisansHero({ stats = { artisans: 0, villages: 0 } }) {
         <div className="lg:col-span-5">
           <div className="relative rounded-2xl overflow-hidden border border-border shadow-xs bg-surface-secondary aspect-16/10 sm:aspect-2/1 lg:aspect-16/10 group">
             <img
-              alt="Nghệ nhân chế tác nhạc cụ truyền thống tại xưởng thủ công"
+              alt="Không gian cửa hàng nhạc cụ thực tế tại Việt Nam"
               className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500 ease-out"
               decoding="async"
               fetchPriority="high"
               height="400"
-              src="/assets/images/auth-craft-showcase.jpg"
+              src="/assets/images/vietnamese-instrument-shop.jpg"
               width="600"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
@@ -62,7 +62,7 @@ function ArtisansHero({ stats = { artisans: 0, villages: 0 } }) {
               aria-hidden="true"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-              <span className="font-semibold text-white/95">Kỹ nghệ thủ công truyền thống</span>
+              <span className="font-semibold text-white/95">Ảnh tư liệu thực tế tại Việt Nam</span>
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   downloadInvoicePdf,
 } from '../services/posService.js'
 import { formatCurrencyVND } from '../utils/currency.js'
+import { isValidVietnameseMobile, sanitizeVietnameseMobile, VIETNAMESE_MOBILE_ERROR } from '../utils/phone.js'
 import {
   Search,
   Trash2,
@@ -216,7 +217,7 @@ function PosDashboardPage() {
   const discountAmount = voucherState.applied ? voucherState.discount : 0
   const finalAmount = Math.max(0, subtotal - discountAmount)
 
-  const numReceived = parseFloat(amountReceived) || 0
+  const numReceived = Number.parseInt(amountReceived, 10) || 0
   const amountChange = paymentMethod === 'CASH' ? Math.max(0, numReceived - finalAmount) : 0
   const cashInsufficient = paymentMethod === 'CASH' && amountReceived && numReceived < finalAmount
 
@@ -240,6 +241,11 @@ function PosDashboardPage() {
         })
         return
       }
+    }
+
+    if (customerPhone && !isValidVietnameseMobile(customerPhone)) {
+      addToast({ message: VIETNAMESE_MOBILE_ERROR, type: 'error' })
+      return
     }
 
     setSubmittingSale(true)
@@ -705,10 +711,11 @@ function PosDashboardPage() {
                 </div>
                 <input
                   id="amount-received-input"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="Nhập số tiền khách đưa..."
                   value={amountReceived}
-                  onChange={(e) => setAmountReceived(e.target.value)}
+                  onChange={(e) => setAmountReceived(e.target.value.replace(/\D/g, ''))}
                   className={`w-full px-3 py-1.5 text-xs rounded-lg border font-mono font-bold text-ink focus:outline-none focus:ring-1 focus:ring-brand ${
                     cashInsufficient ? 'border-rose-400 bg-rose-50/30' : 'border-border bg-canvas'
                   }`}
@@ -741,7 +748,9 @@ function PosDashboardPage() {
                 type="text"
                 placeholder="SĐT khách (tùy chọn)"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
+                onChange={(e) => setCustomerPhone(sanitizeVietnameseMobile(e.target.value))}
+                inputMode="numeric"
+                maxLength={10}
                 className="w-36 px-3 py-1.5 text-xs rounded-xl border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand text-ink placeholder:text-muted font-mono"
               />
             </div>

@@ -34,7 +34,7 @@ public class GlobalExceptionHandler {
                 .timestamp(Instant.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Request validation failed")
+                .message("Dữ liệu gửi lên chưa hợp lệ. Vui lòng kiểm tra các trường được báo lỗi.")
                 .path(request.getRequestURI())
                 .fieldErrors(fieldErrors)
                 .build();
@@ -57,7 +57,7 @@ public class GlobalExceptionHandler {
                 .timestamp(Instant.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Validation constraint violated")
+                .message("Dữ liệu gửi lên chưa hợp lệ. Vui lòng kiểm tra các trường được báo lỗi.")
                 .path(request.getRequestURI())
                 .fieldErrors(fieldErrors)
                 .build();
@@ -265,9 +265,13 @@ public class GlobalExceptionHandler {
         } else if (raw.contains("categories_name_key") || raw.contains("uq_category_name")) {
             msg = "Tên danh mục đã tồn tại trong hệ thống.";
             errorCode = "CATEGORY_NAME_EXISTS";
-        } else if (raw.contains("email")) {
+        } else if (raw.contains("users_email_key") || raw.contains("uq_users_email")
+                || raw.contains("uk_users_email")) {
             msg = "Email này đã được sử dụng trong hệ thống.";
             errorCode = "EMAIL_ALREADY_EXISTS";
+        } else if (raw.contains("check constraint") || raw.contains("violates check constraint")) {
+            msg = "Dữ liệu không phù hợp với trạng thái hoặc quy tắc hiện tại. Vui lòng tải lại và thử lại.";
+            errorCode = "INVALID_DATA_STATE";
         } else if (raw.contains("fk_") || raw.contains("foreign key") || raw.contains("violates foreign key constraint")) {
             msg = "Dữ liệu đang được liên kết và sử dụng bởi các mục khác trong hệ thống, không thể thao tác.";
             errorCode = "RESOURCE_IN_USE";

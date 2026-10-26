@@ -18,6 +18,7 @@ import com.m4n.backend.entity.Product;
 import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.exception.ResourceNotFoundException;
+import com.m4n.backend.exception.InsufficientStockException;
 import com.m4n.backend.mapper.CartMapper;
 import com.m4n.backend.mapper.OrderMapper;
 import com.m4n.backend.repository.CartItemRepository;
@@ -210,6 +211,16 @@ public class OrderServiceImpl implements OrderService {
                 throw new IllegalArgumentException("Số lượng sản phẩm trong giỏ hàng không hợp lệ.");
             }
 
+            inventoryRepository.findByProductId(product.getId()).ifPresent(inventory -> {
+                int availableQuantity = inventory.getQuantity() == null ? 0 : inventory.getQuantity();
+                if (qty > availableQuantity) {
+                    throw new InsufficientStockException(
+                            "Sản phẩm '" + product.getName() + "' chỉ còn " + availableQuantity
+                                    + " sản phẩm. Vui lòng điều chỉnh số lượng trước khi đặt hàng."
+                    );
+                }
+            });
+
             BigDecimal lineTotal = unitPrice.multiply(BigDecimal.valueOf(qty));
             subtotal = subtotal.add(lineTotal);
 
@@ -229,7 +240,7 @@ public class OrderServiceImpl implements OrderService {
         String appliedVoucherCode = null;
 
         if (request.voucherCode() != null && !request.voucherCode().trim().isEmpty()) {
-            VoucherValidationResponse voucherResult = voucherService.validateAndCalculate(request.voucherCode(), subtotal);
+            VoucherValidationResponse voucherResult = voucherService.validateAndConsume(request.voucherCode(), subtotal);
             if (!voucherResult.isValid()) {
                 throw new IllegalArgumentException("Mã voucher không hợp lệ: " + voucherResult.message());
             }
@@ -330,6 +341,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setStatus(OrderStatus.CANCELLED);
+        voucherService.releaseUsage(order.getVoucherCode());
         String cancelNote = "[Khách hàng tự hủy]";
         if (reason != null && !reason.trim().isEmpty()) {
             cancelNote += " Lý do: " + reason.trim();
@@ -611,6 +623,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setStatus(OrderStatus.CANCELLED);
+        voucherService.releaseUsage(order.getVoucherCode());
         String cancelNote = "[Nhân viên hủy đơn]";
         if (reason != null && !reason.trim().isEmpty()) {
             cancelNote += " Lý do: " + reason.trim();

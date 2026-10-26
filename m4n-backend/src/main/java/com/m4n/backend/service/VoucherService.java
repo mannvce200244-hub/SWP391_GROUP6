@@ -13,6 +13,10 @@ public interface VoucherService {
 
     VoucherValidationResponse validateAndCalculate(String voucherCode, BigDecimal orderAmount);
 
+    VoucherValidationResponse validateAndConsume(String voucherCode, BigDecimal orderAmount);
+
+    void releaseUsage(String voucherCode);
+
     Voucher getActiveVoucherOrThrow(String voucherCode);
 
     List<VoucherResponse> getAllVouchers();

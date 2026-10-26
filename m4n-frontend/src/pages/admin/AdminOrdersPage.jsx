@@ -62,7 +62,6 @@ const ORDER_DATE_FORMATTER = new Intl.DateTimeFormat('vi-VN', {
 function getStatusBadge(status) {
   switch (status) {
     case 'PENDING_CONFIRMATION':
- feature/product-master-data
       return { label: 'Chờ xác nhận', className: 'text-amber-800 bg-amber-50 border-amber-200' }
     case 'CONFIRMED':
       return { label: 'Đã xác nhận', className: 'text-teal-700 bg-teal-50 border-teal-200' }
@@ -72,13 +71,6 @@ function getStatusBadge(status) {
       return { label: 'Đang giao hàng', className: 'text-blue-700 bg-blue-50 border-blue-200' }
     case 'DELIVERED':
       return { label: 'Đã giao hàng', className: 'text-violet-700 bg-violet-50 border-violet-200' }
-=======
-      return { label: 'Chờ xác nhận', className: 'text-amber-800 bg-[#F6F7F8] border-amber-200' }
-    case 'CONFIRMED':
-      return { label: 'Đã xác nhận', className: 'text-teal-700 bg-teal-50 border-teal-200' }
-    case 'OUT_OF_STOCK_WAITING':
-      return { label: 'Chờ xử lý tồn kho', className: 'text-orange-800 bg-[#F6F7F8] border-orange-200' }
- main
     case 'COMPLETED':
       return { label: 'Hoàn thành', className: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
     case 'CANCELLED':

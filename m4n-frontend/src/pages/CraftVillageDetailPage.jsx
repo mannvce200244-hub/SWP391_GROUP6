@@ -210,7 +210,7 @@ function CraftVillageDetailPage({ slugOrId }) {
             decoding="async"
             fetchPriority="high"
             height="500"
-            src={village.coverImage || '/assets/images/artisan-workshop.jpg'}
+            src={village.coverImage || '/assets/images/vietnamese-instrument-shop.jpg'}
             width="1200"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10 pointer-events-none" />

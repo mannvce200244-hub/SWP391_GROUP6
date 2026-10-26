@@ -2,7 +2,9 @@ package com.m4n.backend.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.m4n.backend.validation.ValidationPatterns;
 
 public record PlaceOrderRequest(
         @NotBlank(message = "Họ tên người nhận không được để trống")
@@ -10,7 +12,8 @@ public record PlaceOrderRequest(
         String customerName,
 
         @NotBlank(message = "Số điện thoại không được để trống")
-        @Size(max = 30, message = "Số điện thoại không được vượt quá 30 ký tự")
+        @Pattern(regexp = ValidationPatterns.VIETNAMESE_MOBILE,
+                message = ValidationPatterns.VIETNAMESE_MOBILE_MESSAGE)
         String customerPhone,
 
         @NotBlank(message = "Email không được để trống")

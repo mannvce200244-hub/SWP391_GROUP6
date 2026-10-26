@@ -1,10 +1,5 @@
 import {
   CUSTOMER_ROUTES,
- feature/product-master-data
-=======
-  getProfileRouteForRole,
-  getSecurityRouteForRole,
- main
   navigateTo,
 } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
@@ -105,11 +100,7 @@ function AccountLayout({
                       ? 'bg-brand text-white shadow-md shadow-brand/20'
                       : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                   }`}
- feature/product-master-data
                   onClick={() => navigateTo(profileRoute)}
-
-                  onClick={() => navigateTo(getProfileRouteForRole(user?.role))}
- main
                 >
                   <span className="flex items-center gap-3">
                     <UserRound
@@ -134,11 +125,7 @@ function AccountLayout({
                       ? 'bg-brand text-white shadow-md shadow-brand/20'
                       : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                   }`}
- feature/product-master-data
                   onClick={() => navigateTo(securityRoute)}
-
-                  onClick={() => navigateTo(getSecurityRouteForRole(user?.role))}
- main
                 >
                   <span className="flex items-center gap-3">
                     <Shield
@@ -158,12 +145,8 @@ function AccountLayout({
                 {user?.role === 'CUSTOMER' && (
                   <button
                     type="button"
- feature/product-master-data
                     aria-current={activeTab === 'orders' ? 'page' : undefined}
                     className={`group relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-[color,background-color,box-shadow] motion-reduce:transition-none ${
-=======
-                    className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
- main
                       activeTab === 'orders'
                         ? 'bg-brand text-white shadow-md shadow-brand/20'
                         : 'text-muted hover:text-ink hover:bg-surface-secondary/80'

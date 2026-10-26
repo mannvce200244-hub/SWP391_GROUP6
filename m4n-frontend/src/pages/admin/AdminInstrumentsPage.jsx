@@ -4,7 +4,7 @@ import adminProductService from '../../services/adminProductService.js'
 import categoryService from '../../services/categoryService.js'
 import artisanService from '../../services/artisanService.js'
 import craftVillageService from '../../services/craftVillageService.js'
-import { importStock } from '../../services/inventoryService.js'
+import { importStock, issueStock } from '../../services/inventoryService.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import useToast from '../../components/ui/useToast.js'
 import ProductFormModal from '../../components/admin/ProductFormModal.jsx'
@@ -66,6 +66,10 @@ export default function AdminInstrumentsPage() {
   const [importQuantity, setImportQuantity] = useState(1)
   const [importNotes, setImportNotes] = useState('')
   const [submittingImport, setSubmittingImport] = useState(false)
+  const [issueTargetProduct, setIssueTargetProduct] = useState(null)
+  const [issueQuantity, setIssueQuantity] = useState(1)
+  const [issueReason, setIssueReason] = useState('')
+  const [submittingIssue, setSubmittingIssue] = useState(false)
 
   // Load dropdown master data
   const loadMasterData = useCallback(async () => {
@@ -230,6 +234,31 @@ export default function AdminInstrumentsPage() {
       })
     } finally {
       setSubmittingImport(false)
+    }
+  }
+
+  const handleIssueSubmit = async (e) => {
+    e.preventDefault()
+    const qty = Number.parseInt(issueQuantity, 10)
+    const available = issueTargetProduct?.stockQuantity || 0
+    if (!qty || qty < 1 || qty > available) {
+      addToast({ message: `Số lượng điều chỉnh phải từ 1 đến ${available}.`, type: 'error' })
+      return
+    }
+    if (!issueReason.trim()) {
+      addToast({ message: 'Vui lòng nhập lý do điều chỉnh kho.', type: 'error' })
+      return
+    }
+    setSubmittingIssue(true)
+    try {
+      await issueStock(issueTargetProduct.id, { quantity: qty, reason: issueReason })
+      addToast({ message: `Đã xuất điều chỉnh -${qty} cho “${issueTargetProduct.name}”.`, type: 'success' })
+      setIssueTargetProduct(null)
+      setRefreshKey((key) => key + 1)
+    } catch (err) {
+      addToast({ message: err.message || 'Không thể điều chỉnh tồn kho.', type: 'error' })
+    } finally {
+      setSubmittingIssue(false)
     }
   }
 
@@ -685,6 +714,17 @@ export default function AdminInstrumentsPage() {
 
                           <button
                             type="button"
+                            disabled={(p.stockQuantity || 0) < 1}
+                            onClick={() => { setIssueTargetProduct(p); setIssueQuantity(1); setIssueReason('') }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Xuất kho điều chỉnh có lưu lịch sử"
+                          >
+                            <Package size={15} />
+                            <span>Điều chỉnh giảm</span>
+                          </button>
+
+                          <button
+                            type="button"
                             onClick={() => handleOpenEditProduct(p.id)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0D9488]/10 hover:bg-[#0D9488]/20 text-[#0D9488] font-medium text-sm transition-colors cursor-pointer"
                             title="Chỉnh sửa thông số sản phẩm"
@@ -869,6 +909,33 @@ export default function AdminInstrumentsPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {issueTargetProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4" role="dialog" aria-modal="true" aria-labelledby="issue-stock-title">
+          <form onSubmit={handleIssueSubmit} className="bg-white rounded-2xl border border-[#E5E8EB] shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 id="issue-stock-title" className="font-bold text-[#17191B]">Xuất kho điều chỉnh</h3>
+                <p className="text-xs text-secondary mt-1">{issueTargetProduct.name} · hiện có {issueTargetProduct.stockQuantity || 0}</p>
+              </div>
+              <button type="button" aria-label="Đóng" onClick={() => setIssueTargetProduct(null)} className="p-1.5 rounded-lg hover:bg-[#F6F7F8]"><X size={18} /></button>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[#17191B] mb-1.5">Số lượng giảm <span className="text-rose-500">*</span></label>
+              <input type="number" min="1" max={issueTargetProduct.stockQuantity || 0} step="1" required value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} className="w-full px-3.5 py-2 rounded-xl border border-[#E5E8EB]" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[#17191B] mb-1.5">Lý do điều chỉnh <span className="text-rose-500">*</span></label>
+              <textarea required maxLength={500} rows={3} value={issueReason} onChange={(e) => setIssueReason(e.target.value)} placeholder="Ví dụ: sửa phiếu nhập nhầm 100 thành 10 (xuất điều chỉnh 90)…" className="w-full px-3.5 py-2 rounded-xl border border-[#E5E8EB] resize-none" />
+              <p className="mt-1 text-xs text-secondary">Thao tác được lưu lịch sử; không sửa trực tiếp số tồn.</p>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setIssueTargetProduct(null)} className="px-4 py-2 rounded-xl border border-[#E5E8EB]">Hủy</button>
+              <button type="submit" disabled={submittingIssue} className="px-4 py-2 rounded-xl bg-rose-700 text-white font-semibold disabled:opacity-50">{submittingIssue ? 'Đang lưu…' : 'Xác nhận điều chỉnh'}</button>
+            </div>
+          </form>
         </div>
       )}
     </div>

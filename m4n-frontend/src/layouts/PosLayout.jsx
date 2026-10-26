@@ -133,7 +133,6 @@ function PosLayout({ children, pathname }) {
         </div>
       </header>
 
- feature/product-master-data
       <nav className="grid grid-cols-2 border-b border-border bg-white p-2 sm:hidden" aria-label="Điều hướng POS trên thiết bị di động">
         <button
           type="button"
@@ -151,8 +150,6 @@ function PosLayout({ children, pathname }) {
         </button>
       </nav>
 
-=======
- main
       <main className="flex-1 p-3 sm:p-4 lg:p-5 w-full min-w-0">{children}</main>
     </div>
   )

@@ -12,6 +12,9 @@ const voucherService = Object.freeze({
       minimumOrderValue: Number(payload.minimumOrderValue),
       isActive: payload.isActive ?? true,
       description: payload.description ? payload.description.trim() : null,
+      validFrom: payload.validFrom ? new Date(payload.validFrom).toISOString() : null,
+      validUntil: payload.validUntil ? new Date(payload.validUntil).toISOString() : null,
+      usageLimit: payload.usageLimit ? Number(payload.usageLimit) : null,
     })
   },
 
@@ -21,6 +24,9 @@ const voucherService = Object.freeze({
       minimumOrderValue: Number(payload.minimumOrderValue),
       isActive: payload.isActive ?? true,
       description: payload.description ? payload.description.trim() : null,
+      validFrom: payload.validFrom ? new Date(payload.validFrom).toISOString() : null,
+      validUntil: payload.validUntil ? new Date(payload.validUntil).toISOString() : null,
+      usageLimit: payload.usageLimit ? Number(payload.usageLimit) : null,
     })
   },
 
