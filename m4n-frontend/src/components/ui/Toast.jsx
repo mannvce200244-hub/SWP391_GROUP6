@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { ToastContext } from './ToastContext.js'
 import {
   CircleCheck,
@@ -37,19 +37,32 @@ const TOAST_THEMES = {
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
+  const timers = useRef(new Map())
+
+  useEffect(() => {
+    const pendingTimers = timers.current
+    return () => {
+      pendingTimers.forEach(clearTimeout)
+      pendingTimers.clear()
+    }
+  }, [])
 
   const addToast = useCallback(({ message, type = 'success', duration = 3500 }) => {
     const id = Date.now() + Math.random().toString(36).slice(2, 7)
     setToasts((prev) => [...prev, { id, message, type }])
 
     if (duration > 0) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id))
+        timers.current.delete(id)
       }, duration)
+      timers.current.set(id, timer)
     }
   }, [])
 
   const removeToast = useCallback((id) => {
+    clearTimeout(timers.current.get(id))
+    timers.current.delete(id)
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 

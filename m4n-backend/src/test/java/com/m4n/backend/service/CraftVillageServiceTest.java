@@ -5,7 +5,7 @@ import com.m4n.backend.entity.CraftVillage;
 import com.m4n.backend.exception.ResourceNotFoundException;
 import com.m4n.backend.mapper.ProductMapper;
 import com.m4n.backend.repository.CraftVillageRepository;
-import com.m4n.backend.serviceImpl.CraftVillageServiceImpl;
+import com.m4n.backend.service.serviceImpl.CraftVillageServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,13 +32,24 @@ class CraftVillageServiceTest {
     @Mock
     private com.m4n.backend.repository.ProductRepository productRepository;
 
+    @Mock
+    private com.m4n.backend.repository.ArticleRepository articleRepository;
+
     private ProductMapper productMapper;
     private CraftVillageService craftVillageService;
 
     @BeforeEach
     void setUp() {
         productMapper = new ProductMapper();
-        craftVillageService = new CraftVillageServiceImpl(craftVillageRepository, productMapper, artisanRepository, productRepository);
+        craftVillageService = new CraftVillageServiceImpl(craftVillageRepository, productMapper, artisanRepository, productRepository, articleRepository);
+    }
+
+    @Test
+    void shouldPreserveVillageLinkedToContent() {
+        when(craftVillageRepository.findById(7L)).thenReturn(Optional.of(CraftVillage.builder().id(7L).name("Làng nghề").build()));
+        when(articleRepository.existsByCraftVillageId(7L)).thenReturn(true);
+        assertThatThrownBy(() -> craftVillageService.deleteCraftVillage(7L)).isInstanceOf(com.m4n.backend.exception.ResourceInUseException.class);
+        verify(craftVillageRepository, org.mockito.Mockito.never()).delete(org.mockito.ArgumentMatchers.any(CraftVillage.class));
     }
 
     @Test

@@ -85,6 +85,9 @@ public class SecurityConfig {
                                 "/api/v1/categories/**",
                                 "/api/v1/artisans/**",
                                 "/api/v1/craft-villages/**",
+                                "/api/v1/articles/**",
+                                "/api/v1/payments/options",
+                                "/api/v1/payments/vnpay/ipn",
                                 "/api/v1/reviews/product/**"
                         ).permitAll()
                         // Area-level authorization net (defense in depth).

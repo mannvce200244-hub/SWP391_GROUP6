@@ -1,6 +1,6 @@
 import EditorialEyebrow from '../../components/common/EditorialEyebrow.jsx'
 
-function ArtisansHero({ stats = { artisans: 0, villages: 0 } }) {
+function ArtisansHero({ stats }) {
   return (
     <section
       aria-labelledby="artisans-hero-title"
@@ -22,21 +22,21 @@ function ArtisansHero({ stats = { artisans: 0, villages: 0 } }) {
           </h1>
 
           <p className="text-sm sm:text-base text-muted leading-relaxed max-w-2xl">
-            Khám phá câu chuyện của những nghệ nhân tài hoa và các làng nghề trăm năm tuổi tạo nên thanh âm mộc mạc của nhạc cụ truyền thống Việt Nam.
+            Khám phá câu chuyện của những nghệ nhân và làng nghề chế tác nhạc cụ truyền thống Việt Nam.
           </p>
 
           {/* Authentic Metrics Strip */}
           <div className="pt-3 flex flex-wrap items-center gap-6 sm:gap-8 border-t border-border/70 max-w-lg">
             <div className="flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-extrabold text-ink font-sans">
-                {String(stats.artisans).padStart(2, '0')}
+                {stats?.artisans == null ? '—' : String(stats.artisans).padStart(2, '0')}
               </span>
               <span className="text-xs text-muted font-medium">Nghệ nhân</span>
             </div>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-extrabold text-brand font-sans">
-                {String(stats.villages).padStart(2, '0')}
+                {stats?.villages == null ? '—' : String(stats.villages).padStart(2, '0')}
               </span>
               <span className="text-xs text-muted font-medium">Làng nghề</span>
             </div>

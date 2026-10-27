@@ -46,6 +46,10 @@ public class InvoiceItem {
 
     @Column(name = "unit_price", nullable = false, precision = 14, scale = 2)
     private BigDecimal unitPrice;
+    @Column(name = "original_unit_price", precision = 14, scale = 2)
+    private BigDecimal originalUnitPrice;
+    @Column(name = "product_promotion_id")
+    private Long productPromotionId;
 
     @Column(nullable = false)
     private Integer quantity;

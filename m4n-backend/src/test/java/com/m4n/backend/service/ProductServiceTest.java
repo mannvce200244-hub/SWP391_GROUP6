@@ -15,7 +15,9 @@ import com.m4n.backend.mapper.ProductMapper;
 import com.m4n.backend.repository.InventoryRepository;
 import com.m4n.backend.repository.ProductMediaRepository;
 import com.m4n.backend.repository.ProductRepository;
-import com.m4n.backend.serviceImpl.ProductServiceImpl;
+import com.m4n.backend.repository.ProductPromotionRepository;
+import com.m4n.backend.service.serviceImpl.ProductPricingServiceImpl;
+import com.m4n.backend.service.serviceImpl.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,6 +61,7 @@ class ProductServiceTest {
     private com.m4n.backend.repository.CraftVillageRepository craftVillageRepository;
 
     private ProductMapper productMapper;
+    @Mock private ProductPromotionRepository productPromotionRepository;
     private ProductService productService;
 
     @BeforeEach
@@ -71,7 +74,8 @@ class ProductServiceTest {
                 categoryRepository,
                 artisanRepository,
                 craftVillageRepository,
-                productMapper
+                productMapper,
+                new ProductPricingServiceImpl(productPromotionRepository)
         );
     }
 
@@ -230,7 +234,8 @@ class ProductServiceTest {
         when(inventoryRepository.findByProductIdIn(any())).thenReturn(List.of(
                 Inventory.builder().id(10L).product(productWith5Media).quantity(5).build()
         ));
-        when(productMediaRepository.findByProductIdInOrderBySortOrderAsc(any())).thenReturn(List.of(
+        when(productMediaRepository.findByProductIdInOrderBySortOrderAscIdAsc(any())).thenReturn(List.of(
+                ProductMedia.builder().id(0L).product(productWith5Media).mediaType(MediaType.VIDEO).url("/media/demo.mp4").sortOrder(0).build(),
                 ProductMedia.builder().id(1L).product(productWith5Media).mediaType(MediaType.IMAGE).url("/media/primary.jpg").sortOrder(1).build(),
                 ProductMedia.builder().id(2L).product(productWith5Media).mediaType(MediaType.IMAGE).url("/media/secondary.jpg").sortOrder(2).build()
         ));
@@ -247,7 +252,7 @@ class ProductServiceTest {
         assertThat(card.media()).hasSize(1);
         assertThat(card.media().get(0).url()).isEqualTo("/media/primary.jpg");
         assertThat(card.media().get(0).sortOrder()).isEqualTo(1);
-        assertThat(card.availability()).isEqualTo("IN_STOCK");
+        assertThat(card.availability()).isEqualTo("LOW_STOCK");
     }
 
     @Test
@@ -322,7 +327,10 @@ class ProductServiceTest {
                 "3 quãng tám",
                 "Việt Nam",
                 "Mô tả",
-                null
+                null,
+                null,
+                null,
+                BigDecimal.ZERO
         );
 
         com.m4n.backend.dto.response.AdminProductDetailResponse response = productService.createProduct(request);
@@ -347,7 +355,10 @@ class ProductServiceTest {
                 null,
                 null,
                 null, null, null, null, null,
-                null
+                null,
+                null,
+                null,
+                BigDecimal.ZERO
         );
 
         assertThatThrownBy(() -> productService.createProduct(request))
@@ -368,7 +379,7 @@ class ProductServiceTest {
                 .sortOrder(3)
                 .build();
 
-        when(productRepository.existsById(100L)).thenReturn(true);
+        when(productRepository.findByIdWithLock(100L)).thenReturn(Optional.of(Product.builder().id(100L).build()));
         when(productMediaRepository.findByIdAndProductId(10L, 100L)).thenReturn(Optional.of(media));
         when(productMediaRepository.save(media)).thenReturn(media);
 
@@ -398,7 +409,7 @@ class ProductServiceTest {
                 .sortOrder(0)
                 .build();
 
-        when(productRepository.existsById(100L)).thenReturn(true);
+        when(productRepository.findByIdWithLock(100L)).thenReturn(Optional.of(Product.builder().id(100L).build()));
         when(productMediaRepository.findByIdAndProductId(10L, 100L)).thenReturn(Optional.of(media));
 
         productService.deleteProductMedia(100L, 10L);
@@ -409,7 +420,7 @@ class ProductServiceTest {
     @Test
     @DisplayName("Should throw ResourceNotFoundException when media does not belong to product")
     void shouldThrowWhenMediaDoesNotBelongToProduct() {
-        when(productRepository.existsById(100L)).thenReturn(true);
+        when(productRepository.findByIdWithLock(100L)).thenReturn(Optional.of(Product.builder().id(100L).build()));
         when(productMediaRepository.findByIdAndProductId(999L, 100L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> productService.deleteProductMedia(100L, 999L))
@@ -438,7 +449,10 @@ class ProductServiceTest {
                 "Đàn Tỳ Bà",
                 new BigDecimal("3500000"),
                 1L,
-                null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null,
+                null,
+                null,
+                BigDecimal.ZERO
         );
 
         productService.createProduct(req);
@@ -465,11 +479,22 @@ class ProductServiceTest {
                 "Đàn Bầu",
                 new BigDecimal("4500000"),
                 1L,
-                null, null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null,
+                null,
+                null,
+                BigDecimal.ZERO
         );
 
         assertThatThrownBy(() -> productService.createProduct(req))
                 .isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class)
                 .hasMessageContaining("8938501234567");
+    }
+    @Test
+    void rejectsUnsupportedCatalogSortBeforeDatabaseAccess() {
+        Pageable invalid = PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("category.internalSecret"));
+        assertThatThrownBy(() -> productService.listProducts(null, null, null, null, null, null, invalid))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sắp xếp");
+        assertThatThrownBy(() -> productService.listAdminProducts(null, null, null, null, null, invalid))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sắp xếp");
     }
 }

@@ -2,6 +2,7 @@ package com.m4n.backend.dto.request;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,5 +20,6 @@ public class StockImportRequest {
     @Min(value = 1, message = "Số lượng nhập kho tối thiểu là 1")
     private Integer quantity;
 
+    @Size(max = 500, message = "Ghi chú nhập kho không quá 500 ký tự")
     private String notes;
 }

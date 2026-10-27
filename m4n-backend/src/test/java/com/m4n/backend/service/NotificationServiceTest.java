@@ -8,7 +8,7 @@ import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.repository.NotificationRepository;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.NotificationServiceImpl;
+import com.m4n.backend.service.serviceImpl.NotificationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

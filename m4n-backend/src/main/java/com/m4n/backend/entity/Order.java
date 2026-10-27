@@ -65,8 +65,34 @@ public class Order {
     @Column(name = "discount_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    @Builder.Default
+    @Column(name = "manual_discount_amount", precision = 15, scale = 2)
+    private BigDecimal manualDiscountAmount = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "automatic_discount_amount", precision = 15, scale = 2)
+    private BigDecimal automaticDiscountAmount = BigDecimal.ZERO;
+
+    @Column(name = "automatic_promotion_code", length = 50)
+    private String automaticPromotionCode;
+
     @Column(name = "final_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal finalAmount;
+
+    @Column(name = "original_total_amount", precision = 15, scale = 2)
+    private BigDecimal originalTotalAmount;
+    @Builder.Default @Column(name = "product_discount_amount", precision = 15, scale = 2)
+    private BigDecimal productDiscountAmount = BigDecimal.ZERO;
+    @Builder.Default @Column(name = "base_shipping_fee", precision = 15, scale = 2)
+    private BigDecimal baseShippingFee = BigDecimal.ZERO;
+    @Builder.Default @Column(name = "shipping_discount_amount", precision = 15, scale = 2)
+    private BigDecimal shippingDiscountAmount = BigDecimal.ZERO;
+    @Builder.Default @Column(name = "shipping_fee", precision = 15, scale = 2)
+    private BigDecimal shippingFee = BigDecimal.ZERO;
+    @Column(name = "shipping_voucher_code", length = 50)
+    private String shippingVoucherCode;
+    @Builder.Default @Column(name = "free_shipping_applied")
+    private Boolean freeShippingApplied = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -82,7 +108,8 @@ public class Order {
     @Column(name = "voucher_code", length = 50)
     private String voucherCode;
 
-    @Column(length = 500)
+    // Customer notes and subsequent fulfillment/cancellation events share this field.
+    @Column(columnDefinition = "text")
     private String notes;
 
     @Builder.Default
@@ -94,6 +121,9 @@ public class Order {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Column(name = "completed_at")
+    private Instant completedAt;
 
     @PrePersist
     protected void onCreate() {

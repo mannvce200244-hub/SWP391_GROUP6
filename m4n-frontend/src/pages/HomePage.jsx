@@ -4,6 +4,7 @@ import { CUSTOMER_ROUTES, HOME_ARTISAN_SECTION } from '../routes/customerRoutes.
 import ProductCard from '../features/catalog/ProductCard.jsx'
 import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import ScrollReveal from '../components/common/ScrollReveal.jsx'
+import ErrorState from '../components/ui/ErrorState.jsx'
 import productService from '../services/productService.js'
 import {
   ARTISAN,
@@ -16,6 +17,7 @@ function HomePage() {
   const [selectedGroup, setSelectedGroup] = useState('all')
   const [featuredProducts, setFeaturedProducts] = useState([])
   const [featuredStatus, setFeaturedStatus] = useState('loading')
+  const [featuredRetry, setFeaturedRetry] = useState(0)
   const [catDay, catHoi, catGo] = CATEGORIES
 
   useEffect(() => {
@@ -29,7 +31,7 @@ function HomePage() {
     let active = true
 
     productService
-      .listProducts({ page: 1, size: 8, sort: 'createdAt,desc' })
+      .listProducts({ page: 1, size: 8, sort: 'createdAt,desc', group: selectedGroup === 'all' ? undefined : selectedGroup.toUpperCase() })
       .then((products) => {
         if (!active) return
         setFeaturedProducts(products)
@@ -44,18 +46,13 @@ function HomePage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [selectedGroup, featuredRetry])
 
-  // Filter products based on selected tab
-  const filteredProducts =
-    selectedGroup === 'all'
-      ? featuredProducts
-      : featuredProducts.filter((p) =>
-          selectedGroup === 'day'
-            ? p.groupName?.toLowerCase().includes('dây')
-            : p.groupName?.toLowerCase().includes('hơi') ||
-              p.groupName?.toLowerCase().includes('gõ'),
-        )
+  const selectFeaturedGroup = (group) => {
+    if (group === selectedGroup) return
+    setFeaturedStatus('loading')
+    setSelectedGroup(group)
+  }
 
   return (
     <div className="w-full flex flex-col bg-white text-ink">
@@ -113,7 +110,7 @@ function HomePage() {
           {/* Right Column: Authentic Editorial Craft Visual (7 cols) */}
           <div className="lg:col-span-7 flex flex-col">
             <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden flex flex-col">
-              <div className="aspect-[16/11] sm:aspect-[16/10] w-full bg-neutral-900 overflow-hidden">
+              <div className="aspect-[16/11] sm:aspect-[16/10] w-full bg-surface-secondary overflow-hidden">
                 <img
                   src={HERO.image}
                   alt={HERO.alt}
@@ -345,43 +342,16 @@ function HomePage() {
             </div>
 
             {/* Clean category pills */}
-            <div className="flex items-center gap-1.5 p-1 bg-white rounded-lg border border-border self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setSelectedGroup('all')}
-                aria-pressed={selectedGroup === 'all'}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-[background-color,color,box-shadow] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                  selectedGroup === 'all'
-                    ? 'bg-brand text-white shadow-2xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Tất cả
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedGroup('day')}
-                aria-pressed={selectedGroup === 'day'}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-[background-color,color,box-shadow] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                  selectedGroup === 'day'
-                    ? 'bg-brand text-white shadow-2xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Đàn Dây
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedGroup('hoi-go')}
-                aria-pressed={selectedGroup === 'hoi-go'}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-[background-color,color,box-shadow] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                  selectedGroup === 'hoi-go'
-                    ? 'bg-brand text-white shadow-2xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Bộ Hơi / Gõ
-              </button>
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white rounded-lg border border-border self-start sm:self-auto">
+              {[['all', 'Tất cả'], ['day', 'Dây'], ['hoi', 'Hơi'], ['go', 'Gõ']].map(([group, label]) => (
+                <button
+                  key={group}
+                  type="button"
+                  onClick={() => selectFeaturedGroup(group)}
+                  aria-pressed={selectedGroup === group}
+                  className={`min-h-11 px-3.5 rounded-md text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 ${selectedGroup === group ? 'bg-brand text-white shadow-2xs' : 'text-muted hover:text-ink'}`}
+                >{label}</button>
+              ))}
             </div>
           </div>
 
@@ -390,10 +360,8 @@ function HomePage() {
               Đang tải sản phẩm…
             </p>
           ) : featuredStatus === 'error' ? (
-            <p className="py-12 text-center text-sm text-muted" role="alert">
-              Không thể tải sản phẩm tiêu biểu. Vui lòng xem toàn bộ danh mục.
-            </p>
-          ) : filteredProducts.length === 0 ? (
+            <ErrorState message="Không thể tải sản phẩm tiêu biểu. Vui lòng thử lại." onRetry={() => { setFeaturedStatus('loading'); setFeaturedRetry((value) => value + 1) }} />
+          ) : featuredProducts.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted">
               Chưa có sản phẩm phù hợp trong nhóm này.
             </p>
@@ -402,9 +370,9 @@ function HomePage() {
               aria-label="Danh sách sản phẩm mới"
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 list-none p-0 m-0"
             >
-              {filteredProducts.map((product) => (
+              {featuredProducts.map((product) => (
                 <li key={product.id}>
-                  <ProductCard priority={true} product={product} />
+                  <ProductCard product={product} />
                 </li>
               ))}
             </ul>

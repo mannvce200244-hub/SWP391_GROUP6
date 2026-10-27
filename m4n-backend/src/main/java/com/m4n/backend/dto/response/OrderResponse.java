@@ -27,5 +27,15 @@ public record OrderResponse(
         boolean isPaid,
         String voucherCode,
         int itemCount,
-        Instant createdAt
+        Instant createdAt,
+        BigDecimal manualDiscountAmount,
+        BigDecimal automaticDiscountAmount,
+        String automaticPromotionCode,
+        BigDecimal originalTotalAmount,
+        BigDecimal productDiscountAmount,
+        BigDecimal baseShippingFee,
+        BigDecimal shippingDiscountAmount,
+        BigDecimal shippingFee,
+        String shippingVoucherCode,
+        boolean freeShippingApplied
 ) {}

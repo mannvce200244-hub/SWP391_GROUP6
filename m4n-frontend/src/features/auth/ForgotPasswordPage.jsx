@@ -12,11 +12,14 @@ function ForgotPasswordPage() {
   const { addToast } = useToast()
   const [email, setEmail] = useState('')
   const [fieldError, setFieldError] = useState('')
+  const [generalError, setGeneralError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
+    setGeneralError('')
     const trimmedEmail = email.trim()
 
     if (!trimmedEmail) {
@@ -35,12 +38,11 @@ function ForgotPasswordPage() {
       await forgotPassword({ email: trimmedEmail })
       setIsSubmitted(true)
       addToast({
-        message: 'Đã gửi hướng dẫn nếu email tồn tại trên hệ thống.',
+        message: 'Đã tiếp nhận yêu cầu đặt lại mật khẩu.',
         type: 'success',
       })
     } catch {
-      // Always show generic success state to protect user privacy (BR-AUTH-03)
-      setIsSubmitted(true)
+      setGeneralError('Không thể gửi yêu cầu lúc này. Vui lòng kiểm tra kết nối và thử lại.')
     } finally {
       setIsSubmitting(false)
     }
@@ -60,12 +62,9 @@ function ForgotPasswordPage() {
           <div className="w-14 h-14 rounded-full bg-jade-soft flex items-center justify-center text-jade mb-2">
             <CircleCheck size={32} />
           </div>
-          <h2 className="text-xl font-bold text-ink">Đã gửi hướng dẫn</h2>
+          <h2 className="text-xl font-bold text-ink">Đã tiếp nhận yêu cầu</h2>
           <p className="text-sm text-muted leading-relaxed max-w-sm">
-            Nếu địa chỉ <strong>{email}</strong> tồn tại trong hệ thống, bạn sẽ nhận được liên kết đặt lại mật khẩu trong ít phút.
-          </p>
-          <p className="text-xs text-muted/80 bg-surface-secondary p-2.5 rounded-lg border border-border">
-            *Môi trường thử nghiệm (DEV): Đường dẫn xác thực cũng được ghi nhận tại console backend.
+            Nếu địa chỉ <strong>{email}</strong> thuộc tài khoản hợp lệ và email được gửi thành công, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu. Hãy kiểm tra cả thư mục thư rác.
           </p>
           <Button
             type="button"
@@ -78,6 +77,7 @@ function ForgotPasswordPage() {
         </div>
       ) : (
         <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+          {generalError && <p role="alert" className="text-sm text-danger">{generalError}</p>}
           <Input
             id="forgot-email"
             name="email"

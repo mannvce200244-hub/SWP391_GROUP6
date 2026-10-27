@@ -4,7 +4,7 @@ import com.m4n.backend.dto.request.PlaceOrderRequest;
 import com.m4n.backend.dto.response.OrderConfirmResultResponse;
 import com.m4n.backend.dto.response.OrderDetailResponse;
 import com.m4n.backend.dto.response.OrderResponse;
-import com.m4n.backend.dto.response.VoucherValidationResponse;
+import com.m4n.backend.dto.response.DiscountCalculationResponse;
 import com.m4n.backend.entity.Cart;
 import com.m4n.backend.entity.CartItem;
 import com.m4n.backend.entity.Inventory;
@@ -19,13 +19,12 @@ import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.mapper.CartMapper;
 import com.m4n.backend.mapper.OrderMapper;
-import com.m4n.backend.repository.CartItemRepository;
 import com.m4n.backend.repository.CartRepository;
 import com.m4n.backend.repository.InventoryRepository;
 import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.OrderServiceImpl;
+import com.m4n.backend.service.serviceImpl.OrderServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +35,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -47,6 +49,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,9 +65,6 @@ class OrderServiceTest {
     private CartRepository cartRepository;
 
     @Mock
-    private CartItemRepository cartItemRepository;
-
-    @Mock
     private ProductRepository productRepository;
 
     @Mock
@@ -74,20 +75,38 @@ class OrderServiceTest {
 
     @Mock
     private VoucherService voucherService;
+    @Mock private NotificationService notificationService;
+    @Mock private InventoryService inventoryService;
+    @Mock private PaymentService paymentService;
 
     private OrderService orderService;
 
     private User testUser;
     private Product testProduct;
 
+    @Mock private ProductPricingService productPricingService;
+    @Mock private ShippingService shippingService;
+
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(shippingService.calculateShipping(any(), any())).thenReturn(
+                new ShippingQuote(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, false));
+        org.mockito.Mockito.lenient().when(productPricingService.resolvePrices(any())).thenAnswer(inv -> {
+            java.util.List<Product> requested = inv.getArgument(0);
+            return requested.stream().collect(java.util.stream.Collectors.toMap(Product::getId,
+                    product -> new ProductPrice(product.getPrice(), product.getPrice(), BigDecimal.ZERO, null), (first, duplicate) -> first));
+        });
+
         CartMapper cartMapper = new CartMapper();
         OrderMapper orderMapper = new OrderMapper(cartMapper);
         orderService = new OrderServiceImpl(
-                orderRepository, cartRepository, cartItemRepository, productRepository,
-                inventoryRepository, userRepository, voucherService, cartMapper, orderMapper
+                orderRepository, cartRepository, productRepository,
+                inventoryRepository, userRepository, voucherService, cartMapper, orderMapper,
+                notificationService, inventoryService, paymentService, productPricingService, shippingService
         );
+        lenient().when(voucherService.consumeDiscounts(any(), any(), anyInt())).thenAnswer(invocation ->
+                new DiscountCalculationResponse(null, null, BigDecimal.ZERO, BigDecimal.ZERO,
+                        BigDecimal.ZERO, invocation.getArgument(1)));
 
         Role customerRole = Role.builder().id(1L).name(RoleName.CUSTOMER).build();
         testUser = User.builder()
@@ -125,7 +144,7 @@ class OrderServiceTest {
     @Test
     @DisplayName("BR-ORDER-01: Place order must start in PENDING_CONFIRMATION and must NOT deduct inventory")
     void placeOrder_shouldStartInPendingConfirmationAndNotDeductInventory() {
-        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
 
         Cart cart = Cart.builder().id(1L).user(testUser).items(new ArrayList<>()).build();
         CartItem cartItem = CartItem.builder().id(5L).cart(cart).product(testProduct).quantity(2).build();
@@ -133,6 +152,8 @@ class OrderServiceTest {
 
         when(cartRepository.findWithItemsByUserId(testUser.getId())).thenReturn(Optional.of(cart));
         when(productRepository.findByIdAndIsActiveTrue(testProduct.getId())).thenReturn(Optional.of(testProduct));
+        when(inventoryRepository.findByProductId(testProduct.getId())).thenReturn(Optional.of(
+                Inventory.builder().product(testProduct).quantity(2).build()));
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
             Order o = invocation.getArgument(0);
             o.setId(99L);
@@ -159,7 +180,7 @@ class OrderServiceTest {
         assertThat(response.imageUrl()).isEqualTo("/assets/images/prod-dan-tranh.jpg");
 
         // Verify cart is cleared
-        verify(cartItemRepository).deleteAll(any());
+        assertThat(cart.getItems()).isEmpty();
 
         // CRITICAL: Verify inventory was NEVER modified during place order!
         verify(inventoryRepository, never()).findByProductIdWithLock(any());
@@ -167,9 +188,29 @@ class OrderServiceTest {
     }
 
     @Test
+    @DisplayName("Place order rejects a cart quantity when the product has no inventory record")
+    void placeOrder_withoutInventory_shouldRejectWithoutCreatingOrder() {
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        Cart cart = Cart.builder().id(1L).user(testUser).items(new ArrayList<>()).build();
+        cart.getItems().add(CartItem.builder().id(5L).cart(cart).product(testProduct).quantity(1).build());
+        when(cartRepository.findWithItemsByUserId(testUser.getId())).thenReturn(Optional.of(cart));
+        when(productRepository.findByIdAndIsActiveTrue(testProduct.getId())).thenReturn(Optional.of(testProduct));
+        when(inventoryRepository.findByProductId(testProduct.getId())).thenReturn(Optional.empty());
+
+        PlaceOrderRequest request = new PlaceOrderRequest("Nguyen Van Khach", "0912345678",
+                "test.customer@m4n.vn", "123 Nguyen Trai, Ha Noi", "COD", null, null);
+
+        assertThatThrownBy(() -> orderService.placeOrder(request))
+                .isInstanceOf(com.m4n.backend.exception.InsufficientStockException.class)
+                .hasMessageContaining("chỉ còn 0 sản phẩm");
+        verify(orderRepository, never()).save(any(Order.class));
+        assertThat(cart.getItems()).hasSize(1);
+    }
+
+    @Test
     @DisplayName("Payment authority: unsupported or unverified online payment cannot create a paid order")
     void placeOrder_withUnverifiedOnlinePayment_shouldBeRejectedBeforeMutation() {
-        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
         PlaceOrderRequest request = new PlaceOrderRequest(
                 "Nguyen Van Khach",
                 "0912345678",
@@ -182,11 +223,11 @@ class OrderServiceTest {
 
         assertThatThrownBy(() -> orderService.placeOrder(request))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("chưa được kích hoạt");
+                .hasMessageContaining("không hợp lệ");
 
         verify(orderRepository, never()).save(any(Order.class));
         verify(inventoryRepository, never()).save(any(Inventory.class));
-        verify(cartItemRepository, never()).deleteAll(any());
+        verify(cartRepository, never()).save(any(Cart.class));
     }
 
     @Test
@@ -544,6 +585,145 @@ class OrderServiceTest {
         assertThat(counts.get("DELIVERED")).isEqualTo(2L);
         assertThat(counts.get("COMPLETED")).isEqualTo(10L);
         assertThat(counts.get("CANCELLED")).isEqualTo(2L);
+    }
+
+    @Test
+    void orderListsShouldRejectUnsupportedSortBeforeQuerying() {
+        PageRequest pageable = PageRequest.of(0, 10, Sort.by("user.password"));
+        assertThatThrownBy(() -> orderService.getMyOrders(null, pageable))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sắp xếp");
+        assertThatThrownBy(() -> orderService.getAdminOrders(null, null, null, null, pageable))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sắp xếp");
+        assertThatThrownBy(() -> orderService.getCustomerOrderHistory(100L, pageable))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sắp xếp");
+        verify(orderRepository, never()).searchOrders(any(), any(), any(), any(), any());
+        verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void myOrderListShouldFilterOwnerAndStatusBeforePagination() {
+        PageRequest pageable = PageRequest.of(1, 10, Sort.by(Sort.Direction.DESC, "createdAt", "id"));
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(orderRepository.findByUserIdAndStatus(100L, OrderStatus.COMPLETED, pageable))
+                .thenReturn(Page.empty(pageable));
+        assertThat(orderService.getMyOrders(OrderStatus.COMPLETED, pageable).getContent()).isEmpty();
+        verify(orderRepository).findByUserIdAndStatus(100L, OrderStatus.COMPLETED, pageable);
+        verify(orderRepository, never()).findByUserId(any(), any());
+    }
+
+    @Test
+    void disabledVnpayRejectsBeforeCartOrVoucherMutations() {
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        assertThatThrownBy(() -> orderService.placeOrder(new PlaceOrderRequest("Khách", "0912345678", testUser.getEmail(),
+                "Địa chỉ", "VNPAY", null, null))).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("chưa được kích hoạt");
+        verify(cartRepository, never()).findWithItemsByUserId(any());
+        verify(voucherService, never()).consumeDiscounts(any(), any(), anyInt());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void vnpayPlacementValidatesAuthoritativeDiscountedAmountAndRemainsUnpaid() {
+        when(paymentService.isAvailable()).thenReturn(true);
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        Cart cart = Cart.builder().id(1L).user(testUser).items(new ArrayList<>()).build();
+        cart.getItems().add(CartItem.builder().cart(cart).product(testProduct).quantity(1).build());
+        when(cartRepository.findWithItemsByUserId(testUser.getId())).thenReturn(Optional.of(cart));
+        when(productRepository.findByIdAndIsActiveTrue(testProduct.getId())).thenReturn(Optional.of(testProduct));
+        when(inventoryRepository.findByProductId(testProduct.getId())).thenReturn(Optional.of(inventoryForTestProduct(1)));
+        BigDecimal discounted = new BigDecimal("2000000");
+        when(voucherService.consumeDiscounts(any(), any(), anyInt())).thenReturn(new DiscountCalculationResponse(null, null,
+                new BigDecimal("500000"), BigDecimal.ZERO, new BigDecimal("500000"), discounted));
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var result = orderService.placeOrder(new PlaceOrderRequest("Khách", "0912345678", testUser.getEmail(), "Địa chỉ", "VNPAY", null, null));
+        assertThat(result.isPaid()).isFalse();
+        assertThat(result.finalAmount()).isEqualByComparingTo(discounted);
+        verify(paymentService).validatePaymentAmount(discounted);
+        verify(inventoryRepository, never()).save(any());
+    }
+
+    @Test
+    void unpaidOrRefundingVnpayCannotConfirmOrAdvanceFulfillment() {
+        Order order = orderWithSingleItem(91L, OrderStatus.PENDING_CONFIRMATION, 1);
+        order.setPaymentMethod("VNPAY");
+        when(orderRepository.findByIdWithLock(91L)).thenReturn(Optional.of(order));
+        assertThatThrownBy(() -> orderService.confirmOrder(91L)).isInstanceOf(IllegalStateException.class);
+        order.setStatus(OrderStatus.CONFIRMED);
+        assertThatThrownBy(() -> orderService.markOrderShipping(91L)).isInstanceOf(IllegalStateException.class);
+        order.setStatus(OrderStatus.SHIPPING);
+        assertThatThrownBy(() -> orderService.markOrderDelivered(91L)).isInstanceOf(IllegalStateException.class);
+        order.setUser(testUser);
+        order.setStatus(OrderStatus.DELIVERED);
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        assertThatThrownBy(() -> orderService.customerConfirmReceived(91L)).isInstanceOf(IllegalStateException.class);
+        order.setPaid(true);
+        order.setStatus(OrderStatus.PENDING_CONFIRMATION);
+        when(paymentService.isRefundPending(91L)).thenReturn(true);
+        assertThatThrownBy(() -> orderService.confirmOrder(91L)).isInstanceOf(IllegalStateException.class);
+        when(paymentService.hasVerifiedFullRefund(91L)).thenReturn(true);
+        assertThatThrownBy(() -> orderService.confirmOrder(91L)).isInstanceOf(IllegalStateException.class);
+        verify(inventoryRepository, never()).findByProductIdWithLock(any());
+        verify(orderRepository, never()).save(any());
+    }
+
+    @Test
+    void paidVnpayCancellationAndCapabilitiesRequireVerifiedFullRefund() {
+        Order order = orderWithSingleItem(92L, OrderStatus.PENDING_CONFIRMATION, 1);
+        order.setPaymentMethod("VNPAY");
+        order.setPaid(true);
+        order.setUser(testUser);
+        when(orderRepository.findByIdWithLock(92L)).thenReturn(Optional.of(order));
+        when(orderRepository.findById(92L)).thenReturn(Optional.of(order));
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        assertThat(orderService.getAdminOrderDetail(92L).canStaffCancel()).isFalse();
+        assertThat(orderService.getMyOrderDetail(92L).canCustomerCancel()).isFalse();
+        assertThatThrownBy(() -> orderService.staffCancelOrder(92L, "Hủy")).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> orderService.customerCancelOrder(92L, "Hủy")).isInstanceOf(IllegalStateException.class);
+        verify(voucherService, never()).releaseUsage(any());
+        when(paymentService.hasVerifiedFullRefund(92L)).thenReturn(true);
+        assertThat(orderService.getAdminOrderDetail(92L).canStaffCancel()).isTrue();
+        assertThat(orderService.getMyOrderDetail(92L).canCustomerCancel()).isTrue();
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        assertThat(orderService.staffCancelOrder(92L, "Đã hoàn tiền").status()).isEqualTo(OrderStatus.CANCELLED);
+    }
+
+    @Test
+    void unknownPendingVnpayBlocksBothCancellationPathsAndTheirCapabilities() {
+        Order order = orderWithSingleItem(93L, OrderStatus.PENDING_CONFIRMATION, 1);
+        order.setPaymentMethod("VNPAY");
+        order.setUser(testUser);
+        when(orderRepository.findByIdWithLock(93L)).thenReturn(Optional.of(order));
+        when(orderRepository.findById(93L)).thenReturn(Optional.of(order));
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(paymentService.isPaymentPending(93L)).thenReturn(true);
+
+        assertThat(orderService.getAdminOrderDetail(93L).canStaffCancel()).isFalse();
+        assertThat(orderService.getMyOrderDetail(93L).canCustomerCancel()).isFalse();
+        assertThatThrownBy(() -> orderService.staffCancelOrder(93L, "Hủy"))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("đối soát");
+        assertThatThrownBy(() -> orderService.customerCancelOrder(93L, "Hủy"))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("đối soát");
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_CONFIRMATION);
+        verify(orderRepository, never()).save(any());
+        verify(voucherService, never()).releaseUsage(any());
+        verify(inventoryRepository, never()).findByProductIdWithLock(any());
+    }
+
+    @Test
+    void reconciledFailedVnpayAllowsNormalUnpaidCancellation() {
+        Order order = orderWithSingleItem(94L, OrderStatus.PENDING_CONFIRMATION, 1);
+        order.setPaymentMethod("VNPAY");
+        order.setUser(testUser);
+        when(orderRepository.findByIdWithLock(94L)).thenReturn(Optional.of(order));
+        when(orderRepository.findById(94L)).thenReturn(Optional.of(order));
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(orderRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(paymentService.isPaymentPending(94L)).thenReturn(false);
+
+        assertThat(orderService.getAdminOrderDetail(94L).canStaffCancel()).isTrue();
+        assertThat(orderService.getMyOrderDetail(94L).canCustomerCancel()).isTrue();
+        assertThat(orderService.customerCancelOrder(94L, "Đã đối soát thất bại").status()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(order.isPaid()).isFalse();
+        verify(inventoryRepository, never()).findByProductIdWithLock(any());
     }
 
     private Order orderWithSingleItem(Long orderId, OrderStatus status, int quantity) {

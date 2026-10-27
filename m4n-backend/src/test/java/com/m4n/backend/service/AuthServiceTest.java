@@ -16,7 +16,7 @@ import com.m4n.backend.repository.PasswordResetTokenRepository;
 import com.m4n.backend.repository.RoleRepository;
 import com.m4n.backend.repository.UserRepository;
 import com.m4n.backend.security.JwtService;
-import com.m4n.backend.serviceImpl.AuthServiceImpl;
+import com.m4n.backend.service.serviceImpl.AuthServiceImpl;
 import com.m4n.backend.util.TokenHashUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,10 +24,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -38,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -66,6 +67,7 @@ class AuthServiceTest {
 
     @Mock
     private PasswordResetNotifier passwordResetNotifier;
+    @Mock private PasswordResetRequestService passwordResetRequestService;
 
     private UserMapper userMapper;
     private AuthService authService;
@@ -82,7 +84,8 @@ class AuthServiceTest {
                 userMapper,
                 refreshTokenService,
                 passwordResetTokenRepository,
-                passwordResetNotifier
+                passwordResetNotifier,
+                passwordResetRequestService
         );
     }
 
@@ -152,8 +155,8 @@ class AuthServiceTest {
                 .isActive(true)
                 .build();
 
-        when(userRepository.findByEmailIgnoreCase("user@m4n.vn")).thenReturn(Optional.of(user));
-        when(jwtService.generateToken(5L, "user@m4n.vn", RoleName.CUSTOMER)).thenReturn("mock.jwt.token");
+        when(userRepository.findByEmailIgnoreCaseWithLock("user@m4n.vn")).thenReturn(Optional.of(user));
+        when(jwtService.generateToken(5L, "user@m4n.vn", RoleName.CUSTOMER, 0)).thenReturn("mock.jwt.token");
         when(jwtService.getExpirationSeconds()).thenReturn(900L);
         when(refreshTokenService.createRefreshToken(eq(user), any(), any()))
                 .thenReturn(new RefreshTokenService.TokenPair(user, "raw-refresh-token-123"));
@@ -183,7 +186,7 @@ class AuthServiceTest {
                 .isActive(false)
                 .build();
 
-        when(userRepository.findByEmailIgnoreCase("inactive@m4n.vn")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCaseWithLock("inactive@m4n.vn")).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(DisabledException.class)
@@ -202,7 +205,7 @@ class AuthServiceTest {
 
         when(refreshTokenService.rotateRefreshToken(eq("old-token"), any(), any()))
                 .thenReturn(new RefreshTokenService.TokenPair(user, "new-token-456"));
-        when(jwtService.generateToken(7L, "rotate@m4n.vn", RoleName.CUSTOMER)).thenReturn("new.access.token");
+        when(jwtService.generateToken(7L, "rotate@m4n.vn", RoleName.CUSTOMER, 0)).thenReturn("new.access.token");
         when(jwtService.getExpirationSeconds()).thenReturn(900L);
 
         AuthService.LoginResult result = authService.refresh("old-token", "Mozilla", "127.0.0.1");
@@ -221,7 +224,7 @@ class AuthServiceTest {
                 .isActive(true)
                 .build();
 
-        when(userRepository.findByEmailIgnoreCase("changepass@m4n.vn")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCaseWithLock("changepass@m4n.vn")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("OldPassword123!", "encoded_old_pass")).thenReturn(true);
         when(passwordEncoder.matches("NewPassword123!", "encoded_old_pass")).thenReturn(false);
         when(passwordEncoder.encode("NewPassword123!")).thenReturn("encoded_new_pass");
@@ -241,29 +244,34 @@ class AuthServiceTest {
                 .password("encoded_old_pass")
                 .build();
 
-        when(userRepository.findByEmailIgnoreCase("changepass@m4n.vn")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCaseWithLock("changepass@m4n.vn")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("WrongPass!", "encoded_old_pass")).thenReturn(false);
 
         assertThatThrownBy(() -> authService.changePassword("changepass@m4n.vn", request))
-                .isInstanceOf(BadCredentialsException.class)
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Mật khẩu hiện tại không chính xác.");
     }
 
     @Test
     void shouldHandleForgotPasswordForExistingUser() {
         ForgotPasswordRequest request = new ForgotPasswordRequest("existing@m4n.vn");
-        User user = User.builder()
-                .id(9L)
-                .email("existing@m4n.vn")
-                .isActive(true)
-                .build();
-
-        when(userRepository.findByEmailIgnoreCase("existing@m4n.vn")).thenReturn(Optional.of(user));
+        when(passwordResetNotifier.isAvailable()).thenReturn(true);
 
         authService.forgotPassword(request);
 
-        verify(passwordResetTokenRepository).save(any(PasswordResetToken.class));
-        verify(passwordResetNotifier).sendPasswordResetNotification(eq("existing@m4n.vn"), any());
+        verify(passwordResetRequestService).requestReset("existing@m4n.vn");
+    }
+
+    @Test
+    void unavailablePasswordResetDeliveryRejectsBeforeAnyAccountLookup() {
+        assertThatThrownBy(() -> authService.forgotPassword(new ForgotPasswordRequest("existing@m4n.vn")))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode().value()).isEqualTo(503));
+        assertThatThrownBy(() -> authService.forgotPassword(new ForgotPasswordRequest("unknown@m4n.vn")))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode().value()).isEqualTo(503));
+        verify(userRepository, never()).findByEmailIgnoreCaseWithLock(any());
+        verify(passwordResetTokenRepository, never()).save(any());
     }
 
     @Test
@@ -287,6 +295,8 @@ class AuthServiceTest {
                 .build();
 
         when(passwordResetTokenRepository.findByTokenHash(tokenHash)).thenReturn(Optional.of(resetToken));
+        when(passwordResetTokenRepository.findUserIdByTokenHash(tokenHash)).thenReturn(Optional.of(user.getId()));
+        when(userRepository.findByIdWithLock(user.getId())).thenReturn(Optional.of(user));
         when(passwordEncoder.encode("BrandNewPass123!")).thenReturn("encoded_brand_new_pass");
 
         authService.resetPassword(request);
@@ -295,5 +305,20 @@ class AuthServiceTest {
         verify(userRepository).save(user);
         verify(passwordResetTokenRepository).save(resetToken);
         verify(refreshTokenService).revokeAllUserSessions(10L);
+    }
+    @Test
+    void rejectsPasswordsExceedingBcryptUtf8LimitBeforeChangingAccounts() {
+        String oversized = "ấ".repeat(25);
+        assertThatThrownBy(() -> authService.register(
+                new RegisterRequest("UTF-8 customer", "utf8@m4n.test", oversized, null)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("72 byte UTF-8");
+        assertThatThrownBy(() -> authService.changePassword("utf8@m4n.test",
+                new ChangePasswordRequest("Password123!", oversized, oversized)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("72 byte UTF-8");
+        assertThatThrownBy(() -> authService.resetPassword(
+                new ResetPasswordRequest("token", oversized, oversized)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("72 byte UTF-8");
+        verify(userRepository, never()).save(any());
+        verify(passwordEncoder, never()).encode(any());
     }
 }

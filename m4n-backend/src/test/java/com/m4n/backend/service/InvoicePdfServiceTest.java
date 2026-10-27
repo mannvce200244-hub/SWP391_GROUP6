@@ -8,7 +8,9 @@ import com.m4n.backend.entity.Role;
 import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.repository.InvoiceRepository;
-import com.m4n.backend.serviceImpl.InvoicePdfServiceImpl;
+import com.m4n.backend.service.serviceImpl.InvoicePdfServiceImpl;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,10 +21,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,7 +40,7 @@ class InvoicePdfServiceTest {
 
     @BeforeEach
     void setUp() {
-        invoicePdfService = new InvoicePdfServiceImpl(invoiceRepository);
+        invoicePdfService = new InvoicePdfServiceImpl(invoiceRepository, "");
 
         Role staffRole = Role.builder().id(3L).name(RoleName.POS_STAFF).build();
         User staff = User.builder().id(5L).fullName("Nguyễn Thu Ngân").role(staffRole).build();
@@ -90,8 +93,17 @@ class InvoicePdfServiceTest {
     }
 
     @Test
+    void configuredMissingFontRejectsExportInsteadOfProducingCorruptedVietnamese() {
+        when(invoiceRepository.findWithDetailsById(100L)).thenReturn(Optional.of(sampleInvoice));
+        var service = new InvoicePdfServiceImpl(invoiceRepository,
+                java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "m4n-missing-" + java.util.UUID.randomUUID() + ".ttf").toString());
+        assertThatThrownBy(() -> service.generateInvoicePdf(100L)).isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Phông chữ hóa đơn chưa sẵn sàng");
+    }
+
+    @Test
     @DisplayName("generateInvoicePdf should produce valid PDF byte stream with Vietnamese headers and items")
-    void shouldGenerateValidPdfBytes() {
+    void shouldGenerateValidPdfBytes() throws Exception {
         when(invoiceRepository.findWithDetailsById(100L)).thenReturn(Optional.of(sampleInvoice));
 
         byte[] pdfBytes = invoicePdfService.generateInvoicePdf(100L);
@@ -100,7 +112,18 @@ class InvoicePdfServiceTest {
         assertThat(pdfBytes.length).isGreaterThan(1000);
 
         // Verify PDF Header Magic Bytes: %PDF
-        String header = new String(pdfBytes, 0, 4);
+        String header = new String(pdfBytes, 0, 4, StandardCharsets.US_ASCII);
         assertThat(header).isEqualTo("%PDF");
+
+        try (PdfReader reader = new PdfReader(pdfBytes)) {
+            PdfTextExtractor extractor = new PdfTextExtractor(reader);
+            StringBuilder content = new StringBuilder();
+            for (int page = 1; page <= reader.getNumberOfPages(); page++) {
+                content.append(extractor.getTextFromPage(page));
+            }
+            assertThat(content.toString()).contains("HD-2026-123456", "Nguyễn Thu Ngân", "Trần Khách Mua",
+                    "0987654321", "BAU-001", "SAO-001", "Đàn Bầu Gỗ Mun Thân Liền", "Tiền thừa trả khách");
+            assertThat(content.toString().split("BAU-001", -1)).hasSize(2);
+        }
     }
 }

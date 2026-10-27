@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import notificationService from '../../services/notificationService.js'
 import { Check } from 'lucide-react'
 import LoadingState from '../../components/ui/LoadingState.jsx'
@@ -13,60 +13,87 @@ function StaffNotificationsPage() {
   const [error, setError] = useState(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [markingAll, setMarkingAll] = useState(false)
+  const pendingReads = useRef(new Set())
+  const mutationRevision = useRef(0)
+  const markingAllRef = useRef(false)
+
+  useEffect(() => notificationService.subscribeReadChanges(() => {
+    mutationRevision.current += 1
+    setRefreshKey((key) => key + 1)
+  }), [])
 
   useEffect(() => {
     let active = true
+    const revision = mutationRevision.current
 
-    notificationService.getRecentNotifications()
-      .then((data) => {
-        if (!active) return
-        const list = Array.isArray(data) ? data : data?.content || []
-        setNotifications(list)
-        return notificationService.getUnreadCount()
-      })
-      .then((count) => {
-        if (active) {
-          setUnreadCount(count || 0)
-          setLoading(false)
-        }
-      })
+    async function loadNotifications() {
+      if (pendingReads.current.size || markingAllRef.current) return
+      setLoading(true)
+      setError(null)
+      const [data, count] = await Promise.all([
+        notificationService.getMyNotifications({ page, size: 15 }),
+        notificationService.getUnreadCount(),
+      ])
+      if (!active || revision !== mutationRevision.current) return
+      setNotifications(data?.content || [])
+      setTotalPages(data?.totalPages || 1)
+      setUnreadCount(count || 0)
+      setLoading(false)
+    }
+    loadNotifications()
       .catch((err) => {
-        if (active) {
+        if (active && revision === mutationRevision.current) {
           setError(err.message || 'Không thể tải thông báo.')
           setLoading(false)
         }
       })
 
     return () => { active = false }
-  }, [refreshKey])
+  }, [page, refreshKey])
 
   const handleMarkRead = async (notif) => {
-    if (notif.read || notif.isRead) return
+    if (notif.isRead || notif.read || pendingReads.current.has(notif.id) || markingAllRef.current) return
+    pendingReads.current.add(notif.id)
+    mutationRevision.current += 1
     try {
       await notificationService.markAsRead(notif.id)
-      setUnreadCount((c) => Math.max(0, c - 1))
       setNotifications((prev) =>
         prev.map((n) => (n.id === notif.id ? { ...n, read: true, isRead: true } : n))
       )
-    } catch {
-      // silent
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể cập nhật thông báo.', type: 'error' })
+    } finally {
+      pendingReads.current.delete(notif.id)
+      mutationRevision.current += 1
+      setRefreshKey((key) => key + 1)
     }
   }
 
   const handleMarkAllRead = async () => {
+    if (markingAllRef.current || pendingReads.current.size) return
+    markingAllRef.current = true
+    mutationRevision.current += 1
+    setMarkingAll(true)
     try {
       await notificationService.markAllAsRead()
-      setUnreadCount(0)
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true, isRead: true })))
       addToast({ message: 'Đã đánh dấu tất cả thông báo là đã đọc.', type: 'info' })
     } catch (err) {
       addToast({ message: err.message || 'Lỗi khi cập nhật thông báo.', type: 'error' })
+    } finally {
+      markingAllRef.current = false
+      mutationRevision.current += 1
+      setRefreshKey((key) => key + 1)
+      setMarkingAll(false)
     }
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-ink">Thông báo</h1>
           <p className="text-sm text-muted mt-1">
@@ -77,6 +104,7 @@ function StaffNotificationsPage() {
           <button
             type="button"
             onClick={handleMarkAllRead}
+            disabled={markingAll}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-white text-sm font-medium text-ink hover:bg-surface-secondary transition-colors cursor-pointer"
           >
             <Check size={14} />
@@ -139,6 +167,7 @@ function StaffNotificationsPage() {
           })}
         </div>
       )}
+      {totalPages > 1 && <div className="flex items-center justify-end gap-3 text-sm"><button type="button" disabled={loading || page === 0} onClick={() => setPage((value) => value - 1)}>Trước</button><span>Trang {page + 1}/{totalPages}</span><button type="button" disabled={loading || page >= totalPages - 1} onClick={() => setPage((value) => value + 1)}>Sau</button></div>}
     </div>
   )
 }

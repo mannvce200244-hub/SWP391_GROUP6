@@ -4,6 +4,7 @@ import adminProductService from '../../services/adminProductService.js'
 import { importStock } from '../../services/inventoryService.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import useToast from '../../components/ui/useToast.js'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
 import ProductFormModal from '../../components/admin/ProductFormModal.jsx'
 import {
   ArrowLeft,
@@ -36,14 +37,21 @@ export default function AdminProductDetailPage({ productId }) {
   const [submittingImport, setSubmittingImport] = useState(false)
   const [togglingStatus, setTogglingStatus] = useState(false)
 
+  const closeImportModal = () => { if (!submittingImport) setShowImportModal(false) }
+  const importDialogRef = useDialogFocus(showImportModal, closeImportModal, submittingImport)
+
   useEffect(() => {
     if (!productId) return
     let active = true
 
-    adminProductService
-      .getProductDetail(productId)
+    Promise.resolve().then(() => {
+      if (!active) return null
+      setLoading(true)
+      setError(null)
+      return adminProductService.getProductDetail(productId)
+    })
       .then((data) => {
-        if (active) {
+        if (active && data) {
           setProduct(data)
           setActiveMediaIndex(0)
           setLoading(false)
@@ -87,29 +95,25 @@ export default function AdminProductDetailPage({ productId }) {
     }
   }
 
-  const handleCopyCode = () => {
-    if (!product?.code) return
-    navigator.clipboard.writeText(product.code)
-    addToast({
-      message: `Đã sao chép mã sản phẩm: ${product.code}`,
-      type: 'info',
-    })
+  const copyProductValue = async (value, label) => {
+    if (!value) return
+    try {
+      await navigator.clipboard.writeText(value)
+      addToast({ message: `Đã sao chép ${label}: ${value}`, type: 'info' })
+    } catch {
+      addToast({ message: 'Không thể sao chép tự động. Vui lòng chọn và sao chép thủ công.', type: 'error' })
+    }
   }
 
-  const handleCopyBarcode = () => {
-    if (!product?.barcode) return
-    navigator.clipboard.writeText(product.barcode)
-    addToast({
-      message: `Đã sao chép mã vạch: ${product.barcode}`,
-      type: 'info',
-    })
-  }
+  const handleCopyCode = () => copyProductValue(product?.code, 'mã sản phẩm')
+  const handleCopyBarcode = () => copyProductValue(product?.barcode, 'mã vạch')
 
   const handleImportSubmit = async (e) => {
     e.preventDefault()
-    const qty = parseInt(importQuantity, 10)
-    if (isNaN(qty) || qty <= 0) {
-      addToast({ message: 'Số lượng nhập phải lớn hơn 0', type: 'error' })
+    if (!product || submittingImport) return
+    const qty = Number(importQuantity)
+    if (!Number.isInteger(qty) || qty <= 0 || qty > 2147483647) {
+      addToast({ message: 'Số lượng nhập phải là số nguyên từ 1 đến 2147483647.', type: 'error' })
       return
     }
 
@@ -120,7 +124,7 @@ export default function AdminProductDetailPage({ productId }) {
         notes: importNotes.trim() || undefined,
       })
       addToast({
-        message: `Nhập kho thành công +${qty} sản phẩm.`,
+        message: `Đã tạo phiếu nhập ${qty} sản phẩm, chờ xác nhận tại Quản lý kho.`,
         type: 'success',
       })
       setShowImportModal(false)
@@ -129,7 +133,7 @@ export default function AdminProductDetailPage({ productId }) {
       setRefreshKey((k) => k + 1)
     } catch (err) {
       addToast({
-        message: err.message || 'Nhập kho thất bại',
+        message: err.message || 'Không thể tạo phiếu nhập kho.',
         type: 'error',
       })
     } finally {
@@ -151,7 +155,7 @@ export default function AdminProductDetailPage({ productId }) {
   if (error || !product) {
     return (
       <div className="bg-[#FFFFFF] rounded-2xl border border-[#E3E6E8] p-8 sm:p-12 text-center shadow-2xs">
-        <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+        <div className="w-14 h-14 rounded-2xl bg-surface-secondary border border-rose-200 text-rose-600 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
           !
         </div>
         <h2 className="text-xl font-bold text-ink mb-2">
@@ -200,7 +204,7 @@ export default function AdminProductDetailPage({ productId }) {
             <span
               className={`px-3 py-1 rounded-full text-xs font-semibold border ${
                 product.isActive
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  ? 'bg-surface-secondary text-emerald-800 border-emerald-200'
                   : 'bg-zinc-100 text-zinc-700 border-zinc-200'
               }`}
             >
@@ -233,7 +237,7 @@ export default function AdminProductDetailPage({ productId }) {
             className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition-colors cursor-pointer disabled:opacity-50 ${
               product.isActive
                 ? 'border-[#E3E6E8] bg-[#FFFFFF] hover:bg-[#F2F4F5] text-ink'
-                : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                : 'border-emerald-200 bg-surface-secondary text-emerald-800 hover:bg-surface-secondary'
             }`}
           >
             <RefreshCw size={16} className={togglingStatus ? 'animate-spin' : ''} />
@@ -252,7 +256,7 @@ export default function AdminProductDetailPage({ productId }) {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-200 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors cursor-pointer shadow-2xs"
           >
             <Package size={16} />
-            <span>Nhập kho</span>
+            <span>Tạo phiếu nhập</span>
           </button>
 
           <button
@@ -384,15 +388,15 @@ export default function AdminProductDetailPage({ productId }) {
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                       (product.stockQuantity || 0) === 0
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                        : (product.stockQuantity || 0) <= 5
+                        ? 'bg-surface-secondary text-rose-700 border border-rose-200'
+                        : product.availability === 'LOW_STOCK'
                         ? 'bg-[#F6F7F8] text-amber-800 border border-amber-200'
-                        : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : 'bg-surface-secondary text-emerald-800 border border-emerald-200'
                     }`}
                   >
                     {(product.stockQuantity || 0) === 0
                       ? 'Hết hàng'
-                      : (product.stockQuantity || 0) <= 5
+                      : product.availability === 'LOW_STOCK'
                       ? 'Sắp hết'
                       : 'Còn hàng'}
                   </span>
@@ -529,31 +533,34 @@ export default function AdminProductDetailPage({ productId }) {
       </div>
 
       {/* Edit Product Modal */}
-      <ProductFormModal
+      {showEditModal && <ProductFormModal
         isOpen={showEditModal}
         productId={product.id}
         onClose={() => setShowEditModal(false)}
         onSuccess={() => setRefreshKey((k) => k + 1)}
-      />
+      />}
 
       {/* Stock Import Modal */}
       {showImportModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+          ref={importDialogRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
+          aria-labelledby="detail-import-stock-title"
         >
           <div className="bg-[#FFFFFF] rounded-2xl border border-[#E3E6E8] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4.5 border-b border-[#E3E6E8] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Package size={20} className="text-brand" />
-                <h3 className="text-base font-bold text-ink">
-                  Nhập kho: {product.code}
+                <h3 id="detail-import-stock-title" className="text-base font-bold text-ink">
+                  Tạo phiếu nhập: {product.code}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setShowImportModal(false)}
+                onClick={closeImportModal}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:text-ink hover:bg-[#F2F4F5] transition-colors cursor-pointer"
                 aria-label="Đóng"
               >
@@ -562,6 +569,7 @@ export default function AdminProductDetailPage({ productId }) {
             </div>
 
             <form onSubmit={handleImportSubmit} className="p-6 flex flex-col gap-4.5">
+              <fieldset disabled={submittingImport} className="contents">
               <div>
                 <span className="text-xs font-semibold text-secondary block mb-1">Tên sản phẩm</span>
                 <span className="text-sm font-bold text-ink block">{product.name}</span>
@@ -571,27 +579,30 @@ export default function AdminProductDetailPage({ productId }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-ink mb-1.5">
-                  Số lượng nhập thêm <span className="text-rose-500">*</span>
+                <label htmlFor="adminproductdetail-importQuantity" className="block text-sm font-semibold text-ink mb-1.5">
+                  Số lượng trên phiếu <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setImportQuantity((q) => Math.max(1, (parseInt(q, 10) || 1) - 1))}
+                    onClick={() => setImportQuantity((q) => Math.max(1, (Number.isInteger(Number(q)) ? Number(q) : 1) - 1))}
                     className="w-10 h-10 rounded-xl border border-[#E3E6E8] bg-[#F6F7F8] hover:bg-[#E3E6E8] font-bold text-sm cursor-pointer"
                   >
                     -
                   </button>
-                  <input
+                  <input id="adminproductdetail-importQuantity" name="importQuantity"
                     type="number"
                     min="1"
+                    max="2147483647"
+                    step="1"
+                    required
                     value={importQuantity}
                     onChange={(e) => setImportQuantity(e.target.value)}
                     className="flex-1 px-4 py-2.5 rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink font-mono text-center font-bold text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                   <button
                     type="button"
-                    onClick={() => setImportQuantity((q) => (parseInt(q, 10) || 1) + 1)}
+                    onClick={() => setImportQuantity((q) => Math.min(2147483647, (Number.isInteger(Number(q)) ? Number(q) : 1) + 1))}
                     className="w-10 h-10 rounded-xl border border-[#E3E6E8] bg-[#F6F7F8] hover:bg-[#E3E6E8] font-bold text-sm cursor-pointer"
                   >
                     +
@@ -600,10 +611,11 @@ export default function AdminProductDetailPage({ productId }) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-ink mb-1.5">
+                <label htmlFor="adminproductdetail-importNotes" className="block text-sm font-semibold text-ink mb-1.5">
                   Ghi chú nhập kho (tùy chọn)
                 </label>
-                <textarea
+                <textarea id="adminproductdetail-importNotes" name="importNotes"
+                  maxLength={500}
                   value={importNotes}
                   onChange={(e) => setImportNotes(e.target.value)}
                   rows={2}
@@ -612,10 +624,12 @@ export default function AdminProductDetailPage({ productId }) {
                 />
               </div>
 
+              <p className="text-xs text-secondary">Tạo phiếu chưa tăng tồn kho. Xác nhận số lượng đạt QC tại Quản lý kho để nhập vào tồn bán được.</p>
+
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowImportModal(false)}
+                  onClick={closeImportModal}
                   className="px-4 py-2.5 text-sm font-semibold text-secondary hover:text-ink hover:bg-[#F2F4F5] rounded-xl border border-[#E3E6E8] transition-colors cursor-pointer"
                 >
                   Hủy
@@ -626,9 +640,10 @@ export default function AdminProductDetailPage({ productId }) {
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs"
                 >
                   <Package size={16} />
-                  <span>{submittingImport ? 'Đang cập nhật...' : 'Xác nhận nhập kho'}</span>
+                  <span>{submittingImport ? 'Đang tạo phiếu…' : 'Tạo phiếu nhập'}</span>
                 </button>
               </div>
+            </fieldset>
             </form>
           </div>
         </div>

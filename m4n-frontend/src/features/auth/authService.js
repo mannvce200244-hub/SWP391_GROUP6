@@ -19,7 +19,7 @@ export const authService = Object.freeze({
   },
 
   async refresh() {
-    return apiClient.post('/auth/refresh')
+    return apiClient.refreshSession()
   },
 
   async logout() {

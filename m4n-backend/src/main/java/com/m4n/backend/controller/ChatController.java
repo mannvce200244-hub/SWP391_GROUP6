@@ -64,7 +64,7 @@ public class ChatController {
 
     @GetMapping("/conversations/{id}/messages")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ONLINE_STAFF')")
-    @Operation(summary = "Get messages for conversation", description = "Returns chronological message thread. Enforces customer conversation ownership.")
+    @Operation(summary = "Get messages for conversation", description = "Returns messages newest first; later pages contain older messages. Marks only returned incoming messages read and enforces conversation ownership.")
     public ResponseEntity<Page<ChatMessageResponse>> getMessages(
             @PathVariable Long id,
             @PageableDefault(size = 100) Pageable pageable,

@@ -1,6 +1,16 @@
 import apiClient from '../api/apiClient.js'
 
+const changeListeners = new Set()
+
+function notifyReadChange() {
+  changeListeners.forEach((listener) => listener())
+}
+
 export const notificationService = Object.freeze({
+  subscribeReadChanges(listener) {
+    changeListeners.add(listener)
+    return () => changeListeners.delete(listener)
+  },
   async getMyNotifications({ page = 0, size = 15 } = {}) {
     return apiClient.get(`/notifications?page=${page}&size=${size}`)
   },
@@ -15,11 +25,15 @@ export const notificationService = Object.freeze({
   },
 
   async markAsRead(id) {
-    return apiClient.post(`/notifications/${id}/read`, {})
+    const result = await apiClient.post(`/notifications/${id}/read`, {})
+    notifyReadChange()
+    return result
   },
 
   async markAllAsRead() {
-    return apiClient.post('/notifications/read-all', {})
+    const result = await apiClient.post('/notifications/read-all', {})
+    notifyReadChange()
+    return result
   },
 })
 

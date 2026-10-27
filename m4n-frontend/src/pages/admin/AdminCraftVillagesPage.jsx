@@ -46,7 +46,7 @@ export default function AdminCraftVillagesPage() {
   }
 
   const handleDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || deleting) return
     setDeleting(true)
     try {
       await craftVillageService.deleteCraftVillage(deleteTarget.id)
@@ -98,7 +98,7 @@ export default function AdminCraftVillagesPage() {
   if (error) {
     return (
       <div className="text-center py-16">
-        <p className="text-sm text-rose-600 mb-3">{error}</p>
+        <p role="alert" className="text-sm text-rose-600 mb-3">{error}</p>
         <button
           type="button"
           onClick={reloadVillages}
@@ -136,6 +136,7 @@ export default function AdminCraftVillagesPage() {
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
         <input
           type="text"
+          name="masterSearch" aria-label="Tìm theo tên hoặc thông tin liên quan"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Tìm kiếm làng nghề…"
@@ -194,7 +195,7 @@ export default function AdminCraftVillagesPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          title="Chỉnh sửa"
+                          title="Chỉnh sửa" aria-label="Chỉnh sửa"
                           onClick={() => {
                             setSelectedVillage(village)
                             setIsModalOpen(true)
@@ -215,7 +216,7 @@ export default function AdminCraftVillagesPage() {
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             (village.artisanCount ?? 0) > 0 || (village.productCount ?? 0) > 0
                               ? 'text-zinc-300 hover:text-zinc-500 hover:bg-[#F6F7F8]'
-                              : 'text-zinc-400 hover:text-rose-600 hover:bg-rose-50'
+                              : 'text-zinc-400 hover:text-rose-600 hover:bg-surface-secondary'
                           }`}
                         >
                           <Trash2 size={15} aria-hidden="true" />
@@ -239,7 +240,7 @@ export default function AdminCraftVillagesPage() {
           variant="danger"
           isLoading={deleting}
           onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
+          onCancel={() => { if (!deleting) setDeleteTarget(null) }}
         />
       )}
 

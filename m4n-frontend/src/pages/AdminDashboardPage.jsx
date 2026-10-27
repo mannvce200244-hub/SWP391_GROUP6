@@ -48,28 +48,28 @@ function getStatusBadge(status, label) {
   switch (status) {
     case 'COMPLETED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-emerald-700 border border-emerald-200">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>{label || 'Hoàn thành'}</span>
         </span>
       )
     case 'CONFIRMED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-sky-700 border border-sky-200">
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
           <span>{label || 'Đã xác nhận'}</span>
         </span>
       )
     case 'SHIPPING':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-blue-700 border border-blue-200">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
           <span>{label || 'Đang giao hàng'}</span>
         </span>
       )
     case 'DELIVERED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-violet-700 border border-violet-200">
           <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
           <span>{label || 'Đã giao hàng'}</span>
         </span>
@@ -83,7 +83,7 @@ function getStatusBadge(status, label) {
       )
     case 'CANCELLED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-rose-700 border border-rose-200">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
           <span>{label || 'Đã hủy'}</span>
         </span>
@@ -133,6 +133,7 @@ function AdminDashboardPage() {
   }, [period, retryCount])
 
   const handlePeriodChange = (newPeriod) => {
+    if (newPeriod === period) return
     setPeriod(newPeriod)
     setDashboardState((prev) => ({ ...prev, status: 'loading' }))
   }
@@ -167,7 +168,7 @@ function AdminDashboardPage() {
 
         {/* TailAdmin-style Segmented Period Selector */}
         <div
-          className="inline-flex items-center p-1 bg-[#F5F7FA] rounded-xl border border-[#E5E8EB] self-start sm:self-auto"
+          className="inline-flex items-center p-1 bg-[#F6F7F8] rounded-xl border border-[#E5E8EB] self-start sm:self-auto"
           role="tablist"
           aria-label="Chọn kỳ báo cáo"
         >
@@ -195,7 +196,7 @@ function AdminDashboardPage() {
 
       {/* Global Error Notice if request fails */}
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-between text-xs sm:text-sm">
+        <div className="p-4 rounded-2xl bg-surface-secondary border border-rose-200 text-rose-800 flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-2">
             <span className="font-bold">Lỗi:</span>
             <span>{error}</span>
@@ -319,7 +320,7 @@ function AdminDashboardPage() {
                 Thống kê doanh thu theo {PERIOD_OPTIONS.find((p) => p.id === period)?.label.toLowerCase()}
               </p>
             </div>
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 text-[#0D9488] border border-teal-200 self-start sm:self-auto">
+            <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-secondary text-[#0D9488] border border-teal-200 self-start sm:self-auto">
               {PERIOD_OPTIONS.find((p) => p.id === period)?.label}
             </span>
           </div>
@@ -399,7 +400,7 @@ function AdminDashboardPage() {
                   {topProducts.map((prod) => {
                     const thumb = PRODUCT_IMAGE_MAP[prod.productCode]
                     return (
-                      <tr key={prod.productId} className="hover:bg-[#F9FAFB] transition-colors">
+                      <tr key={prod.productId} className="hover:bg-[#F6F7F8] transition-colors">
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-zinc-100 overflow-hidden shrink-0 border border-border flex items-center justify-center">
@@ -477,7 +478,7 @@ function AdminDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-[#F2F4F5]">
                   {recentOrders.map((ord) => (
-                    <tr key={ord.id} className="hover:bg-[#F9FAFB] transition-colors">
+                    <tr key={ord.id} className="hover:bg-[#F6F7F8] transition-colors">
                       <td className="py-3 px-2.5">
                         <div className="flex flex-col">
                           <span className="font-bold text-[#17191B] font-mono text-xs">

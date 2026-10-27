@@ -186,9 +186,9 @@ function AccountLayout({
           </aside>
 
           {/* Right Main Content Card */}
-          <main className="flex-1 w-full min-w-0 rounded-[32px] border border-border/80 bg-white p-6 sm:p-10 shadow-sm relative overflow-hidden">
+          <div className="flex-1 w-full min-w-0 rounded-[32px] border border-border/80 bg-white p-6 sm:p-10 shadow-sm relative overflow-hidden">
             {children}
-          </main>
+          </div>
 
         </div>
       </div>

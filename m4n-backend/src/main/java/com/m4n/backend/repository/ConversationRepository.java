@@ -31,6 +31,11 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     @Query("SELECT c FROM Conversation c WHERE c.id = :id")
     Optional<Conversation> findByIdWithLock(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM Conversation c WHERE c.assignedStaff.id = :staffId " +
+            "AND c.status = com.m4n.backend.entity.ConversationStatus.OPEN ORDER BY c.id")
+    List<Conversation> findOpenAssignedToStaffWithLock(@Param("staffId") Long staffId);
+
     @EntityGraph(attributePaths = {"customer", "assignedStaff"})
     @Query(
             value = "SELECT c FROM Conversation c WHERE c.status = com.m4n.backend.entity.ConversationStatus.OPEN " +

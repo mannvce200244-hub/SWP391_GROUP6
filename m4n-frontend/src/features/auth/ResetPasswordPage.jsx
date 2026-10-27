@@ -22,7 +22,7 @@ function ResetPasswordPage() {
   const [generalError, setGeneralError] = useState(() => {
     if (typeof window === 'undefined') return ''
     const urlParams = new URLSearchParams(window.location.search)
-    return urlParams.get('token')
+    return urlParams.get('token')?.trim()
       ? ''
       : 'Liên kết đặt lại mật khẩu không hợp lệ hoặc thiếu mã xác thực (token).'
   })
@@ -36,6 +36,8 @@ function ResetPasswordPage() {
       errors.newPassword = 'Vui lòng nhập mật khẩu mới.'
     } else if (newPassword.length < 8 || newPassword.length > 72) {
       errors.newPassword = 'Mật khẩu mới phải từ 8 đến 72 ký tự.'
+    } else if (new TextEncoder().encode(newPassword).length > 72) {
+      errors.newPassword = 'Mật khẩu quá dài. Vui lòng giảm số ký tự có dấu hoặc ký tự đặc biệt.'
     }
 
     if (!confirmPassword) {
@@ -45,11 +47,14 @@ function ResetPasswordPage() {
     }
 
     setFieldErrors(errors)
+    if (errors.newPassword) document.getElementById('reset-new-password')?.focus()
+    else if (errors.confirmPassword) document.getElementById('reset-confirm-password')?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGeneralError('')
 
     if (!token) {
@@ -75,8 +80,9 @@ function ResetPasswordPage() {
         type: 'success',
       })
     } catch (err) {
+      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       const message =
-        err?.status === 400 || err?.status === 404
+        (err?.status === 400 && !Object.keys(err.fieldErrors || {}).length) || err?.status === 401 || err?.status === 404
           ? 'Mã xác thực không hợp lệ, đã hết hạn hoặc đã được sử dụng trước đó.'
           : err?.message || 'Không thể đặt lại mật khẩu. Vui lòng thử lại sau.'
       setGeneralError(message)

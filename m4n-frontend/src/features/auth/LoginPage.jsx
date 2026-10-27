@@ -56,11 +56,14 @@ function LoginPage() {
     }
 
     setFieldErrors(errors)
+    if (errors.email) document.getElementById('login-email')?.focus()
+    else if (errors.password) document.getElementById('login-password')?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGeneralError('')
 
     if (!validate()) {
@@ -82,6 +85,7 @@ function LoginPage() {
 
       navigateTo(getRoleHome(authenticatedUser.role))
     } catch (err) {
+      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       const message =
         err?.status === 401
           ? 'Email hoặc mật khẩu không chính xác.'

@@ -28,8 +28,13 @@ public record PlaceOrderRequest(
         @NotBlank(message = "Phương thức thanh toán không được để trống")
         String paymentMethod,
 
-        String voucherCode,
+        @Size(max = 50, message = "Mã voucher không quá 50 ký tự") String voucherCode,
 
         @Size(max = 500, message = "Ghi chú không được vượt quá 500 ký tự")
-        String notes
-) {}
+        String notes,
+        @Size(max = 50, message = "Mã voucher vận chuyển không quá 50 ký tự") String shippingVoucherCode
+) {
+    public PlaceOrderRequest(String name, String phone, String email, String address, String paymentMethod, String voucherCode, String notes) {
+        this(name, phone, email, address, paymentMethod, voucherCode, notes, null);
+    }
+}

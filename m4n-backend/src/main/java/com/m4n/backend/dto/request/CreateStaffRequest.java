@@ -15,6 +15,7 @@ public record CreateStaffRequest(
 
         @NotBlank(message = "Email không được để trống")
         @Email(message = "Định dạng email không hợp lệ")
+        @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
         String email,
 
         @NotNull(message = "Vai trò nhân viên không được để trống")

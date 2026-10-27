@@ -19,6 +19,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -49,6 +50,19 @@ public class Product {
 
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal price;
+
+    @Column(name = "billable_weight_kg", precision = 10, scale = 3)
+    private BigDecimal billableWeightKg;
+
+    @Builder.Default
+    @ColumnDefault("0")
+    @Column(name = "bulky_surcharge", nullable = false, precision = 15, scale = 2)
+    private BigDecimal bulkySurcharge = BigDecimal.ZERO;
+
+    @Builder.Default
+    @ColumnDefault("5")
+    @Column(name = "low_stock_threshold", nullable = false)
+    private Integer lowStockThreshold = 5;
 
     @Column(columnDefinition = "TEXT")
     private String description;

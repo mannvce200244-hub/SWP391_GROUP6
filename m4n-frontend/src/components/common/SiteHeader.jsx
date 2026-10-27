@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react'
 import NotificationBell from './NotificationBell.jsx'
+import useToast from '../ui/useToast.js'
 
 const ROLE_LABELS = Object.freeze({
   CUSTOMER: 'Khách hàng',
@@ -33,6 +34,7 @@ const ROLE_LABELS = Object.freeze({
 
 function SiteHeader({ pathname }) {
   const { user, isAuthenticated, logout } = useAuth()
+  const { addToast } = useToast()
   const { cartItemCount } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
@@ -45,6 +47,7 @@ function SiteHeader({ pathname }) {
   const isArtisansRoute =
     pathname === CUSTOMER_ROUTES.artisans ||
     pathname.startsWith(`${CUSTOMER_ROUTES.artisans}/`)
+  const isArticlesRoute = pathname === CUSTOMER_ROUTES.articles || pathname.startsWith(`${CUSTOMER_ROUTES.articles}/`)
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const closeAccountMenu = () => setAccountMenuOpen(false)
@@ -91,8 +94,12 @@ function SiteHeader({ pathname }) {
   const handleLogout = async () => {
     closeAccountMenu()
     closeMobileMenu()
-    await logout()
-    navigateTo(CUSTOMER_ROUTES.login)
+    try {
+      await logout()
+      navigateTo(CUSTOMER_ROUTES.login)
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể đăng xuất. Vui lòng thử lại.', type: 'error' })
+    }
   }
 
   const roleName = user?.role ? (ROLE_LABELS[user.role] || user.role) : ''
@@ -112,7 +119,7 @@ function SiteHeader({ pathname }) {
         </RouterLink>
 
         {/* Center: Main Navigation */}
-        <nav aria-label="Điều hướng chính" className="hidden md:flex items-center gap-1">
+        <nav aria-label="Điều hướng chính" className="hidden lg:flex items-center gap-1">
           <ul className="flex items-center gap-1 list-none m-0 p-0">
             <li>
               <RouterLink
@@ -153,6 +160,8 @@ function SiteHeader({ pathname }) {
                 Nghệ nhân & Làng nghề
               </RouterLink>
             </li>
+            <li><RouterLink href={CUSTOMER_ROUTES.articles} aria-current={isArticlesRoute ? 'page' : undefined}
+              className={`px-3.5 py-1.5 rounded-lg text-sm transition-colors ${isArticlesRoute ? 'text-brand font-semibold bg-[#F6F7F8]' : 'text-ink hover:text-brand hover:bg-surface-secondary font-medium'}`}>Bài viết & Hướng dẫn</RouterLink></li>
           </ul>
         </nav>
 
@@ -333,7 +342,7 @@ function SiteHeader({ pathname }) {
           <button
             aria-expanded={mobileMenuOpen}
             aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu điều hướng'}
-            className="md:hidden p-2 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary transition-colors cursor-pointer"
+            className="lg:hidden p-2 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary transition-colors cursor-pointer"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
             type="button"
           >
@@ -348,7 +357,7 @@ function SiteHeader({ pathname }) {
 
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen ? (
-        <div className="md:hidden fixed inset-x-0 top-16 bg-surface border-b border-border shadow-lg p-4 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <div className="lg:hidden fixed inset-x-0 top-16 bg-surface border-b border-border shadow-lg p-4 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto">
           <nav aria-label="Điều hướng di động">
             <ul className="flex flex-col gap-1 list-none p-0 m-0">
               <li>
@@ -393,6 +402,8 @@ function SiteHeader({ pathname }) {
                   Nghệ nhân & Làng nghề
                 </RouterLink>
               </li>
+              <li><RouterLink href={CUSTOMER_ROUTES.articles} onClick={closeMobileMenu} aria-current={isArticlesRoute ? 'page' : undefined}
+                className={`block min-h-11 px-3.5 py-2.5 rounded-lg text-sm transition-colors ${isArticlesRoute ? 'text-brand font-semibold bg-[#F6F7F8]' : 'text-ink hover:text-brand hover:bg-surface-secondary font-medium'}`}>Bài viết & Hướng dẫn</RouterLink></li>
 
               {canUseCustomerCommerce && (
                 <li>

@@ -20,6 +20,7 @@ public class CustomUserPrincipal implements UserDetails {
     private final String fullName;
     private final RoleName role;
     private final boolean active;
+    private final long sessionVersion;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public CustomUserPrincipal(User user) {
@@ -29,6 +30,7 @@ public class CustomUserPrincipal implements UserDetails {
         this.fullName = user.getFullName();
         this.role = user.getRole() != null ? user.getRole().getName() : null;
         this.active = user.isActive();
+        this.sessionVersion = user.getSessionVersion();
 
         if (this.role != null) {
             this.authorities = List.of(new SimpleGrantedAuthority("ROLE_" + this.role.name()));

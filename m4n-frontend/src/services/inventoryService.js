@@ -28,8 +28,33 @@ export async function issueStock(productId, { quantity, reason }) {
   })
 }
 
+export async function getStockDocuments({ page = 0, size = 10, productId, type = '', status = '' } = {}) {
+  const params = new URLSearchParams({ page, size })
+  if (productId) params.set('productId', productId)
+  if (type) params.set('type', type)
+  if (status) params.set('status', status)
+  return apiClient.get(`/inventory/documents?${params}`)
+}
+
+export async function confirmStockDocument(documentId, { rejectedQuantity = 0, rejectionReason = '' } = {}) {
+  return apiClient.post(`/inventory/documents/${encodeURIComponent(documentId)}/confirm`, {
+    rejectedQuantity,
+    rejectionReason,
+  })
+}
+
+export async function getInventoryMovements({ page = 0, size = 10, productId, type = '' } = {}) {
+  const params = new URLSearchParams({ page, size })
+  if (productId) params.set('productId', productId)
+  if (type) params.set('type', type)
+  return apiClient.get(`/inventory/movements?${params}`)
+}
+
 export default {
   getInventory,
   importStock,
   issueStock,
+  getStockDocuments,
+  confirmStockDocument,
+  getInventoryMovements,
 }

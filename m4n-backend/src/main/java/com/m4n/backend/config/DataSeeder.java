@@ -27,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +43,7 @@ import java.util.List;
  */
 @Slf4j
 @Component
+@org.springframework.core.annotation.Order(0)
 public class DataSeeder implements ApplicationRunner {
 
     private final RoleRepository roleRepository;
@@ -56,12 +56,11 @@ public class DataSeeder implements ApplicationRunner {
     private final InventoryRepository inventoryRepository;
     private final OrderRepository orderRepository;
     private final VoucherRepository voucherRepository;
-    private final JdbcTemplate jdbcTemplate;
 
-    @Value("${m4n.seed.dev-accounts:true}")
+    @Value("${m4n.seed.dev-accounts:false}")
     private boolean seedDevAccounts;
 
-    @Value("${M4N_DEFAULT_TEST_PASSWORD:Password123!}")
+    @Value("${M4N_DEFAULT_TEST_PASSWORD:}")
     private String defaultPassword;
 
     public DataSeeder(
@@ -74,8 +73,7 @@ public class DataSeeder implements ApplicationRunner {
             ProductRepository productRepository,
             InventoryRepository inventoryRepository,
             OrderRepository orderRepository,
-            VoucherRepository voucherRepository,
-            JdbcTemplate jdbcTemplate
+            VoucherRepository voucherRepository
     ) {
         this.roleRepository = roleRepository;
         this.userRepository = userRepository;
@@ -87,43 +85,25 @@ public class DataSeeder implements ApplicationRunner {
         this.inventoryRepository = inventoryRepository;
         this.orderRepository = orderRepository;
         this.voucherRepository = voucherRepository;
-        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         initRoles();
-        synchronizeOrderStatusConstraint();
-        initProducts();
-        initVouchers();
         if (seedDevAccounts) {
+            if (defaultPassword.isBlank()) {
+                throw new IllegalStateException("M4N_DEFAULT_TEST_PASSWORD must be configured when development seeding is enabled.");
+            }
+            initProducts();
+            initVouchers();
             initDevAccounts();
             initOrders();
             printTestAccountsSummary();
         }
     }
 
-    private void synchronizeOrderStatusConstraint() {
-        try {
-            jdbcTemplate.execute("ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check");
-            jdbcTemplate.execute("ALTER TABLE orders DROP CONSTRAINT IF EXISTS order_status_check");
-            jdbcTemplate.execute("ALTER TABLE orders ADD CONSTRAINT orders_status_check CHECK (status IN "
-                    + "('PENDING_CONFIRMATION', 'CONFIRMED', 'OUT_OF_STOCK_WAITING', 'SHIPPING', "
-                    + "'DELIVERED', 'COMPLETED', 'CANCELLED'))");
-        } catch (Exception e) {
-            log.debug("Orders status check constraint update skipped or not applicable: {}", e.getMessage());
-        }
-    }
-
     private void initRoles() {
-        try {
-            jdbcTemplate.execute("ALTER TABLE roles DROP CONSTRAINT IF EXISTS roles_name_check");
-            jdbcTemplate.execute("ALTER TABLE roles ADD CONSTRAINT roles_name_check CHECK (name IN ('CUSTOMER', 'ONLINE_STAFF', 'POS_STAFF', 'ADMIN', 'SUPER_ADMIN'))");
-        } catch (Exception e) {
-            log.debug("Roles check constraint update skipped or not applicable: {}", e.getMessage());
-        }
-
         for (RoleName roleName : RoleName.values()) {
             if (roleRepository.findByName(roleName).isEmpty()) {
                 String description = switch (roleName) {
@@ -576,32 +556,6 @@ public class DataSeeder implements ApplicationRunner {
         var existingOpt = productRepository.findByCodeIgnoreCase(code);
         String standardBarcode = deriveBarcode(code);
         if (existingOpt.isPresent()) {
-            Product existing = existingOpt.get();
-            boolean changed = false;
-            if (existing.getBarcode() == null || !existing.getBarcode().equals(standardBarcode)) {
-                existing.setBarcode(standardBarcode);
-                changed = true;
-            }
-            boolean needsUpdate = existing.getMedia().size() != mediaList.size();
-            if (!needsUpdate) {
-                for (int i = 0; i < mediaList.size(); i++) {
-                    if (!existing.getMedia().get(i).getUrl().equals(mediaList.get(i).getUrl())) {
-                        needsUpdate = true;
-                        break;
-                    }
-                }
-            }
-            if (needsUpdate || changed) {
-                if (needsUpdate) {
-                    existing.getMedia().clear();
-                    for (ProductMedia m : mediaList) {
-                        m.setProduct(existing);
-                        existing.getMedia().add(m);
-                    }
-                }
-                productRepository.save(existing);
-                log.info("Synchronized product and barcode for: [{}] {} (Barcode: {})", code, existing.getName(), standardBarcode);
-            }
             return;
         }
 
@@ -678,7 +632,7 @@ public class DataSeeder implements ApplicationRunner {
                 "nam.tran@gmail.com",
                 "Số 45 Tràng Tiền, Hoàn Kiếm, Hà Nội",
                 OrderStatus.COMPLETED,
-                "Chuyển khoản QR Napas",
+                "COD",
                 true,
                 "Yêu cầu khắc tên nghệ nhân lên thành đàn.",
                 now.minus(4, ChronoUnit.HOURS),
@@ -694,7 +648,7 @@ public class DataSeeder implements ApplicationRunner {
                 "thuydung.le@outlook.com",
                 "228 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
                 OrderStatus.COMPLETED,
-                "Chuyển khoản QR Napas",
+                "COD",
                 true,
                 "Đóng gói hộp chống sốc chuyên dụng.",
                 now.minus(1, ChronoUnit.DAYS),
@@ -729,8 +683,8 @@ public class DataSeeder implements ApplicationRunner {
                 "quan.hm@gmail.com",
                 "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
                 OrderStatus.CONFIRMED,
-                "Chuyển khoản QR Napas",
-                true,
+                "COD",
+                false,
                 "Đã kiểm tra kho và xác nhận xuất xưởng.",
                 now.minus(2, ChronoUnit.DAYS),
                 List.of(new SeedItem(pTranh, 1, pTranh.getPrice()))
@@ -761,8 +715,8 @@ public class DataSeeder implements ApplicationRunner {
                 "long.dh@gmail.com",
                 "34 Hai Bà Trưng, Đà Nẵng",
                 OrderStatus.OUT_OF_STOCK_WAITING,
-                "Chuyển khoản QR Napas",
-                true,
+                "COD",
+                false,
                 "Khách đồng ý đợi xưởng Đào Xá hoàn thiện đợt mới.",
                 now.minus(3, ChronoUnit.DAYS),
                 List.of(new SeedItem(pBau, 1, pBau.getPrice()))
@@ -793,7 +747,7 @@ public class DataSeeder implements ApplicationRunner {
                 "customer2@m4n.vn",
                 "45 Phố Hàng Gai, Hoàn Kiếm, Hà Nội",
                 OrderStatus.COMPLETED,
-                "Chuyển khoản QR Napas",
+                "COD",
                 true,
                 "Đơn hàng hoàn tất tháng trước.",
                 now.minus(35, ChronoUnit.DAYS),
@@ -865,7 +819,6 @@ public class DataSeeder implements ApplicationRunner {
         String summary = """
                 \n========================================================================================
                 [M4N DEV & TEST SEED DATA INITIALIZED]
-                Default Password: %s
                 ----------------------------------------------------------------------------------------
                 Role           | Email              | Status   | Full Name
                 ----------------------------------------------------------------------------------------
@@ -879,7 +832,7 @@ public class DataSeeder implements ApplicationRunner {
                 CUSTOMER       | customer2@m4n.vn   | ACTIVE   | Trần Thị Mai Phương
                 CUSTOMER       | locked@m4n.vn      | LOCKED   | Tài Khoản Bị Khóa (Testing 403)
                 ========================================================================================
-                """.formatted(defaultPassword);
+                """;
         log.info("{}", summary);
     }
 }

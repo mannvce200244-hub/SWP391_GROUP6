@@ -2,6 +2,8 @@ package com.m4n.backend.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -13,9 +15,11 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Locale;
 
 /**
  * Voucher entity representing promotional discounts.
@@ -37,8 +41,19 @@ public class Voucher {
     @Column(nullable = false, unique = true, length = 50)
     private String code;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'MANUAL'")
+    @Column(name = "promotion_type", nullable = false, length = 30)
+    private PromotionType promotionType = PromotionType.MANUAL;
+
+    @Column(name = "minimum_quantity")
+    private Integer minimumQuantity;
+
     @Column(name = "discount_rate", nullable = false, precision = 6, scale = 4)
     private BigDecimal discountRate;
+    @Column(name = "fixed_discount_amount", precision = 15, scale = 2)
+    private BigDecimal fixedDiscountAmount;
 
     @Column(name = "minimum_order_value", nullable = false, precision = 15, scale = 2)
     private BigDecimal minimumOrderValue;
@@ -76,7 +91,7 @@ public class Voucher {
         }
         this.updatedAt = this.createdAt;
         if (this.code != null) {
-            this.code = this.code.trim().toUpperCase();
+            this.code = this.code.trim().toUpperCase(Locale.ROOT);
         }
         if (this.usedCount == null) {
             this.usedCount = 0;
@@ -87,7 +102,7 @@ public class Voucher {
     protected void onUpdate() {
         this.updatedAt = Instant.now();
         if (this.code != null) {
-            this.code = this.code.trim().toUpperCase();
+            this.code = this.code.trim().toUpperCase(Locale.ROOT);
         }
     }
 }

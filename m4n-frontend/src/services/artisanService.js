@@ -1,28 +1,24 @@
 import apiClient from '../api/apiClient.js'
 
-function paginate(items, page, limit) {
-  const total = items.length
-  const totalPages = Math.max(1, Math.ceil(total / limit))
-  const safePage = Math.max(1, Math.min(page, totalPages))
-  const offset = (safePage - 1) * limit
-
-  return {
-    items: items.slice(offset, offset + limit),
-    page: safePage,
-    limit,
-    total,
-    totalPages,
-  }
+function discoveryQuery({ limit, page, search, sort, province }) {
+  const query = new URLSearchParams({ page: String(Math.max(0, page - 1)), size: String(limit) })
+  if (search?.trim()) query.set('keyword', search.trim())
+  if (province && province !== 'all') query.set('location', province)
+  const sorting = sort === 'az' ? 'name,asc' : sort === 'newest' ? 'createdAt,desc' : 'id,asc'
+  query.append('sort', sorting)
+  if (sorting !== 'id,asc') query.append('sort', 'id,asc')
+  return query.toString()
 }
 
-function sortItems(items, sort) {
-  const sorted = [...items]
-  if (sort === 'az') {
-    sorted.sort((a, b) => a.name.localeCompare(b.name, 'vi'))
-  } else if (sort === 'newest') {
-    sorted.sort((a, b) => Number(b.id) - Number(a.id))
+function mapPage(response, mapper) {
+  if (!Array.isArray(response?.content)) throw new Error('Không thể đọc danh sách trả về từ máy chủ.')
+  return {
+    items: response.content.map(mapper),
+    page: response.number + 1,
+    limit: response.size,
+    total: response.totalElements,
+    totalPages: Math.max(1, response.totalPages),
   }
-  return sorted
 }
 
 function mapArtisan(artisan) {
@@ -49,20 +45,10 @@ function mapVillage(village) {
   }
 }
 
-function matchesSearch(item, search) {
-  if (!search?.trim()) return true
-  const query = search.trim().toLocaleLowerCase('vi')
-  return [item.name, item.description, item.province]
-    .filter(Boolean)
-    .some((value) => value.toLocaleLowerCase('vi').includes(query))
-}
-
 const artisanService = Object.freeze({
   async listArtisans({ limit = 6, page = 1, search = '', sort = 'featured' } = {}) {
-    const response = await apiClient.get('/artisans')
-    const source = Array.isArray(response) ? response.map(mapArtisan) : []
-    const filtered = source.filter((item) => matchesSearch(item, search))
-    return { ...paginate(sortItems(filtered, sort), page, limit), provinces: [] }
+    const response = await apiClient.get(`/artisans/search?${discoveryQuery({ limit, page, search, sort })}`)
+    return { ...mapPage(response, mapArtisan), provinces: [] }
   },
 
   async listCraftVillages({
@@ -72,26 +58,22 @@ const artisanService = Object.freeze({
     search = '',
     sort = 'featured',
   } = {}) {
-    const response = await apiClient.get('/craft-villages')
-    const source = Array.isArray(response) ? response.map(mapVillage) : []
-    const provinces = Array.from(new Set(source.map((item) => item.province).filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b, 'vi'))
-    const filtered = source.filter(
-      (item) =>
-        matchesSearch(item, search) &&
-        (!province || province === 'all' || item.province === province),
-    )
-    return { ...paginate(sortItems(filtered, sort), page, limit), provinces }
+    const [response, provinces] = await Promise.all([
+      apiClient.get(`/craft-villages/search?${discoveryQuery({ limit, page, search, sort, province })}`),
+      apiClient.get('/craft-villages/locations'),
+    ])
+    if (!Array.isArray(provinces)) throw new Error('Không thể đọc danh sách địa phương.')
+    return { ...mapPage(response, mapVillage), provinces }
   },
 
   async getDiscoveryCounts() {
     const [artisans, villages] = await Promise.all([
-      apiClient.get('/artisans'),
-      apiClient.get('/craft-villages'),
+      apiClient.get('/artisans/search?page=0&size=1'),
+      apiClient.get('/craft-villages/search?page=0&size=1'),
     ])
     return {
-      artisans: Array.isArray(artisans) ? artisans.length : 0,
-      villages: Array.isArray(villages) ? villages.length : 0,
+      artisans: mapPage(artisans, mapArtisan).total,
+      villages: mapPage(villages, mapVillage).total,
     }
   },
 
@@ -111,9 +93,13 @@ const artisanService = Object.freeze({
   async getArtisanById(id) {
     if (!id) return null
 
-    const response = await apiClient.get('/artisans')
-    const artisans = Array.isArray(response) ? response.map(mapArtisan) : []
-    return artisans.find((artisan) => String(artisan.id) === String(id)) || null
+    try {
+      const response = await apiClient.get(`/artisans/${encodeURIComponent(String(id))}`)
+      return response?.id ? mapArtisan(response) : null
+    } catch (error) {
+      if (error?.status === 404) return null
+      throw error
+    }
   },
 
   async getArtisans() {

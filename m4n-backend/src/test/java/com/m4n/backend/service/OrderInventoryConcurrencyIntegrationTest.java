@@ -10,6 +10,7 @@ import com.m4n.backend.entity.OrderItem;
 import com.m4n.backend.entity.OrderStatus;
 import com.m4n.backend.entity.Product;
 import com.m4n.backend.entity.User;
+import com.m4n.backend.entity.Voucher;
 import com.m4n.backend.exception.InsufficientStockException;
 import com.m4n.backend.repository.CategoryRepository;
 import com.m4n.backend.repository.InventoryRepository;
@@ -17,12 +18,16 @@ import com.m4n.backend.repository.InvoiceRepository;
 import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.UserRepository;
+import com.m4n.backend.repository.VoucherRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -36,6 +41,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -66,7 +72,12 @@ class OrderInventoryConcurrencyIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired private VoucherRepository voucherRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private PlatformTransactionManager transactionManager;
+
     private final List<Long> orderIds = new ArrayList<>();
+    private final List<String> orderCodes = new ArrayList<>();
     private final List<Long> invoiceIds = new ArrayList<>();
     private Product product;
     private Inventory inventory;
@@ -95,8 +106,12 @@ class OrderInventoryConcurrencyIntegrationTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+        orderCodes.forEach(code -> jdbcTemplate.update(
+                "DELETE FROM notifications WHERE user_id = ? AND message LIKE ?",
+                customer.getId(), "%" + code + "%"));
         invoiceIds.forEach(invoiceRepository::deleteById);
         orderIds.forEach(orderRepository::deleteById);
+        if (product != null) jdbcTemplate.update("DELETE FROM inventory_movements WHERE product_id = ?", product.getId());
         if (inventory != null && inventory.getId() != null && inventoryRepository.existsById(inventory.getId())) {
             inventoryRepository.deleteById(inventory.getId());
         }
@@ -186,6 +201,87 @@ class OrderInventoryConcurrencyIntegrationTest {
         assertThat(currentQuantity()).isEqualTo(5);
     }
 
+    @Test
+    void posSaleAndConfirmedCancellationWithSharedVoucherFollowOneLockOrder() throws Exception {
+        Voucher voucher = voucherRepository.save(Voucher.builder()
+                .code("LOCK-" + UUID.randomUUID().toString().replace("-", ""))
+                .discountRate(new BigDecimal("0.10")).minimumOrderValue(BigDecimal.ZERO)
+                .usedCount(1).usageLimit(10).build());
+        try {
+            inventory.setQuantity(3);
+            inventoryRepository.save(inventory);
+            Order order = createOrder(OrderStatus.CONFIRMED, 1);
+            order.setVoucherCode(voucher.getCode());
+            order.setDiscountAmount(new BigDecimal("100000"));
+            order.setManualDiscountAmount(new BigDecimal("100000"));
+            order.setFinalAmount(new BigDecimal("900000"));
+            orderRepository.save(order);
+            CountDownLatch inventoryHeld = new CountDownLatch(1);
+            CountDownLatch posTransactionStarted = new CountDownLatch(1);
+            AtomicInteger posBackendPid = new AtomicInteger();
+            TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+
+            List<Throwable> failures = runConcurrent(
+                    () -> transactions.executeWithoutResult(transaction -> {
+                        inventoryRepository.findByProductIdWithLock(product.getId()).orElseThrow();
+                        inventoryHeld.countDown();
+                        await(posTransactionStarted);
+                        awaitPostgresLockWait(posBackendPid.get());
+                        orderService.staffCancelOrder(order.getId(), "Kiểm thử thứ tự khóa POS/voucher");
+                    }),
+                    () -> {
+                        await(inventoryHeld);
+                        SecurityContextHolder.getContext().setAuthentication(
+                                new UsernamePasswordAuthenticationToken("pos@m4n.vn", "test", List.of()));
+                        try {
+                            transactions.executeWithoutResult(transaction -> {
+                                posBackendPid.set(jdbcTemplate.queryForObject("SELECT pg_backend_pid()", Integer.class));
+                                posTransactionStarted.countDown();
+                                PosSaleResponse sale = posService.finalizeSale(PosSaleRequest.builder()
+                                        .items(List.of(new PosSaleItemRequest(product.getId(), 1)))
+                                        .voucherCode(voucher.getCode()).paymentMethod("BANK_TRANSFER").build());
+                                synchronized (invoiceIds) { invoiceIds.add(sale.getInvoiceId()); }
+                            });
+                        } finally {
+                            SecurityContextHolder.clearContext();
+                        }
+                    });
+
+            assertThat(failures).isEmpty();
+            assertThat(orderRepository.findById(order.getId()).orElseThrow().getStatus()).isEqualTo(OrderStatus.CANCELLED);
+            assertThat(currentQuantity()).isEqualTo(3);
+            assertThat(invoiceIds).hasSize(1);
+            assertThat(voucherRepository.findById(voucher.getId()).orElseThrow().getUsedCount()).isEqualTo(1);
+        } finally {
+            voucherRepository.deleteById(voucher.getId());
+        }
+    }
+
+    private void await(CountDownLatch latch) {
+        try {
+            if (!latch.await(5, TimeUnit.SECONDS)) throw new IllegalStateException("Concurrent fixture timed out");
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Concurrent fixture interrupted", exception);
+        }
+    }
+
+    private void awaitPostgresLockWait(int backendPid) {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (System.nanoTime() < deadline) {
+            Boolean waiting = jdbcTemplate.queryForObject(
+                    "SELECT EXISTS (SELECT 1 FROM pg_locks WHERE pid = ? AND NOT granted)", Boolean.class, backendPid);
+            if (Boolean.TRUE.equals(waiting)) return;
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Lock-wait fixture interrupted", exception);
+            }
+        }
+        throw new IllegalStateException("POS did not reach its PostgreSQL inventory lock wait");
+    }
+
     private Order createOrder(OrderStatus status, int quantity) {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
         Order order = Order.builder()
@@ -213,6 +309,7 @@ class OrderInventoryConcurrencyIntegrationTest {
                 .build());
         Order saved = orderRepository.save(order);
         orderIds.add(saved.getId());
+        orderCodes.add(saved.getOrderCode());
         return saved;
     }
 

@@ -7,6 +7,8 @@ export const CUSTOMER_ROUTES = Object.freeze({
   artisanDetail: (slugOrId) =>
     `/artisans/${encodeURIComponent(String(slugOrId))}`,
   craftVillages: '/craft-villages',
+  articles: '/articles',
+  articleDetail: (id) => `/articles/${encodeURIComponent(String(id))}`,
   craftVillageDetail: (slugOrId) =>
     `/craft-villages/${encodeURIComponent(String(slugOrId))}`,
   login: '/login',
@@ -18,6 +20,7 @@ export const CUSTOMER_ROUTES = Object.freeze({
   orders: '/account/orders',
   cart: '/cart',
   checkout: '/checkout',
+  paymentReturn: '/payment-return',
   forbidden: '/403',
   staff: '/staff',
   pos: '/pos',
@@ -29,11 +32,13 @@ export const CUSTOMER_ROUTES = Object.freeze({
   adminCategories: '/admin/categories',
   adminArtisans: '/admin/artisans',
   adminCraftVillages: '/admin/craft-villages',
+  adminArticles: '/admin/articles',
   adminInventory: '/admin/inventory',
   legacyAdminStockImport: '/admin/stock-import',
   adminOrders: '/admin/orders',
   adminInvoices: '/admin/invoices',
   adminVouchers: '/admin/vouchers',
+  adminPricing: '/admin/pricing',
   adminProfile: '/admin/profile',
   adminSecurity: '/admin/security',
   adminUsers: '/admin/users',
@@ -155,4 +160,9 @@ export function matchAdminInstrumentDetailPath(pathname) {
   } catch {
     return null
   }
+}
+
+export function matchArticleDetailPath(pathname) {
+  const match = pathname.match(/^\/articles\/([1-9]\d*)$/)
+  return match && Number.isSafeInteger(Number(match[1])) ? match[1] : null
 }

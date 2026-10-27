@@ -16,9 +16,7 @@ public interface AuthService {
 
     LoginResult login(LoginRequest request, String userAgent, String ipAddress);
 
-    default LoginResult login(LoginRequest request) {
-        return login(request, null, null);
-    }
+    LoginResult login(LoginRequest request);
 
     LoginResult refresh(String rawRefreshToken, String userAgent, String ipAddress);
 

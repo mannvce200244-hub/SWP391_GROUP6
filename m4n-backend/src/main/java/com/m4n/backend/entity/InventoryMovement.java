@@ -33,6 +33,20 @@ public class InventoryMovement {
     @Column(name = "actor_email", length = 255)
     private String actorEmail;
 
+    @Column(name = "product_code", length = 50)
+    private String productCode;
+    @Column(name = "product_name", length = 200)
+    private String productName;
+    @Builder.Default
+    @Column(name = "rejected_quantity")
+    private Integer rejectedQuantity = 0;
+    @Column(name = "rejection_reason", length = 500)
+    private String rejectionReason;
+    @Column(name = "source_type", length = 20)
+    private String sourceType;
+    @Column(name = "source_id")
+    private Long sourceId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

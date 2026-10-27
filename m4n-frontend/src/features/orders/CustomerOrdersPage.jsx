@@ -1,4 +1,10 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import Pagination from '../catalog/Pagination.jsx'
+import ErrorState from '../../components/ui/ErrorState.jsx'
+import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
+import CustomerOrderDetailDialog from './CustomerOrderDetailDialog.jsx'
+import { formatDate, getStatusBadge } from './orderPresentation.js'
 import AccountLayout from '../../layouts/AccountLayout.jsx'
 import useToast from '../../components/ui/useToast.js'
 import orderService from '../../services/orderService.js'
@@ -6,13 +12,9 @@ import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import {
   ArrowRight,
   ChevronRight,
-  X,
   Package,
   CircleAlert,
-  Check,
-  PackageCheck,
 } from 'lucide-react'
-import { IconInstrument } from '../../components/ui/Icons.jsx'
 
 const STATUS_TABS = [
   { id: 'ALL', label: 'Tất cả đơn' },
@@ -25,72 +27,16 @@ const STATUS_TABS = [
   { id: 'CANCELLED', label: 'Đã hủy' },
 ]
 
-function getStatusBadge(status) {
-  switch (status) {
-    case 'PENDING_CONFIRMATION':
-      return {
-        label: 'Chờ xác nhận',
-        className: 'text-amber-800 bg-[#F6F7F8] border-amber-200',
-      }
-    case 'CONFIRMED':
-      return {
-        label: 'Đã xác nhận',
-        className: 'text-teal-700 bg-teal-50 border-teal-200',
-      }
-    case 'OUT_OF_STOCK_WAITING':
-      return {
-        label: 'Chờ xử lý tồn kho',
-        className: 'text-orange-800 bg-[#F6F7F8] border-orange-200',
-      }
-    case 'SHIPPING':
-      return {
-        label: 'Đang giao hàng',
-        className: 'text-blue-700 bg-blue-50 border-blue-200',
-      }
-    case 'DELIVERED':
-      return {
-        label: 'Đã giao hàng',
-        className: 'text-violet-700 bg-violet-50 border-violet-200',
-      }
-    case 'COMPLETED':
-      return {
-        label: 'Đã hoàn thành',
-        className: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-      }
-    case 'CANCELLED':
-      return {
-        label: 'Đã hủy',
-        className: 'text-rose-700 bg-rose-50 border-rose-200',
-      }
-    default:
-      return {
-        label: status || 'Chờ xử lý',
-        className: 'text-slate-700 bg-slate-50 border-slate-200',
-      }
-  }
-}
-
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  try {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return dateStr
-  }
-}
-
 function CustomerOrdersPage() {
   const { addToast } = useToast()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null)
+  const [reloadSequence, setReloadSequence] = useState(0)
   const [activeFilter, setActiveFilter] = useState('ALL')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalOrders, setTotalOrders] = useState(0)
 
   // Detail Modal state
   const [selectedOrderId, setSelectedOrderId] = useState(null)
@@ -103,21 +49,8 @@ function CustomerOrdersPage() {
   const [cancelling, setCancelling] = useState(false)
   const [receiveModalOrder, setReceiveModalOrder] = useState(null)
   const [receivingOrderId, setReceivingOrderId] = useState(null)
-
-  const fetchOrders = useCallback(async () => {
-    try {
-      setLoading(true)
-      const data = await orderService.getMyOrders()
-      setOrders(Array.isArray(data) ? data : [])
-    } catch (err) {
-      addToast({
-        message: err.message || 'Không thể tải danh sách đơn hàng',
-        type: 'error',
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [addToast])
+  const detailSequence = useRef(0)
+  const cancelDialogRef = useDialogFocus(Boolean(cancelModalOrder), () => setCancelModalOrder(null), cancelling)
 
   useEffect(() => {
     let active = true
@@ -125,12 +58,21 @@ function CustomerOrdersPage() {
     async function load() {
       try {
         setLoading(true)
-        const data = await orderService.getMyOrders()
+        setLoadError(null)
+        const data = await orderService.getMyOrders({ page: currentPage - 1, status: activeFilter })
         if (active) {
-          setOrders(Array.isArray(data) ? data : [])
+          if (!Array.isArray(data?.content)) throw new Error('Không thể đọc danh sách đơn hàng. Vui lòng thử lại.')
+          if (data.totalPages > 0 && currentPage > data.totalPages) {
+            setCurrentPage(data.totalPages)
+            return
+          }
+          setOrders(data.content)
+          setTotalPages(data.totalPages)
+          setTotalOrders(data.totalElements)
         }
       } catch (err) {
         if (active) {
+          setLoadError(err.message || 'Không thể tải danh sách đơn hàng.')
           addToast({
             message: err.message || 'Không thể tải danh sách đơn hàng',
             type: 'error',
@@ -148,26 +90,30 @@ function CustomerOrdersPage() {
     return () => {
       active = false
     }
-  }, [addToast])
+  }, [addToast, reloadSequence, currentPage, activeFilter])
 
   const handleOpenDetail = async (orderId) => {
+    const requestId = ++detailSequence.current
     setSelectedOrderId(orderId)
+    setOrderDetail(null)
     setDetailLoading(true)
     try {
       const data = await orderService.getOrderDetail(orderId)
-      setOrderDetail(data)
+      if (requestId === detailSequence.current) setOrderDetail(data)
     } catch (err) {
+      if (requestId !== detailSequence.current) return
       addToast({
         message: err.message || 'Không thể tải chi tiết đơn hàng',
         type: 'error',
       })
       setSelectedOrderId(null)
     } finally {
-      setDetailLoading(false)
+      if (requestId === detailSequence.current) setDetailLoading(false)
     }
   }
 
   const handleCloseDetail = () => {
+    detailSequence.current += 1
     setSelectedOrderId(null)
     setOrderDetail(null)
   }
@@ -175,27 +121,25 @@ function CustomerOrdersPage() {
   // Open self-cancel modal (Strictly for PENDING_CONFIRMATION)
   const handleOpenCancel = (order, e) => {
     if (e) e.stopPropagation()
+    if (order.status !== 'PENDING_CONFIRMATION' || cancelling) return
     setCancelModalOrder(order)
     setCancelReason('')
   }
 
   const handleConfirmCancel = async () => {
-    if (!cancelModalOrder) return
+    if (!cancelModalOrder || cancelling) return
 
     try {
       setCancelling(true)
-      await orderService.customerCancelOrder(cancelModalOrder.id, cancelReason)
+      const fresh = await orderService.customerCancelOrder(cancelModalOrder.id, cancelReason.trim())
+      setOrders((current) => current.map((order) => order.id === fresh.id ? { ...order, ...fresh } : order))
+      setOrderDetail((current) => current?.id === fresh.id ? fresh : current)
       addToast({
         message: `Đã hủy đơn hàng ${cancelModalOrder.orderCode} thành công`,
         type: 'success',
       })
       setCancelModalOrder(null)
-      // Refresh list and detail
-      await fetchOrders()
-      if (selectedOrderId === cancelModalOrder.id) {
-        const fresh = await orderService.getOrderDetail(cancelModalOrder.id)
-        setOrderDetail(fresh)
-      }
+      setReloadSequence((current) => current + 1)
     } catch (err) {
       addToast({
         message: err.message || 'Không thể hủy đơn hàng',
@@ -208,6 +152,7 @@ function CustomerOrdersPage() {
 
   const handleOpenReceiveConfirmation = (order, event) => {
     if (event) event.stopPropagation()
+    if (order.status !== 'DELIVERED' || receivingOrderId) return
     setReceiveModalOrder(order)
   }
 
@@ -218,13 +163,14 @@ function CustomerOrdersPage() {
     try {
       setReceivingOrderId(order.id)
       const fresh = await orderService.confirmReceived(order.id)
+      setOrders((current) => current.map((item) => item.id === fresh.id ? { ...item, ...fresh } : item))
       addToast({
         message: `Cảm ơn bạn đã xác nhận nhận đơn ${order.orderCode}.`,
         type: 'success',
       })
       setOrderDetail((current) => current?.id === order.id ? fresh : current)
       setReceiveModalOrder(null)
-      await fetchOrders()
+      setReloadSequence((current) => current + 1)
     } catch (err) {
       addToast({
         message: err.message || 'Không thể xác nhận đã nhận hàng',
@@ -234,23 +180,6 @@ function CustomerOrdersPage() {
       setReceivingOrderId(null)
     }
   }
-
-  useEffect(() => {
-    if (!receiveModalOrder) return undefined
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape' && !receivingOrderId) {
-        setReceiveModalOrder(null)
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [receiveModalOrder, receivingOrderId])
-
-  const filteredOrders = useMemo(() => {
-    if (activeFilter === 'ALL') return orders
-    return orders.filter((o) => o.status === activeFilter)
-  }, [orders, activeFilter])
 
   return (
     <AccountLayout activeTab="orders">
@@ -263,7 +192,7 @@ function CustomerOrdersPage() {
                 Đơn hàng của tôi
               </h2>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-soft text-brand border border-brand-border">
-                {orders.length} đơn
+                {totalOrders} đơn
               </span>
             </div>
             <p className="text-xs sm:text-sm text-muted mt-1">
@@ -285,16 +214,18 @@ function CustomerOrdersPage() {
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {STATUS_TABS.map((tab) => {
             const isActive = activeFilter === tab.id
-            const count =
-              tab.id === 'ALL'
-                ? orders.length
-                : orders.filter((o) => o.status === tab.id).length
 
             return (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveFilter(tab.id)}
+                aria-pressed={isActive}
+                onClick={() => {
+                  if (activeFilter === tab.id) return
+                  setLoading(true)
+                  setActiveFilter(tab.id)
+                  setCurrentPage(1)
+                }}
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer select-none flex items-center gap-2 ${
                   isActive
                     ? 'bg-brand text-white shadow-sm shadow-brand/20'
@@ -302,15 +233,6 @@ function CustomerOrdersPage() {
                 }`}
               >
                 <span>{tab.label}</span>
-                <span
-                  className={`text-xs px-1.5 py-0.2 rounded-full font-semibold ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-surface-secondary text-subtle'
-                  }`}
-                >
-                  {count}
-                </span>
               </button>
             )
           })}
@@ -329,7 +251,9 @@ function CustomerOrdersPage() {
               </div>
             ))}
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : loadError ? (
+          <ErrorState message={loadError} onRetry={() => setReloadSequence((current) => current + 1)} />
+        ) : orders.length === 0 ? (
           <div className="rounded-3xl bg-white border border-border/80 p-12 text-center shadow-xs space-y-4 max-w-lg mx-auto">
             <div className="w-14 h-14 rounded-2xl bg-surface-secondary text-subtle flex items-center justify-center mx-auto">
               <Package size={26} />
@@ -353,7 +277,7 @@ function CustomerOrdersPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredOrders.map((order) => {
+            {orders.map((order) => {
               const badge = getStatusBadge(order.status)
               const isPending = order.status === 'PENDING_CONFIRMATION'
               const canConfirmReceived = order.status === 'DELIVERED'
@@ -361,8 +285,7 @@ function CustomerOrdersPage() {
               return (
                 <div
                   key={order.id}
-                  onClick={() => handleOpenDetail(order.id)}
-                  className="rounded-2xl bg-white border border-border/80 p-5 sm:p-6 shadow-xs hover:border-brand/40 hover:shadow-sm transition-all cursor-pointer space-y-4"
+                  className="rounded-2xl bg-white border border-border/80 p-5 sm:p-6 shadow-xs space-y-4"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-border/50">
                     <div className="flex items-center gap-3">
@@ -406,7 +329,7 @@ function CustomerOrdersPage() {
                           <button
                             type="button"
                             onClick={(e) => handleOpenCancel(order, e)}
-                            className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-all cursor-pointer"
+                            className="px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-surface-secondary text-xs font-bold transition-all cursor-pointer"
                           >
                             Hủy đơn
                           </button>
@@ -437,290 +360,41 @@ function CustomerOrdersPage() {
                 </div>
               )
             })}
+            {totalPages > 1 && <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={(page) => { setLoading(true); setCurrentPage(page) }} />}
           </div>
         )}
       </div>
 
-      {/* Order Detail Modal */}
-      {selectedOrderId && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/50 backdrop-blur-xs overscroll-contain">
-          <div role="dialog" aria-modal="true" aria-labelledby="order-detail-title" className="w-full max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-border overflow-hidden max-h-[calc(100dvh-12px)] sm:max-h-[calc(100dvh-48px)] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="shrink-0 p-4 sm:p-6 border-b border-border/60 flex items-center justify-between bg-surface-secondary/40">
-              <div>
-                <div className="flex items-center gap-2.5">
-                  <h3 id="order-detail-title" className="text-lg font-bold text-ink font-mono">
-                    {orderDetail?.orderCode || 'Chi tiết đơn hàng'}
-                  </h3>
-                  {orderDetail && (
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadge(orderDetail.status).className}`}>
-                      {getStatusBadge(orderDetail.status).label}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted mt-0.5">
-                  Ngày đặt: {formatDate(orderDetail?.createdAt)}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                aria-label="Đóng chi tiết đơn hàng"
-                onClick={handleCloseDetail}
-                className="w-9 h-9 rounded-xl text-muted hover:text-ink hover:bg-surface-secondary flex items-center justify-center cursor-pointer transition-all"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="min-h-0 p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-6 flex-1 text-xs">
-              {detailLoading ? (
-                <div className="py-12 text-center text-muted">Đang tải chi tiết đơn hàng...</div>
-              ) : orderDetail ? (
-                <>
-                  {/* Status Timeline */}
-                  <div className="p-4 rounded-2xl bg-surface-secondary/50 border border-border/70 space-y-3">
-                    <h4 className="font-bold text-ink uppercase tracking-wider text-xs">
-                      Tiến độ đơn hàng
-                    </h4>
-
-                    {orderDetail.status === 'CANCELLED' ? (
-                      <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
-                        Đơn hàng này đã bị hủy.
-                      </div>
-                    ) : orderDetail.status === 'OUT_OF_STOCK_WAITING' ? (
-                      <div className="p-3 rounded-xl bg-[#F6F7F8] border border-orange-200 text-orange-800 text-xs font-medium">
-                        Sản phẩm hiện đang tạm hết tồn kho sẵn sàng. Đơn hàng chuyển sang hàng đợi chế tác/nhập kho từ làng nghề.
-                      </div>
-                    ) : (
-                      <div className="relative pt-2">
-                        <div aria-hidden="true" className="absolute left-[10%] right-[10%] top-[22px] h-0.5 bg-border" />
-                        <div className="relative grid grid-cols-5 gap-1 text-center">
-                        {[
-                          ['PENDING_CONFIRMATION', 'Đã đặt'],
-                          ['CONFIRMED', 'Đã xác nhận'],
-                          ['SHIPPING', 'Đang giao'],
-                          ['DELIVERED', 'Đã giao'],
-                          ['COMPLETED', 'Hoàn thành'],
-                        ].map(([status, label], index, steps) => {
-                          const currentIndex = steps.findIndex(([stepStatus]) => stepStatus === orderDetail.status)
-                          const isReached = index <= currentIndex
-                          const isCurrent = index === currentIndex
-                          return (
-                            <div key={status} className="space-y-1 min-w-0">
-                              <div className={`relative z-10 w-7 h-7 rounded-full flex items-center justify-center mx-auto text-xs font-bold ${
-                                isReached
-                                  ? isCurrent ? 'bg-brand text-white ring-2 ring-brand/20' : 'bg-emerald-600 text-white'
-                                  : 'bg-surface-secondary text-muted'
-                              }`}>
-                                {isReached && !isCurrent ? <Check size={14} className="stroke-[2.5]" /> : index + 1}
-                              </div>
-                              <span className="font-semibold text-ink block text-[10px] sm:text-xs leading-tight">{label}</span>
-                            </div>
-                          )
-                        })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Customer Information Snapshot */}
-                  <div className="space-y-2 p-4 rounded-2xl bg-white border border-border/80">
-                    <h4 className="font-bold text-ink uppercase tracking-wider text-xs pb-2 border-b border-border/60">
-                      Thông tin giao nhận
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2 text-muted">
-                      <div>Người nhận: <strong className="text-ink">{orderDetail.customerName}</strong></div>
-                      <div>Số điện thoại: <strong className="text-ink">{orderDetail.customerPhone}</strong></div>
-                      <div className="col-span-2">Email: {orderDetail.customerEmail}</div>
-                      <div className="col-span-2">Địa chỉ: {orderDetail.shippingAddress}</div>
-                      {orderDetail.notes && (
-                        <div className="col-span-2 text-ink italic">Ghi chú: {orderDetail.notes}</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Purchased Items List */}
-                  <div className="space-y-3">
-                    <h4 className="font-bold text-ink uppercase tracking-wider text-xs">
-                      Danh sách nhạc cụ ({orderDetail.items?.length || 0})
-                    </h4>
-                    <div className="space-y-2">
-                      {orderDetail.items?.map((it) => (
-                        <div key={it.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-secondary/30 border border-border/60">
-                          <div className="w-12 h-12 rounded-lg bg-surface-secondary overflow-hidden shrink-0">
-                            {it.imageUrl ? (
-                              <img src={it.imageUrl} alt={it.productName} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-subtle">
-                                <IconInstrument size={18} />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-bold text-ink line-clamp-1">{it.productName}</h5>
-                            <span className="text-xs text-muted">Mã: {it.productCode} &bull; SL: {it.quantity}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-right">
-                            {orderDetail.status === 'COMPLETED' && it.productId && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  handleCloseDetail()
-                                  navigateTo(CUSTOMER_ROUTES.productDetail(it.productId))
-                                }}
-                                className="px-2.5 py-1 text-[11px] rounded-lg border border-teal-300 text-teal-700 bg-teal-50 hover:bg-teal-100 font-bold transition-colors cursor-pointer"
-                              >
-                                Đánh giá
-                              </button>
-                            )}
-                            <span className="font-bold text-ink">{it.lineTotalDisplay}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Price Calculation Breakdown */}
-                  <div className="space-y-2 p-4 rounded-2xl bg-surface-secondary/40 border border-border/70">
-                    <div className="flex justify-between text-muted">
-                      <span>Tạm tính tiền hàng:</span>
-                      <span className="font-bold text-ink">{orderDetail.totalAmountDisplay}</span>
-                    </div>
-
-                    {orderDetail.voucherCode && (
-                      <div className="flex justify-between text-emerald-700">
-                        <span>Voucher ({orderDetail.voucherCode}):</span>
-                        <span className="font-bold">-{orderDetail.discountAmountDisplay}</span>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between text-muted">
-                      <span>Phương thức thanh toán:</span>
-                      <span className="font-medium text-ink">{orderDetail.paymentMethod}</span>
-                    </div>
-
-                    <div className="flex justify-between text-muted">
-                      <span>Trạng thái thanh toán:</span>
-                      <span className={`font-bold ${orderDetail.isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {orderDetail.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}
-                      </span>
-                    </div>
-
-                    <div className="pt-2 border-t border-border/60 flex justify-between items-baseline">
-                      <span className="text-sm font-bold text-ink">Tổng thanh toán:</span>
-                      <span className="text-lg font-bold text-brand font-sans">{orderDetail.finalAmountDisplay}</span>
-                    </div>
-                  </div>
-                </>
-              ) : null}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="shrink-0 p-3 sm:p-5 border-t border-border/60 bg-white flex flex-wrap items-center gap-2">
-              {orderDetail?.canCustomerCancel && (
-                <button
-                  type="button"
-                  onClick={() => handleOpenCancel(orderDetail)}
-                  className="px-4 py-2.5 rounded-xl border border-rose-300 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-all cursor-pointer"
-                >
-                  Hủy đơn hàng này
-                </button>
-              )}
-
-              {orderDetail?.status === 'DELIVERED' && (
-                <button
-                  type="button"
-                  disabled={receivingOrderId === orderDetail.id}
-                  onClick={() => handleOpenReceiveConfirmation(orderDetail)}
-                  className="px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors cursor-pointer disabled:opacity-60"
-                >
-                  {receivingOrderId === orderDetail.id ? 'Đang xác nhận…' : 'Đã nhận được hàng'}
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleCloseDetail}
-                className="ml-auto px-5 py-2.5 rounded-xl bg-charcoal hover:bg-black text-white text-xs font-bold transition-all cursor-pointer"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Receipt Confirmation Modal */}
-      {receiveModalOrder && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <button
-            type="button"
-            aria-label="Đóng hộp xác nhận nhận hàng"
-            disabled={Boolean(receivingOrderId)}
-            onClick={() => setReceiveModalOrder(null)}
-            className="absolute inset-0 bg-black/50 backdrop-blur-xs cursor-pointer disabled:cursor-wait"
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="receive-order-title"
-            aria-describedby="receive-order-description"
-            className="relative w-full max-w-md rounded-3xl border border-border bg-white p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-              <PackageCheck size={24} aria-hidden="true" />
-            </div>
-
-            <div>
-              <h3 id="receive-order-title" className="text-lg font-bold text-ink">
-                Xác nhận đã nhận được hàng?
-              </h3>
-              <p id="receive-order-description" className="mt-1.5 text-sm leading-relaxed text-muted">
-                Chỉ xác nhận khi bạn đã nhận và kiểm tra đủ sản phẩm trong đơn{' '}
-                <strong className="text-ink">{receiveModalOrder.orderCode}</strong>. Sau bước này,
-                đơn hàng sẽ hoàn tất và có thể được đánh giá.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-border bg-[#F6F7F8] p-3 text-xs text-muted">
-              Nếu hàng chưa đến, thiếu hoặc có vấn đề, chưa xác nhận và hãy liên hệ M4N để được hỗ trợ.
-            </div>
-
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                autoFocus
-                disabled={Boolean(receivingOrderId)}
-                onClick={() => setReceiveModalOrder(null)}
-                className="min-h-11 rounded-xl border border-border px-4 text-sm font-bold text-ink hover:bg-[#F6F7F8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 cursor-pointer disabled:opacity-60"
-              >
-                Chưa, để tôi kiểm tra lại
-              </button>
-              <button
-                type="button"
-                disabled={Boolean(receivingOrderId)}
-                onClick={handleConfirmReceived}
-                className="min-h-11 rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 cursor-pointer disabled:cursor-wait disabled:opacity-60"
-              >
-                {receivingOrderId ? 'Đang xác nhận…' : 'Tôi đã nhận đủ hàng'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      <CustomerOrderDetailDialog
+        isOpen={Boolean(selectedOrderId)}
+        order={orderDetail}
+        loading={detailLoading}
+        onClose={handleCloseDetail}
+        onCancel={handleOpenCancel}
+        onReceive={handleOpenReceiveConfirmation}
+        receivingOrderId={receivingOrderId}
+      />
+      <ConfirmDialog
+        isOpen={Boolean(receiveModalOrder)}
+        title="Xác nhận đã nhận được hàng?"
+        description={receiveModalOrder ? `Chỉ xác nhận khi bạn đã nhận và kiểm tra đủ sản phẩm trong đơn ${receiveModalOrder.orderCode}. Sau bước này đơn hàng hoàn tất và có thể được đánh giá.` : ''}
+        confirmLabel="Tôi đã nhận đủ hàng"
+        cancelLabel="Để tôi kiểm tra lại"
+        variant="primary"
+        isLoading={Boolean(receivingOrderId)}
+        onConfirm={handleConfirmReceived}
+        onCancel={() => setReceiveModalOrder(null)}
+      />
       {/* Cancel Order Confirmation Modal */}
       {cancelModalOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-border p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center">
+          <div ref={cancelDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-border p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-surface-secondary text-rose-600 flex items-center justify-center">
               <CircleAlert size={24} />
             </div>
 
             <div>
-              <h3 className="text-lg font-bold text-ink">
+              <h3 id="cancel-order-title" className="text-lg font-bold text-ink">
                 Xác nhận hủy đơn hàng?
               </h3>
               <p className="text-xs text-muted mt-1 leading-relaxed">
@@ -734,6 +408,9 @@ function CustomerOrdersPage() {
               </label>
               <textarea
                 id="cancelReason"
+                name="reason"
+                maxLength={500}
+                disabled={cancelling}
                 rows={2}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
@@ -769,3 +446,6 @@ function CustomerOrdersPage() {
 }
 
 export default CustomerOrdersPage
+
+
+

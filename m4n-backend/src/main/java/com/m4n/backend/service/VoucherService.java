@@ -3,23 +3,27 @@ package com.m4n.backend.service;
 import com.m4n.backend.dto.request.CreateVoucherRequest;
 import com.m4n.backend.dto.request.UpdateVoucherRequest;
 import com.m4n.backend.dto.response.VoucherResponse;
+import com.m4n.backend.dto.response.DiscountCalculationResponse;
 import com.m4n.backend.dto.response.VoucherValidationResponse;
-import com.m4n.backend.entity.Voucher;
+import com.m4n.backend.entity.PromotionType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 public interface VoucherService {
 
-    VoucherValidationResponse validateAndCalculate(String voucherCode, BigDecimal orderAmount);
+    DiscountCalculationResponse calculateDiscounts(String voucherCode, BigDecimal orderAmount, int quantity);
 
-    VoucherValidationResponse validateAndConsume(String voucherCode, BigDecimal orderAmount);
+    DiscountCalculationResponse consumeDiscounts(String voucherCode, BigDecimal orderAmount, int quantity);
 
     void releaseUsage(String voucherCode);
 
-    Voucher getActiveVoucherOrThrow(String voucherCode);
+    VoucherValidationResponse calculateShippingDiscount(String code, BigDecimal shippingFee, BigDecimal subtotal, int quantity);
 
-    List<VoucherResponse> getAllVouchers();
+    VoucherValidationResponse consumeShippingDiscount(String code, BigDecimal shippingFee, BigDecimal subtotal, int quantity);
+
+    Page<VoucherResponse> searchVouchers(String search, PromotionType type, Boolean isActive, String state, Pageable pageable);
 
     VoucherResponse createVoucher(CreateVoucherRequest request);
 

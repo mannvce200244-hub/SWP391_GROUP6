@@ -1,12 +1,15 @@
+import PosScannerDialog from '../features/pos/PosScannerDialog.jsx'
+import PosReceiptDialog from '../features/pos/PosReceiptDialog.jsx'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import useAuth from '../features/auth/useAuth.js'
 import useToast from '../components/ui/useToast.js'
+import ConfirmDialog from '../components/ui/ConfirmDialog.jsx'
+import usePosSalePreview from '../features/pos/usePosSalePreview.js'
 import {
   searchProducts,
   lookupBarcode,
   previewSale,
   finalizeSale,
-  downloadInvoicePdf,
 } from '../services/posService.js'
 import { formatCurrencyVND } from '../utils/currency.js'
 import { isValidVietnameseMobile, sanitizeVietnameseMobile, VIETNAMESE_MOBILE_ERROR } from '../utils/phone.js'
@@ -16,7 +19,6 @@ import {
   Check,
   X,
   Package,
-  CircleAlert,
   Store,
   Banknote,
   QrCode,
@@ -29,6 +31,8 @@ function PosDashboardPage() {
   // Catalog State
   const [catalog, setCatalog] = useState([])
   const [loadingCatalog, setLoadingCatalog] = useState(true)
+  const [catalogError, setCatalogError] = useState('')
+  const catalogRequest = useRef(0)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [barcodeInput, setBarcodeInput] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
@@ -36,6 +40,7 @@ function PosDashboardPage() {
   // Current POS Bill State
   const [billItems, setBillItems] = useState([])
   const [voucherCode, setVoucherCode] = useState('')
+  const voucherPreviewVersionRef = useRef(0)
   const [voucherState, setVoucherState] = useState({
     applied: false,
     discount: 0,
@@ -48,31 +53,32 @@ function PosDashboardPage() {
   const [amountReceived, setAmountReceived] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
-  const [saleNotes, setSaleNotes] = useState('')
   const [submittingSale, setSubmittingSale] = useState(false)
+  const salePending = useRef(false)
+  const billGeneration = useRef(0)
+  const barcodePending = useRef(false)
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
 
   // Camera Scanner Modal State
   const [scannerOpen, setScannerOpen] = useState(false)
-  const [cameraError, setCameraError] = useState(null)
-  const [scannerSupported, setScannerSupported] = useState(true)
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
-  const scanLockRef = useRef(false)
-
   // Success Modal State
   const [successSale, setSuccessSale] = useState(null)
+  const salePreview = usePosSalePreview(billItems, voucherState.applied ? voucherCode.trim() : '')
 
   // 1. Fetch Catalog (Debounced)
   const loadCatalog = useCallback(async (keyword) => {
+    const request = ++catalogRequest.current
     setLoadingCatalog(true)
+    setCatalogError('')
     try {
       const res = await searchProducts(keyword)
       const data = res?.data || res
+      if (request !== catalogRequest.current) return
       setCatalog(Array.isArray(data) ? data : [])
-    } catch {
-      setCatalog([])
+    } catch (error) {
+      if (request === catalogRequest.current) setCatalogError(error.message || 'Không thể tải sản phẩm. Vui lòng thử lại.')
     } finally {
-      setLoadingCatalog(false)
+      if (request === catalogRequest.current) setLoadingCatalog(false)
     }
   }, [])
 
@@ -80,11 +86,19 @@ function PosDashboardPage() {
     const timer = setTimeout(() => {
       loadCatalog(searchKeyword)
     }, 250)
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      catalogRequest.current += 1
+    }
   }, [searchKeyword, loadCatalog])
 
   // 2. Add product to Bill
   const handleAddToBill = useCallback((product) => {
+    if (salePending.current || successSale) return
+    voucherPreviewVersionRef.current += 1
+    setVoucherState((previous) => previous.applied || previous.loading
+      ? { applied: false, discount: 0, message: 'Hóa đơn đã thay đổi. Vui lòng áp dụng lại voucher.', loading: false }
+      : previous)
     setBillItems((prev) => {
       const existing = prev.find((item) => item.productId === product.id)
       if (existing) {
@@ -112,10 +126,14 @@ function PosDashboardPage() {
       message: `Đã thêm '${product.name}' vào đơn hàng.`,
       type: 'info',
     })
-  }, [addToast])
+  }, [addToast, successSale])
 
   // 3. Update quantity
   const handleUpdateQty = (productId, delta) => {
+    voucherPreviewVersionRef.current += 1
+    setVoucherState((previous) => previous.applied || previous.loading
+      ? { applied: false, discount: 0, message: 'Hóa đơn đã thay đổi. Vui lòng áp dụng lại voucher.', loading: false }
+      : previous)
     setBillItems((prev) =>
       prev
         .map((item) => {
@@ -131,6 +149,10 @@ function PosDashboardPage() {
 
   // 4. Remove item from Bill
   const handleRemoveItem = (item) => {
+    voucherPreviewVersionRef.current += 1
+    setVoucherState((previous) => previous.applied || previous.loading
+      ? { applied: false, discount: 0, message: 'Hóa đơn đã thay đổi. Vui lòng áp dụng lại voucher.', loading: false }
+      : previous)
     setBillItems((prev) => prev.filter((billItem) => billItem.productId !== item.productId))
     addToast({ message: `Đã xóa "${item.name}" khỏi đơn hàng.`, type: 'success' })
   }
@@ -138,10 +160,14 @@ function PosDashboardPage() {
   // 5. Clear entire Bill
   const handleClearBill = () => {
     if (billItems.length === 0) return
+    billGeneration.current += 1
+    salePreview.retry()
+    voucherPreviewVersionRef.current += 1
     setBillItems([])
     setVoucherCode('')
     setVoucherState({ applied: false, discount: 0, message: '', loading: false })
     setAmountReceived('')
+    setClearConfirmOpen(false)
     addToast({ message: 'Đã xóa toàn bộ sản phẩm khỏi đơn hàng.', type: 'success' })
   }
 
@@ -149,20 +175,25 @@ function PosDashboardPage() {
   const handleBarcodeSubmit = async (e) => {
     e.preventDefault()
     const code = barcodeInput.trim()
-    if (!code) return
+    if (!code || barcodePending.current || salePending.current) return
+    barcodePending.current = true
+    const generation = billGeneration.current
 
     setLookupLoading(true)
     try {
       const res = await lookupBarcode(code)
       const product = res?.data || res
+      if (generation !== billGeneration.current) return
       handleAddToBill(product)
       setBarcodeInput('')
     } catch (err) {
+      if (generation !== billGeneration.current) return
       addToast({
-        message: err?.response?.data?.message || `Không tìm thấy sản phẩm với mã '${code}'.`,
+        message: err.message || `Không tìm thấy sản phẩm với mã '${code}'.`,
         type: 'error',
       })
     } finally {
+      barcodePending.current = false
       setLookupLoading(false)
     }
   }
@@ -181,6 +212,7 @@ function PosDashboardPage() {
       return
     }
 
+    const previewVersion = ++voucherPreviewVersionRef.current
     setVoucherState((prev) => ({ ...prev, loading: true }))
     try {
       const res = await previewSale({
@@ -188,10 +220,11 @@ function PosDashboardPage() {
         voucherCode: voucherCode.trim(),
       })
       const data = res?.data || res
+      if (previewVersion !== voucherPreviewVersionRef.current) return
       if (data.voucherApplied) {
         setVoucherState({
           applied: true,
-          discount: Number(data.discount) || 0,
+          discount: Number(data.manualDiscountAmount) || 0,
           message: data.voucherMessage || 'Áp dụng mã giảm giá thành công!',
           loading: false,
         })
@@ -206,20 +239,22 @@ function PosDashboardPage() {
         addToast({ message: data.voucherMessage || 'Voucher không đủ điều kiện.', type: 'error' })
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || 'Mã giảm giá không hợp lệ.'
+      if (previewVersion !== voucherPreviewVersionRef.current) return
+      const msg = err.message || 'Mã giảm giá không hợp lệ.'
       setVoucherState({ applied: false, discount: 0, message: msg, loading: false })
       addToast({ message: msg, type: 'error' })
     }
   }
 
   // Totals calculations
-  const subtotal = billItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
-  const discountAmount = voucherState.applied ? voucherState.discount : 0
-  const finalAmount = Math.max(0, subtotal - discountAmount)
+  const subtotal = salePreview.data?.subtotal ?? billItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+  const discountAmount = salePreview.data?.manualDiscountAmount ?? (voucherState.applied ? voucherState.discount : 0)
+  const automaticDiscountAmount = salePreview.data?.automaticDiscountAmount ?? 0
+  const finalAmount = salePreview.data?.finalAmount ?? Math.max(0, subtotal - discountAmount - automaticDiscountAmount)
 
   const numReceived = Number.parseInt(amountReceived, 10) || 0
   const amountChange = paymentMethod === 'CASH' ? Math.max(0, numReceived - finalAmount) : 0
-  const cashInsufficient = paymentMethod === 'CASH' && amountReceived && numReceived < finalAmount
+  const cashInsufficient = paymentMethod === 'CASH' && Boolean(amountReceived) && numReceived < finalAmount
 
   // Automatically update amountReceived when exact cash shortcut is clicked
   const handleSetExactCash = () => {
@@ -228,6 +263,7 @@ function PosDashboardPage() {
 
   // 8. Finalize Sale
   const handleFinalizeSale = async () => {
+    if (salePending.current || successSale || salePreview.loading || salePreview.error || !salePreview.data || salePreview.data.stockWarnings?.length) return
     if (billItems.length === 0) {
       addToast({ message: 'Vui lòng chọn ít nhất một nhạc cụ để thanh toán.', type: 'error' })
       return
@@ -248,6 +284,7 @@ function PosDashboardPage() {
       return
     }
 
+    salePending.current = true
     setSubmittingSale(true)
     try {
       const res = await finalizeSale({
@@ -257,25 +294,30 @@ function PosDashboardPage() {
         amountReceived: paymentMethod === 'CASH' ? numReceived : finalAmount,
         customerName,
         customerPhone,
-        notes: saleNotes,
+
       })
       const result = res?.data || res
+      billGeneration.current += 1
       setSuccessSale(result)
       addToast({ message: `Bán hàng thành công! Hóa đơn #${result.invoiceCode}`, type: 'success' })
       // Reload catalog to reflect updated inventory in showroom
       loadCatalog(searchKeyword)
     } catch (err) {
       addToast({
-        message: err?.response?.data?.message || 'Giao dịch không thành công. Vui lòng kiểm tra lại tồn kho.',
+        message: err.message || 'Giao dịch không thành công. Vui lòng kiểm tra lại tồn kho.',
         type: 'error',
       })
     } finally {
+      salePending.current = false
       setSubmittingSale(false)
     }
   }
 
   // 9. Reset POS for new sale
   const handleNewSale = () => {
+    billGeneration.current += 1
+    salePreview.retry()
+    voucherPreviewVersionRef.current += 1
     setSuccessSale(null)
     setBillItems([])
     setVoucherCode('')
@@ -283,104 +325,11 @@ function PosDashboardPage() {
     setAmountReceived('')
     setCustomerName('')
     setCustomerPhone('')
-    setSaleNotes('')
   }
-
-  // 10. Camera Barcode Scanner Controls
-  const stopCameraStream = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
-    }
-  }, [])
-
-  const handleOpenScanner = () => {
-    setCameraError(null)
-    setScannerSupported(typeof window !== 'undefined' && 'BarcodeDetector' in window)
-    setScannerOpen(true)
-  }
-
-  useEffect(() => {
-    if (!scannerOpen) {
-      stopCameraStream()
-      return
-    }
-
-    let isMounted = true
-
-    navigator.mediaDevices
-      ?.getUserMedia({ video: { facingMode: 'environment' } })
-      .then((stream) => {
-        if (!isMounted) {
-          stream.getTracks().forEach((t) => t.stop())
-          return
-        }
-        streamRef.current = stream
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-        }
-      })
-      .catch((err) => {
-        if (isMounted) {
-          setCameraError(
-            err.name === 'NotAllowedError'
-              ? 'Quyền truy cập camera bị từ chối. Vui lòng cho phép quyền camera trong cài đặt trình duyệt.'
-              : 'Không thể kết nối đến camera thiết bị: ' + err.message
-          )
-        }
-      })
-
-    // Detection loop if BarcodeDetector is available
-    let intervalId = null
-    if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
-      const barcodeDetector = new window.BarcodeDetector({
-        formats: ['code_128', 'ean_13', 'ean_8', 'qr_code', 'upc_a'],
-      })
-
-      intervalId = setInterval(async () => {
-        if (!videoRef.current || scanLockRef.current || !videoRef.current.readyState || videoRef.current.readyState < 2) {
-          return
-        }
-        try {
-          const barcodes = await barcodeDetector.detect(videoRef.current)
-          if (barcodes && barcodes.length > 0) {
-            const code = barcodes[0].rawValue
-            if (code) {
-              scanLockRef.current = true
-              lookupBarcode(code)
-                .then((res) => {
-                  const product = res?.data || res
-                  handleAddToBill(product)
-                  addToast({ message: `Quét mã thành công: ${product.name}`, type: 'success' })
-                })
-                .catch(() => {
-                  addToast({ message: `Không tìm thấy nhạc cụ với mã vạch '${code}'.`, type: 'error' })
-                })
-                .finally(() => {
-                  setTimeout(() => {
-                    scanLockRef.current = false
-                  }, 1800)
-                })
-            }
-          }
-        } catch {
-          // ignore detection frame drops
-        }
-      }, 250)
-    }
-
-    return () => {
-      isMounted = false
-      if (intervalId) clearInterval(intervalId)
-      stopCameraStream()
-    }
-  }, [scannerOpen, stopCameraStream, handleAddToBill, addToast])
 
   return (
     <div className="flex flex-col gap-4">
+      <fieldset disabled={submittingSale || Boolean(successSale)} className="contents">
       {/* Top POS Action Toolbar */}
       <div className="bg-surface rounded-2xl border border-border p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Left: Product Search */}
@@ -399,6 +348,7 @@ function PosDashboardPage() {
           {searchKeyword && (
             <button
               type="button"
+              aria-label="Xóa từ khóa tìm kiếm"
               onClick={() => setSearchKeyword('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
             >
@@ -414,6 +364,7 @@ function PosDashboardPage() {
             <input
               type="text"
               placeholder="Nhập mã vạch / SKU..."
+              name="barcode" aria-label="Mã vạch hoặc SKU" maxLength={100}
               value={barcodeInput}
               onChange={(e) => setBarcodeInput(e.target.value)}
               className="px-3 py-2 text-xs rounded-xl border border-border bg-canvas focus:outline-none focus:ring-1 focus:ring-brand text-ink placeholder:text-muted w-44 font-mono"
@@ -430,8 +381,8 @@ function PosDashboardPage() {
           {/* Camera Scanner Trigger */}
           <button
             type="button"
-            onClick={handleOpenScanner}
-            className="px-3.5 py-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-700 hover:bg-emerald-100 text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+            onClick={() => setScannerOpen(true)}
+            className="px-3.5 py-2 rounded-xl bg-[#F6F7F8] border border-emerald-300 text-emerald-700 hover:bg-[#F6F7F8] text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Quét Camera</span>
@@ -454,6 +405,11 @@ function PosDashboardPage() {
             <div className="bg-surface rounded-2xl border border-border p-12 text-center flex flex-col items-center justify-center gap-3 shadow-xs">
               <div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin" />
               <span className="text-xs text-muted">Đang tải sản phẩm showroom...</span>
+            </div>
+          ) : catalogError ? (
+            <div role="alert" className="p-6 bg-white border border-border rounded-xl text-sm text-danger">
+              <p>{catalogError}</p>
+              <button type="button" onClick={() => loadCatalog(searchKeyword)} className="mt-2 underline">Thử lại</button>
             </div>
           ) : catalog.length === 0 ? (
             <div className="bg-surface rounded-2xl border border-border p-12 text-center flex flex-col items-center justify-center gap-2 shadow-xs">
@@ -540,7 +496,7 @@ function PosDashboardPage() {
             {billItems.length > 0 && (
               <button
                 type="button"
-                onClick={handleClearBill}
+                onClick={() => setClearConfirmOpen(true)}
                 className="text-xs font-semibold text-rose-600 hover:text-rose-700 transition-colors cursor-pointer"
               >
                 Xóa tất cả
@@ -583,6 +539,7 @@ function PosDashboardPage() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
+                      aria-label={`Giảm số lượng ${item.name}`}
                       onClick={() => handleUpdateQty(item.productId, -1)}
                       className="w-6 h-6 rounded-md border border-border bg-canvas hover:bg-surface-secondary text-ink font-bold flex items-center justify-center cursor-pointer transition-colors"
                     >
@@ -591,6 +548,7 @@ function PosDashboardPage() {
                     <span className="w-6 text-center font-bold text-ink font-mono">{item.quantity}</span>
                     <button
                       type="button"
+                      aria-label={`Tăng số lượng ${item.name}`}
                       onClick={() => handleUpdateQty(item.productId, 1)}
                       className="w-6 h-6 rounded-md border border-border bg-canvas hover:bg-surface-secondary text-ink font-bold flex items-center justify-center cursor-pointer transition-colors"
                     >
@@ -605,6 +563,7 @@ function PosDashboardPage() {
                     </span>
                     <button
                       type="button"
+                      aria-label={`Xóa ${item.name} khỏi hóa đơn`}
                       onClick={() => handleRemoveItem(item)}
                       className="text-muted hover:text-rose-600 transition-colors p-1 cursor-pointer"
                     >
@@ -623,9 +582,16 @@ function PosDashboardPage() {
               <input
                 type="text"
                 placeholder="Mã voucher (ví dụ: M4N10)..."
+                name="voucherCode" aria-label="Mã voucher" maxLength={50}
                 value={voucherCode}
-                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand font-mono uppercase text-ink placeholder:text-muted"
+                onChange={(e) => {
+                  voucherPreviewVersionRef.current += 1
+                  setVoucherCode(e.target.value.toUpperCase())
+                  setVoucherState((previous) => previous.applied || previous.loading
+                    ? { applied: false, discount: 0, message: 'Mã voucher đã thay đổi. Vui lòng áp dụng lại.', loading: false }
+                    : previous)
+                }}
+                className="min-w-0 flex-1 px-3 py-1.5 text-xs rounded-xl border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand font-mono uppercase text-ink placeholder:text-muted"
               />
               <button
                 type="button"
@@ -659,6 +625,10 @@ function PosDashboardPage() {
                   <span className="font-mono">-{formatCurrencyVND(discountAmount)}</span>
                 </div>
               )}
+              {Number(automaticDiscountAmount) > 0 && <div className="flex justify-between text-success"><span>Khuyến mãi tự động ({salePreview.data?.automaticPromotionCode}):</span><span>-{formatCurrencyVND(automaticDiscountAmount)}</span></div>}
+              {salePreview.data?.stockWarnings?.length > 0 && <div role="alert" className="text-danger space-y-1">{salePreview.data.stockWarnings.map((warning, index) => <p key={index}>{typeof warning === 'string' ? warning : warning.message}</p>)}</div>}
+              {salePreview.loading && <p role="status" className="text-muted">Đang tính hóa đơn…</p>}
+              {salePreview.error && <div role="alert" className="text-danger"><p>{salePreview.error}</p><button type="button" onClick={salePreview.retry} className="underline">Thử lại</button></div>}
               <div className="flex justify-between items-baseline pt-1 border-t border-border text-sm font-bold text-ink">
                 <span>TỔNG CỘNG:</span>
                 <span className="text-lg font-bold text-brand font-mono">{formatCurrencyVND(finalAmount)}</span>
@@ -674,7 +644,7 @@ function PosDashboardPage() {
                   onClick={() => setPaymentMethod('CASH')}
                   className={`py-2.5 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                     paymentMethod === 'CASH'
-                      ? 'border-brand bg-brand/5 text-brand shadow-xs'
+                      ? 'border-brand bg-[#F6F7F8] text-brand shadow-xs'
                       : 'border-border bg-surface text-muted hover:text-ink'
                   }`}
                 >
@@ -686,12 +656,12 @@ function PosDashboardPage() {
                   onClick={() => setPaymentMethod('BANK_TRANSFER')}
                   className={`py-2.5 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                     paymentMethod === 'BANK_TRANSFER'
-                      ? 'border-brand bg-brand/5 text-brand shadow-xs'
+                      ? 'border-brand bg-[#F6F7F8] text-brand shadow-xs'
                       : 'border-border bg-surface text-muted hover:text-ink'
                   }`}
                 >
                   <QrCode size={18} />
-                  <span>Chuyển khoản QR</span>
+                  <span>Chuyển khoản</span>
                 </button>
               </div>
             </div>
@@ -703,6 +673,7 @@ function PosDashboardPage() {
                   <label htmlFor="amount-received-input" className="font-semibold text-muted text-xs">Tiền khách đưa:</label>
                   <button
                     type="button"
+                    disabled={!salePreview.data || salePreview.loading || Boolean(salePreview.error)}
                     onClick={handleSetExactCash}
                     className="text-xs font-bold text-brand hover:underline cursor-pointer"
                   >
@@ -714,21 +685,21 @@ function PosDashboardPage() {
                   type="text"
                   inputMode="numeric"
                   placeholder="Nhập số tiền khách đưa..."
-                  value={amountReceived}
-                  onChange={(e) => setAmountReceived(e.target.value.replace(/\D/g, ''))}
+                  value={amountReceived ? new Intl.NumberFormat('vi-VN').format(Number(amountReceived)) : ''}
+                  onChange={(e) => setAmountReceived(e.target.value.replace(/\D/g, '').slice(0, 15))}
                   className={`w-full px-3 py-1.5 text-xs rounded-lg border font-mono font-bold text-ink focus:outline-none focus:ring-1 focus:ring-brand ${
-                    cashInsufficient ? 'border-rose-400 bg-rose-50/30' : 'border-border bg-canvas'
+                    cashInsufficient ? 'border-rose-400 bg-[#F6F7F8]' : 'border-border bg-canvas'
                   }`}
                 />
                 <div className="flex justify-between items-center text-xs pt-1 border-t border-border/40">
-                  <span className="text-muted">Tiền thừa trả khách:</span>
+                  <span className="text-muted">{cashInsufficient ? 'Tiền khách còn thiếu:' : 'Tiền thừa trả khách:'}</span>
                   <span
                     className={`font-mono font-bold ${
                       cashInsufficient ? 'text-rose-600' : 'text-emerald-700'
                     }`}
                   >
                     {cashInsufficient
-                      ? 'Khách đưa thiếu ' + formatCurrencyVND(finalAmount - numReceived)
+                      ? formatCurrencyVND(finalAmount - numReceived)
                       : formatCurrencyVND(amountChange)}
                   </span>
                 </div>
@@ -736,29 +707,31 @@ function PosDashboardPage() {
             )}
 
             {/* Customer Details (Optional) */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 placeholder="Tên khách (tùy chọn)"
+                name="customerName" aria-label="Tên khách hàng (tùy chọn)" autoComplete="name" maxLength={100}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand text-ink placeholder:text-muted"
+                className="min-w-0 flex-1 px-3 py-1.5 text-xs rounded-xl border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand text-ink placeholder:text-muted"
               />
               <input
                 type="text"
                 placeholder="SĐT khách (tùy chọn)"
+                name="customerPhone" aria-label="Số điện thoại khách hàng (tùy chọn)" autoComplete="tel"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(sanitizeVietnameseMobile(e.target.value))}
                 inputMode="numeric"
                 maxLength={10}
-                className="w-36 px-3 py-1.5 text-xs rounded-xl border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand text-ink placeholder:text-muted font-mono"
+                className="w-full sm:w-36 px-3 py-1.5 text-xs rounded-xl border border-border bg-surface focus:outline-none focus:ring-1 focus:ring-brand text-ink placeholder:text-muted font-mono"
               />
             </div>
 
             {/* Checkout Action Button */}
             <button
               type="button"
-              disabled={submittingSale || billItems.length === 0 || cashInsufficient}
+              disabled={submittingSale || billItems.length === 0 || cashInsufficient || salePreview.loading || Boolean(salePreview.error) || !salePreview.data || Boolean(salePreview.data?.stockWarnings?.length)}
               onClick={handleFinalizeSale}
               className="w-full mt-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
@@ -779,165 +752,11 @@ function PosDashboardPage() {
       </div>
 
       {/* Camera Scanner Modal */}
-      {scannerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="p-4 border-b border-border flex items-center justify-between bg-surface-secondary/40">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <h3 className="text-sm font-bold text-ink">Quét mã vạch camera</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setScannerOpen(false)}
-                className="text-muted hover:text-ink transition-colors cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
+      </fieldset>
+      <ConfirmDialog isOpen={clearConfirmOpen} title="Xóa toàn bộ hóa đơn đang nhập?" description="Các sản phẩm và voucher trong hóa đơn này sẽ được xóa." confirmLabel="Xóa hóa đơn" onConfirm={handleClearBill} onCancel={() => setClearConfirmOpen(false)} variant="danger" />
+      {scannerOpen && <PosScannerDialog onClose={() => setScannerOpen(false)} onProduct={handleAddToBill} />}
 
-            <div className="p-5 flex flex-col gap-4 text-xs">
-              {/* Video Viewport */}
-              <div className="relative w-full h-64 rounded-xl overflow-hidden bg-black flex items-center justify-center">
-                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-                {/* Aiming Reticle */}
-                <div className="absolute inset-x-8 inset-y-12 border-2 border-dashed border-emerald-400/80 rounded-lg pointer-events-none flex items-center justify-center">
-                  <span className="text-xs text-white/90 bg-black/60 px-2 py-0.5 rounded font-mono">
-                    Đặt mã vạch vào khung
-                  </span>
-                </div>
-              </div>
-
-              {cameraError && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 flex items-start gap-2">
-                  <CircleAlert size={16} className="shrink-0 mt-0.5" />
-                  <span>{cameraError}</span>
-                </div>
-              )}
-
-              {!scannerSupported && (
-                <div className="p-3 rounded-xl bg-[#F6F7F8] border border-amber-200 text-amber-800 text-xs">
-                  Trình duyệt chưa hỗ trợ tự động BarcodeDetector. Bạn có thể nhập mã vạch bằng tay bên dưới hoặc dùng máy quét USB / Bluetooth cầm tay.
-                </div>
-              )}
-
-              {/* Manual code fallback on modal */}
-              <form onSubmit={handleBarcodeSubmit} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nhập mã vạch hoặc SKU..."
-                  value={barcodeInput}
-                  onChange={(e) => setBarcodeInput(e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-xl border border-border bg-canvas focus:outline-none focus:ring-1 focus:ring-brand font-mono text-xs"
-                />
-                <button
-                  type="submit"
-                  disabled={lookupLoading || !barcodeInput.trim()}
-                  className="px-4 py-2 rounded-xl bg-brand text-white font-bold text-xs shadow-xs hover:bg-brand/90 transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {lookupLoading ? '...' : 'Thêm'}
-                </button>
-              </form>
-
-              <button
-                type="button"
-                onClick={() => setScannerOpen(false)}
-                className="w-full py-2 rounded-xl border border-border bg-canvas hover:bg-surface-secondary text-xs font-semibold text-ink transition-colors cursor-pointer"
-              >
-                Đóng máy quét
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sale Success Modal */}
-      {successSale && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="p-6 bg-emerald-600 text-white flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                <Check size={28} className="text-white" />
-              </div>
-              <h3 className="text-xl font-bold">Thanh toán thành công!</h3>
-              <span className="text-xs text-white/90">
-                Đã trừ tồn kho showroom an toàn và tạo hóa đơn bán hàng.
-              </span>
-            </div>
-
-            {/* Receipt Summary */}
-            <div className="p-6 flex flex-col gap-4 text-xs">
-              <div className="p-3.5 rounded-xl bg-canvas border border-border flex flex-col gap-2">
-                <div className="flex justify-between">
-                  <span className="text-muted">Mã hóa đơn:</span>
-                  <span className="font-bold text-ink font-mono">{successSale.invoiceCode}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Tổng tiền thanh toán:</span>
-                  <span className="font-bold text-brand font-mono text-sm">{formatCurrencyVND(successSale.finalAmount)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted">Phương thức:</span>
-                  <span className="font-medium text-ink">
-                    {successSale.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản QR'}
-                  </span>
-                </div>
-                {successSale.paymentMethod === 'CASH' && successSale.amountReceived && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-muted">Tiền khách đưa:</span>
-                      <span className="font-mono text-ink">{formatCurrencyVND(successSale.amountReceived)}</span>
-                    </div>
-                    <div className="flex justify-between text-emerald-700 font-bold">
-                      <span>Tiền thừa trả khách:</span>
-                      <span className="font-mono">{formatCurrencyVND(successSale.amountChange)}</span>
-                    </div>
-                  </>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-muted">Thu ngân:</span>
-                  <span className="text-ink">{successSale.staffName || user?.fullName}</span>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      addToast({ message: 'Đang chuẩn bị tải hóa đơn PDF...', type: 'info' })
-                      await downloadInvoicePdf(successSale.invoiceId)
-                      addToast({ message: 'Tải hóa đơn PDF thành công!', type: 'success' })
-                    } catch (err) {
-                      addToast({ message: err?.message || 'Không thể tải hóa đơn PDF', type: 'error' })
-                    }
-                  }}
-                  className="py-2.5 px-4 rounded-xl border border-brand bg-brand/5 hover:bg-brand/10 text-brand font-bold text-center transition-colors cursor-pointer"
-                >
-                  Tải hóa đơn PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="py-2.5 px-4 rounded-xl border border-border bg-canvas hover:bg-surface-secondary text-ink font-bold text-center transition-colors cursor-pointer"
-                >
-                  In hóa đơn
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleNewSale}
-                className="w-full py-3 rounded-xl bg-brand text-white font-bold text-sm shadow-md hover:bg-brand/90 transition-all cursor-pointer"
-              >
-                + Bắt đầu đơn hàng mới
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {successSale && <PosReceiptDialog sale={successSale} staffName={user?.fullName} onNewSale={handleNewSale} />}
     </div>
   )
 }

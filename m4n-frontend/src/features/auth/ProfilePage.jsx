@@ -56,13 +56,17 @@ function ProfilePage({
     if (trimmedPhone && !isValidVietnameseMobile(trimmedPhone)) {
       errors.phone = VIETNAMESE_MOBILE_ERROR
     }
+    if (address.trim().length > 255) errors.address = 'Địa chỉ không được vượt quá 255 ký tự.'
 
     setFieldErrors(errors)
+    const ids = { fullName: 'profile-fullname', phone: 'profile-phone', address: 'profile-address' }
+    document.getElementById(ids[Object.keys(errors)[0]])?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGeneralError('')
 
     if (!validate()) {
@@ -82,6 +86,7 @@ function ProfilePage({
         type: 'success',
       })
     } catch (err) {
+      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       const message = err?.message || 'Không thể cập nhật thông tin. Vui lòng thử lại sau.'
       setGeneralError(message)
     } finally {
@@ -208,6 +213,9 @@ function ProfilePage({
                   type="text"
                   autoComplete="name"
                   required
+                  maxLength={150}
+                  aria-invalid={Boolean(fieldErrors.fullName)}
+                  aria-describedby={fieldErrors.fullName ? 'profile-fullname-error' : undefined}
                   placeholder="Nhập họ và tên của bạn"
                   value={fullName}
                   disabled={isSubmitting}
@@ -225,7 +233,7 @@ function ProfilePage({
                 />
               </div>
               {fieldErrors.fullName && (
-                <p className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
+                <p id="profile-fullname-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
                   <CircleAlert size={13} />
                   <span>{fieldErrors.fullName}</span>
                 </p>
@@ -248,8 +256,12 @@ function ProfilePage({
                   id="profile-phone"
                   name="tel"
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  aria-invalid={Boolean(fieldErrors.phone)}
+                  aria-describedby={fieldErrors.phone ? 'profile-phone-error' : undefined}
                   autoComplete="tel"
-                  placeholder="Ví dụ: 0912 345 678"
+                  placeholder="Ví dụ: 0912345678"
                   value={phone}
                   disabled={isSubmitting}
                   onChange={(e) => {
@@ -266,7 +278,7 @@ function ProfilePage({
                 />
               </div>
               {fieldErrors.phone ? (
-                <p className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
+                <p id="profile-phone-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
                   <CircleAlert size={13} />
                   <span>{fieldErrors.phone}</span>
                 </p>
@@ -324,14 +336,22 @@ function ProfilePage({
                 <textarea
                   id="profile-address"
                   name="address"
+                  autoComplete="street-address"
+                  maxLength={255}
+                  aria-invalid={Boolean(fieldErrors.address)}
+                  aria-describedby={fieldErrors.address ? 'profile-address-error' : undefined}
                   rows={3}
                   placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
                   value={address}
                   disabled={isSubmitting}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    setAddress(e.target.value)
+                    if (fieldErrors.address) setFieldErrors((current) => ({ ...current, address: undefined }))
+                  }}
                   className="w-full rounded-2xl border border-border/80 bg-white p-4 pl-11 text-sm text-ink shadow-2xs min-h-[105px] resize-y transition-all duration-200 placeholder:text-subtle focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10"
                 />
               </div>
+              {fieldErrors.address && <p id="profile-address-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger">{fieldErrors.address}</p>}
               <p className="mt-1.5 text-xs text-muted">
                 {isCustomer
                   ? 'Địa chỉ này sẽ được ưu tiên tự động điền khi bạn mua nhạc cụ tại M4N.'

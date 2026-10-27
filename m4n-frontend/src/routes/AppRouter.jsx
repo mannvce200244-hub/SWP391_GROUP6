@@ -1,52 +1,58 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import CustomerLayout from '../layouts/CustomerLayout.jsx'
 import AuthLayout from '../layouts/AuthLayout.jsx'
 import AdminLayout from '../layouts/AdminLayout.jsx'
 import StaffLayout from '../layouts/StaffLayout.jsx'
 import PosLayout from '../layouts/PosLayout.jsx'
 
-import HomePage from '../pages/HomePage.jsx'
-import NotFoundPage from '../pages/NotFoundPage.jsx'
-import ProductDetailPage from '../pages/ProductDetailPage.jsx'
-import ProductListPage from '../pages/ProductListPage.jsx'
-import ArtisansPage from '../pages/ArtisansPage.jsx'
-import ArtisanDetailPage from '../pages/ArtisanDetailPage.jsx'
-import CraftVillageDetailPage from '../pages/CraftVillageDetailPage.jsx'
-import CartPage from '../pages/CartPage.jsx'
-import CheckoutPage from '../pages/CheckoutPage.jsx'
+const HomePage = lazy(() => import('../pages/HomePage.jsx'))
+const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'))
+const ProductDetailPage = lazy(() => import('../pages/ProductDetailPage.jsx'))
+const ProductListPage = lazy(() => import('../pages/ProductListPage.jsx'))
+const ArtisansPage = lazy(() => import('../pages/ArtisansPage.jsx'))
+const ArtisanDetailPage = lazy(() => import('../pages/ArtisanDetailPage.jsx'))
+const CraftVillageDetailPage = lazy(() => import('../pages/CraftVillageDetailPage.jsx'))
+const ArticlesPage = lazy(() => import('../pages/ArticlesPage.jsx'))
+const ArticleDetailPage = lazy(() => import('../pages/ArticleDetailPage.jsx'))
+const CartPage = lazy(() => import('../pages/CartPage.jsx'))
+const CheckoutPage = lazy(() => import('../pages/CheckoutPage.jsx'))
+const PaymentReturnPage = lazy(() => import('../pages/PaymentReturnPage.jsx'))
 
-import LoginPage from '../features/auth/LoginPage.jsx'
-import RegisterPage from '../features/auth/RegisterPage.jsx'
-import ForgotPasswordPage from '../features/auth/ForgotPasswordPage.jsx'
-import ResetPasswordPage from '../features/auth/ResetPasswordPage.jsx'
-import ProfilePage from '../features/auth/ProfilePage.jsx'
-import AccountSecurityPage from '../features/auth/AccountSecurityPage.jsx'
-import CustomerOrdersPage from '../features/orders/CustomerOrdersPage.jsx'
-import ForbiddenPage from '../pages/ForbiddenPage.jsx'
+const LoginPage = lazy(() => import('../features/auth/LoginPage.jsx'))
+const RegisterPage = lazy(() => import('../features/auth/RegisterPage.jsx'))
+const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage.jsx'))
+const ResetPasswordPage = lazy(() => import('../features/auth/ResetPasswordPage.jsx'))
+const ProfilePage = lazy(() => import('../features/auth/ProfilePage.jsx'))
+const AccountSecurityPage = lazy(() => import('../features/auth/AccountSecurityPage.jsx'))
+const CustomerOrdersPage = lazy(() => import('../features/orders/CustomerOrdersPage.jsx'))
+const ForbiddenPage = lazy(() => import('../pages/ForbiddenPage.jsx'))
 
-import StaffDashboardPage from '../pages/StaffDashboardPage.jsx'
-import PosDashboardPage from '../pages/PosDashboardPage.jsx'
-import PosTransactionHistoryPage from '../pages/PosTransactionHistoryPage.jsx'
-import AdminDashboardPage from '../pages/AdminDashboardPage.jsx'
-import AdminInstrumentsPage from '../pages/admin/AdminInstrumentsPage.jsx'
-import AdminCategoriesPage from '../pages/admin/AdminCategoriesPage.jsx'
-import AdminArtisansPage from '../pages/admin/AdminArtisansPage.jsx'
-import AdminCraftVillagesPage from '../pages/admin/AdminCraftVillagesPage.jsx'
-import AdminInventoryPage from '../pages/admin/AdminInventoryPage.jsx'
-import AdminOrdersPage from '../pages/admin/AdminOrdersPage.jsx'
-import AdminInvoicesPage from '../pages/admin/AdminInvoicesPage.jsx'
-import AdminVouchersPage from '../pages/admin/AdminVouchersPage.jsx'
-import AdminProductDetailPage from '../pages/admin/AdminProductDetailPage.jsx'
-import AdminUsersPage from '../pages/admin/AdminUsersPage.jsx'
-import StaffChatPage from '../pages/staff/StaffChatPage.jsx'
-import StaffProductsPage from '../pages/staff/StaffProductsPage.jsx'
-import StaffNotificationsPage from '../pages/staff/StaffNotificationsPage.jsx'
+const StaffDashboardPage = lazy(() => import('../pages/StaffDashboardPage.jsx'))
+const PosDashboardPage = lazy(() => import('../pages/PosDashboardPage.jsx'))
+const PosTransactionHistoryPage = lazy(() => import('../pages/PosTransactionHistoryPage.jsx'))
+const AdminDashboardPage = lazy(() => import('../pages/AdminDashboardPage.jsx'))
+const AdminInstrumentsPage = lazy(() => import('../pages/admin/AdminInstrumentsPage.jsx'))
+const AdminCategoriesPage = lazy(() => import('../pages/admin/AdminCategoriesPage.jsx'))
+const AdminArtisansPage = lazy(() => import('../pages/admin/AdminArtisansPage.jsx'))
+const AdminCraftVillagesPage = lazy(() => import('../pages/admin/AdminCraftVillagesPage.jsx'))
+const AdminArticlesPage = lazy(() => import('../pages/admin/AdminArticlesPage.jsx'))
+const AdminInventoryPage = lazy(() => import('../pages/admin/AdminInventoryPage.jsx'))
+const AdminOrdersPage = lazy(() => import('../pages/admin/AdminOrdersPage.jsx'))
+const AdminInvoicesPage = lazy(() => import('../pages/admin/AdminInvoicesPage.jsx'))
+const AdminVouchersPage = lazy(() => import('../pages/admin/AdminVouchersPage.jsx'))
+const AdminPricingPage = lazy(() => import('../pages/admin/AdminPricingPage.jsx'))
+const AdminProductDetailPage = lazy(() => import('../pages/admin/AdminProductDetailPage.jsx'))
+const AdminUsersPage = lazy(() => import('../pages/admin/AdminUsersPage.jsx'))
+const StaffChatPage = lazy(() => import('../pages/staff/StaffChatPage.jsx'))
+const StaffProductsPage = lazy(() => import('../pages/staff/StaffProductsPage.jsx'))
+const StaffNotificationsPage = lazy(() => import('../pages/staff/StaffNotificationsPage.jsx'))
 
 import RequireAuth from './RequireAuth.jsx'
 import RequireRole from './RequireRole.jsx'
 import {
   CUSTOMER_ROUTES,
   matchArtisanDetailPath,
+  matchArticleDetailPath,
   matchCraftVillageDetailPath,
   matchProductDetailPath,
   matchAdminInstrumentDetailPath,
@@ -61,7 +67,7 @@ function readCurrentPathname() {
     : currentPathname
 }
 
-function AppRouter() {
+function CurrentRoute() {
   const [pathname, setPathname] = useState(readCurrentPathname)
 
   useEffect(() => {
@@ -109,10 +115,12 @@ function AppRouter() {
     pathname === CUSTOMER_ROUTES.adminCategories ||
     pathname === CUSTOMER_ROUTES.adminArtisans ||
     pathname === CUSTOMER_ROUTES.adminCraftVillages ||
+    pathname === CUSTOMER_ROUTES.adminArticles ||
     pathname === CUSTOMER_ROUTES.adminInventory ||
     pathname === CUSTOMER_ROUTES.adminOrders ||
     pathname === CUSTOMER_ROUTES.adminInvoices ||
     pathname === CUSTOMER_ROUTES.adminVouchers ||
+    pathname === CUSTOMER_ROUTES.adminPricing ||
     pathname === CUSTOMER_ROUTES.adminProfile ||
     pathname === CUSTOMER_ROUTES.adminSecurity ||
     pathname === CUSTOMER_ROUTES.adminUsers
@@ -128,6 +136,8 @@ function AppRouter() {
       adminContent = <AdminArtisansPage />
     } else if (pathname === CUSTOMER_ROUTES.adminCraftVillages) {
       adminContent = <AdminCraftVillagesPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminArticles) {
+      adminContent = <AdminArticlesPage />
     } else if (pathname === CUSTOMER_ROUTES.adminInventory) {
       adminContent = <AdminInventoryPage />
     } else if (pathname === CUSTOMER_ROUTES.adminOrders) {
@@ -136,6 +146,8 @@ function AppRouter() {
       adminContent = <AdminInvoicesPage />
     } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
       adminContent = <AdminVouchersPage />
+    } else if (pathname === CUSTOMER_ROUTES.adminPricing) {
+      adminContent = <AdminPricingPage />
     } else if (pathname === CUSTOMER_ROUTES.adminProfile) {
       adminContent = (
         <ProfilePage
@@ -229,6 +241,8 @@ function AppRouter() {
     pageContent = <ProductListPage />
   } else if (pathname === CUSTOMER_ROUTES.artisans) {
     pageContent = <ArtisansPage />
+  } else if (pathname === CUSTOMER_ROUTES.articles) {
+    pageContent = <ArticlesPage />
   } else if (pathname === CUSTOMER_ROUTES.profile) {
     pageContent = (
       <RequireAuth>
@@ -259,17 +273,22 @@ function AppRouter() {
         <CheckoutPage />
       </RequireRole>
     )
+  } else if (pathname === CUSTOMER_ROUTES.paymentReturn) {
+    pageContent = <RequireRole allowedRoles={['CUSTOMER']}><PaymentReturnPage /></RequireRole>
   } else if (pathname === CUSTOMER_ROUTES.forbidden) {
     pageContent = <ForbiddenPage />
   } else {
     const productId = matchProductDetailPath(pathname)
     const artisanId = matchArtisanDetailPath(pathname)
+    const articleId = matchArticleDetailPath(pathname)
     const villageSlugOrId = matchCraftVillageDetailPath(pathname)
 
     if (productId) {
       pageContent = <ProductDetailPage key={productId} productId={productId} />
     } else if (artisanId) {
       pageContent = <ArtisanDetailPage artisanId={artisanId} key={artisanId} />
+    } else if (articleId) {
+      pageContent = <ArticleDetailPage articleId={articleId} key={articleId} />
     } else if (villageSlugOrId) {
       pageContent = (
         <CraftVillageDetailPage
@@ -289,4 +308,6 @@ function AppRouter() {
   )
 }
 
-export default AppRouter
+export default function AppRouter() {
+  return <Suspense fallback={<div role="status" className="min-h-screen flex items-center justify-center bg-white text-ink">Đang tải trang…</div>}><CurrentRoute /></Suspense>
+}

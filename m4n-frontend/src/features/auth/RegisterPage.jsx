@@ -38,6 +38,8 @@ function RegisterPage() {
       errors.email = 'Email không được để trống.'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       errors.email = 'Định dạng email không hợp lệ.'
+    } else if (trimmedEmail.length > 255) {
+      errors.email = 'Email không được vượt quá 255 ký tự.'
     }
 
     if (trimmedPhone && !isValidVietnameseMobile(trimmedPhone)) {
@@ -48,6 +50,8 @@ function RegisterPage() {
       errors.password = 'Mật khẩu không được để trống.'
     } else if (password.length < 8 || password.length > 72) {
       errors.password = 'Mật khẩu phải từ 8 đến 72 ký tự.'
+    } else if (new TextEncoder().encode(password).length > 72) {
+      errors.password = 'Mật khẩu quá dài. Vui lòng giảm số ký tự có dấu hoặc ký tự đặc biệt.'
     }
 
     if (!confirmPassword) {
@@ -57,11 +61,15 @@ function RegisterPage() {
     }
 
     setFieldErrors(errors)
+    const firstField = Object.keys(errors)[0]
+    const ids = { fullName: 'reg-fullname', email: 'reg-email', phone: 'reg-phone', password: 'reg-password', confirmPassword: 'reg-confirm-password' }
+    document.getElementById(ids[firstField])?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGeneralError('')
 
     if (!validate()) {
@@ -83,6 +91,7 @@ function RegisterPage() {
         type: 'success',
       })
     } catch (err) {
+      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       const message =
         err?.status === 409
           ? 'Địa chỉ email này đã được đăng ký trên hệ thống.'
@@ -182,9 +191,12 @@ function RegisterPage() {
                 id="reg-phone"
                 name="tel"
                 type="tel"
+                inputMode="numeric"
+                maxLength={10}
                 label="Số điện thoại"
                 autoComplete="tel"
                 placeholder="0901234567"
+                helperText="10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09."
                 value={phone}
                 error={fieldErrors.phone}
                 disabled={isSubmitting}

@@ -46,6 +46,8 @@ function AccountSecurityPage({
       errors.newPassword = 'Vui lòng nhập mật khẩu mới.'
     } else if (newPassword.length < 8 || newPassword.length > 72) {
       errors.newPassword = 'Mật khẩu mới phải từ 8 đến 72 ký tự.'
+    } else if (new TextEncoder().encode(newPassword).length > 72) {
+      errors.newPassword = 'Mật khẩu quá dài. Vui lòng giảm số ký tự có dấu hoặc ký tự đặc biệt.'
     }
 
     if (!confirmPassword) {
@@ -59,11 +61,14 @@ function AccountSecurityPage({
     }
 
     setFieldErrors(errors)
+    const ids = { currentPassword: 'sec-current-pwd', newPassword: 'sec-new-pwd', confirmPassword: 'sec-confirm-pwd' }
+    document.getElementById(ids[Object.keys(errors)[0]])?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleChangePassword = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGeneralError('')
 
     if (!validate()) {
@@ -82,10 +87,9 @@ function AccountSecurityPage({
         message: 'Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại.',
         type: 'success',
       })
-      setTimeout(() => {
-        navigateTo(CUSTOMER_ROUTES.login)
-      }, 1200)
+      navigateTo(CUSTOMER_ROUTES.login)
     } catch (err) {
+      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       setGeneralError(
         err?.message || 'Không thể đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại.'
       )
@@ -94,6 +98,7 @@ function AccountSecurityPage({
   }
 
   const handleConfirmLogoutAll = async () => {
+    if (isLoggingOutAll) return
     setIsLoggingOutAll(true)
     try {
       await logoutAll()
@@ -165,6 +170,8 @@ function AccountSecurityPage({
                   type={showCurrentPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   required
+                  aria-invalid={Boolean(fieldErrors.currentPassword)}
+                  aria-describedby={fieldErrors.currentPassword ? 'sec-current-pwd-error' : undefined}
                   placeholder="Nhập mật khẩu hiện tại"
                   value={currentPassword}
                   disabled={isSubmitting}
@@ -190,7 +197,7 @@ function AccountSecurityPage({
                 </button>
               </div>
               {fieldErrors.currentPassword && (
-                <p className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
+                <p id="sec-current-pwd-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
                   <CircleAlert size={13} />
                   <span>{fieldErrors.currentPassword}</span>
                 </p>
@@ -215,6 +222,8 @@ function AccountSecurityPage({
                   type={showNewPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
+                  aria-invalid={Boolean(fieldErrors.newPassword)}
+                  aria-describedby={fieldErrors.newPassword ? 'sec-new-pwd-error' : 'sec-new-pwd-helper'}
                   placeholder="Nhập mật khẩu mới"
                   value={newPassword}
                   disabled={isSubmitting}
@@ -240,12 +249,12 @@ function AccountSecurityPage({
                 </button>
               </div>
               {fieldErrors.newPassword ? (
-                <p className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
+                <p id="sec-new-pwd-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
                   <CircleAlert size={13} />
                   <span>{fieldErrors.newPassword}</span>
                 </p>
               ) : (
-                <p className="mt-1.5 text-xs text-muted">
+                <p id="sec-new-pwd-helper" className="mt-1.5 text-xs text-muted">
                   Tối thiểu 8 ký tự, khuyến khích kết hợp chữ hoa, chữ thường và số.
                 </p>
               )}
@@ -269,6 +278,8 @@ function AccountSecurityPage({
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   required
+                  aria-invalid={Boolean(fieldErrors.confirmPassword)}
+                  aria-describedby={fieldErrors.confirmPassword ? 'sec-confirm-pwd-error' : undefined}
                   placeholder="Nhập lại mật khẩu mới vừa nhập"
                   value={confirmPassword}
                   disabled={isSubmitting}
@@ -294,7 +305,7 @@ function AccountSecurityPage({
                 </button>
               </div>
               {fieldErrors.confirmPassword && (
-                <p className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
+                <p id="sec-confirm-pwd-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
                   <CircleAlert size={13} />
                   <span>{fieldErrors.confirmPassword}</span>
                 </p>
@@ -332,7 +343,7 @@ function AccountSecurityPage({
                 Đăng xuất khỏi tất cả thiết bị
               </h3>
               <p className="text-xs text-muted mt-1 leading-relaxed">
-                Thu hồi phiên làm việc trên mọi thiết bị khác. Bạn sẽ cần đăng nhập lại trên các thiết bị đã bị thu hồi.
+                Thu hồi phiên làm việc trên mọi thiết bị, bao gồm thiết bị hiện tại. Bạn sẽ cần đăng nhập lại.
               </p>
             </div>
           </div>

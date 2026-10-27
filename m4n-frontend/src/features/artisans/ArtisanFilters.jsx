@@ -18,7 +18,7 @@ function ArtisanFilters({
   )
 
   const searchPlaceholder = isArtisans
-    ? 'Tìm theo tên nghệ nhân, nghề thủ công...'
+    ? 'Tìm theo tên nghệ nhân, tiểu sử...'
     : 'Tìm theo tên làng nghề, địa phương...'
 
   return (
@@ -103,7 +103,7 @@ function ArtisanFilters({
             >
               <option value="featured">Thứ tự mặc định</option>
               <option value="az">Tên A → Z</option>
-              <option value="newest">Mới cập nhật</option>
+              <option value="newest">Mới thêm</option>
             </select>
           </div>
         </div>

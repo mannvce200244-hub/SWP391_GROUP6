@@ -14,5 +14,17 @@ public record CheckoutPreviewResponse(
         BigDecimal finalAmount,
         String finalAmountDisplay,
         boolean voucherApplied,
-        String voucherMessage
+        String voucherMessage,
+        BigDecimal manualDiscountAmount,
+        BigDecimal automaticDiscountAmount,
+        String automaticPromotionCode,
+        BigDecimal originalTotalAmount,
+        BigDecimal productDiscountAmount,
+        BigDecimal baseShippingFee,
+        BigDecimal shippingDiscountAmount,
+        BigDecimal shippingFee,
+        String shippingVoucherCode,
+        boolean freeShippingApplied,
+        boolean shippingVoucherApplied,
+        String shippingVoucherMessage
 ) {}
