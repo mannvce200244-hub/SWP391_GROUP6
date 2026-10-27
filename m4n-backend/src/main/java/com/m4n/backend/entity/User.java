@@ -60,6 +60,9 @@ public class User {
     @Column(name = "version")
     private Long version;
 
+    @Column(name = "session_version", nullable = false, columnDefinition = "bigint default 0")
+    private long sessionVersion;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

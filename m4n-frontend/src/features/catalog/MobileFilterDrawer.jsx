@@ -1,7 +1,6 @@
-import { useEffect, useRef } from 'react'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
 import { X } from 'lucide-react'
 import ProductFilters from './ProductFilters.jsx'
-import validateProductFilters from './productFilterValidation.js'
 
 function MobileFilterDrawer({
   busy = false,
@@ -12,32 +11,7 @@ function MobileFilterDrawer({
   onReset,
   value,
 }) {
-  const drawerRef = useRef(null)
-
-  // Lock body scroll when drawer is open
-  useEffect(() => {
-    if (isOpen) {
-      const originalOverflow = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = originalOverflow
-      }
-    }
-  }, [isOpen])
-
-  // Handle Escape key
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  const drawerRef = useDialogFocus(isOpen, onClose)
 
   if (!isOpen) return null
 
@@ -47,11 +21,7 @@ function MobileFilterDrawer({
   }
 
   const handleApplyClick = () => {
-    const validation = validateProductFilters(value)
-    if (Object.keys(validation.errors).length > 0) {
-      return
-    }
-    handleApplyAndClose(validation.normalizedFilters)
+    drawerRef.current?.querySelector('form')?.requestSubmit()
   }
 
   const handleResetAndClose = () => {
@@ -76,6 +46,7 @@ function MobileFilterDrawer({
       {/* Slide-over Drawer Panel */}
       <div
         ref={drawerRef}
+        tabIndex={-1}
         className="relative w-full max-w-sm h-full bg-surface shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200"
       >
         {/* Drawer Header */}

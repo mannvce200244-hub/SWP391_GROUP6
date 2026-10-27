@@ -58,7 +58,22 @@ export async function downloadInvoicePdf(id) {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  window.URL.revokeObjectURL(url)
+  setTimeout(() => window.URL.revokeObjectURL(url), 30000)
+}
+
+export async function openInvoicePdf(id) {
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) throw new Error('Trình duyệt chặn cửa sổ PDF. Vui lòng cho phép cửa sổ bật lên hoặc tải hóa đơn PDF.')
+  printWindow.opener = null
+  try {
+    const blob = await apiClient.getBlob(`/pos/invoices/${encodeURIComponent(id)}/pdf`)
+    const url = window.URL.createObjectURL(blob)
+    printWindow.location.href = url
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+  } catch (error) {
+    printWindow.close()
+    throw error
+  }
 }
 
 export async function listInvoices({ page = 0, size = 15, search = '' } = {}) {
@@ -78,5 +93,6 @@ export default {
   finalizeSale,
   getInvoice,
   downloadInvoicePdf,
+  openInvoicePdf,
   listInvoices,
 }

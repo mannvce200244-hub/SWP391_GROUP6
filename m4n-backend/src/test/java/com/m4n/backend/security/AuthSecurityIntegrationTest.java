@@ -286,15 +286,15 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
-    void shouldHandleForgotPasswordWithGenericResponse() throws Exception {
+    void unavailableResetDeliveryReturnsTheSameServiceUnavailableResponseForEveryEmail() throws Exception {
         com.m4n.backend.dto.request.ForgotPasswordRequest request =
                 new com.m4n.backend.dto.request.ForgotPasswordRequest("customer@m4n.vn");
 
         mockMvc.perform(post("/api/v1/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi."));
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("Dịch vụ gửi hướng dẫn đặt lại mật khẩu chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ."));
 
         // Non-existent email should also return the same generic message
         com.m4n.backend.dto.request.ForgotPasswordRequest unknownRequest =
@@ -303,7 +303,7 @@ class AuthSecurityIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(unknownRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi."));
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("Dịch vụ gửi hướng dẫn đặt lại mật khẩu chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ."));
     }
 }

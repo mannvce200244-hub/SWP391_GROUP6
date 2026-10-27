@@ -3,6 +3,7 @@ import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import ProductCard from '../features/catalog/ProductCard.jsx'
+import RelatedArticles from '../features/content/RelatedArticles.jsx'
 import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
 import artisanService from '../services/artisanService.js'
@@ -54,6 +55,7 @@ function ArtisanDetailPage({ artisanId }) {
               ...current,
               products: Array.isArray(products) ? products : [],
               productsLoading: false,
+              productsError: false,
             }))
           }
         } catch {
@@ -62,6 +64,7 @@ function ArtisanDetailPage({ artisanId }) {
               ...current,
               products: [],
               productsLoading: false,
+              productsError: true,
             }))
           }
         }
@@ -156,7 +159,7 @@ function ArtisanDetailPage({ artisanId }) {
     : []
 
   return (
-    <main className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       <div className="border-b border-border bg-surface-secondary">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
           <nav
@@ -261,6 +264,8 @@ function ArtisanDetailPage({ artisanId }) {
                 <div className="aspect-3/4 animate-pulse rounded-xl bg-white" key={item} />
               ))}
             </div>
+          ) : pageState.productsError ? (
+            <ErrorState message="Không thể tải tác phẩm của nghệ nhân. Vui lòng thử lại." onRetry={handleRetry} />
           ) : products.length > 0 ? (
             <div className="mt-8 grid grid-cols-2 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-4">
               {products.map((product) => (
@@ -283,7 +288,8 @@ function ArtisanDetailPage({ artisanId }) {
           )}
         </div>
       </section>
-    </main>
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"><RelatedArticles key={artisan.id} artisanId={artisan.id} /></div>
+    </div>
   )
 }
 

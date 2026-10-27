@@ -5,11 +5,10 @@ import com.m4n.backend.dto.response.TopProductResponse;
 import com.m4n.backend.entity.Order;
 import com.m4n.backend.entity.OrderStatus;
 import com.m4n.backend.repository.InventoryRepository;
-import com.m4n.backend.repository.InvoiceItemRepository;
 import com.m4n.backend.repository.InvoiceRepository;
 import com.m4n.backend.repository.OrderItemRepository;
 import com.m4n.backend.repository.OrderRepository;
-import com.m4n.backend.serviceImpl.DashboardServiceImpl;
+import com.m4n.backend.service.serviceImpl.DashboardServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,9 +41,6 @@ class DashboardServiceTest {
     @Mock
     private InvoiceRepository invoiceRepository;
 
-    @Mock
-    private InvoiceItemRepository invoiceItemRepository;
-
     private DashboardService dashboardService;
 
     @BeforeEach
@@ -53,8 +49,7 @@ class DashboardServiceTest {
                 orderRepository,
                 orderItemRepository,
                 inventoryRepository,
-                invoiceRepository,
-                invoiceItemRepository
+                invoiceRepository
         );
     }
 
@@ -73,8 +68,8 @@ class DashboardServiceTest {
         when(orderRepository.countByStatus(OrderStatus.CANCELLED)).thenReturn(1L);
 
         when(inventoryRepository.sumTotalQuantity()).thenReturn(75L);
-        when(inventoryRepository.countByQuantityGreaterThan(5)).thenReturn(4L);
-        when(inventoryRepository.countByQuantityBetween(1, 5)).thenReturn(1L);
+        when(inventoryRepository.countAvailableProducts()).thenReturn(4L);
+        when(inventoryRepository.countLowStockProducts()).thenReturn(1L);
         when(inventoryRepository.countByQuantity(0)).thenReturn(0L);
 
         TopProductResponse topOnline = TopProductResponse.builder()
@@ -82,22 +77,11 @@ class DashboardServiceTest {
                 .productCode("TRN-001")
                 .productName("Đàn Tranh 16 Dây")
                 .categoryName("Nhạc cụ dây")
-                .quantitySold(2L)
-                .revenue(new BigDecimal("17000000"))
+                .quantitySold(3L)
+                .revenue(new BigDecimal("25500000"))
                 .build();
-        when(orderItemRepository.findTopSellingProducts(eq(OrderStatus.COMPLETED), any(PageRequest.class)))
+        when(orderItemRepository.findTopSellingProductsAcrossChannels(eq(OrderStatus.COMPLETED), any(PageRequest.class)))
                 .thenReturn(List.of(topOnline));
-
-        TopProductResponse topPos = TopProductResponse.builder()
-                .productId(1L)
-                .productCode("TRN-001")
-                .productName("Đàn Tranh 16 Dây")
-                .categoryName("Nhạc cụ dây")
-                .quantitySold(1L)
-                .revenue(new BigDecimal("8500000"))
-                .build();
-        when(invoiceItemRepository.findTopSellingProducts(any(PageRequest.class)))
-                .thenReturn(List.of(topPos));
 
         Order recentOrder = Order.builder()
                 .id(1L)

@@ -1,3 +1,4 @@
+import useDialogFocus from '../hooks/useDialogFocus.js'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Eye, Printer, Search, X } from 'lucide-react'
 import posService from '../services/posService.js'
@@ -30,8 +31,11 @@ export default function PosTransactionHistoryPage() {
   const [error, setError] = useState('')
   const [selectedInvoice, setSelectedInvoice] = useState(null)
   const [detailLoading, setDetailLoading] = useState(false)
-  const dialogRef = useRef(null)
-  const closeButtonRef = useRef(null)
+  const dialogRef = useDialogFocus(Boolean(selectedInvoice), () => setSelectedInvoice(null))
+  const detailPending = useRef(false)
+  const pdfPending = useRef(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -67,44 +71,11 @@ export default function PosTransactionHistoryPage() {
     return () => {
       active = false
     }
-  }, [page, debouncedSearch])
-
-  useEffect(() => {
-    if (!selectedInvoice) return undefined
-
-    const previouslyFocused = document.activeElement
-    closeButtonRef.current?.focus()
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setSelectedInvoice(null)
-        return
-      }
-      if (event.key !== 'Tab' || !dialogRef.current) return
-      const focusable = dialogRef.current.querySelectorAll(
-        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      )
-      if (focusable.length === 0) return
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    const originalOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = originalOverflow
-      previouslyFocused?.focus?.()
-    }
-  }, [selectedInvoice])
+  }, [page, debouncedSearch, reloadKey])
 
   const handleViewInvoice = async (invoiceId) => {
+    if (detailPending.current) return
+    detailPending.current = true
     setDetailLoading(true)
     try {
       setSelectedInvoice(await posService.getInvoice(invoiceId))
@@ -114,11 +85,15 @@ export default function PosTransactionHistoryPage() {
         type: 'error',
       })
     } finally {
+      detailPending.current = false
       setDetailLoading(false)
     }
   }
 
   const handlePrintInvoice = async (invoiceId) => {
+    if (pdfPending.current) return
+    pdfPending.current = true
+    setPdfLoading(true)
     try {
       await posService.downloadInvoicePdf(invoiceId)
       addToast({ message: 'Đã tải hóa đơn PDF.', type: 'success' })
@@ -127,6 +102,9 @@ export default function PosTransactionHistoryPage() {
         message: requestError.message || 'Không thể tải hóa đơn PDF.',
         type: 'error',
       })
+    } finally {
+      pdfPending.current = false
+      setPdfLoading(false)
     }
   }
 
@@ -158,6 +136,7 @@ export default function PosTransactionHistoryPage() {
           <div className="p-10 text-center" role="alert">
             <p className="font-semibold text-danger">Không thể tải dữ liệu</p>
             <p className="mt-1 text-sm text-muted">{error}</p>
+            <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="mt-3 underline text-brand">Thử lại</button>
           </div>
         ) : invoices.length === 0 ? (
           <div className="p-10 text-center">
@@ -198,7 +177,7 @@ export default function PosTransactionHistoryPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handlePrintInvoice(invoice.invoiceId)}
+                          disabled={pdfLoading} onClick={() => handlePrintInvoice(invoice.invoiceId)}
                           className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border text-secondary hover:bg-surface-secondary hover:text-brand"
                           aria-label={`Tải PDF hóa đơn ${invoice.invoiceCode}`}
                         >
@@ -239,16 +218,16 @@ export default function PosTransactionHistoryPage() {
       </div>
 
       {selectedInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="pos-invoice-detail-title">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button type="button" className="absolute inset-0 bg-black/50" onClick={() => setSelectedInvoice(null)} aria-label="Đóng chi tiết hóa đơn" />
-          <div ref={dialogRef} className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-xl border border-border bg-white p-5 shadow-xl">
+          <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="pos-invoice-detail-title" className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-xl border border-border bg-white p-5 shadow-xl">
             <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-brand">Hóa đơn POS</p>
                 <h2 id="pos-invoice-detail-title" className="mt-1 text-xl font-bold text-ink">{selectedInvoice.invoiceCode}</h2>
                 <p className="mt-1 text-sm text-muted">{formatDate(selectedInvoice.createdAt)}</p>
               </div>
-              <button ref={closeButtonRef} type="button" onClick={() => setSelectedInvoice(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-surface-secondary" aria-label="Đóng">
+              <button data-dialog-initial-focus type="button" onClick={() => setSelectedInvoice(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg hover:bg-surface-secondary" aria-label="Đóng">
                 <X size={18} aria-hidden="true" />
               </button>
             </div>
@@ -280,8 +259,8 @@ export default function PosTransactionHistoryPage() {
               <strong className="text-lg tabular-nums text-brand">{selectedInvoice.formattedFinalAmount}</strong>
             </div>
             <div className="mt-4 flex justify-end">
-              <button type="button" onClick={() => handlePrintInvoice(selectedInvoice.invoiceId)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover">
-                <Printer size={16} aria-hidden="true" /> Tải PDF / In lại
+              <button type="button" disabled={pdfLoading} onClick={() => handlePrintInvoice(selectedInvoice.invoiceId)} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-hover">
+                <Printer size={16} aria-hidden="true" /> Tải PDF để in lại
               </button>
             </div>
           </div>

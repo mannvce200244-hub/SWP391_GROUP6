@@ -12,31 +12,31 @@
      Approved: DESIGN_SYSTEM.md cool-neutral foundation
      ================================================== */
 
-  /* PRIMARY: Deep Emerald Teal (fresh, elegant, soothing, artisan nature) */
-  --color-brand: #0D9488;
-  --color-brand-hover: #0F766E;
-  --color-brand-active: #115E59;
-  --color-brand-deep: #115E59;
-  --color-brand-soft: #F0FDFA;
-  --color-brand-border: #CCFBF1;
+  /* PRIMARY: Approved lacquer red */
+  --color-brand: #A62F25;
+  --color-brand-hover: #84231D;
+  --color-brand-active: #721D18;
+  --color-brand-deep: #721D18;
+  --color-brand-soft: #F6F7F8;
+  --color-brand-border: #F7D7D4;
 
   /* SECONDARY: Deep Jade (approved #2F5A50) */
   --color-jade: #2F5A50;
   --color-jade-hover: #24483F;
   --color-jade-active: #1D3B34;
-  --color-jade-soft: #EDF4F1;
+  --color-jade-soft: #F6F7F8;
   --color-jade-border: #D5E5E0;
 
   /* ACCENT: Warm Gold Highlight */
   --color-gold: #C28B2C;
   --color-gold-hover: #A57323;
-  --color-gold-soft: #FDF8ED;
+  --color-gold-soft: #F6F7F8;
   --color-gold-border: #F5E8C7;
 
   /* ACCENT: Muted Coral Warm Touch */
   --color-coral: #D96B5F;
   --color-coral-hover: #C5594E;
-  --color-coral-soft: #FDF2F1;
+  --color-coral-soft: #F6F7F8;
   --color-coral-border: #F7D9D5;
 
   /* BACKGROUND & SURFACES — Approved cool-neutral foundation */
@@ -45,7 +45,7 @@
   --color-surface: #FFFFFF;
   --color-surface-raised: #FFFFFF;
   --color-surface-muted: #F6F7F8;
-  --color-surface-subtle: #F2F4F5;
+  --color-surface-subtle: #F6F7F8;
   --color-surface-secondary: #F6F7F8;
 
   /* INK & TYPOGRAPHY — Approved charcoal */
@@ -64,21 +64,21 @@
   --color-control-border: #CDD2D5;
 
   /* SEMANTIC SHORTCUTS */
-  --color-primary: #0D9488;
-  --color-primary-hover: #0F766E;
-  --color-primary-soft: #F0FDFA;
-  --color-primary-border: #CCFBF1;
+  --color-primary: #A62F25;
+  --color-primary-hover: #84231D;
+  --color-primary-soft: #F6F7F8;
+  --color-primary-border: #F7D7D4;
 
   --color-danger: #EF4444;
-  --color-danger-soft: #FEF2F2;
+  --color-danger-soft: #F6F7F8;
   --color-danger-border: #FECACA;
 
   --color-success: #0D9488;
-  --color-success-soft: #F0FDFA;
+  --color-success-soft: #F6F7F8;
   --color-success-border: #CCFBF1;
 
   --color-warning: #856404;
-  --color-warning-soft: #FFF9E6;
+  --color-warning-soft: #F6F7F8;
   --color-warning-border: #FFEBAA;
 
   --color-footer: #17191B;
@@ -103,23 +103,23 @@
   --background: #FFFFFF;
   --surface: #FFFFFF;
   --surface-muted: #F6F7F8;
-  --surface-subtle: #F2F4F5;
+  --surface-subtle: #F6F7F8;
   --foreground: #17191B;
   --foreground-secondary: #2C3033;
   --muted: #5F646A;
   --border: #E3E6E8;
   --border-strong: #CDD2D5;
-  --brand: #0D9488;
-  --brand-hover: #0F766E;
-  --brand-active: #115E59;
-  --brand-soft: #F0FDFA;
+  --brand: #A62F25;
+  --brand-hover: #84231D;
+  --brand-active: #721D18;
+  --brand-soft: #F6F7F8;
   --jade: #2F5A50;
   --jade-hover: #24483F;
-  --jade-soft: #EDF4F1;
+  --jade-soft: #F6F7F8;
   --gold: #C28B2C;
-  --gold-soft: #FDF8ED;
+  --gold-soft: #F6F7F8;
   --coral: #D96B5F;
-  --coral-soft: #FDF2F1;
+  --coral-soft: #F6F7F8;
 }
 
 /* Base Document Styles */
@@ -231,5 +231,46 @@ summary:focus-visible,
   .scroll-reveal {
     opacity: 1;
     transform: none;
+  }
+}
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+
+  body:has(#printable-slip) > #root {
+    display: none !important;
+  }
+
+  body:has(#printable-slip) .print-slip-overlay,
+  body:has(#printable-slip) .print-slip-dialog {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  body:has(#printable-slip) .print-slip-actions {
+    display: none !important;
+  }
+
+  #printable-slip {
+    position: static !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  #printable-slip tr {
+    break-inside: avoid;
   }
 }

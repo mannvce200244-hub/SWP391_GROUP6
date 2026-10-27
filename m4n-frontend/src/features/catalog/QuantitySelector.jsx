@@ -23,8 +23,8 @@ function QuantitySelector({
       onChange(min)
       return
     }
-    const parsed = parseInt(raw, 10)
-    if (!Number.isNaN(parsed)) {
+    const parsed = Number(raw)
+    if (Number.isSafeInteger(parsed)) {
       const clamped = Math.max(min, Math.min(max, parsed))
       onChange(clamped)
     }
@@ -48,6 +48,8 @@ function QuantitySelector({
           className="w-12 h-full text-center text-sm font-semibold text-ink bg-transparent focus:outline-none border-x border-border/70 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           disabled={disabled}
           inputMode="numeric"
+          name="quantity"
+          step={1}
           max={max}
           min={min}
           onChange={handleInputChange}

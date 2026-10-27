@@ -9,7 +9,8 @@ import com.m4n.backend.exception.ResourceInUseException;
 import com.m4n.backend.repository.ArtisanRepository;
 import com.m4n.backend.repository.CraftVillageRepository;
 import com.m4n.backend.repository.ProductRepository;
-import com.m4n.backend.serviceImpl.ArtisanServiceImpl;
+import com.m4n.backend.repository.ArticleRepository;
+import com.m4n.backend.service.serviceImpl.ArtisanServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,11 +39,22 @@ class ArtisanServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private ArticleRepository articleRepository;
+
     private ArtisanService artisanService;
 
     @BeforeEach
     void setUp() {
-        artisanService = new ArtisanServiceImpl(artisanRepository, craftVillageRepository, productRepository);
+        artisanService = new ArtisanServiceImpl(artisanRepository, craftVillageRepository, productRepository, articleRepository);
+    }
+
+    @Test
+    void shouldPreserveArtisanLinkedToContent() {
+        when(artisanRepository.findById(7L)).thenReturn(Optional.of(Artisan.builder().id(7L).name("Nghệ nhân").build()));
+        when(articleRepository.existsByArtisanId(7L)).thenReturn(true);
+        assertThatThrownBy(() -> artisanService.deleteArtisan(7L)).isInstanceOf(ResourceInUseException.class);
+        org.mockito.Mockito.verify(artisanRepository, org.mockito.Mockito.never()).delete(any(Artisan.class));
     }
 
     @Test
@@ -52,7 +64,7 @@ class ArtisanServiceTest {
         Artisan artisan = Artisan.builder().id(1L).name("Nguyễn Văn A").craftVillage(village).build();
 
         when(artisanRepository.findAll(any(Sort.class))).thenReturn(List.of(artisan));
-        when(productRepository.countByArtisanId(1L)).thenReturn(3L);
+        when(productRepository.countProductsGroupedByArtisanId()).thenReturn(java.util.Collections.singletonList(new Object[] {1L, 3L}));
 
         List<ArtisanDetailResponse> result = artisanService.listAdminArtisans();
 

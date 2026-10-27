@@ -11,6 +11,9 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -19,6 +22,30 @@ import java.util.Map;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class})
+    public ResponseEntity<ApiErrorResponse> handleMalformedRequest(Exception ex, HttpServletRequest request) {
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Dữ liệu gửi lên không đúng định dạng hoặc thiếu trường bắt buộc.")
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiErrorResponse> handleResponseStatus(ResponseStatusException ex, HttpServletRequest request) {
+        ApiErrorResponse errorResponse = ApiErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(ex.getStatusCode().value())
+                .error(HttpStatus.valueOf(ex.getStatusCode().value()).getReasonPhrase())
+                .message(ex.getReason())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(ex.getStatusCode()).body(errorResponse);
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValid(
@@ -224,7 +251,7 @@ public class GlobalExceptionHandler {
                 .timestamp(Instant.now())
                 .status(HttpStatus.CONFLICT.value())
                 .error("USER_MODIFIED_BY_ANOTHER_OPERATOR")
-                .message("Thông tin người dùng đã được thay đổi bởi quản trị viên khác. Dữ liệu mới nhất đã được tải lại. Vui lòng kiểm tra trước khi lưu lại.")
+                .message("Dữ liệu đã được thay đổi bởi quản trị viên khác. Vui lòng tải lại và kiểm tra trước khi lưu lại.")
                 .path(request.getRequestURI())
                 .build();
 
@@ -336,6 +363,38 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    @ExceptionHandler(PaymentProviderException.class)
+    public ResponseEntity<ApiErrorResponse> handlePaymentProvider(PaymentProviderException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ApiErrorResponse.builder().timestamp(Instant.now())
+                .status(502).error("PAYMENT_PROVIDER_UNVERIFIED")
+                .message("Chưa xác minh được kết quả từ VNPay. Vui lòng đối soát lại.").path(request.getRequestURI()).build());
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnsupportedMethod(
+            org.springframework.web.HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        var headers = new org.springframework.http.HttpHeaders();
+        if (ex.getSupportedHttpMethods() != null) headers.setAllow(ex.getSupportedHttpMethods());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).headers(headers)
+                .body(ApiErrorResponse.builder().timestamp(Instant.now())
+                        .status(405).error("METHOD_NOT_ALLOWED")
+                        .message("Phương thức HTTP không được hỗ trợ cho chức năng này.")
+                        .path(request.getRequestURI()).build());
+    }
+
+    @ExceptionHandler({org.springframework.web.HttpMediaTypeNotSupportedException.class,
+            org.springframework.web.HttpMediaTypeNotAcceptableException.class})
+    public ResponseEntity<ApiErrorResponse> handleUnsupportedMediaType(
+            org.springframework.web.HttpMediaTypeException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        return ResponseEntity.status(status).headers(ex.getHeaders())
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(ApiErrorResponse.builder().timestamp(Instant.now())
+                        .status(status.value()).error(status.getReasonPhrase())
+                        .message("Định dạng dữ liệu HTTP không được hỗ trợ. Vui lòng sử dụng JSON.")
+                        .path(request.getRequestURI()).build());
     }
 
     @ExceptionHandler(Exception.class)

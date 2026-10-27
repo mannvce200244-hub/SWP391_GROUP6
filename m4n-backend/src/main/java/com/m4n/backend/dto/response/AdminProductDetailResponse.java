@@ -24,5 +24,8 @@ public record AdminProductDetailResponse(
         Integer stockQuantity,
         String availability,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Integer lowStockThreshold,
+        BigDecimal billableWeightKg,
+        BigDecimal bulkySurcharge
 ) {}

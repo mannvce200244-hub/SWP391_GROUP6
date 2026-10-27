@@ -1,4 +1,7 @@
-import { useEffect } from 'react'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
+import ErrorState from '../../components/ui/ErrorState.jsx'
+import LoadingState from '../../components/ui/LoadingState.jsx'
+import RouterLink from '../../routes/RouterLink.jsx'
 import {
   ShoppingBag,
   ChevronRight,
@@ -12,9 +15,15 @@ import useToast from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 
 function CartDrawer({ isOpen, onClose }) {
-  const { cart, cartItemCount, updateCartItem, removeCartItem, loading } = useCart()
+  const { cart, cartItemCount, updateCartItem, removeCartItem, loading, error, refreshCart } = useCart()
   const { isAuthenticated } = useAuth()
   const { addToast } = useToast()
+  const drawerRef = useDialogFocus(isOpen, onClose)
+
+  const handleQuantityChange = async (item, quantity) => {
+    const result = await updateCartItem(item.id, quantity)
+    if (!result.success) addToast({ message: result.message, type: 'error' })
+  }
 
   const handleRemoveItem = async (item) => {
     const result = await removeCartItem(item.id)
@@ -25,32 +34,6 @@ function CartDrawer({ isOpen, onClose }) {
       type: result.success ? 'success' : 'error',
     })
   }
-
-  // Close on Escape key
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  // Prevent background body scroll when drawer is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -67,12 +50,12 @@ function CartDrawer({ isOpen, onClose }) {
 
       {/* Drawer Container */}
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col border-l border-border animate-in slide-in-from-right duration-250">
+        <div ref={drawerRef} className="w-screen max-w-md bg-white shadow-2xl flex flex-col border-l border-border animate-in slide-in-from-right duration-250">
           
           {/* Drawer Header */}
           <div className="p-5 sm:p-6 border-b border-border flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-brand-soft text-brand flex items-center justify-center border border-brand-border">
+              <div className="w-11 h-11 rounded-xl bg-brand-soft text-brand flex items-center justify-center border border-brand-border">
                 <ShoppingBag size={18} />
               </div>
               <div>
@@ -90,7 +73,7 @@ function CartDrawer({ isOpen, onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-muted hover:text-ink hover:bg-surface-secondary transition-colors cursor-pointer"
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-muted hover:text-ink hover:bg-surface-secondary transition-colors cursor-pointer"
               aria-label="Đóng giỏ hàng"
             >
               <X size={18} />
@@ -125,6 +108,10 @@ function CartDrawer({ isOpen, onClose }) {
                   <ArrowRight size={16} />
                 </button>
               </div>
+            ) : loading && !cart ? (
+              <LoadingState message="Đang tải giỏ hàng…" />
+            ) : error ? (
+              <ErrorState message={error} onRetry={refreshCart} />
             ) : items.length === 0 ? (
               /* Empty Cart State */
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
@@ -173,17 +160,10 @@ function CartDrawer({ isOpen, onClose }) {
 
                     {/* Item Details */}
                     <div className="flex-1 min-w-0">
-                      <h4
-                        className="text-sm font-bold text-ink truncate cursor-pointer hover:text-brand transition-colors"
-                        onClick={() => {
-                          onClose()
-                          if (item.productId) {
-                            navigateTo(CUSTOMER_ROUTES.productDetail(item.productId))
-                          }
-                        }}
-                        title={item.productName}
-                      >
-                        {item.productName}
+                      <h4 className="text-sm font-bold text-ink truncate" title={item.productName}>
+                        <RouterLink href={CUSTOMER_ROUTES.productDetail(item.productId)} onClick={onClose} className="hover:text-brand transition-colors">
+                          {item.productName}
+                        </RouterLink>
                       </h4>
                       <p className="text-xs font-bold text-brand mt-0.5">
                         {item.unitPriceDisplay}
@@ -195,8 +175,8 @@ function CartDrawer({ isOpen, onClose }) {
                           <button
                             type="button"
                             disabled={loading || item.quantity <= 1}
-                            onClick={() => updateCartItem(item.id, item.quantity - 1)}
-                            className="w-6 h-6 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded transition-colors disabled:opacity-40 cursor-pointer"
+                            onClick={() => handleQuantityChange(item, item.quantity - 1)}
+                            className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded transition-colors disabled:opacity-40 cursor-pointer"
                             aria-label="Giảm số lượng"
                           >
                             -
@@ -207,8 +187,8 @@ function CartDrawer({ isOpen, onClose }) {
                           <button
                             type="button"
                             disabled={loading}
-                            onClick={() => updateCartItem(item.id, item.quantity + 1)}
-                            className="w-6 h-6 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded transition-colors disabled:opacity-40 cursor-pointer"
+                            onClick={() => handleQuantityChange(item, item.quantity + 1)}
+                            className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded transition-colors disabled:opacity-40 cursor-pointer"
                             aria-label="Tăng số lượng"
                           >
                             +
@@ -242,7 +222,7 @@ function CartDrawer({ isOpen, onClose }) {
                 </span>
               </div>
               <p className="text-xs text-subtle">
-                Phí vận chuyển và chi phí bảo hiểm nhạc cụ sẽ được tính tại bước thanh toán.
+                Giá và mã giảm giá được kiểm tra lại khi đặt hàng. Tồn kho được xác nhận khi nhân viên xử lý đơn hàng.
               </p>
 
               <div className="grid grid-cols-2 gap-2.5 pt-1">
@@ -278,3 +258,6 @@ function CartDrawer({ isOpen, onClose }) {
 }
 
 export default CartDrawer
+
+
+

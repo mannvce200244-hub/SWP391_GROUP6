@@ -1,5 +1,8 @@
 import useCart from '../features/cart/useCart.js'
 import useAuth from '../features/auth/useAuth.js'
+import ErrorState from '../components/ui/ErrorState.jsx'
+import LoadingState from '../components/ui/LoadingState.jsx'
+import RouterLink from '../routes/RouterLink.jsx'
 import {
   ShoppingBag,
   ArrowRight,
@@ -11,11 +14,16 @@ import useToast from '../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 
 function CartPage() {
-  const { cart, cartItemCount, updateCartItem, removeCartItem, loading } = useCart()
+  const { cart, cartItemCount, updateCartItem, removeCartItem, loading, error, refreshCart } = useCart()
   const { isAuthenticated } = useAuth()
   const { addToast } = useToast()
 
   const items = cart?.items || []
+
+  const handleQuantityChange = async (item, quantity) => {
+    const result = await updateCartItem(item.id, quantity)
+    if (!result.success) addToast({ message: result.message, type: 'error' })
+  }
 
   const handleRemoveItem = async (item) => {
     const result = await removeCartItem(item.id)
@@ -90,6 +98,10 @@ function CartPage() {
               <ArrowRight size={15} />
             </button>
           </div>
+        ) : loading && !cart ? (
+          <LoadingState message="Đang tải giỏ hàng…" />
+        ) : error ? (
+          <ErrorState message={error} onRetry={refreshCart} />
         ) : items.length === 0 ? (
           /* Empty State */
           <div className="rounded-[32px] bg-white border border-border/80 p-12 text-center shadow-sm max-w-lg mx-auto space-y-4">
@@ -135,15 +147,10 @@ function CartPage() {
                     </div>
 
                     <div className="min-w-0">
-                      <h3
-                        className="text-base font-bold text-ink truncate cursor-pointer hover:text-brand transition-colors"
-                        onClick={() => {
-                          if (item.productId) {
-                            navigateTo(CUSTOMER_ROUTES.productDetail(item.productId))
-                          }
-                        }}
-                      >
-                        {item.productName}
+                      <h3 className="text-base font-bold text-ink truncate">
+                        <RouterLink href={CUSTOMER_ROUTES.productDetail(item.productId)} className="hover:text-brand transition-colors">
+                          {item.productName}
+                        </RouterLink>
                       </h3>
                       {item.productCode && (
                         <p className="text-xs text-subtle mt-0.5 font-mono">
@@ -162,8 +169,8 @@ function CartPage() {
                       <button
                         type="button"
                         disabled={loading || item.quantity <= 1}
-                        onClick={() => updateCartItem(item.id, item.quantity - 1)}
-                        className="w-7 h-7 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
+                        onClick={() => handleQuantityChange(item, item.quantity - 1)}
+                        className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
                         aria-label="Giảm số lượng"
                       >
                         -
@@ -174,8 +181,8 @@ function CartPage() {
                       <button
                         type="button"
                         disabled={loading}
-                        onClick={() => updateCartItem(item.id, item.quantity + 1)}
-                        className="w-7 h-7 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
+                        onClick={() => handleQuantityChange(item, item.quantity + 1)}
+                        className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
                         aria-label="Tăng số lượng"
                       >
                         +
@@ -227,6 +234,7 @@ function CartPage() {
 
               <button
                 type="button"
+                disabled={loading}
                 onClick={() => navigateTo(CUSTOMER_ROUTES.checkout)}
                 className="w-full h-12 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
               >
@@ -249,3 +257,4 @@ function CartPage() {
 }
 
 export default CartPage
+

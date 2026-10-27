@@ -91,6 +91,7 @@ function ProductListPage() {
     errorMessage: '',
   })
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [requestSequence, setRequestSequence] = useState(0)
 
   // Listen for browser Back/Forward (popstate) to restore state from URL
   useEffect(() => {
@@ -131,6 +132,10 @@ function ProductListPage() {
       })
       .then((data) => {
         if (active) {
+          if (data.totalPages > 0 && currentPage > data.totalPages) {
+            setCurrentPage(data.totalPages)
+            return
+          }
           setIsLoading(false)
           setCatalog({
             status: 'success',
@@ -157,13 +162,14 @@ function ProductListPage() {
     return () => {
       active = false
     }
-  }, [activeFilters, currentPage, sortBy])
+  }, [activeFilters, currentPage, sortBy, requestSequence])
 
   const applyFilters = useCallback((nextFilters) => {
     setDraftFilters(nextFilters)
     setActiveFilters(nextFilters)
     setCurrentPage(1)
     setIsLoading(true)
+    setRequestSequence((current) => current + 1)
   }, [])
 
   const resetFilters = useCallback(() => {
@@ -171,6 +177,7 @@ function ProductListPage() {
     setActiveFilters(EMPTY_FILTERS)
     setCurrentPage(1)
     setIsLoading(true)
+    setRequestSequence((current) => current + 1)
   }, [])
 
   const handleSearchSubmit = useCallback((keyword) => {
@@ -219,36 +226,8 @@ function ProductListPage() {
 
   const retry = useCallback(() => {
     setIsLoading(true)
-    const backendSort = SORT_MAPPINGS[sortBy] || 'createdAt,desc'
-    productService
-      .listProductsPage({
-        ...activeFilters,
-        page: currentPage,
-        size: ITEMS_PER_PAGE,
-        sort: backendSort,
-      })
-      .then((data) => {
-        setIsLoading(false)
-        setCatalog({
-          status: 'success',
-          products: data.products || [],
-          totalPages: data.totalPages || 1,
-          totalElements: data.totalElements || 0,
-          errorMessage: '',
-        })
-      })
-      .catch((err) => {
-        setIsLoading(false)
-        setCatalog({
-          status: 'error',
-          products: [],
-          totalPages: 1,
-          totalElements: 0,
-          errorMessage: err.message || 'Không thể tải danh sách sản phẩm.',
-        })
-      })
-  }, [activeFilters, currentPage, sortBy])
-
+    setRequestSequence((current) => current + 1)
+  }, [])
   const hasAppliedFilters = Object.values(activeFilters).some(
     (val) => val && String(val).trim() !== '',
   )
@@ -292,6 +271,7 @@ function ProductListPage() {
                 return (
                   <button
                     key={tab.id || 'all'}
+                    aria-pressed={isSelected}
                     type="button"
                     onClick={() => handleCategoryTabClick(tab.id)}
                     className={`px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
@@ -457,3 +437,4 @@ function ProductListPage() {
 }
 
 export default ProductListPage
+

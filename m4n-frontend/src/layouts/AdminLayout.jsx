@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
+import useDialogFocus from '../hooks/useDialogFocus.js'
+import { useState } from 'react'
 import {
   CUSTOMER_ROUTES,
   navigateTo,
   matchAdminInstrumentDetailPath,
 } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
-import notificationService from '../services/notificationService.js'
+import NotificationBell from '../components/common/NotificationBell.jsx'
 import {
   LayoutDashboard,
   Store,
@@ -23,8 +24,7 @@ import {
   Receipt,
   TicketPercent,
   Users,
-  Bell,
-  Check,
+  BookOpen,
 } from 'lucide-react'
 import { IconInstrument } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
@@ -36,76 +36,7 @@ function AdminLayout({ children, pathname }) {
   const { addToast } = useToast()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-
-  // Notifications
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [notifications, setNotifications] = useState([])
-  const [loadingNotifications, setLoadingNotifications] = useState(false)
-  const notificationRef = useRef(null)
-
-  useEffect(() => {
-    let mounted = true
-    notificationService
-      .getUnreadCount()
-      .then((count) => {
-        if (mounted) setUnreadCount(count || 0)
-      })
-      .catch(() => {})
-    return () => {
-      mounted = false
-    }
-  }, [])
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setNotificationsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const handleToggleNotifications = async () => {
-    const nextState = !notificationsOpen
-    setNotificationsOpen(nextState)
-    if (nextState) {
-      setLoadingNotifications(true)
-      try {
-        const data = await notificationService.getRecentNotifications()
-        setNotifications(Array.isArray(data) ? data : data?.content || [])
-      } catch {
-        setNotifications([])
-      } finally {
-        setLoadingNotifications(false)
-      }
-    }
-  }
-
-  const handleMarkAllRead = async () => {
-    try {
-      await notificationService.markAllAsRead()
-      setUnreadCount(0)
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true, isRead: true })))
-      addToast({ message: 'Đã đánh dấu tất cả thông báo là đã đọc.', type: 'info' })
-    } catch (err) {
-      addToast({ message: err.message || 'Lỗi khi cập nhật thông báo.', type: 'error' })
-    }
-  }
-
-  const handleMarkNotificationRead = async (notif) => {
-    if (notif.read || notif.isRead) return
-    try {
-      await notificationService.markAsRead(notif.id)
-      setUnreadCount((c) => Math.max(0, c - 1))
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notif.id ? { ...n, read: true, isRead: true } : n))
-      )
-    } catch {
-      // ignore
-    }
-  }
+  const sidebarRef = useDialogFocus(mobileMenuOpen, () => setMobileMenuOpen(false))
 
   const handleLogout = async () => {
     try {
@@ -115,8 +46,8 @@ function AdminLayout({ children, pathname }) {
         type: 'info',
       })
       navigateTo(CUSTOMER_ROUTES.login)
-    } catch {
-      navigateTo(CUSTOMER_ROUTES.login)
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể đăng xuất. Vui lòng thử lại.', type: 'error' })
     }
   }
 
@@ -138,11 +69,16 @@ function AdminLayout({ children, pathname }) {
       ],
     },
     {
+      title: 'NỘI DUNG',
+      items: [{ label: 'Bài viết & Hướng dẫn', path: CUSTOMER_ROUTES.adminArticles, Icon: BookOpen }],
+    },
+    {
       title: 'BÁN HÀNG',
       items: [
         { label: 'Đơn hàng online', path: CUSTOMER_ROUTES.adminOrders, Icon: ClipboardList },
         { label: 'Hóa đơn (POS)', path: CUSTOMER_ROUTES.adminInvoices, Icon: Receipt },
         { label: 'Voucher', path: CUSTOMER_ROUTES.adminVouchers, Icon: TicketPercent },
+        { label: 'Giá & vận chuyển', path: CUSTOMER_ROUTES.adminPricing, Icon: TicketPercent },
       ],
     },
     {
@@ -170,6 +106,8 @@ function AdminLayout({ children, pathname }) {
     pageTitle = 'Quản lý Nghệ nhân'
   } else if (pathname === CUSTOMER_ROUTES.adminCraftVillages) {
     pageTitle = 'Quản lý Làng nghề truyền thống'
+  } else if (pathname === CUSTOMER_ROUTES.adminArticles) {
+    pageTitle = 'Quản lý Bài viết & Hướng dẫn'
   } else if (pathname === CUSTOMER_ROUTES.adminInventory) {
     pageTitle = 'Quản lý Kho hàng'
   } else if (pathname === CUSTOMER_ROUTES.adminOrders) {
@@ -187,7 +125,7 @@ function AdminLayout({ children, pathname }) {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#F5F7FA] text-[#17191B]">
+    <div className="min-h-screen flex bg-[#F6F7F8] text-[#17191B]">
       {/* Mobile Backdrop Overlay */}
       {mobileMenuOpen && (
         <div
@@ -198,15 +136,15 @@ function AdminLayout({ children, pathname }) {
       )}
 
       {/* Charcoal TailAdmin-Grade Persistent Sidebar */}
-      <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 bg-[#111315] border-r border-[#22262A] flex flex-col transition-all duration-200 ease-in-out ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      <aside ref={sidebarRef} tabIndex={-1}
+        className={`fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-border flex flex-col transition-[width,transform] duration-200 ease-in-out ${
+          mobileMenuOpen ? 'visible translate-x-0' : 'invisible lg:visible -translate-x-full lg:translate-x-0'
         } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 shadow-xl`}
         aria-label="Thanh điều hướng chính"
       >
         {/* Sidebar Brand Header */}
         <div
-          className={`h-16 px-4 border-b border-[#22262A] flex items-center justify-between ${
+          className={`h-16 px-4 border-b border-border flex items-center justify-between ${
             sidebarCollapsed ? 'justify-center' : ''
           }`}
         >
@@ -214,19 +152,19 @@ function AdminLayout({ children, pathname }) {
             href={CUSTOMER_ROUTES.home}
             className={`flex items-center gap-3 cursor-pointer group min-w-0 ${
               sidebarCollapsed ? 'justify-center w-full' : ''
-            } rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D9488]`}
+            } rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A62F25]`}
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Về trang chủ"
             title="Về trang chủ"
           >
-            <BrandLogo variant="dark" collapsed={sidebarCollapsed} />
+            <BrandLogo collapsed={sidebarCollapsed} />
           </RouterLink>
 
           {/* Desktop collapse toggle on sidebar header */}
           {!sidebarCollapsed && (
             <button
               type="button"
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 border border-[#272B30] transition-colors cursor-pointer shrink-0"
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-xl text-secondary hover:text-ink hover:bg-[#F6F7F8] border border-border transition-colors cursor-pointer shrink-0"
               onClick={() => setSidebarCollapsed(true)}
               title="Thu gọn menu điều hướng"
               aria-label="Thu gọn menu điều hướng"
@@ -238,7 +176,7 @@ function AdminLayout({ children, pathname }) {
           {/* Mobile close button */}
           <button
             type="button"
-            className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="lg:hidden p-1.5 rounded-lg text-secondary hover:text-ink hover:bg-[#F6F7F8] transition-colors cursor-pointer"
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Đóng menu"
           >
@@ -248,11 +186,11 @@ function AdminLayout({ children, pathname }) {
 
         {/* If collapsed on desktop: show expand button right below the header */}
         {sidebarCollapsed && (
-          <div className="hidden lg:flex justify-center p-2 border-b border-[#22262A]">
+          <div className="hidden lg:flex justify-center p-2 border-b border-border">
             <button
               type="button"
               onClick={() => setSidebarCollapsed(false)}
-              className="w-full py-2 rounded-xl bg-[#16181A] hover:bg-zinc-800 text-zinc-400 hover:text-[#0D9488] border border-[#272B30] flex items-center justify-center transition-all cursor-pointer shadow-2xs group"
+              className="w-full py-2 rounded-xl bg-white hover:bg-[#F6F7F8] text-secondary hover:text-[#A62F25] border border-border flex items-center justify-center transition-all cursor-pointer shadow-2xs group"
               title="Mở rộng menu điều hướng"
               aria-label="Mở rộng menu điều hướng"
             >
@@ -266,7 +204,7 @@ function AdminLayout({ children, pathname }) {
           {navSections.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
               {!sidebarCollapsed ? (
-                <span className="px-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                <span className="px-3 text-xs font-semibold uppercase tracking-wider text-secondary mb-1">
                   {section.title}
                 </span>
               ) : (
@@ -283,12 +221,12 @@ function AdminLayout({ children, pathname }) {
                   <button
                     key={item.path}
                     type="button"
-                    title={sidebarCollapsed ? item.label : undefined}
+                    aria-label={item.label} title={sidebarCollapsed ? item.label : undefined}
                     aria-current={isActive ? 'page' : undefined}
                     className={`relative flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] group motion-reduce:transition-none ${
                       isActive
-                        ? 'border-[#0D9488]/35 bg-[#0D9488]/20 text-white shadow-xs'
-                        : 'border-transparent text-zinc-400 hover:bg-zinc-800/70 hover:text-white'
+                        ? 'border-[#A62F25]/35 bg-[#F6F7F8] text-ink shadow-xs'
+                        : 'border-transparent text-secondary hover:bg-[#F6F7F8] hover:text-ink'
                     } ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
                     onClick={() => {
                       setMobileMenuOpen(false)
@@ -298,7 +236,7 @@ function AdminLayout({ children, pathname }) {
                     {/* Active emerald indicator bar */}
                     {isActive && (
                       <span
-                        className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-[#0D9488]"
+                        className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-[#A62F25]"
                         aria-hidden="true"
                       />
                     )}
@@ -306,7 +244,7 @@ function AdminLayout({ children, pathname }) {
                     <ItemIcon
                       size={19}
                       className={`shrink-0 transition-transform group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none ${
-                        isActive ? 'text-[#0D9488]' : 'text-zinc-400 group-hover:text-white'
+                        isActive ? 'text-[#A62F25]' : 'text-secondary group-hover:text-ink'
                       }`}
                     />
 
@@ -321,10 +259,10 @@ function AdminLayout({ children, pathname }) {
         </nav>
 
         {/* Sidebar Footer: User Profile and Logout */}
-        <div className="p-3 border-t border-[#22262A] bg-[#0E1012]">
-          <div className={`flex items-center gap-2.5 p-2 rounded-xl bg-[#16181A] border border-[#272B30] ${sidebarCollapsed ? 'justify-center' : ''}`}>
+        <div className="p-3 border-t border-border bg-[#F6F7F8]">
+          <div className={`flex items-center gap-2.5 p-2 rounded-xl bg-white border border-border ${sidebarCollapsed ? 'justify-center' : ''}`}>
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#0D9488]/25 text-[#0D9488] font-bold text-xs flex items-center justify-center border border-[#0D9488]/40 shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-[#F6F7F8] text-[#A62F25] font-bold text-xs flex items-center justify-center border border-[#A62F25]/40 shrink-0">
                 {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'A'}
               </div>
               {!sidebarCollapsed && (
@@ -332,7 +270,7 @@ function AdminLayout({ children, pathname }) {
                   <span className="text-xs font-bold text-white truncate leading-tight">
                     {user?.fullName || 'Quản trị viên'}
                   </span>
-                  <span className="text-xs text-zinc-400 truncate">
+                  <span className="text-xs text-secondary truncate">
                     {user?.email || 'admin@m4n.vn'}
                   </span>
                 </div>
@@ -342,7 +280,7 @@ function AdminLayout({ children, pathname }) {
 
           <button
             type="button"
-            className={`mt-2 flex min-h-10 w-full items-center rounded-xl border border-transparent text-zinc-400 transition-colors hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 cursor-pointer ${
+            className={`mt-2 flex min-h-10 w-full items-center rounded-xl border border-transparent text-secondary transition-colors hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 cursor-pointer ${
               sidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3 text-left text-xs font-semibold'
             }`}
             onClick={handleLogout}
@@ -377,13 +315,13 @@ function AdminLayout({ children, pathname }) {
 
             {/* Breadcrumb & Page Title */}
             <div className="flex items-center gap-2 text-sm">
-              <span
+              <button type="button"
                 className="text-sm font-medium text-secondary hover:text-[#17191B] cursor-pointer transition-colors"
                 onClick={() => navigateTo(CUSTOMER_ROUTES.admin)}
               >
                 M4N Back Office
-              </span>
-              <span className="text-zinc-300 text-xs">/</span>
+              </button>
+              <span className="text-secondary text-xs">/</span>
               <h1 className="font-bold text-[#17191B] text-base tracking-tight">
                 {pageTitle}
               </h1>
@@ -395,7 +333,7 @@ function AdminLayout({ children, pathname }) {
             {/* Storefront Link Shortcut */}
             <button
               type="button"
-              className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-sm font-medium text-[#17191B] hover:text-[#0D9488] hover:bg-[#F6F7F8] hover:border-[#CDD2D5] transition-colors cursor-pointer shadow-2xs"
+              className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-sm font-medium text-[#17191B] hover:text-[#A62F25] hover:bg-[#F6F7F8] hover:border-[#CDD2D5] transition-colors cursor-pointer shadow-2xs"
               onClick={() => navigateTo(CUSTOMER_ROUTES.home)}
               title="Xem cửa hàng khách hàng"
             >
@@ -404,105 +342,7 @@ function AdminLayout({ children, pathname }) {
               <ExternalLink size={14} className="text-secondary" />
             </button>
 
-            {/* System Status Pill */}
-            <div className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Hệ thống: Sẵn sàng</span>
-            </div>
-
-            {/* Notification Bell */}
-            <div className="relative" ref={notificationRef}>
-              <button
-                type="button"
-                className="relative p-2 rounded-xl text-zinc-600 hover:text-[#17191B] hover:bg-[#F2F4F5] border border-transparent hover:border-[#E5E8EB] transition-colors cursor-pointer"
-                onClick={handleToggleNotifications}
-                title="Thông báo hệ thống"
-                aria-label="Thông báo hệ thống"
-              >
-                <Bell size={18} />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center animate-pulse shadow-sm">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </button>
-
-              {notificationsOpen && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[#FFFFFF] rounded-2xl border border-[#E5E8EB] shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95"
-                  role="region"
-                  aria-label="Danh sách thông báo"
-                >
-                  <div className="px-4 py-2.5 border-b border-[#E5E8EB] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#17191B]">Thông báo</span>
-                      {unreadCount > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
-                          {unreadCount} mới
-                        </span>
-                      )}
-                    </div>
-                    {unreadCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={handleMarkAllRead}
-                        className="text-xs text-[#0D9488] hover:text-[#0F766E] font-medium transition-colors flex items-center gap-1"
-                      >
-                        <Check size={13} />
-                        Đã đọc tất cả
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="max-h-80 overflow-y-auto divide-y divide-zinc-100 text-xs">
-                    {loadingNotifications ? (
-                      <div className="py-8 text-center text-zinc-400">
-                        <div className="w-5 h-5 border-2 border-[#0D9488] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                        <p>Đang tải thông báo...</p>
-                      </div>
-                    ) : notifications.length === 0 ? (
-                      <div className="py-8 text-center text-zinc-400">
-                        <Bell className="w-8 h-8 mx-auto mb-1 text-zinc-300 stroke-[1.5]" />
-                        <p className="text-zinc-600 font-medium">Không có thông báo nào</p>
-                      </div>
-                    ) : (
-                      notifications.map((n) => {
-                        const isRead = n.read || n.isRead
-                        return (
-                          <div
-                            key={n.id}
-                            onClick={() => handleMarkNotificationRead(n)}
-                            className={`p-3.5 cursor-pointer transition-colors hover:bg-zinc-50 flex items-start gap-2.5 ${
-                              !isRead ? 'bg-[#F0FDF4]/60' : ''
-                            }`}
-                          >
-                            <span
-                              className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
-                                !isRead ? 'bg-[#0D9488]' : 'bg-transparent'
-                              }`}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className={`font-medium ${!isRead ? 'text-zinc-900 font-semibold' : 'text-zinc-700'}`}>
-                                {n.title || n.message || 'Thông báo mới'}
-                              </p>
-                              {n.title && n.message && (
-                                <p className="text-zinc-500 mt-0.5 line-clamp-2 leading-relaxed">
-                                  {n.message}
-                                </p>
-                              )}
-                              <span className="text-[11px] text-zinc-400 mt-1 block">
-                                {n.createdAt ? new Date(n.createdAt).toLocaleString('vi-VN') : ''}
-                              </span>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
+            <NotificationBell />
           </div>
         </header>
 

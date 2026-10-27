@@ -7,6 +7,7 @@ import com.m4n.backend.dto.response.PosProductResponse;
 import com.m4n.backend.dto.response.PosSalePreviewResponse;
 import com.m4n.backend.dto.response.PosSaleResponse;
 import com.m4n.backend.dto.response.VoucherValidationResponse;
+import com.m4n.backend.dto.response.DiscountCalculationResponse;
 import com.m4n.backend.entity.Category;
 import com.m4n.backend.entity.Inventory;
 import com.m4n.backend.entity.Invoice;
@@ -19,7 +20,7 @@ import com.m4n.backend.repository.InventoryRepository;
 import com.m4n.backend.repository.InvoiceRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.PosServiceImpl;
+import com.m4n.backend.service.serviceImpl.PosServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +33,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -42,6 +44,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,6 +68,7 @@ class PosServiceTest {
 
     @Mock
     private VoucherService voucherService;
+    @Mock private InventoryService inventoryService;
 
     private PosService posService;
 
@@ -72,15 +78,26 @@ class PosServiceTest {
     private Inventory inventoryA;
     private Inventory inventoryB;
 
+    @Mock private ProductPricingService productPricingService;
+
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(productPricingService.resolvePrices(any())).thenAnswer(inv -> {
+            java.util.List<Product> requested = inv.getArgument(0);
+            return requested.stream().collect(java.util.stream.Collectors.toMap(Product::getId,
+                    product -> new ProductPrice(product.getPrice(), product.getPrice(), BigDecimal.ZERO, null), (first, duplicate) -> first));
+        });
+
         posService = new PosServiceImpl(
                 productRepository,
                 inventoryRepository,
                 invoiceRepository,
                 userRepository,
-                voucherService
+                voucherService, inventoryService, productPricingService
         );
+        lenient().when(voucherService.consumeDiscounts(any(), any(), anyInt())).thenAnswer(invocation ->
+                new DiscountCalculationResponse(null, null, BigDecimal.ZERO, BigDecimal.ZERO,
+                        BigDecimal.ZERO, invocation.getArgument(1)));
 
         Role posStaffRole = Role.builder().id(3L).name(RoleName.POS_STAFF).build();
         staffUser = User.builder()
@@ -166,12 +183,12 @@ class PosServiceTest {
         BigDecimal discount = new BigDecimal("1470000");
         BigDecimal finalAmount = new BigDecimal("13230000");
 
-        when(voucherService.validateAndCalculate("M4N10", subtotal))
-                .thenReturn(new VoucherValidationResponse(
+        when(voucherService.calculateDiscounts(eq("M4N10"), eq(subtotal), eq(2)))
+                .thenReturn(new DiscountCalculationResponse(new VoucherValidationResponse(
                         "M4N10", new BigDecimal("0.10"), BigDecimal.ZERO,
                         discount, "1.470.000 ₫", finalAmount, "13.230.000 ₫",
                         true, "Áp dụng thành công"
-                ));
+                ), null, discount, BigDecimal.ZERO, discount, finalAmount));
 
         PosSalePreviewRequest request = PosSalePreviewRequest.builder()
                 .items(List.of(
@@ -270,6 +287,7 @@ class PosServiceTest {
     void shouldRejectWhenCashReceivedInsufficient() {
         when(userRepository.findByEmailIgnoreCase("pos@m4n.vn")).thenReturn(Optional.of(staffUser));
         when(productRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(productA));
+        when(inventoryRepository.findByProductIdWithLock(1L)).thenReturn(Optional.of(inventoryA));
 
         // Subtotal: 8,500,000, Cash received: 5,000,000
         PosSaleRequest request = PosSaleRequest.builder()
@@ -333,16 +351,35 @@ class PosServiceTest {
                 .createdAt(Instant.now())
                 .items(new ArrayList<>())
                 .build();
-        PageRequest pageable = PageRequest.of(0, 15);
+        PageRequest pageable = PageRequest.of(0, 15, Sort.by(Sort.Direction.DESC, "createdAt", "id"));
         when(userRepository.findByEmailIgnoreCase("pos@m4n.vn")).thenReturn(Optional.of(staffUser));
-        when(invoiceRepository.findByStaffIdOrderByCreatedAtDesc(staffUser.getId(), pageable))
+        when(invoiceRepository.findByStaffId(staffUser.getId(), pageable))
                 .thenReturn(new PageImpl<>(List.of(ownedInvoice), pageable, 1));
 
         var result = posService.listInvoices(null, pageable, "pos@m4n.vn");
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().getFirst().getInvoiceCode()).isEqualTo("HD-2026-500");
-        verify(invoiceRepository).findByStaffIdOrderByCreatedAtDesc(staffUser.getId(), pageable);
-        verify(invoiceRepository, never()).findAllByOrderByCreatedAtDesc(any());
+        verify(invoiceRepository).findByStaffId(staffUser.getId(), pageable);
+        verify(invoiceRepository, never()).findAll(any(org.springframework.data.domain.Pageable.class));
+    }
+
+    @Test
+    void invoiceListShouldRejectUnsupportedNestedSort() {
+        assertThatThrownBy(() -> posService.listInvoices(null,
+                PageRequest.of(0, 10, Sort.by("staff.password")), "pos@m4n.vn"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sắp xếp");
+        verify(userRepository, never()).findByEmailIgnoreCase(any());
+        verify(invoiceRepository, never()).findAll(any(org.springframework.data.domain.Pageable.class));
+    }
+
+    @Test
+    void previewSaleRejectsDuplicateQuantityOverflowBeforeStockOrPriceCalculation() {
+        PosSalePreviewRequest request = PosSalePreviewRequest.builder().items(List.of(
+                new PosSaleItemRequest(1L, Integer.MAX_VALUE), new PosSaleItemRequest(1L, 1))).build();
+
+        assertThatThrownBy(() -> posService.previewSale(request)).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("vượt quá giới hạn");
+        verify(inventoryRepository, never()).save(any());
     }
 }

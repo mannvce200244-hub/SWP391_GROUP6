@@ -30,26 +30,27 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("SELECT i FROM Inventory i WHERE i.product.id IN :productIds")
     List<Inventory> findByProductIdsWithLock(@Param("productIds") Collection<Long> productIds);
 
-    long countByQuantityGreaterThan(Integer quantity);
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > COALESCE(i.product.lowStockThreshold, 5)")
+    long countAvailableProducts();
 
-    long countByQuantityBetween(Integer min, Integer max);
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > 0 AND i.quantity <= COALESCE(i.product.lowStockThreshold, 5)")
+    long countLowStockProducts();
 
     long countByQuantity(Integer quantity);
 
     @Query("SELECT COALESCE(SUM(i.quantity), 0) FROM Inventory i")
     long sumTotalQuantity();
 
-    @EntityGraph(attributePaths = {"product", "product.category", "product.media"})
+    @EntityGraph(attributePaths = {"product", "product.category"})
     @Query("SELECT i FROM Inventory i WHERE " +
             "(:keyword IS NULL OR :keyword = '' OR " +
             "LOWER(i.product.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(i.product.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(i.product.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
             "(:status IS NULL OR :status = '' OR " +
-            "(:status = 'IN_STOCK' AND i.quantity > 5) OR " +
-            "(:status = 'LOW_STOCK' AND i.quantity BETWEEN 1 AND 5) OR " +
-            "(:status = 'OUT_OF_STOCK' AND i.quantity = 0)) " +
-            "ORDER BY i.product.id ASC")
+            "(:status = 'IN_STOCK' AND i.quantity > COALESCE(i.product.lowStockThreshold, 5)) OR " +
+            "(:status = 'LOW_STOCK' AND i.quantity > 0 AND i.quantity <= COALESCE(i.product.lowStockThreshold, 5)) OR " +
+            "(:status = 'OUT_OF_STOCK' AND i.quantity = 0))")
     Page<Inventory> searchInventories(
             @Param("keyword") String keyword,
             @Param("status") String status,

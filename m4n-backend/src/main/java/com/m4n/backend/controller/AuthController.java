@@ -128,7 +128,7 @@ public class AuthController {
     @Operation(summary = "Request password reset instructions", description = "Dispatches password reset instructions if account exists. Returns a generic success response.")
     public ResponseEntity<MessageResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
-        return ResponseEntity.ok(new MessageResponse("Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi."));
+        return ResponseEntity.ok(new MessageResponse("Yêu cầu đã được tiếp nhận. Nếu tài khoản hợp lệ và email được gửi thành công, bạn sẽ nhận hướng dẫn đặt lại mật khẩu. Vui lòng kiểm tra hộp thư hoặc thử lại sau."));
     }
 
     @PostMapping("/reset-password")

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { listInvoices, downloadInvoicePdf } from '../../services/posService.js'
 import useToast from '../../components/ui/useToast.js'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import {
   Receipt,
@@ -32,16 +33,16 @@ function formatDate(isoString) {
 function getPaymentBadge(method) {
   switch (method) {
     case 'CASH':
-      return { label: 'Tiền mặt', className: 'text-emerald-700 bg-emerald-50 border-emerald-200' }
+      return { label: 'Tiền mặt', className: 'text-emerald-700 bg-[#F6F7F8] border-emerald-200' }
     case 'BANK_TRANSFER':
     case 'TRANSFER':
-      return { label: 'Chuyển khoản', className: 'text-blue-700 bg-blue-50 border-blue-200' }
+      return { label: 'Chuyển khoản', className: 'text-blue-700 bg-[#F6F7F8] border-blue-200' }
     case 'CARD':
       return { label: 'Thẻ POS', className: 'text-purple-700 bg-purple-50 border-purple-200' }
     case 'VNPAY':
-      return { label: 'VNPay', className: 'text-sky-700 bg-sky-50 border-sky-200' }
+      return { label: 'VNPay', className: 'text-sky-700 bg-surface-secondary border-sky-200' }
     default:
-      return { label: method || 'Khác', className: 'text-zinc-700 bg-zinc-50 border-zinc-200' }
+      return { label: method || 'Khác', className: 'text-zinc-700 bg-[#F6F7F8] border-zinc-200' }
   }
 }
 
@@ -61,10 +62,16 @@ export default function AdminInvoicesPage() {
   // Detail Modal
   const [selectedInvoice, setSelectedInvoice] = useState(null)
   const [downloadingId, setDownloadingId] = useState(null)
+  const detailRef = useDialogFocus(Boolean(selectedInvoice), () => setSelectedInvoice(null))
 
   useEffect(() => {
     let active = true
-    listInvoices({ page, size: 15, search })
+    async function loadInvoices() {
+      setLoading(true)
+      setError(null)
+      return listInvoices({ page, size: 15, search })
+    }
+    loadInvoices()
       .then((res) => {
         if (active) {
           if (res && res.content) {
@@ -107,6 +114,7 @@ export default function AdminInvoicesPage() {
   }
 
   const handleDownloadPdf = async (invoiceId) => {
+    if (downloadingId !== null) return
     setDownloadingId(invoiceId)
     try {
       await downloadInvoicePdf(invoiceId)
@@ -164,7 +172,7 @@ export default function AdminInvoicesPage() {
                   setSearch('')
                   setPage(0)
                 }}
-                className="px-3 py-2 text-sm text-zinc-600 hover:text-zinc-900 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors"
+                className="px-3 py-2 text-sm text-zinc-600 hover:text-zinc-900 bg-[#F6F7F8] hover:bg-zinc-200 rounded-lg transition-colors"
               >
                 Đặt lại
               </button>
@@ -175,7 +183,7 @@ export default function AdminInvoicesPage() {
 
       {/* Error state */}
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700 flex items-center justify-between">
+        <div className="p-4 bg-[#F6F7F8] border border-rose-200 rounded-xl text-sm text-rose-700 flex items-center justify-between">
           <span>{error}</span>
           <button
             onClick={reloadInvoices}
@@ -191,7 +199,7 @@ export default function AdminInvoicesPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50/75 text-zinc-500 text-xs font-semibold uppercase tracking-wider">
+              <tr className="border-b border-zinc-200 bg-[#F6F7F8] text-zinc-500 text-xs font-semibold uppercase tracking-wider">
                 <th className="px-5 py-3.5">Mã hóa đơn</th>
                 <th className="px-5 py-3.5">Thời gian</th>
                 <th className="px-5 py-3.5">Khách hàng</th>
@@ -223,7 +231,7 @@ export default function AdminInvoicesPage() {
                 invoices.map((inv) => {
                   const badge = getPaymentBadge(inv.paymentMethod)
                   return (
-                    <tr key={inv.invoiceId} className="hover:bg-zinc-50/80 transition-colors">
+                    <tr key={inv.invoiceId} className="hover:bg-[#F6F7F8] transition-colors">
                       <td className="px-5 py-4 font-semibold text-zinc-900 font-mono">
                         {inv.invoiceCode}
                       </td>
@@ -254,7 +262,7 @@ export default function AdminInvoicesPage() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => setSelectedInvoice(inv)}
-                            className="p-1.5 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-lg transition-colors"
+                            className="p-1.5 text-zinc-500 hover:text-zinc-800 hover:bg-[#F6F7F8] rounded-lg transition-colors"
                             title="Xem chi tiết"
                           >
                             <Eye className="w-4 h-4" />
@@ -262,7 +270,7 @@ export default function AdminInvoicesPage() {
                           <button
                             onClick={() => handleDownloadPdf(inv.invoiceId)}
                             disabled={downloadingId === inv.invoiceId}
-                            className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                            className="p-1.5 text-red-600 hover:text-red-700 hover:bg-[#F6F7F8] rounded-lg transition-colors disabled:opacity-50"
                             title="Tải PDF"
                           >
                             <Download className="w-4 h-4" />
@@ -279,7 +287,7 @@ export default function AdminInvoicesPage() {
 
         {/* Pagination */}
         {invoices.length > 0 && (
-          <div className="px-5 py-3.5 border-t border-zinc-200 bg-zinc-50/50 flex items-center justify-between text-xs text-zinc-500">
+          <div className="px-5 py-3.5 border-t border-zinc-200 bg-[#F6F7F8] flex items-center justify-between text-xs text-zinc-500">
             <div>
               Hiển thị <strong className="text-zinc-800">{invoices.length}</strong> / <strong className="text-zinc-800">{totalElements}</strong> hóa đơn · Trang <span className="font-medium text-zinc-700">{page + 1}</span> / {totalPages || 1}
             </div>
@@ -287,7 +295,7 @@ export default function AdminInvoicesPage() {
               <button
                 disabled={page <= 0}
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-[#F6F7F8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Trang trước"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -298,7 +306,7 @@ export default function AdminInvoicesPage() {
               <button
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-                className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-[#F6F7F8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 title="Trang sau"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -313,6 +321,8 @@ export default function AdminInvoicesPage() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 p-3 backdrop-blur-sm animate-fade-in sm:p-6"
           role="dialog"
+          ref={detailRef}
+          tabIndex={-1}
           aria-modal="true"
           aria-labelledby="invoice-detail-title"
         >
@@ -434,6 +444,7 @@ export default function AdminInvoicesPage() {
                 <div className="my-6 border-t border-dashed border-[#AEB5B9]" />
 
                 <section className="ml-auto max-w-sm space-y-2.5 text-sm" aria-label="Tổng kết thanh toán">
+                  {Number(selectedInvoice.productDiscountAmount) > 0 && <p className="text-xs text-jade">Đã giảm theo sản phẩm {formatCurrencyVND(selectedInvoice.productDiscountAmount)} từ niêm yết {formatCurrencyVND(selectedInvoice.originalTotalAmount)}.</p>}
                   <div className="flex items-baseline justify-between gap-5 text-secondary">
                     <span>Tạm tính</span>
                     <span className="tabular-nums">

@@ -14,7 +14,7 @@ import com.m4n.backend.entity.User;
 import com.m4n.backend.repository.ChatMessageRepository;
 import com.m4n.backend.repository.ConversationRepository;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.ChatServiceImpl;
+import com.m4n.backend.service.serviceImpl.ChatServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -138,7 +138,7 @@ class ChatServiceTest {
     @DisplayName("Customer cannot read another customer's conversation")
     void getMessages_rejectsForeignCustomer() {
         mockUserLookup(customer2);
-        when(conversationRepository.findById(100L)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.findByIdWithLock(100L)).thenReturn(Optional.of(conversation));
 
         assertThatThrownBy(() -> chatService.getMessages(100L, PageRequest.of(0, 100), customer2.getEmail()))
                 .isInstanceOf(AccessDeniedException.class)
@@ -150,7 +150,7 @@ class ChatServiceTest {
     void getMessages_rejectsStaffWhoDoesNotOwnConversation() {
         mockUserLookup(onlineStaff2);
         conversation.setAssignedStaff(onlineStaff);
-        when(conversationRepository.findById(100L)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.findByIdWithLock(100L)).thenReturn(Optional.of(conversation));
 
         assertThatThrownBy(() -> chatService.getMessages(100L, PageRequest.of(0, 100), onlineStaff2.getEmail()))
                 .isInstanceOf(AccessDeniedException.class)
@@ -162,8 +162,8 @@ class ChatServiceTest {
     void getMessages_allowsAssignedStaff() {
         mockUserLookup(onlineStaff);
         conversation.setAssignedStaff(onlineStaff);
-        when(conversationRepository.findById(100L)).thenReturn(Optional.of(conversation));
-        when(chatMessageRepository.findByConversationIdOrderByCreatedAtAscIdAsc(eq(100L), any(PageRequest.class)))
+        when(conversationRepository.findByIdWithLock(100L)).thenReturn(Optional.of(conversation));
+        when(chatMessageRepository.findByConversationIdOrderByCreatedAtDescIdDesc(eq(100L), any(PageRequest.class)))
                 .thenReturn(Page.empty());
 
         Page<ChatMessageResponse> messages = chatService.getMessages(
@@ -173,14 +173,13 @@ class ChatServiceTest {
         );
 
         assertThat(messages).isEmpty();
-        verify(chatMessageRepository).markMessagesAsRead(100L, onlineStaff.getId());
     }
 
     @Test
     @DisplayName("POS and admin roles are denied service-level chat access")
     void getMessages_rejectsNonChatRoles() {
         mockUserLookup(posStaff);
-        when(conversationRepository.findById(100L)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.findByIdWithLock(100L)).thenReturn(Optional.of(conversation));
 
         assertThatThrownBy(() -> chatService.getMessages(100L, PageRequest.of(0, 20), posStaff.getEmail()))
                 .isInstanceOf(AccessDeniedException.class)
@@ -330,7 +329,7 @@ class ChatServiceTest {
     @Test
     @DisplayName("Closed queue is scoped to the authenticated staff member")
     void getStaffConversations_usesOwnerScopedClosedQuery() {
-        mockUserLookup(onlineStaff);
+        when(userRepository.findByEmailIgnoreCase(onlineStaff.getEmail())).thenReturn(Optional.of(onlineStaff));
         PageRequest pageable = PageRequest.of(0, 20);
         when(conversationRepository.findMyClosedQueue(onlineStaff.getId(), pageable))
                 .thenReturn(new PageImpl<>(List.of()));
@@ -346,7 +345,7 @@ class ChatServiceTest {
     }
 
     private void mockUserLookup(User user) {
-        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(Optional.of(user));
+        when(userRepository.findByEmailIgnoreCaseWithLock(user.getEmail())).thenReturn(Optional.of(user));
     }
 
     private User user(Long id, String email, String fullName, RoleName roleName) {

@@ -1,3 +1,4 @@
+import useDialogFocus from '../hooks/useDialogFocus.js'
 import { useState } from 'react'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
@@ -24,6 +25,7 @@ function StaffLayout({ children, pathname }) {
   const { addToast } = useToast()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const sidebarRef = useDialogFocus(mobileMenuOpen, () => setMobileMenuOpen(false))
 
   const handleLogout = async () => {
     try {
@@ -33,8 +35,8 @@ function StaffLayout({ children, pathname }) {
         type: 'info',
       })
       navigateTo(CUSTOMER_ROUTES.login)
-    } catch {
-      navigateTo(CUSTOMER_ROUTES.login)
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể đăng xuất. Vui lòng thử lại.', type: 'error' })
     }
   }
 
@@ -78,7 +80,7 @@ function StaffLayout({ children, pathname }) {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#F5F7FA] text-[#17191B]">
+    <div className="min-h-screen flex bg-[#F6F7F8] text-[#17191B]">
       {/* Mobile Backdrop Overlay */}
       {mobileMenuOpen && (
         <div
@@ -89,29 +91,29 @@ function StaffLayout({ children, pathname }) {
       )}
 
       {/* Charcoal TailAdmin-Grade Sidebar for Staff */}
-      <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 bg-[#111315] border-r border-[#22262A] flex flex-col transition-all duration-200 ease-in-out ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+      <aside ref={sidebarRef} tabIndex={-1}
+        className={`fixed top-0 bottom-0 left-0 z-50 bg-white border-r border-border flex flex-col transition-[width,transform] duration-200 ease-in-out ${
+          mobileMenuOpen ? 'visible translate-x-0' : 'invisible lg:visible -translate-x-full lg:translate-x-0'
         } ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64 shadow-xl`}
         aria-label="Thanh điều hướng nhân viên"
       >
         {/* Sidebar Brand Header */}
-        <div className={`h-16 px-4 border-b border-[#22262A] flex items-center justify-between ${sidebarCollapsed ? 'justify-center' : ''}`}>
+        <div className={`h-16 px-4 border-b border-border flex items-center justify-between ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <RouterLink
             href={CUSTOMER_ROUTES.home}
-            className={`flex items-center gap-3 cursor-pointer group min-w-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2EA083] ${sidebarCollapsed ? 'justify-center w-full' : ''}`}
+            className={`flex items-center gap-3 cursor-pointer group min-w-0 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#A62F25] ${sidebarCollapsed ? 'justify-center w-full' : ''}`}
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Về trang chủ"
             title="Về trang chủ"
           >
-            <BrandLogo variant="dark" collapsed={sidebarCollapsed} />
+            <BrandLogo collapsed={sidebarCollapsed} />
           </RouterLink>
 
           {/* Desktop collapse toggle on sidebar header */}
           {!sidebarCollapsed && (
             <button
               type="button"
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 border border-[#272B30] transition-colors cursor-pointer shrink-0"
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-xl text-secondary hover:text-ink hover:bg-[#F6F7F8] border border-border transition-colors cursor-pointer shrink-0"
               onClick={() => setSidebarCollapsed(true)}
               title="Thu gọn thanh điều hướng"
               aria-label="Thu gọn thanh điều hướng"
@@ -123,7 +125,7 @@ function StaffLayout({ children, pathname }) {
           {/* Mobile close button */}
           <button
             type="button"
-            className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="lg:hidden p-1.5 rounded-lg text-secondary hover:text-ink hover:bg-[#F6F7F8] transition-colors cursor-pointer"
             onClick={() => setMobileMenuOpen(false)}
             aria-label="Đóng menu"
           >
@@ -133,11 +135,11 @@ function StaffLayout({ children, pathname }) {
 
         {/* If collapsed on desktop: show expand button right below the header */}
         {sidebarCollapsed && (
-          <div className="hidden lg:flex justify-center p-2 border-b border-[#22262A]">
+          <div className="hidden lg:flex justify-center p-2 border-b border-border">
             <button
               type="button"
               onClick={() => setSidebarCollapsed(false)}
-              className="w-full py-2 rounded-xl bg-[#16181A] hover:bg-zinc-800 text-zinc-400 hover:text-[#2EA083] border border-[#272B30] flex items-center justify-center transition-all cursor-pointer shadow-2xs group"
+              className="w-full py-2 rounded-xl bg-white hover:bg-[#F6F7F8] text-secondary hover:text-[#A62F25] border border-border flex items-center justify-center transition-all cursor-pointer shadow-2xs group"
               title="Mở rộng thanh điều hướng"
               aria-label="Mở rộng thanh điều hướng"
             >
@@ -151,7 +153,7 @@ function StaffLayout({ children, pathname }) {
           {navSections.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
               {!sidebarCollapsed ? (
-                <span className="px-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                <span className="px-3 text-xs font-semibold uppercase tracking-wider text-secondary mb-1">
                   {section.title}
                 </span>
               ) : (
@@ -165,12 +167,12 @@ function StaffLayout({ children, pathname }) {
                   <button
                     key={item.path}
                     type="button"
-                    title={sidebarCollapsed ? item.label : undefined}
+                    aria-label={item.label} title={sidebarCollapsed ? item.label : undefined}
                     aria-current={isActive ? 'page' : undefined}
                     className={`relative flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-[color,background-color,border-color,box-shadow] group motion-reduce:transition-none ${
                       isActive
-                        ? 'border-[#1F6B5A]/40 bg-[#1F6B5A]/25 text-white shadow-xs'
-                        : 'border-transparent text-zinc-400 hover:bg-zinc-800/70 hover:text-white'
+                        ? 'border-[#A62F25]/40 bg-[#F6F7F8] text-ink shadow-xs'
+                        : 'border-transparent text-secondary hover:bg-[#F6F7F8] hover:text-ink'
                     } ${sidebarCollapsed ? 'justify-center px-0' : ''}`}
                     onClick={() => {
                       setMobileMenuOpen(false)
@@ -179,14 +181,14 @@ function StaffLayout({ children, pathname }) {
                   >
                     {/* Active accent indicator */}
                     {isActive && (
-                      <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-[#1F6B5A]" />
+                      <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-[#A62F25]" />
                     )}
 
                     <span
                       className={`${
                         isActive
-                          ? 'text-[#2EA083]'
-                          : 'text-zinc-400 group-hover:text-zinc-200'
+                          ? 'text-[#A62F25]'
+                          : 'text-secondary group-hover:text-ink'
                       }`}
                     >
                       <ItemIcon size={18} />
@@ -203,13 +205,13 @@ function StaffLayout({ children, pathname }) {
         </nav>
 
         {/* Sidebar Footer User Info and Logout */}
-        <div className="p-3 border-t border-[#22262A] bg-[#0E1012]">
+        <div className="p-3 border-t border-border bg-[#F6F7F8]">
           <div
             className={`flex items-center gap-3 p-2 rounded-xl bg-zinc-900/60 border border-zinc-800/80 ${
               sidebarCollapsed ? 'justify-center' : ''
             }`}
           >
-            <div className="w-8 h-8 rounded-full bg-[#1F6B5A] text-white flex items-center justify-center font-bold text-xs shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#A62F25] text-white flex items-center justify-center font-bold text-xs shrink-0">
               {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'S'}
             </div>
             {!sidebarCollapsed && (
@@ -217,7 +219,7 @@ function StaffLayout({ children, pathname }) {
                 <span className="text-xs font-semibold text-white truncate">
                   {user?.fullName || 'Nhân viên'}
                 </span>
-                <span className="text-xs text-zinc-400 truncate">
+                <span className="text-xs text-secondary truncate">
                   {user?.email || 'staff@m4n.vn'}
                 </span>
               </div>
@@ -226,7 +228,7 @@ function StaffLayout({ children, pathname }) {
 
           <button
             type="button"
-            className={`mt-2 flex min-h-10 w-full items-center rounded-xl border border-transparent text-zinc-400 transition-colors hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 cursor-pointer ${
+            className={`mt-2 flex min-h-10 w-full items-center rounded-xl border border-transparent text-secondary transition-colors hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 cursor-pointer ${
               sidebarCollapsed ? 'justify-center px-0' : 'gap-2.5 px-3 text-left text-xs font-semibold'
             }`}
             onClick={handleLogout}
@@ -272,7 +274,7 @@ function StaffLayout({ children, pathname }) {
           {/* Right: Operational Status, Storefront Link, Notifications */}
           <div className="flex items-center gap-3">
             {/* System Status Pill */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-secondary border border-emerald-200 text-xs font-medium text-emerald-800">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Ca trực: Đang trực tuyến</span>
             </div>

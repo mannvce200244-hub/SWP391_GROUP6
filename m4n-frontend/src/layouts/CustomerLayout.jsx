@@ -1,8 +1,15 @@
+import { useState } from 'react'
 import SiteFooter from '../components/common/SiteFooter.jsx'
 import SiteHeader from '../components/common/SiteHeader.jsx'
 import CustomerChatWidget from '../features/chat/CustomerChatWidget.jsx'
+import useAuth from '../features/auth/useAuth.js'
+import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
 
 function CustomerLayout({ children, pathname }) {
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const { isAuthenticated, user } = useAuth()
+  const canOpenCustomerChat = !isAuthenticated || user?.role === 'CUSTOMER'
+
   return (
     <div className="min-h-screen flex flex-col bg-canvas text-ink">
       <a
@@ -15,8 +22,11 @@ function CustomerLayout({ children, pathname }) {
       <main id="main-content" className="flex-1">
         {children}
       </main>
-      <SiteFooter />
-      <CustomerChatWidget />
+      <SiteFooter
+        onOpenChat={canOpenCustomerChat ? () => setIsChatOpen(true) : undefined}
+        supportHref={user?.role === 'ONLINE_STAFF' ? CUSTOMER_ROUTES.staffChat : undefined}
+      />
+      <CustomerChatWidget isOpen={isChatOpen} onOpenChange={setIsChatOpen} />
     </div>
   )
 }

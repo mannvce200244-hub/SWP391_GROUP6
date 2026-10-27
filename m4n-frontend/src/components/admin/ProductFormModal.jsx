@@ -4,23 +4,13 @@ import categoryService from '../../services/categoryService.js'
 import artisanService from '../../services/artisanService.js'
 import craftVillageService from '../../services/craftVillageService.js'
 import useToast from '../ui/useToast.js'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
+import Input from '../ui/Input.jsx'
 import CategoryManagementModal from './CategoryManagementModal.jsx'
 import ArtisanManagementModal from './ArtisanManagementModal.jsx'
 import CraftVillageManagementModal from './CraftVillageManagementModal.jsx'
 import { IconInstrument } from '../ui/Icons.jsx'
 import { ArrowDown, ArrowUp, X, Plus, Trash2, Image, Package } from 'lucide-react'
-
-const vndNumberFormatter = new Intl.NumberFormat('vi-VN', {
-  maximumFractionDigits: 0,
-})
-
-function normalizeVndInput(value) {
-  return value.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
-}
-
-function formatVndInput(value) {
-  return value ? vndNumberFormatter.format(Number(value)) : ''
-}
 
 export default function ProductFormModal({
   isOpen,
@@ -46,6 +36,9 @@ export default function ProductFormModal({
   const [barcode, setBarcode] = useState('')
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
+  const [billableWeightKg, setBillableWeightKg] = useState('')
+  const [bulkySurcharge, setBulkySurcharge] = useState('0')
+  const [lowStockThreshold, setLowStockThreshold] = useState('5')
   const [categoryId, setCategoryId] = useState('')
   const [artisanId, setArtisanId] = useState('')
   const [craftVillageId, setCraftVillageId] = useState('')
@@ -58,12 +51,14 @@ export default function ProductFormModal({
 
   // Media items state
   const [mediaList, setMediaList] = useState([])
-  const [removedMediaIds, setRemovedMediaIds] = useState([])
   const [newMediaUrl, setNewMediaUrl] = useState('')
   const [newMediaType, setNewMediaType] = useState('IMAGE')
   const [newMediaAlt, setNewMediaAlt] = useState('')
 
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(Boolean(productId))
+  const [masterDataError, setMasterDataError] = useState('')
+  const [masterDataReady, setMasterDataReady] = useState(false)
+  const [productReady, setProductReady] = useState(!productId)
   const [submitting, setSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState({})
   const [serverError, setServerError] = useState('')
@@ -73,6 +68,9 @@ export default function ProductFormModal({
     setBarcode('')
     setName('')
     setPrice('')
+    setBillableWeightKg('')
+    setBulkySurcharge('0')
+    setLowStockThreshold('5')
     setCategoryId('')
     setArtisanId('')
     setCraftVillageId('')
@@ -83,7 +81,6 @@ export default function ProductFormModal({
     setDescription('')
     setIsActive(true)
     setMediaList([])
-    setRemovedMediaIds([])
     setFormErrors({})
     setServerError('')
   }, [])
@@ -91,15 +88,17 @@ export default function ProductFormModal({
   const loadMasterData = useCallback(async () => {
     try {
       const [cats, arts, vils] = await Promise.all([
-        categoryService.getCategories().catch(() => []),
-        artisanService.getAdminArtisans().catch(() => []),
-        craftVillageService.getCraftVillages().catch(() => []),
+        categoryService.getCategories(),
+        artisanService.getAdminArtisans(),
+        craftVillageService.getCraftVillages(),
       ])
       setCategories(cats || [])
       setArtisans(arts || [])
       setCraftVillages(vils || [])
-    } catch {
-      // master data fetch soft fail
+      setMasterDataReady(true)
+      setMasterDataError('')
+    } catch (error) {
+      setMasterDataError(error.message || 'Không thể tải dữ liệu phân loại. Vui lòng tải lại trước khi lưu.')
     }
   }, [])
 
@@ -108,15 +107,18 @@ export default function ProductFormModal({
     let active = true
 
     Promise.all([
-      categoryService.getCategories().catch(() => []),
-      artisanService.getAdminArtisans().catch(() => []),
-      craftVillageService.getCraftVillages().catch(() => []),
+      categoryService.getCategories(),
+      artisanService.getAdminArtisans(),
+      craftVillageService.getCraftVillages(),
     ]).then(([cats, arts, vils]) => {
       if (active) {
         setCategories(cats || [])
         setArtisans(arts || [])
         setCraftVillages(vils || [])
+        setMasterDataReady(true)
       }
+    }).catch((error) => {
+      if (active) setMasterDataError(error.message || 'Không thể tải dữ liệu phân loại. Vui lòng tải lại trước khi lưu.')
     })
 
     if (productId) {
@@ -127,7 +129,10 @@ export default function ProductFormModal({
             setCode(p.code || '')
             setBarcode(p.barcode || '')
             setName(p.name || '')
-            setPrice(p.price != null ? String(Math.trunc(Number(p.price))) : '')
+            setPrice(p.price != null ? String(p.price) : '')
+            setBillableWeightKg(p.billableWeightKg == null ? '' : String(p.billableWeightKg))
+            setBulkySurcharge(String(p.bulkySurcharge ?? 0))
+            setLowStockThreshold(String(p.lowStockThreshold ?? 5))
             setCategoryId(p.category?.id ? String(p.category.id) : '')
             setArtisanId(p.artisan?.id ? String(p.artisan.id) : '')
             setCraftVillageId(p.craftVillage?.id ? String(p.craftVillage.id) : '')
@@ -150,7 +155,7 @@ export default function ProductFormModal({
                 sortOrder: index,
               }))
             )
-            setRemovedMediaIds([])
+            setProductReady(true)
             setLoading(false)
           }
         })
@@ -168,9 +173,12 @@ export default function ProductFormModal({
   }, [isOpen, productId])
 
   const handleClose = () => {
+    if (submitting) return
     resetFormFields()
     onClose()
   }
+
+  const dialogRef = useDialogFocus(isOpen, () => handleClose(), submitting)
 
   // When an artisan is selected, auto-fill craft village if available and not yet set
   const handleArtisanChange = (selectedArtisanId) => {
@@ -185,7 +193,12 @@ export default function ProductFormModal({
 
   // Media helpers
   const handleAddMedia = () => {
+    if (submitting) return
     if (!newMediaUrl.trim()) return
+    if (newMediaUrl.trim().length > 500 || newMediaAlt.trim().length > 255) {
+      setFormErrors((current) => ({ ...current, media: 'Đường dẫn media tối đa 500 ký tự; mô tả thay thế tối đa 255 ký tự.' }))
+      return
+    }
     const isFirst = mediaList.length === 0
     const newItem = {
       url: newMediaUrl.trim(),
@@ -197,13 +210,10 @@ export default function ProductFormModal({
     setMediaList((prev) => [...prev, newItem])
     setNewMediaUrl('')
     setNewMediaAlt('')
+    setFormErrors((current) => ({ ...current, media: undefined }))
   }
 
   const handleRemoveMedia = (index) => {
-    const item = mediaList[index]
-    if (isEdit && item.id) {
-      setRemovedMediaIds((prev) => [...prev, item.id])
-    }
     setMediaList((prev) =>
       prev
         .filter((_, i) => i !== index)
@@ -257,20 +267,40 @@ export default function ProductFormModal({
     }
 
     const numPrice = Number(price)
-    if (!price || isNaN(numPrice) || numPrice <= 0) {
-      errors.price = 'Giá sản phẩm phải lớn hơn 0'
+    if (!/^\d+(\.\d{1,2})?$/.test(price) || !Number.isFinite(numPrice) || numPrice <= 0 || numPrice > 999999999999.99) {
+      errors.price = 'Giá niêm yết phải lớn hơn 0, tối đa 999.999.999.999,99đ và 2 chữ số thập phân.'
+    }
+    if (billableWeightKg !== '' && (!/^\d+(\.\d{1,3})?$/.test(billableWeightKg) || Number(billableWeightKg) <= 0 || Number(billableWeightKg) > 9999999.999)) {
+      errors.billableWeightKg = 'Khối lượng phải lớn hơn 0, tối đa 9.999.999,999 kg và 3 chữ số thập phân.'
+    }
+    if (!/^\d+$/.test(bulkySurcharge) || Number(bulkySurcharge) > 9999999999999) {
+      errors.bulkySurcharge = 'Phụ phí là số nguyên từ 0 đến 9.999.999.999.999đ.'
+    }
+    const threshold = Number(lowStockThreshold)
+    if (lowStockThreshold === '' || !Number.isInteger(threshold) || threshold < 0 || threshold > 2147483647) {
+      errors.lowStockThreshold = 'Ngưỡng cảnh báo phải là số nguyên từ 0 đến 2147483647.'
     }
 
     if (!categoryId) {
       errors.categoryId = 'Vui lòng chọn danh mục cho sản phẩm'
     }
 
+    for (const [field, value, limit] of [
+      ['barcode', barcode, 100], ['material', material, 255],
+      ['dimensions', dimensions, 100], ['musicalRange', musicalRange, 100],
+      ['origin', origin, 150],
+    ]) {
+      if (value.trim().length > limit) errors[field] = `Trường này tối đa ${limit} ký tự.`
+    }
+
     setFormErrors(errors)
+    if (Object.keys(errors).length) document.getElementById('product-' + Object.keys(errors)[0])?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (submitting || loading || !masterDataReady || !productReady || masterDataError) return
     if (!validate()) return
 
     setSubmitting(true)
@@ -281,6 +311,9 @@ export default function ProductFormModal({
           barcode: barcode.trim() || null,
           name: name.trim(),
           price: Number(price),
+          billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
+          bulkySurcharge: Number(bulkySurcharge),
+          lowStockThreshold: Number(lowStockThreshold),
           categoryId: Number(categoryId),
           artisanId: artisanId ? Number(artisanId) : null,
           craftVillageId: craftVillageId ? Number(craftVillageId) : null,
@@ -290,46 +323,33 @@ export default function ProductFormModal({
           origin: origin.trim() || null,
           description: description.trim() || null,
           isActive: Boolean(isActive),
+          media: mediaList.map((media, index) => ({
+            id: media.id || null,
+            mediaType: media.mediaType,
+            url: media.url,
+            altText: media.altText || null,
+            sortOrder: index,
+          })),
         }
 
         await adminProductService.updateProduct(productId, updatePayload)
-
-        for (const mediaId of removedMediaIds) {
-          await adminProductService.deleteMedia(productId, mediaId)
-        }
-
-        const existingMediaItems = mediaList.filter((m) => m.id)
-        for (const m of existingMediaItems) {
-          await adminProductService.updateMedia(productId, m.id, {
-            mediaType: m.mediaType,
-            url: m.url,
-            altText: m.altText || null,
-            sortOrder: m.sortOrder,
-          })
-        }
-
-        const newMediaItems = mediaList.filter((m) => !m.id)
-        for (const m of newMediaItems) {
-          await adminProductService.addMedia(productId, {
-            url: m.url,
-            mediaType: m.mediaType,
-            altText: m.altText || null,
-            sortOrder: m.sortOrder || 0,
-          })
-        }
 
         addToast({
           message: `Đã cập nhật sản phẩm "${name.trim()}".`,
           type: 'success',
         })
         if (onSuccess) onSuccess(productId)
-        handleClose()
+        resetFormFields()
+        onClose()
       } else {
         const createPayload = {
           code: code.trim() ? code.trim().toUpperCase() : null,
           barcode: barcode.trim() || null,
           name: name.trim(),
           price: Number(price),
+          billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
+          bulkySurcharge: Number(bulkySurcharge),
+          lowStockThreshold: Number(lowStockThreshold),
           categoryId: Number(categoryId),
           artisanId: artisanId ? Number(artisanId) : null,
           craftVillageId: craftVillageId ? Number(craftVillageId) : null,
@@ -352,9 +372,11 @@ export default function ProductFormModal({
           type: 'success',
         })
         if (onSuccess) onSuccess(created.id)
-        handleClose()
+        resetFormFields()
+        onClose()
       }
     } catch (err) {
+      setFormErrors(err.fieldErrors || err.data?.fieldErrors || {})
       setServerError(err.message || 'Đã xảy ra lỗi khi lưu thông tin sản phẩm')
     } finally {
       setSubmitting(false)
@@ -366,6 +388,8 @@ export default function ProductFormModal({
   return (
     <>
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
         role="dialog"
         aria-modal="true"
@@ -402,8 +426,15 @@ export default function ProductFormModal({
           {/* Modal Body */}
           <div className="flex-1 overflow-y-auto p-6 bg-[#F6F7F8]">
             {serverError && (
-              <div className="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
+              <div role="alert" className="mb-5 p-4 rounded-xl bg-[#FFFFFF] border border-rose-200 text-rose-700 text-sm font-medium">
                 {serverError}
+              </div>
+            )}
+
+            {masterDataError && (
+              <div role="alert" className="mb-5 rounded-xl border border-danger p-4 text-sm text-danger">
+                <p>{masterDataError}</p>
+                <button type="button" onClick={loadMasterData} className="mt-2 underline">Tải lại dữ liệu phân loại</button>
               </div>
             )}
 
@@ -412,7 +443,8 @@ export default function ProductFormModal({
                 Đang tải dữ liệu sản phẩm...
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-6">
+                <fieldset disabled={submitting || !masterDataReady || !productReady} className="contents">
                 {/* 1. THÔNG TIN CƠ BẢN */}
                 <div className="bg-[#FFFFFF] p-6 rounded-2xl border border-[#E3E6E8] shadow-2xs">
                   <h3 className="text-base font-semibold text-ink mb-4 pb-2.5 border-b border-[#E3E6E8] flex items-center justify-between">
@@ -435,20 +467,20 @@ export default function ProductFormModal({
                       </div>
                     ) : (
                       <div>
-                        <label className="block text-sm font-semibold text-ink mb-1.5">
+                        <label htmlFor="product-code" className="block text-sm font-semibold text-ink mb-1.5">
                           Mã nhạc cụ (tùy chọn)
                         </label>
-                        <input
+                        <input id="product-code" name="code" maxLength={50} aria-invalid={Boolean(formErrors.code)} aria-describedby={formErrors.code ? "product-code-error" : undefined}
                           type="text"
                           value={code}
                           onChange={(e) => setCode(e.target.value.toUpperCase())}
                           placeholder="Để trống tự tạo (VD: M4N-DAY-0006)"
                           className={`w-full px-3.5 py-2.5 text-sm rounded-xl border ${
-                            formErrors.code ? 'border-rose-400 bg-rose-50/30' : 'border-[#E3E6E8]'
+                            formErrors.code ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E3E6E8]'
                           } bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono`}
                         />
                         {formErrors.code ? (
-                          <span className="text-xs text-rose-500 mt-1 block">{formErrors.code}</span>
+                          <span id="product-code-error" role="alert" className="text-xs text-rose-500 mt-1 block">{formErrors.code}</span>
                         ) : (
                           <span className="text-xs text-secondary mt-1 block">
                             Hệ thống tự tạo mã chuẩn nếu để trống
@@ -458,10 +490,10 @@ export default function ProductFormModal({
                     )}
 
                     <div>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">
+                      <label htmlFor="product-barcode" className="block text-sm font-semibold text-ink mb-1.5">
                         Mã vạch (Barcode)
                       </label>
-                      <input
+                      <input id="product-barcode" name="barcode" maxLength={100} aria-invalid={Boolean(formErrors.barcode)}
                         type="text"
                         value={barcode}
                         onChange={(e) => setBarcode(e.target.value)}
@@ -474,20 +506,20 @@ export default function ProductFormModal({
                     </div>
 
                     <div className={isEdit ? 'sm:col-span-2' : 'sm:col-span-2'}>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">
+                      <label htmlFor="product-name" className="block text-sm font-semibold text-ink mb-1.5">
                         Tên sản phẩm nhạc cụ <span className="text-rose-500">*</span>
                       </label>
-                      <input
+                      <input id="product-name" name="name" maxLength={200} aria-invalid={Boolean(formErrors.name)} aria-describedby={formErrors.name ? "product-name-error" : undefined}
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="VD: Đàn Tranh 17 Dây Gỗ Mun Sừng Cao Cấp"
                         className={`w-full px-3.5 py-2.5 text-sm rounded-xl border ${
-                          formErrors.name ? 'border-rose-400 bg-rose-50/30' : 'border-[#E3E6E8]'
+                          formErrors.name ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E3E6E8]'
                         } bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30`}
                       />
                       {formErrors.name && (
-                        <span className="text-xs text-rose-500 mt-1 block">{formErrors.name}</span>
+                        <span id="product-name-error" role="alert" className="text-xs text-rose-500 mt-1 block">{formErrors.name}</span>
                       )}
                     </div>
 
@@ -499,21 +531,24 @@ export default function ProductFormModal({
                         <input
                           id="product-price"
                           name="price"
-                          type="text"
-                          inputMode="numeric"
+                          type="number"
+                          inputMode="decimal"
+                          min="0.01"
+                          max="999999999999.99"
+                          step="0.01"
                           autoComplete="off"
-                          value={formatVndInput(price)}
+                          value={price}
                           onChange={(e) => {
-                            setPrice(normalizeVndInput(e.target.value))
+                            setPrice(e.target.value)
                             if (formErrors.price) {
                               setFormErrors((previous) => ({ ...previous, price: undefined }))
                             }
                           }}
-                          placeholder="VD: 6.500.000"
+                          placeholder="VD: 6500000"
                           aria-invalid={Boolean(formErrors.price)}
                           aria-describedby={formErrors.price ? 'product-price-error' : undefined}
                           className={`w-full rounded-xl border bg-[#FFFFFF] px-3.5 py-2.5 pr-10 text-sm font-mono text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 ${
-                            formErrors.price ? 'border-rose-400 bg-rose-50/30' : 'border-[#E3E6E8]'
+                            formErrors.price ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E3E6E8]'
                           }`}
                         />
                         <span
@@ -530,7 +565,17 @@ export default function ProductFormModal({
                       )}
                     </div>
 
-                    <div className="flex flex-col justify-end pb-1 sm:col-span-2 lg:col-span-3">
+                    <div>
+                      <label htmlFor="product-lowStockThreshold" className="block text-sm font-semibold text-ink mb-1.5">Ngưỡng cảnh báo tồn kho</label>
+                      <input id="product-lowStockThreshold" name="lowStockThreshold" type="number" min="0" step="1" max="2147483647" value={lowStockThreshold} onChange={(event) => setLowStockThreshold(event.target.value)} aria-invalid={Boolean(formErrors.lowStockThreshold)} aria-describedby="product-lowStockThreshold-help" className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#E3E6E8] bg-white text-ink focus:outline-none focus:ring-2 focus:ring-brand/30" />
+                      <p id="product-lowStockThreshold-help" className="mt-1 text-xs text-secondary">Cảnh báo khi tồn kho dương không vượt ngưỡng; 0 chỉ cảnh báo hết hàng.</p>
+                      {formErrors.lowStockThreshold && <p role="alert" className="mt-1 text-xs text-danger">{formErrors.lowStockThreshold}</p>}
+                    </div>
+
+                    <Input id="product-billableWeightKg" name="billableWeightKg" type="number" min="0.001" max="9999999.999" step="0.001" label="Khối lượng tính cước (kg)" value={billableWeightKg} error={formErrors.billableWeightKg} helperText="Nhập khối lượng thực tế hoặc quy đổi. Cần có khi bật phí vận chuyển." onChange={(event) => setBillableWeightKg(event.target.value)} />
+                    <Input id="product-bulkySurcharge" name="bulkySurcharge" type="number" min="0" max="9999999999999" step="1" required label="Phụ phí cồng kềnh / sản phẩm (đ)" value={bulkySurcharge} error={formErrors.bulkySurcharge} helperText="0 nếu không cồng kềnh; ví dụ 30.000đ cho một sản phẩm." onChange={(event) => setBulkySurcharge(event.target.value)} />
+
+                    <div className="flex flex-col justify-end pb-1 sm:col-span-2 lg:col-span-2">
                       <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-ink">
                         <input
                           type="checkbox"
@@ -557,7 +602,7 @@ export default function ProductFormModal({
                     {/* Category Select */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-sm font-semibold text-ink">
+                        <label htmlFor="product-categoryId" className="text-sm font-semibold text-ink">
                           Danh mục <span className="text-rose-500">*</span>
                         </label>
                         <button
@@ -568,11 +613,11 @@ export default function ProductFormModal({
                           + Quản lý
                         </button>
                       </div>
-                      <select
+                      <select id="product-categoryId" name="categoryId" aria-invalid={Boolean(formErrors.categoryId)} aria-describedby={formErrors.categoryId ? "product-categoryId-error" : undefined}
                         value={categoryId}
                         onChange={(e) => setCategoryId(e.target.value)}
                         className={`w-full px-3.5 py-2.5 text-sm rounded-xl border ${
-                          formErrors.categoryId ? 'border-rose-400 bg-rose-50/30' : 'border-[#E3E6E8]'
+                          formErrors.categoryId ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E3E6E8]'
                         } bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30`}
                       >
                         <option value="">-- Chọn danh mục --</option>
@@ -583,14 +628,14 @@ export default function ProductFormModal({
                         ))}
                       </select>
                       {formErrors.categoryId && (
-                        <span className="text-xs text-rose-500 mt-1 block">{formErrors.categoryId}</span>
+                        <span id="product-categoryId-error" role="alert" className="text-xs text-rose-500 mt-1 block">{formErrors.categoryId}</span>
                       )}
                     </div>
 
                     {/* Artisan Select */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-sm font-semibold text-ink">
+                        <label htmlFor="product-artisanId" className="text-sm font-semibold text-ink">
                           Nghệ nhân chế tác
                         </label>
                         <button
@@ -601,7 +646,7 @@ export default function ProductFormModal({
                           + Quản lý
                         </button>
                       </div>
-                      <select
+                      <select id="product-artisanId" name="artisanId" aria-invalid={Boolean(formErrors.artisanId)}
                         value={artisanId}
                         onChange={(e) => handleArtisanChange(e.target.value)}
                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30"
@@ -618,7 +663,7 @@ export default function ProductFormModal({
                     {/* Craft Village Select */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-sm font-semibold text-ink">
+                        <label htmlFor="product-craftVillageId" className="text-sm font-semibold text-ink">
                           Làng nghề truyền thống
                         </label>
                         <button
@@ -629,7 +674,7 @@ export default function ProductFormModal({
                           + Quản lý
                         </button>
                       </div>
-                      <select
+                      <select id="product-craftVillageId" name="craftVillageId" aria-invalid={Boolean(formErrors.craftVillageId)}
                         value={craftVillageId}
                         onChange={(e) => setCraftVillageId(e.target.value)}
                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30"
@@ -653,10 +698,10 @@ export default function ProductFormModal({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
                     <div>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">
+                      <label htmlFor="product-material" className="block text-sm font-semibold text-ink mb-1.5">
                         Chất liệu chế tác
                       </label>
-                      <input
+                      <input id="product-material" name="material" maxLength={255} aria-invalid={Boolean(formErrors.material)}
                         type="text"
                         value={material}
                         onChange={(e) => setMaterial(e.target.value)}
@@ -666,10 +711,10 @@ export default function ProductFormModal({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">
+                      <label htmlFor="product-dimensions" className="block text-sm font-semibold text-ink mb-1.5">
                         Kích thước
                       </label>
-                      <input
+                      <input id="product-dimensions" name="dimensions" maxLength={100} aria-invalid={Boolean(formErrors.dimensions)}
                         type="text"
                         value={dimensions}
                         onChange={(e) => setDimensions(e.target.value)}
@@ -679,10 +724,10 @@ export default function ProductFormModal({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">
+                      <label htmlFor="product-musicalRange" className="block text-sm font-semibold text-ink mb-1.5">
                         Âm vực
                       </label>
-                      <input
+                      <input id="product-musicalRange" name="musicalRange" maxLength={100} aria-invalid={Boolean(formErrors.musicalRange)}
                         type="text"
                         value={musicalRange}
                         onChange={(e) => setMusicalRange(e.target.value)}
@@ -692,10 +737,10 @@ export default function ProductFormModal({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">
+                      <label htmlFor="product-origin" className="block text-sm font-semibold text-ink mb-1.5">
                         Xuất xứ địa phương
                       </label>
-                      <input
+                      <input id="product-origin" name="origin" maxLength={150} aria-invalid={Boolean(formErrors.origin)}
                         type="text"
                         value={origin}
                         onChange={(e) => setOrigin(e.target.value)}
@@ -705,10 +750,10 @@ export default function ProductFormModal({
                     </div>
 
                     <div className="sm:col-span-2 lg:col-span-4">
-                      <label className="block text-sm font-semibold text-ink mb-1.5">
+                      <label htmlFor="product-description" className="block text-sm font-semibold text-ink mb-1.5">
                         Mô tả chi tiết sản phẩm
                       </label>
-                      <textarea
+                      <textarea id="product-description" name="description" aria-invalid={Boolean(formErrors.description)}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         rows={4}
@@ -732,12 +777,17 @@ export default function ProductFormModal({
                   <div className="p-3.5 bg-[#F6F7F8] rounded-xl border border-[#E3E6E8] mb-4.5 flex flex-col sm:flex-row gap-2.5">
                     <input
                       type="text"
+                      name="mediaUrl"
+                      aria-label="Đường dẫn hình ảnh hoặc video"
+                      maxLength={500}
                       value={newMediaUrl}
                       onChange={(e) => setNewMediaUrl(e.target.value)}
                       placeholder="Nhập URL hình ảnh hoặc video (VD: /assets/... hoặc https://...)"
                       className="flex-1 px-3.5 py-2 text-sm rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink placeholder:text-subtle focus:outline-none focus:ring-2 focus:ring-brand/30"
                     />
                     <select
+                      name="mediaType"
+                      aria-label="Loại media"
                       value={newMediaType}
                       onChange={(e) => setNewMediaType(e.target.value)}
                       className="px-3.5 py-2 text-sm rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30"
@@ -747,6 +797,9 @@ export default function ProductFormModal({
                     </select>
                     <input
                       type="text"
+                      name="mediaAlt"
+                      aria-label="Mô tả thay thế của media"
+                      maxLength={255}
                       value={newMediaAlt}
                       onChange={(e) => setNewMediaAlt(e.target.value)}
                       placeholder="Mô tả alt..."
@@ -761,6 +814,7 @@ export default function ProductFormModal({
                       <span>Thêm ảnh</span>
                     </button>
                   </div>
+                  {formErrors.media && <p role="alert" className="mb-3 text-sm text-danger">{formErrors.media}</p>}
 
                   {/* Media Grid */}
                   {mediaList.length === 0 ? (
@@ -833,7 +887,7 @@ export default function ProductFormModal({
                             <button
                               type="button"
                               onClick={() => handleRemoveMedia(idx)}
-                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-800 cursor-pointer"
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-xs text-rose-600 hover:bg-surface-secondary hover:text-rose-800 cursor-pointer"
                               title="Xóa ảnh"
                               aria-label="Xóa ảnh"
                             >
@@ -869,13 +923,15 @@ export default function ProductFormModal({
                     </button>
                     <button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || loading || !masterDataReady || !productReady || Boolean(masterDataError)}
+                      aria-busy={submitting}
                       className="px-6 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                     >
                       {submitting ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Tạo sản phẩm'}
                     </button>
                   </div>
                 </div>
+                </fieldset>
               </form>
             )}
           </div>
@@ -883,21 +939,21 @@ export default function ProductFormModal({
       </div>
 
       {/* Sub-modals for inline master data creation */}
-      <CategoryManagementModal
+      {showCategoryModal && <CategoryManagementModal
         isOpen={showCategoryModal}
         onClose={() => setShowCategoryModal(false)}
         onSuccess={loadMasterData}
-      />
-      <ArtisanManagementModal
+      />}
+      {showArtisanModal && <ArtisanManagementModal
         isOpen={showArtisanModal}
         onClose={() => setShowArtisanModal(false)}
         onSuccess={loadMasterData}
-      />
-      <CraftVillageManagementModal
+      />}
+      {showVillageModal && <CraftVillageManagementModal
         isOpen={showVillageModal}
         onClose={() => setShowVillageModal(false)}
         onSuccess={loadMasterData}
-      />
+      />}
     </>
   )
 }

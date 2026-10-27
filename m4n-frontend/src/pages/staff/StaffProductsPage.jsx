@@ -4,6 +4,7 @@ import { Search, Package } from 'lucide-react'
 import LoadingState from '../../components/ui/LoadingState.jsx'
 import EmptyState from '../../components/ui/EmptyState.jsx'
 import ErrorState from '../../components/ui/ErrorState.jsx'
+import { isSafeMediaUrl } from '../../features/catalog/productMedia.js'
 
 function StaffProductsPage() {
   const [products, setProducts] = useState([])
@@ -12,17 +13,25 @@ function StaffProductsPage() {
   const [keyword, setKeyword] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
     let active = true
 
-    const filters = {}
+    const filters = { page, size: 15 }
     if (keyword) filters.keyword = keyword
 
-    productService.listProducts(filters)
+    async function loadProducts() {
+      setLoading(true)
+      setError(null)
+      return productService.listProductsPage(filters)
+    }
+    loadProducts()
       .then((result) => {
         if (active) {
-          setProducts(result)
+          setProducts(result.products)
+          setTotalPages(result.totalPages || 1)
           setLoading(false)
         }
       })
@@ -34,13 +43,14 @@ function StaffProductsPage() {
       })
 
     return () => { active = false }
-  }, [keyword, reloadKey])
+  }, [keyword, page, reloadKey])
 
   const handleSearch = (e) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
     setKeyword(searchInput.trim())
+    setPage(1)
     setReloadKey((current) => current + 1)
   }
 
@@ -112,13 +122,15 @@ function StaffProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {products.map((product) => (
+                {products.map((product) => {
+                  const image = product.media?.find((media) => media.type === 'IMAGE' && isSafeMediaUrl(media.url))
+                  return (
                   <tr key={product.id} className="hover:bg-surface-secondary/50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        {product.media?.[0]?.url ? (
+                        {image ? (
                           <img
-                            src={product.media[0].url}
+                            src={image.url}
                             alt={product.name}
                             className="w-10 h-10 rounded-lg object-cover border border-border"
                           />
@@ -146,23 +158,25 @@ function StaffProductsPage() {
                         : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      {product.availability !== 'OUT_OF_STOCK' ? (
+                      {['IN_STOCK', 'LOW_STOCK'].includes(product.availability) ? (
                         <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-jade-soft text-jade border border-jade-border">
-                          Còn hàng
+                          {product.availability === 'LOW_STOCK' ? 'Sắp hết hàng' : 'Còn hàng'}
                         </span>
                       ) : (
                         <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-danger-soft text-danger border border-danger-border">
-                          Hết hàng
+                          {product.availability === 'OUT_OF_STOCK' ? 'Hết hàng' : 'Chưa xác định'}
                         </span>
                       )}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
+      {totalPages > 1 && <div className="flex items-center justify-end gap-3 text-sm"><button type="button" disabled={loading || page === 1} onClick={() => setPage((value) => value - 1)}>Trước</button><span>Trang {page}/{totalPages}</span><button type="button" disabled={loading || page >= totalPages} onClick={() => setPage((value) => value + 1)}>Sau</button></div>}
     </div>
   )
 }

@@ -9,14 +9,13 @@ import ArtisanVillageTabs from '../features/artisans/ArtisanVillageTabs.jsx'
 import VillageCard from '../features/artisans/VillageCard.jsx'
 import ArtisanProductsSection from '../features/artisans/ArtisanProductsSection.jsx'
 import artisanService from '../services/artisanService.js'
+import { ROUTE_CHANGE_EVENT } from '../routes/customerRoutes.js'
 
 function parseQueryParams() {
   if (typeof window === 'undefined') {
     return {
-      craft: 'all',
       page: 1,
       province: 'all',
-      region: 'all',
       search: '',
       sort: 'featured',
       tab: 'artisans',
@@ -27,12 +26,11 @@ function parseQueryParams() {
   const tab = searchParams.get('tab') === 'villages' ? 'villages' : 'artisans'
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10) || 1)
   const search = searchParams.get('search') || ''
-  const craft = searchParams.get('craft') || 'all'
   const province = searchParams.get('province') || 'all'
-  const region = searchParams.get('region') || 'all'
-  const sort = searchParams.get('sort') || 'featured'
+  const requestedSort = searchParams.get('sort')
+  const sort = ['az', 'newest'].includes(requestedSort) ? requestedSort : 'featured'
 
-  return { craft, page, province, region, search, sort, tab }
+  return { page, province, search, sort, tab }
 }
 
 function ArtisansPage() {
@@ -46,7 +44,7 @@ function ArtisansPage() {
     total: 0,
     totalPages: 1,
   })
-  const [summary, setSummary] = useState({ artisans: 0, villages: 0 })
+  const [summary, setSummary] = useState(null)
   const [retryKey, setRetryKey] = useState(0)
 
   // Sync state with browser back/forward history
@@ -56,69 +54,64 @@ function ArtisansPage() {
       setParams(parseQueryParams())
     }
     window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
+    window.addEventListener(ROUTE_CHANGE_EVENT, handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+      window.removeEventListener(ROUTE_CHANGE_EVENT, handlePopState)
+    }
   }, [])
 
   // Sync state to URL without reloading page
   const updateParams = (newParams) => {
     setData((prev) => ({ ...prev, loading: true }))
-    setParams((prev) => {
-      const merged = { ...prev, ...newParams }
-      const searchParams = new URLSearchParams()
+    const merged = { ...params, ...newParams }
+    const searchParams = new URLSearchParams()
 
-      if (merged.tab && merged.tab !== 'artisans') {
-        searchParams.set('tab', merged.tab)
-      }
-      if (merged.search && merged.search.trim()) {
-        searchParams.set('search', merged.search.trim())
-      }
-      if (merged.craft && merged.craft !== 'all') {
-        searchParams.set('craft', merged.craft)
-      }
-      if (merged.province && merged.province !== 'all') {
-        searchParams.set('province', merged.province)
-      }
-      if (merged.region && merged.region !== 'all') {
-        searchParams.set('region', merged.region)
-      }
-      if (merged.sort && merged.sort !== 'featured') {
-        searchParams.set('sort', merged.sort)
-      }
-      if (merged.page && merged.page > 1) {
-        searchParams.set('page', String(merged.page))
-      }
+    if (merged.tab && merged.tab !== 'artisans') {
+      searchParams.set('tab', merged.tab)
+    }
+    if (merged.search && merged.search.trim()) {
+      searchParams.set('search', merged.search.trim())
+    }
+    if (merged.province && merged.province !== 'all') {
+      searchParams.set('province', merged.province)
+    }
+    if (merged.sort && merged.sort !== 'featured') {
+      searchParams.set('sort', merged.sort)
+    }
+    if (merged.page && merged.page > 1) {
+      searchParams.set('page', String(merged.page))
+    }
 
-      const queryString = searchParams.toString()
-      const newUrl = queryString
-        ? `${window.location.pathname}?${queryString}`
-        : window.location.pathname
+    const queryString = searchParams.toString()
+    const newUrl = queryString
+      ? `${window.location.pathname}?${queryString}`
+      : window.location.pathname
 
-      window.history.pushState(null, '', newUrl)
-      return merged
-    })
+    if (`${window.location.pathname}${window.location.search}` !== newUrl) {
+      if ('search' in newParams && Object.keys(newParams).length === 2) window.history.replaceState(null, '', newUrl)
+      else window.history.pushState(null, '', newUrl)
+    }
+    setParams(merged)
   }
 
   // Load data whenever params change
   useEffect(() => {
     let active = true
 
+    const timer = setTimeout(() => {
     const fetchPromise =
       params.tab === 'villages'
         ? artisanService.listCraftVillages({
-            craft: params.craft,
             limit: 6,
             page: params.page,
             province: params.province,
-            region: params.region,
             search: params.search,
             sort: params.sort,
           })
         : artisanService.listArtisans({
-            craft: params.craft,
             limit: 6,
             page: params.page,
-            province: params.province,
-            region: params.region,
             search: params.search,
             sort: params.sort,
           })
@@ -126,6 +119,14 @@ function ArtisansPage() {
     fetchPromise
       .then((result) => {
         if (active) {
+          if (params.page > result.totalPages) {
+            setParams((current) => ({ ...current, page: result.totalPages }))
+            const query = new URLSearchParams(window.location.search)
+            if (result.totalPages > 1) query.set('page', String(result.totalPages))
+            else query.delete('page')
+            window.history.replaceState(null, '', `${window.location.pathname}${query.size ? `?${query}` : ''}`)
+            return
+          }
           setData({
             error: false,
             items: result.items,
@@ -142,9 +143,11 @@ function ArtisansPage() {
           setData((prev) => ({ ...prev, error: true, loading: false }))
         }
       })
+    }, params.search ? 300 : 0)
 
     return () => {
       active = false
+      clearTimeout(timer)
     }
   }, [params, retryKey])
 
@@ -155,7 +158,7 @@ function ArtisansPage() {
       .then((counts) => {
         if (active) setSummary(counts)
       })
-      .catch(() => {})
+      .catch(() => { if (active) setSummary(null) })
     return () => {
       active = false
     }
@@ -174,10 +177,8 @@ function ArtisansPage() {
   const handleTabChange = (newTab) => {
     if (newTab === params.tab) return
     updateParams({
-      craft: 'all',
       page: 1,
       province: 'all',
-      region: 'all',
       search: '',
       sort: 'featured',
       tab: newTab,
@@ -192,10 +193,8 @@ function ArtisansPage() {
   // Clear all filters
   const handleClearFilters = () => {
     updateParams({
-      craft: 'all',
       page: 1,
       province: 'all',
-      region: 'all',
       search: '',
       sort: 'featured',
     })
@@ -206,12 +205,7 @@ function ArtisansPage() {
   return (
     <div className="w-full flex flex-col bg-white">
       {/* 1. COMPACT EDITORIAL HERO */}
-      <ArtisansHero
-        stats={{
-          artisans: summary.artisans,
-          villages: summary.villages,
-        }}
-      />
+      <ArtisansHero stats={summary} />
 
       {/* 2. MAIN DISCOVERY & FILTER SECTION */}
       <section
@@ -239,9 +233,9 @@ function ArtisansPage() {
             {/* Dual Tabs: [ Nghệ nhân (8) ] [ Làng nghề (8) ] */}
             <ArtisanVillageTabs
               activeTab={params.tab}
-              artisanCount={summary.artisans}
+              artisanCount={summary?.artisans}
               onChangeTab={handleTabChange}
-              villageCount={summary.villages}
+              villageCount={summary?.villages}
             />
           </div>
 
@@ -252,7 +246,7 @@ function ArtisansPage() {
             filters={params}
             onClearFilters={handleClearFilters}
             onFilterChange={handleFilterChange}
-            provinceOptions={data.provinces}
+            provinceOptions={isArtisansTab ? [] : data.provinces}
             totalResults={data.total}
           />
 

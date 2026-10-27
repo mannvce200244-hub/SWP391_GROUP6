@@ -1,17 +1,13 @@
 package com.m4n.backend.service;
 
-import com.m4n.backend.dto.request.StockImportRequest;
-import com.m4n.backend.dto.request.StockIssueRequest;
 import com.m4n.backend.dto.response.InventoryItemResponse;
-import com.m4n.backend.dto.response.StockImportResponse;
 import com.m4n.backend.entity.Category;
 import com.m4n.backend.entity.Inventory;
 import com.m4n.backend.entity.Product;
-import com.m4n.backend.exception.ResourceNotFoundException;
 import com.m4n.backend.repository.InventoryRepository;
 import com.m4n.backend.repository.InventoryMovementRepository;
-import com.m4n.backend.repository.ProductRepository;
-import com.m4n.backend.serviceImpl.InventoryServiceImpl;
+import com.m4n.backend.repository.ProductMediaRepository;
+import com.m4n.backend.service.serviceImpl.InventoryServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,12 +18,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class InventoryServiceTest {
@@ -43,10 +40,10 @@ class InventoryServiceTest {
     private InventoryRepository inventoryRepository;
 
     @Mock
-    private ProductRepository productRepository;
+    private InventoryMovementRepository inventoryMovementRepository;
 
     @Mock
-    private InventoryMovementRepository inventoryMovementRepository;
+    private ProductMediaRepository productMediaRepository;
 
     private InventoryService inventoryService;
 
@@ -55,7 +52,8 @@ class InventoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        inventoryService = new InventoryServiceImpl(inventoryRepository, productRepository, inventoryMovementRepository);
+        inventoryService = new InventoryServiceImpl(inventoryRepository,
+                inventoryMovementRepository, productMediaRepository);
 
         Category category = Category.builder().id(1L).name("Nhạc cụ dây").build();
 
@@ -81,7 +79,7 @@ class InventoryServiceTest {
     @Test
     @DisplayName("listInventory should return paginated mapped items with stock status")
     void shouldListInventoryWithStatus() {
-        Pageable pageable = PageRequest.of(0, 10);
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "quantity", "id"));
         Page<Inventory> page = new PageImpl<>(List.of(sampleInventory), pageable, 1);
 
         when(inventoryRepository.searchInventories(eq("Tranh"), eq("IN_STOCK"), eq(pageable)))
@@ -131,72 +129,11 @@ class InventoryServiceTest {
     }
 
     @Test
-    @DisplayName("importStock should atomically add quantity and return updated response")
-    void shouldImportStockSuccessfully() {
-        when(productRepository.findById(10L)).thenReturn(Optional.of(sampleProduct));
-        when(inventoryRepository.findByProductIdWithLock(10L)).thenReturn(Optional.of(sampleInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        StockImportRequest request = new StockImportRequest(5, "Bổ sung kho showroom");
-        StockImportResponse response = inventoryService.importStock(10L, request);
-
-        assertThat(response).isNotNull();
-        assertThat(response.getProductId()).isEqualTo(10L);
-        assertThat(response.getPreviousQuantity()).isEqualTo(15);
-        assertThat(response.getImportedQuantity()).isEqualTo(5);
-        assertThat(response.getNewQuantity()).isEqualTo(20);
-        assertThat(sampleInventory.getQuantity()).isEqualTo(20);
-
-        verify(inventoryRepository).save(sampleInventory);
+    void inventoryListShouldRejectUnsupportedNestedSort() {
+        assertThatThrownBy(() -> inventoryService.listInventory(null, null,
+                PageRequest.of(0, 10, Sort.by("product.name"))))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("sắp xếp");
+        verify(inventoryRepository, never()).searchInventories(any(), any(), any());
     }
 
-    @Test
-    @DisplayName("importStock should reject non-positive quantity")
-    void shouldRejectNonPositiveQuantity() {
-        StockImportRequest zeroRequest = new StockImportRequest(0, null);
-        assertThatThrownBy(() -> inventoryService.importStock(10L, zeroRequest))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Số lượng nhập kho phải là số nguyên dương lớn hơn 0");
-
-        StockImportRequest negativeRequest = new StockImportRequest(-3, null);
-        assertThatThrownBy(() -> inventoryService.importStock(10L, negativeRequest))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
-    @DisplayName("importStock should throw ResourceNotFoundException when product does not exist")
-    void shouldThrowWhenProductNotFound() {
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
-
-        StockImportRequest request = new StockImportRequest(5, null);
-        assertThatThrownBy(() -> inventoryService.importStock(999L, request))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Sản phẩm không tồn tại");
-    }
-
-    @Test
-    @DisplayName("issueStock should reduce quantity and persist an audit movement")
-    void shouldIssueStockWithAuditMovement() {
-        when(productRepository.findById(10L)).thenReturn(Optional.of(sampleProduct));
-        when(inventoryRepository.findByProductIdWithLock(10L)).thenReturn(Optional.of(sampleInventory));
-        when(inventoryRepository.save(any(Inventory.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        var response = inventoryService.issueStock(10L, new StockIssueRequest(5, "Sửa phiếu nhập nhầm"));
-
-        assertThat(response.previousQuantity()).isEqualTo(15);
-        assertThat(response.newQuantity()).isEqualTo(10);
-        assertThat(sampleInventory.getQuantity()).isEqualTo(10);
-        verify(inventoryMovementRepository).save(any());
-    }
-
-    @Test
-    @DisplayName("issueStock should never make inventory negative")
-    void shouldRejectIssueAboveAvailableQuantity() {
-        when(productRepository.findById(10L)).thenReturn(Optional.of(sampleProduct));
-        when(inventoryRepository.findByProductIdWithLock(10L)).thenReturn(Optional.of(sampleInventory));
-
-        assertThatThrownBy(() -> inventoryService.issueStock(10L, new StockIssueRequest(16, "Sai số")))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("không được vượt quá tồn kho");
-    }
 }

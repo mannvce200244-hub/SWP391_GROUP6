@@ -29,6 +29,12 @@ public class PosSaleResponse {
     private BigDecimal finalAmount;
     private String formattedFinalAmount;
     private String voucherCode;
+    private BigDecimal manualDiscountAmount;
+    private BigDecimal automaticDiscountAmount;
+    private String automaticPromotionCode;
+    private BigDecimal originalTotalAmount;
+    private BigDecimal productDiscountAmount;
+    private BigDecimal shippingFee;
     private String paymentMethod;
     private BigDecimal amountReceived;
     private String formattedAmountReceived;
@@ -49,6 +55,8 @@ public class PosSaleResponse {
         private String productCode;
         private String productName;
         private BigDecimal unitPrice;
+        private BigDecimal originalUnitPrice;
+        private BigDecimal productDiscountAmount;
         private String formattedUnitPrice;
         private Integer quantity;
         private BigDecimal lineAmount;

@@ -21,13 +21,13 @@ function Pagination({ className = '', currentPage = 1, onPageChange, totalPages 
 
   return (
     <nav
-      aria-label="Điều hướng trang sản phẩm"
-      className={`flex items-center justify-center gap-1.5 pt-8 pb-4 select-none ${className}`}
+      aria-label="Điều hướng phân trang"
+      className={`flex flex-wrap items-center justify-center gap-1.5 pt-8 pb-4 select-none ${className}`}
     >
       {/* Previous button */}
       <button
         aria-label="Trang trước"
-        className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-control-border bg-surface text-ink text-sm font-medium hover:bg-surface-secondary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+        className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-control-border bg-surface text-ink text-sm font-medium hover:bg-surface-secondary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
         disabled={currentPage <= 1}
         onClick={() => onPageChange(currentPage - 1)}
         type="button"
@@ -41,7 +41,7 @@ function Pagination({ className = '', currentPage = 1, onPageChange, totalPages 
           return (
             <span
               key={`ellipsis-${idx}`}
-              className="w-9 h-9 flex items-center justify-center text-xs text-muted"
+              className="w-11 h-11 flex items-center justify-center text-xs text-muted"
             >
               …
             </span>
@@ -53,8 +53,9 @@ function Pagination({ className = '', currentPage = 1, onPageChange, totalPages 
           <button
             key={page}
             aria-current={isCurrent ? 'page' : undefined}
+            disabled={isCurrent}
             aria-label={`Trang ${page}`}
-            className={`w-9 h-9 flex items-center justify-center rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+            className={`w-11 h-11 flex items-center justify-center rounded-md text-xs font-semibold transition-colors cursor-pointer ${
               isCurrent
                 ? 'bg-brand text-white shadow-xs'
                 : 'border border-control-border bg-surface text-ink hover:bg-surface-secondary'
@@ -70,7 +71,7 @@ function Pagination({ className = '', currentPage = 1, onPageChange, totalPages 
       {/* Next button */}
       <button
         aria-label="Trang kế tiếp"
-        className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-control-border bg-surface text-ink text-sm font-medium hover:bg-surface-secondary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+        className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-control-border bg-surface text-ink text-sm font-medium hover:bg-surface-secondary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
         disabled={currentPage >= totalPages}
         onClick={() => onPageChange(currentPage + 1)}
         type="button"
@@ -82,3 +83,4 @@ function Pagination({ className = '', currentPage = 1, onPageChange, totalPages 
 }
 
 export default Pagination
+

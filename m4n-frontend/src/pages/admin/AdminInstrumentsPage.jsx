@@ -7,6 +7,7 @@ import craftVillageService from '../../services/craftVillageService.js'
 import { importStock, issueStock } from '../../services/inventoryService.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import useToast from '../../components/ui/useToast.js'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
 import ProductFormModal from '../../components/admin/ProductFormModal.jsx'
 import CategoryManagementModal from '../../components/admin/CategoryManagementModal.jsx'
 import ArtisanManagementModal from '../../components/admin/ArtisanManagementModal.jsx'
@@ -51,6 +52,8 @@ export default function AdminInstrumentsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [masterDataError, setMasterDataError] = useState('')
+  const [togglingProductId, setTogglingProductId] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Modals state
@@ -71,35 +74,41 @@ export default function AdminInstrumentsPage() {
   const [issueReason, setIssueReason] = useState('')
   const [submittingIssue, setSubmittingIssue] = useState(false)
 
+  const closeImportModal = () => { if (!submittingImport) setImportModalOpen(false) }
+  const closeIssueModal = () => { if (!submittingIssue) setIssueTargetProduct(null) }
+  const importDialogRef = useDialogFocus(importModalOpen, closeImportModal, submittingImport)
+  const issueDialogRef = useDialogFocus(Boolean(issueTargetProduct), closeIssueModal, submittingIssue)
+
   // Load dropdown master data
   const loadMasterData = useCallback(async () => {
     try {
       const [cats, arts, vils] = await Promise.all([
-        categoryService.getCategories().catch(() => []),
-        artisanService.getArtisans().catch(() => []),
-        craftVillageService.getCraftVillages().catch(() => []),
+        categoryService.getCategories(),
+        artisanService.getAdminArtisans(),
+        craftVillageService.getCraftVillages(),
       ])
       setCategories(cats || [])
       setArtisans(arts || [])
       setCraftVillages(vils || [])
-    } catch {
-      // master data soft fail
+      setMasterDataError('')
+    } catch (err) {
+      setMasterDataError(err.message || 'Không thể tải dữ liệu bộ lọc.')
     }
   }, [])
 
   useEffect(() => {
     let active = true
     Promise.all([
-      categoryService.getCategories().catch(() => []),
-      artisanService.getArtisans().catch(() => []),
-      craftVillageService.getCraftVillages().catch(() => []),
+      categoryService.getCategories(),
+      artisanService.getAdminArtisans(),
+      craftVillageService.getCraftVillages(),
     ]).then(([cats, arts, vils]) => {
       if (active) {
         setCategories(cats || [])
         setArtisans(arts || [])
         setCraftVillages(vils || [])
       }
-    })
+    }).catch((err) => { if (active) setMasterDataError(err.message || 'Không thể tải dữ liệu bộ lọc.') })
     return () => {
       active = false
     }
@@ -121,8 +130,11 @@ export default function AdminInstrumentsPage() {
     if (selectedStatus === 'ACTIVE') isActiveFilter = true
     else if (selectedStatus === 'INACTIVE') isActiveFilter = false
 
-    adminProductService
-      .listProducts({
+    Promise.resolve().then(() => {
+      if (!active) return null
+      setLoading(true)
+      setError(null)
+      return adminProductService.listProducts({
         keyword,
         categoryId: selectedCategory ? Number(selectedCategory) : undefined,
         artisanId: selectedArtisan ? Number(selectedArtisan) : undefined,
@@ -132,8 +144,9 @@ export default function AdminInstrumentsPage() {
         size: pageSize,
         sort: 'createdAt,desc',
       })
+    })
       .then((response) => {
-        if (active) {
+        if (active && response) {
           const content = response.content || []
           setProducts(content)
           setTotalElements(response.totalElements || 0)
@@ -179,6 +192,8 @@ export default function AdminInstrumentsPage() {
   }
 
   const handleToggleStatus = async (product) => {
+    if (togglingProductId !== null) return
+    setTogglingProductId(product.id)
     const newStatus = !product.isActive
     try {
       await adminProductService.updateStatus(product.id, newStatus)
@@ -188,14 +203,14 @@ export default function AdminInstrumentsPage() {
           : `Đã tạm ngừng kinh doanh "${product.name}".`,
         type: newStatus ? 'success' : 'info',
       })
-      setProducts((prev) =>
-        prev.map((p) => (p.id === product.id ? { ...p, isActive: newStatus } : p))
-      )
+      setRefreshKey((key) => key + 1)
     } catch (err) {
       addToast({
         message: err.message || 'Không thể thay đổi trạng thái sản phẩm',
         type: 'error',
       })
+    } finally {
+      setTogglingProductId(null)
     }
   }
 
@@ -208,10 +223,10 @@ export default function AdminInstrumentsPage() {
 
   const handleImportSubmit = async (e) => {
     e.preventDefault()
-    if (!importTargetProduct) return
-    const qty = parseInt(importQuantity, 10)
-    if (isNaN(qty) || qty <= 0) {
-      addToast({ message: 'Số lượng nhập phải lớn hơn 0', type: 'error' })
+    if (!importTargetProduct || submittingImport) return
+    const qty = Number(importQuantity)
+    if (!Number.isInteger(qty) || qty <= 0 || qty > 2147483647) {
+      addToast({ message: 'Số lượng nhập phải là số nguyên từ 1 đến 2147483647.', type: 'error' })
       return
     }
 
@@ -222,14 +237,14 @@ export default function AdminInstrumentsPage() {
         notes: importNotes.trim() || undefined,
       })
       addToast({
-        message: `Đã nhập kho +${qty} cho "${importTargetProduct.name}".`,
+        message: `Đã tạo phiếu nhập ${qty} “${importTargetProduct.name}”, chờ xác nhận tại Quản lý kho.`,
         type: 'success',
       })
       setImportModalOpen(false)
       setRefreshKey((k) => k + 1)
     } catch (err) {
       addToast({
-        message: err.message || 'Nhập kho thất bại',
+        message: err.message || 'Không thể tạo phiếu nhập kho.',
         type: 'error',
       })
     } finally {
@@ -239,10 +254,10 @@ export default function AdminInstrumentsPage() {
 
   const handleIssueSubmit = async (e) => {
     e.preventDefault()
-    const qty = Number.parseInt(issueQuantity, 10)
-    const available = issueTargetProduct?.stockQuantity || 0
-    if (!qty || qty < 1 || qty > available) {
-      addToast({ message: `Số lượng điều chỉnh phải từ 1 đến ${available}.`, type: 'error' })
+    if (!issueTargetProduct || submittingIssue) return
+    const qty = Number(issueQuantity)
+    if (!Number.isInteger(qty) || qty < 1 || qty > 2147483647) {
+      addToast({ message: 'Số lượng xuất phải là số nguyên từ 1 đến 2147483647.', type: 'error' })
       return
     }
     if (!issueReason.trim()) {
@@ -252,7 +267,7 @@ export default function AdminInstrumentsPage() {
     setSubmittingIssue(true)
     try {
       await issueStock(issueTargetProduct.id, { quantity: qty, reason: issueReason })
-      addToast({ message: `Đã xuất điều chỉnh -${qty} cho “${issueTargetProduct.name}”.`, type: 'success' })
+      addToast({ message: `Đã tạo phiếu xuất ${qty} “${issueTargetProduct.name}”, chờ xác nhận tại Quản lý kho.`, type: 'success' })
       setIssueTargetProduct(null)
       setRefreshKey((key) => key + 1)
     } catch (err) {
@@ -288,6 +303,7 @@ export default function AdminInstrumentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      {masterDataError && <div role="alert" className="rounded-xl border border-danger bg-white p-4 text-sm text-danger">{masterDataError} <button type="button" onClick={loadMasterData} className="underline">Tải lại bộ lọc</button></div>}
       {/* Page Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#FFFFFF] p-5 sm:p-6 rounded-2xl border border-[#E5E8EB] shadow-2xs">
         <div>
@@ -361,7 +377,7 @@ export default function AdminInstrumentsPage() {
         </div>
 
         <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E5E8EB] shadow-2xs flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-surface-secondary text-emerald-600 flex items-center justify-center shrink-0">
             <CircleCheck size={22} />
           </div>
           <div>
@@ -375,7 +391,7 @@ export default function AdminInstrumentsPage() {
         </div>
 
         <div className="bg-[#FFFFFF] p-4 rounded-xl border border-[#E5E8EB] shadow-2xs flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-xl bg-surface-secondary text-rose-600 flex items-center justify-center shrink-0">
             <CircleAlert size={22} />
           </div>
           <div>
@@ -488,7 +504,7 @@ export default function AdminInstrumentsPage() {
               className="w-full px-3 py-2 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 shadow-2xs"
             >
               <option value="ALL">Tất cả trạng thái</option>
-              <option value="ACTIVE">Đang kinh doanh</option>
+              <option value="ACTIVE">Đang kinh doanh (trang này)</option>
               <option value="INACTIVE">Tạm ngừng bán</option>
             </select>
           </div>
@@ -515,7 +531,7 @@ export default function AdminInstrumentsPage() {
       {/* Main Table Container */}
       <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E8EB] shadow-2xs overflow-hidden flex flex-col">
         {error && (
-          <div className="p-4 bg-rose-50 border-b border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+          <div className="p-4 bg-surface-secondary border-b border-rose-200 text-rose-700 text-xs flex items-center gap-2">
             <CircleAlert size={16} />
             <span>{error}</span>
           </div>
@@ -574,7 +590,7 @@ export default function AdminInstrumentsPage() {
               <tbody className="divide-y divide-[#E5E8EB]">
                 {products.map((p) => {
                   const isOutOfStock = (p.stockQuantity || 0) === 0
-                  const isLowStock = !isOutOfStock && (p.stockQuantity || 0) <= 5
+                  const isLowStock = p.availability === 'LOW_STOCK'
 
                   return (
                     <tr
@@ -660,10 +676,10 @@ export default function AdminInstrumentsPage() {
                           <span
                             className={`px-2 py-0.5 rounded text-xs font-semibold ${
                               isOutOfStock
-                                ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                                ? 'bg-surface-secondary text-rose-600 border border-rose-200'
                                 : isLowStock
                                 ? 'bg-[#F6F7F8] text-amber-800 border border-amber-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-surface-secondary text-emerald-700 border border-emerald-200'
                             }`}
                           >
                             {isOutOfStock ? 'Hết hàng' : isLowStock ? 'Sắp hết' : 'Còn hàng'}
@@ -678,7 +694,7 @@ export default function AdminInstrumentsPage() {
                           onClick={() => handleToggleStatus(p)}
                           className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
                             p.isActive
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              ? 'bg-surface-secondary text-emerald-700 border-emerald-200 hover:bg-surface-secondary'
                               : 'bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-200'
                           }`}
                           title="Nhấn để bật / tắt trạng thái bán"
@@ -705,19 +721,18 @@ export default function AdminInstrumentsPage() {
                           <button
                             type="button"
                             onClick={() => handleOpenImportModal(p)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium text-sm transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-surface-secondary hover:bg-surface-secondary text-emerald-700 font-medium text-sm transition-colors cursor-pointer"
                             title="Nhập thêm số lượng tồn kho"
                           >
                             <Package size={15} />
-                            <span>Nhập kho</span>
+                            <span>Tạo phiếu nhập</span>
                           </button>
 
                           <button
                             type="button"
-                            disabled={(p.stockQuantity || 0) < 1}
                             onClick={() => { setIssueTargetProduct(p); setIssueQuantity(1); setIssueReason('') }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                            title="Xuất kho điều chỉnh có lưu lịch sử"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-surface-secondary hover:bg-surface-secondary text-rose-700 font-medium text-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Tạo phiếu xuất điều chỉnh"
                           >
                             <Package size={15} />
                             <span>Điều chỉnh giảm</span>
@@ -777,58 +792,61 @@ export default function AdminInstrumentsPage() {
       </div>
 
       {/* Product Form Modal (Create / Edit) */}
-      <ProductFormModal
+      {productModalOpen && <ProductFormModal
         isOpen={productModalOpen}
         productId={editingProductId}
         onClose={() => setProductModalOpen(false)}
         onSuccess={handleProductSaved}
-      />
+      />}
 
       {/* Category Management Modal */}
-      <CategoryManagementModal
+      {categoryModalOpen && <CategoryManagementModal
         isOpen={categoryModalOpen}
         onClose={() => setCategoryModalOpen(false)}
         onSuccess={() => {
           loadMasterData()
           setRefreshKey((k) => k + 1)
         }}
-      />
+      />}
 
       {/* Artisan Management Modal */}
-      <ArtisanManagementModal
+      {artisanModalOpen && <ArtisanManagementModal
         isOpen={artisanModalOpen}
         onClose={() => setArtisanModalOpen(false)}
         onSuccess={() => {
           loadMasterData()
           setRefreshKey((k) => k + 1)
         }}
-      />
+      />}
 
       {/* Craft Village Management Modal */}
-      <CraftVillageManagementModal
+      {villageModalOpen && <CraftVillageManagementModal
         isOpen={villageModalOpen}
         onClose={() => setVillageModalOpen(false)}
         onSuccess={() => {
           loadMasterData()
           setRefreshKey((k) => k + 1)
         }}
-      />
+      />}
 
       {/* Stock Import Modal */}
       {importModalOpen && importTargetProduct && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+          ref={importDialogRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
+          aria-labelledby="import-stock-title"
         >
           <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E8EB] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4 border-b border-[#E5E8EB] flex items-center justify-between">
-              <h3 className="text-base font-bold text-[#17191B]">
-                Nhập kho nhạc cụ: <span className="font-mono text-secondary">{importTargetProduct.code}</span>
+              <h3 id="import-stock-title" className="text-base font-bold text-[#17191B]">
+                Tạo phiếu nhập: <span className="font-mono text-secondary">{importTargetProduct.code}</span>
               </h3>
               <button
                 type="button"
-                onClick={() => setImportModalOpen(false)}
+                onClick={closeImportModal}
                 className="text-secondary hover:text-[#17191B] cursor-pointer p-1 rounded-lg hover:bg-zinc-100 transition-colors"
                 aria-label="Đóng"
               >
@@ -837,6 +855,7 @@ export default function AdminInstrumentsPage() {
             </div>
 
             <form onSubmit={handleImportSubmit} className="p-6 flex flex-col gap-4">
+              <fieldset disabled={submittingImport} className="contents">
               <div>
                 <span className="text-xs text-secondary block mb-1">Tên sản phẩm</span>
                 <span className="text-base font-bold text-[#17191B] block">
@@ -848,20 +867,21 @@ export default function AdminInstrumentsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Số lượng nhập thêm <span className="text-rose-500">*</span>
+                <label htmlFor="admininstruments-importQuantity" className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                  Số lượng trên phiếu <span className="text-rose-500">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setImportQuantity((q) => Math.max(1, (parseInt(q, 10) || 1) - 1))}
+                    onClick={() => setImportQuantity((q) => Math.max(1, (Number.isInteger(Number(q)) ? Number(q) : 1) - 1))}
                     className="w-10 h-10 rounded-xl border border-[#E5E8EB] bg-[#F6F7F8] hover:bg-[#E5E8EB] font-bold text-sm cursor-pointer"
                   >
                     -
                   </button>
-                  <input
+                  <input id="admininstruments-importQuantity" name="importQuantity"
                     type="number"
                     min="1"
+                    max="2147483647"
                     step="1"
                     required
                     value={importQuantity}
@@ -870,7 +890,7 @@ export default function AdminInstrumentsPage() {
                   />
                   <button
                     type="button"
-                    onClick={() => setImportQuantity((q) => (parseInt(q, 10) || 0) + 1)}
+                    onClick={() => setImportQuantity((q) => Math.min(2147483647, (Number.isInteger(Number(q)) ? Number(q) : 1) + 1))}
                     className="w-10 h-10 rounded-xl border border-[#E5E8EB] bg-[#F6F7F8] hover:bg-[#E5E8EB] font-bold text-sm cursor-pointer"
                   >
                     +
@@ -879,11 +899,12 @@ export default function AdminInstrumentsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="admininstruments-importNotes" className="block text-sm font-semibold text-[#17191B] mb-1.5">
                   Ghi chú nhập kho (tùy chọn)
                 </label>
-                <input
+                <input id="admininstruments-importNotes" name="importNotes"
                   type="text"
+                  maxLength={500}
                   value={importNotes}
                   onChange={(e) => setImportNotes(e.target.value)}
                   placeholder="VD: Nhập đợt nghệ nhân hoàn thiện nhạc cụ..."
@@ -891,10 +912,12 @@ export default function AdminInstrumentsPage() {
                 />
               </div>
 
+              <p className="text-xs text-secondary">Tạo phiếu chưa tăng tồn kho. Xác nhận số lượng đạt QC tại Quản lý kho để nhập vào tồn bán được.</p>
+
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E5E8EB]">
                 <button
                   type="button"
-                  onClick={() => setImportModalOpen(false)}
+                  onClick={closeImportModal}
                   className="px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:text-[#17191B] hover:bg-[#F2F4F5] rounded-xl border border-[#E5E8EB] transition-colors cursor-pointer"
                 >
                   Hủy
@@ -904,37 +927,40 @@ export default function AdminInstrumentsPage() {
                   disabled={submittingImport}
                   className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs flex items-center gap-2"
                 >
-                  {submittingImport ? 'Đang cập nhật...' : 'Xác nhận nhập kho'}
+                  {submittingImport ? 'Đang tạo phiếu…' : 'Tạo phiếu nhập'}
                 </button>
               </div>
+            </fieldset>
             </form>
           </div>
         </div>
       )}
 
       {issueTargetProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4" role="dialog" aria-modal="true" aria-labelledby="issue-stock-title">
+        <div ref={issueDialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4" role="dialog" aria-modal="true" aria-labelledby="issue-stock-title">
           <form onSubmit={handleIssueSubmit} className="bg-white rounded-2xl border border-[#E5E8EB] shadow-2xl w-full max-w-md p-6 space-y-4">
+            <fieldset disabled={submittingIssue} className="contents">
             <div className="flex items-center justify-between">
               <div>
-                <h3 id="issue-stock-title" className="font-bold text-[#17191B]">Xuất kho điều chỉnh</h3>
+                <h3 id="issue-stock-title" className="font-bold text-[#17191B]">Tạo phiếu xuất điều chỉnh</h3>
                 <p className="text-xs text-secondary mt-1">{issueTargetProduct.name} · hiện có {issueTargetProduct.stockQuantity || 0}</p>
               </div>
-              <button type="button" aria-label="Đóng" onClick={() => setIssueTargetProduct(null)} className="p-1.5 rounded-lg hover:bg-[#F6F7F8]"><X size={18} /></button>
+              <button type="button" aria-label="Đóng" onClick={closeIssueModal} className="p-1.5 rounded-lg hover:bg-[#F6F7F8]"><X size={18} /></button>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#17191B] mb-1.5">Số lượng giảm <span className="text-rose-500">*</span></label>
-              <input type="number" min="1" max={issueTargetProduct.stockQuantity || 0} step="1" required value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} className="w-full px-3.5 py-2 rounded-xl border border-[#E5E8EB]" />
+              <label htmlFor="admininstruments-issueQuantity" className="block text-sm font-semibold text-[#17191B] mb-1.5">Số lượng trên phiếu <span className="text-rose-500">*</span></label>
+              <input id="admininstruments-issueQuantity" name="issueQuantity" type="number" min="1" max="2147483647" step="1" required value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} className="w-full px-3.5 py-2 rounded-xl border border-[#E5E8EB]" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-[#17191B] mb-1.5">Lý do điều chỉnh <span className="text-rose-500">*</span></label>
-              <textarea required maxLength={500} rows={3} value={issueReason} onChange={(e) => setIssueReason(e.target.value)} placeholder="Ví dụ: sửa phiếu nhập nhầm 100 thành 10 (xuất điều chỉnh 90)…" className="w-full px-3.5 py-2 rounded-xl border border-[#E5E8EB] resize-none" />
-              <p className="mt-1 text-xs text-secondary">Thao tác được lưu lịch sử; không sửa trực tiếp số tồn.</p>
+              <label htmlFor="admininstruments-issueReason" className="block text-sm font-semibold text-[#17191B] mb-1.5">Lý do điều chỉnh <span className="text-rose-500">*</span></label>
+              <textarea id="admininstruments-issueReason" name="issueReason" required maxLength={500} rows={3} value={issueReason} onChange={(e) => setIssueReason(e.target.value)} placeholder="Ví dụ: sửa phiếu nhập nhầm 100 thành 10 (xuất điều chỉnh 90)…" className="w-full px-3.5 py-2 rounded-xl border border-[#E5E8EB] resize-none" />
+              <p className="mt-1 text-xs text-secondary">Tạo phiếu chưa giảm tồn kho. Tồn hiện tại được kiểm tra lại khi xác nhận phiếu tại Quản lý kho.</p>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setIssueTargetProduct(null)} className="px-4 py-2 rounded-xl border border-[#E5E8EB]">Hủy</button>
-              <button type="submit" disabled={submittingIssue} className="px-4 py-2 rounded-xl bg-rose-700 text-white font-semibold disabled:opacity-50">{submittingIssue ? 'Đang lưu…' : 'Xác nhận điều chỉnh'}</button>
+              <button type="button" onClick={closeIssueModal} className="px-4 py-2 rounded-xl border border-[#E5E8EB]">Hủy</button>
+              <button type="submit" disabled={submittingIssue} className="px-4 py-2 rounded-xl bg-rose-700 text-white font-semibold disabled:opacity-50">{submittingIssue ? 'Đang tạo phiếu…' : 'Tạo phiếu xuất'}</button>
             </div>
+          </fieldset>
           </form>
         </div>
       )}
