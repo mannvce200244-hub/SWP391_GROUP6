@@ -110,7 +110,13 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
             addMetaCell(metaTable, "Thời gian: " + timeStr, bodyFont, Element.ALIGN_RIGHT);
             addMetaCell(metaTable, "Thu ngân: " + staffStr, bodyFont, Element.ALIGN_LEFT);
             addMetaCell(metaTable, "Khách hàng: " + (invoice.getCustomerName() != null ? invoice.getCustomerName() : "Khách lẻ tại quầy"), bodyFont, Element.ALIGN_RIGHT);
-            addMetaCell(metaTable, "Phương thức: " + ("CASH".equals(invoice.getPaymentMethod()) ? "Tiền mặt tại quầy" : "Chuyển khoản"), bodyFont, Element.ALIGN_LEFT);
+            String paymentLabel = switch (invoice.getPaymentMethod()) {
+                case "CASH" -> "Tiền mặt tại quầy";
+                case "BANK_TRANSFER" -> "Chuyển khoản";
+                case "MOMO" -> "Thẻ quốc tế qua MoMo";
+                default -> "Chưa xác định";
+            };
+            addMetaCell(metaTable, "Phương thức: " + paymentLabel, bodyFont, Element.ALIGN_LEFT);
             if (invoice.getCustomerPhone() != null && !invoice.getCustomerPhone().isBlank()) {
                 addMetaCell(metaTable, "SĐT khách: " + invoice.getCustomerPhone(), bodyFont, Element.ALIGN_RIGHT);
             } else {

@@ -53,6 +53,75 @@ and server disagree, stop and report the mismatch; do not silently choose one.
 
 ## Request contract
 
+### Customer MoMo refund and cancellation — user approval 2026-10-16
+
+`POST /orders/{id}/cancel` retains its `{ reason }` request and
+`OrderDetailResponse` response. For the owning Customer's paid MoMo order in
+`PENDING_CONFIRMATION`, explicit confirmation starts a persisted full refund.
+The response is `CANCELLED` only after provider-verified full refund; otherwise
+the response retains `PENDING_CONFIRMATION`. The client must check the returned
+order status and read `/payments/orders/{id}` for pending/failed refund feedback,
+instead of announcing success on HTTP 200 alone. Retrying cancellation while a
+refund is pending reuses that refund request identifier. Verified completion
+cancels the requested order and releases voucher usage exactly once in the same
+transaction. Existing Admin refund reconciliation can complete this persisted
+customer intent. Backend ownership/status/payment checks remain authoritative;
+historical `isPaid` is preserved. Other provider/staff cancellation rules are
+unchanged. No provider call occurs inside an order-lock transaction.
+
+The payment return page combines authenticated payment status and order detail;
+query-string payment results, amount and messages are never trusted as display
+authority or proof of payment.
+
+### MoMo browser return — 2026-10-16 fix
+
+`POST /payments/orders/{id}/momo` reads the browser `Origin` HTTP header. The
+backend accepts only exact configured CORS origins with HTTPS or explicitly
+allowlisted HTTP loopback development hosts, then uses that origin with the
+configured `/payment-return` path. A missing header uses `MOMO_REDIRECT_URL`;
+an invalid header returns 400 before allocating an attempt. The return URL is
+included in the MoMo request signature; it never grants order access or marks
+payment successful. Existing pending attempts retain their original provider
+session URL. The frontend return page queries the authenticated status API and
+reconciles pending online payments through the existing server endpoint.
+
+### POS MoMo sandbox — approved 2026-10-16
+
+The existing `customerEmail` is also the recipient of the committed POS invoice
+PDF (user approval 2026-10-16). Email delivery is queued in the settlement
+transaction and runs afterward with durable retry; no browser success flag,
+new request field or email endpoint authorizes a receipt. A receipt is not sent
+for a failed/cancelled/refunded intent without an invoice. SMTP delivery does
+not change the payment response or invalidate an issued invoice.
+
+The cashier-owned durable intent, create/status/reconciliation endpoints,
+automatic settlement-failure refund and `/pos` return are defined in
+[`POS_MOMO.md`](POS_MOMO.md). The existing MoMo IPN dispatches POS references
+to the POS service. Client flags never establish success; only a verified,
+atomically settled `invoiceId` permits showing a completed showroom sale.
+The direct `/pos/sales` endpoint cannot accept client-declared MoMo success.
+User-approved cancellation adds `POST /pos/payments/momo/{id}/cancel` (empty
+body). Every POS MoMo response includes `cancelRequested`. A true flag with no
+invoice confirms the bill is stopped and permits a new empty POS bill; it does
+not confirm provider cancellation or completed refund. The owning cashier is
+required, and an already issued invoice returns conflict. Persist the flag
+before provider checks; late verified payment triggers full refund rather than
+invoice issuance. Uncertain/failed refunds retain the existing reconciliation
+contract.
+
+### Direct purchase — user correction 2026-10-15
+
+`POST /api/v1/checkout/preview` and `POST /api/v1/orders` accept optional
+`directPurchase: { productId, quantity }`. Both fields are required positive integers
+when present; quantity fits a Java Integer. Omit `cartItemIds` in this mode; supplying
+both sources is HTTP 400. Authentication and Customer authorization remain mandatory.
+The backend loads active products and calculates all prices, vouchers and shipping;
+normal inventory and payment checks apply. Direct preview/order creation never writes
+the cart. Preview line `id` is null for direct purchase; `productId` identifies the line.
+The existing cart checkout contract is unchanged when `directPurchase` is absent.
+Frontend direct intent is retained in `/checkout?productId=…&quantity=…`; malformed
+direct parameters block checkout rather than falling back to saved-cart items.
+
 - A request contains only inputs the caller is permitted to provide.
 - Use an intent-specific request DTO once the endpoint is approved. Do not send
   a persistence Entity or reuse one oversized DTO for unrelated operations.
@@ -142,10 +211,12 @@ and server disagree, stop and report the mismatch; do not silently choose one.
 
 | Method | Endpoint | Auth | Cookie / Header | Request Body | Success Response | Error Codes |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/register` | Public | None | `fullName`, `email`, `phone`, `password`, `address` (optional) | `201 Created` (`UserResponse`) | `400`, `409` |
+| `POST` | `/api/v1/auth/register` | Public | None | Legacy `{registration:{fullName,email,password,phone?,address?},challengeId,code}` | `201 Created` (`UserResponse`) | `400`, `409` |
+| `POST` | `/api/v1/auth/register/start` | Public | None | `fullName`, `email`, `password`, optional `phone`, `address`; persists unverified CUSTOMER | `200 OK` (`EmailOtpResponse`) | `400`, `409`, `429`, `503` |
+| `POST` | `/api/v1/auth/register/verify` | Public | None | `email`, `challengeId`, six-digit `code`; verifies existing CUSTOMER | `201 Created` (`UserResponse`) | `400` |
 | `POST` | `/api/v1/auth/login` | Public | Sets `m4n_refresh_token` (HttpOnly, SameSite=Lax, Path=/api/v1/auth) | `email`, `password` | `200 OK` (`AuthResponse`: `accessToken`, `tokenType`, `expiresIn`, `user`) | `400`, `401`, `403` |
-| `POST` | `/api/v1/auth/refresh` | Public | Reads/rotates `m4n_refresh_token` | None | `200 OK` (`AuthResponse`) | `401`, `403` |
-| `POST` | `/api/v1/auth/logout` | Public | Clears `m4n_refresh_token` | None | `204 No Content` | - |
+| `POST` | `/api/v1/auth/refresh` | Public | Reads/rotates `m4n_refresh_token`; requires `X-Requested-With: M4N` | None | `200 OK` (`AuthResponse`) | `401`, `403` |
+| `POST` | `/api/v1/auth/logout` | Public | Clears `m4n_refresh_token`; requires `X-Requested-With: M4N` | None | `204 No Content` | `403` |
 | `POST` | `/api/v1/auth/logout-all` | Bearer JWT | Clears `m4n_refresh_token` | None | `204 No Content` | `401` |
 | `GET` | `/api/v1/auth/me` | Bearer JWT | None | None | `200 OK` (`UserResponse`) | `401`, `403` |
 | `POST` | `/api/v1/auth/change-password` | Bearer JWT | Clears `m4n_refresh_token` | `currentPassword`, `newPassword`, `confirmPassword` | `200 OK` (`MessageResponse`) | `400`, `401` |
@@ -156,6 +227,12 @@ and server disagree, stop and report the mismatch; do not silently choose one.
 
 ### Authentication lifecycle and unavailable reset delivery
 
+- Email OTP initial requests and resends use the same `POST /api/v1/auth/email-otp`
+  input (`email`, `purpose`). The existing response supplies `challengeId`,
+  `expiresAt`, `resendAt` and `message`. The client counts down to `resendAt`
+  without navigating away or resetting entered account/password fields. Only
+  successful resend replaces the client challenge and clears the code input;
+  the backend remains authoritative over the cooldown and newest-code validity.
 - Login, refresh, password/reset changes and session revocation serialize on
   the account row before locking token rows. A concurrent rotation or old-password
   login cannot create a replacement session after revocation.
@@ -245,6 +322,15 @@ customer records, conversation content, or another staff member's unread count.
 
 - Online Place Order creates `PENDING_CONFIRMATION` and does not reserve or
   deduct inventory (`BR-ORDER-01`).
+- `POST /api/v1/checkout/preview` and `POST /api/v1/orders` accept
+  `cartItemIds` with 1–100 positive cart-item IDs. The backend checks ownership
+  against the authenticated Customer's current cart and calculates the preview
+  or order only from that subset. Duplicate, foreign, removed, empty or stale
+  selections return a validation error. Successful Place Order removes only
+  those cart entries and preserves every unselected item (`BR-CART-01`). A
+  missing field remains temporarily compatible with older clients and means all
+  current cart items. The maintained frontend sends an explicit list for cart
+  checkout or the exclusive `directPurchase` input documented above for Buy now.
 - Online confirmation rechecks and deducts stock atomically; stock never becomes
   negative (`BR-INVENTORY-01`, `BR-INVENTORY-02`, `BR-INVENTORY-03`).
 - Retry is an explicit `POST /api/v1/admin/orders/{id}/retry-confirmation`
@@ -274,8 +360,46 @@ customer records, conversation content, or another staff member's unread count.
 - Voucher results and completed revenue are calculated by the backend
   (`BR-VOUCHER-01`, `BR-REVENUE-01`).
 
+## Approved customer-flow contracts — 2026-10-12
+
+Cookie-authenticated `POST /api/v1/auth/refresh` and `POST /api/v1/auth/logout`
+require `X-Requested-With: M4N`. Browser requests must have an Origin included
+in the exact configured CORS allowlist; untrusted/opaque origins or missing
+custom headers return 403 before any cookie/session mutation. The shared API
+client supplies the header. Explicit non-browser clients may omit Origin but
+must supply the same header. JWT APIs and signed provider notifications retain
+their existing authentication contracts. Production defaults to same-origin
+`/api/v1`; an explicit build-time API base URL may override it.
+
+The exact OTP, structured address/fee, MoMo and multipart product contracts are
+documented in [`CUSTOMER_FLOW_INTEGRATIONS.md`](CUSTOMER_FLOW_INTEGRATIONS.md).
+Registration grants access only after email proof. `/register/start` creates the
+CUSTOMER with `email_verified=false`; `/register/verify` verifies that same User.
+Login with correct credentials for an unverified account returns HTTP 409
+`REGISTRATION_VERIFICATION_REQUIRED`, `email` and `challenge` metadata with
+`Cache-Control: no-store`, without access/refresh tokens or cookies. Wrong
+credentials remain HTTP 401. Unverified accounts cannot refresh or use JWT APIs.
+The previous flat payload to the legacy `/register` endpoint is rejected. Payment options include `momoAvailable`. Carrier quoting requires
+structured address and fee acknowledgment only when GHN is enabled. Product
+multipart endpoints retain Admin/Super Admin authorization and normal validation.
+
 These invariants constrain future contracts; they do not authorize creating the
 corresponding endpoints.
+
+## Saved delivery addresses — approved 2026-10-15
+
+All paths below are relative to `/api/v1/profile/delivery-addresses`, require an active CUSTOMER, and derive ownership from authenticated server identity.
+
+| Method/path | Contract |
+| --- | --- |
+| GET `?page=0` | Zero-based page, size 10, ID descending; returns `{items, page, totalPages, totalElements}` |
+| POST | Create; returns 201 with saved address |
+| PUT `/{id}` | Replace owned entry; requires `expectedVersion`; returns saved address |
+| DELETE `/{id}?expectedVersion=0` | Delete owned entry; returns 204 |
+
+Write payload: required `customerName` (≤150), `customerPhone` (Vietnamese mobile), `customerEmail` (valid email ≤150); `shippingAddress` (≤300, required without GHN), optional `notes` (≤500), optional `deliveryAddress` (`provinceId`, `wardId`, `streetAddress`, required and validated when GHN enabled). `expectedVersion` is a nonnegative integer required on update/delete.
+
+Saved response: `id`, all five recipient text fields, nullable structured `deliveryAddress`, and `version`. Notes may be null. Foreign/missing IDs return 404, malformed input 400, forbidden roles/inactive users 403, and stale/missing update version 409 using the existing `USER_MODIFIED_BY_ANOTHER_OPERATOR` conflict envelope. Checkout sends the copied fields through its existing contract; no saved address ID can grant access to another account's data.
 
 ## Contract approval checklist
 

@@ -1,4 +1,5 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, lazy } from 'react'
+import RouteContent from './RouteContent.jsx'
 import CustomerLayout from '../layouts/CustomerLayout.jsx'
 import AuthLayout from '../layouts/AuthLayout.jsx'
 import AdminLayout from '../layouts/AdminLayout.jsx'
@@ -25,6 +26,7 @@ const ResetPasswordPage = lazy(() => import('../features/auth/ResetPasswordPage.
 const ProfilePage = lazy(() => import('../features/auth/ProfilePage.jsx'))
 const AccountSecurityPage = lazy(() => import('../features/auth/AccountSecurityPage.jsx'))
 const CustomerOrdersPage = lazy(() => import('../features/orders/CustomerOrdersPage.jsx'))
+const DeliveryAddressesPage = lazy(() => import('../features/checkout/DeliveryAddressesPage.jsx'))
 const ForbiddenPage = lazy(() => import('../pages/ForbiddenPage.jsx'))
 
 const StaffDashboardPage = lazy(() => import('../pages/StaffDashboardPage.jsx'))
@@ -90,19 +92,19 @@ function CurrentRoute() {
 
   // 1. Auth pages using AuthLayout
   if (pathname === CUSTOMER_ROUTES.login) {
-    return <AuthLayout><LoginPage /></AuthLayout>
+    return <AuthLayout><RouteContent pathname={pathname}><LoginPage /></RouteContent></AuthLayout>
   }
 
   if (pathname === CUSTOMER_ROUTES.register) {
-    return <AuthLayout><RegisterPage /></AuthLayout>
+    return <AuthLayout><RouteContent pathname={pathname}><RegisterPage /></RouteContent></AuthLayout>
   }
 
   if (pathname === CUSTOMER_ROUTES.forgotPassword) {
-    return <AuthLayout><ForgotPasswordPage /></AuthLayout>
+    return <AuthLayout><RouteContent pathname={pathname}><ForgotPasswordPage /></RouteContent></AuthLayout>
   }
 
   if (pathname === CUSTOMER_ROUTES.resetPassword) {
-    return <AuthLayout><ResetPasswordPage /></AuthLayout>
+    return <AuthLayout><RouteContent pathname={pathname}><ResetPasswordPage /></RouteContent></AuthLayout>
   }
 
   // 2. Admin shell using AdminLayout
@@ -169,7 +171,7 @@ function CurrentRoute() {
     return (
       <RequireRole allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
         <AdminLayout pathname={pathname}>
-          {adminContent}
+          <RouteContent pathname={pathname}>{adminContent}</RouteContent>
         </AdminLayout>
       </RequireRole>
     )
@@ -213,7 +215,7 @@ function CurrentRoute() {
     return (
       <RequireRole allowedRoles={['ONLINE_STAFF']}>
         <StaffLayout pathname={pathname}>
-          {staffContent}
+          <RouteContent pathname={pathname}>{staffContent}</RouteContent>
         </StaffLayout>
       </RequireRole>
     )
@@ -224,9 +226,11 @@ function CurrentRoute() {
     return (
       <RequireRole allowedRoles={['POS_STAFF']}>
         <PosLayout pathname={pathname}>
-          {pathname === CUSTOMER_ROUTES.posHistory
-            ? <PosTransactionHistoryPage />
-            : <PosDashboardPage />}
+          <RouteContent pathname={pathname}>
+            {pathname === CUSTOMER_ROUTES.posHistory
+              ? <PosTransactionHistoryPage />
+              : <PosDashboardPage />}
+          </RouteContent>
         </PosLayout>
       </RequireRole>
     )
@@ -255,6 +259,8 @@ function CurrentRoute() {
         <AccountSecurityPage />
       </RequireAuth>
     )
+  } else if (pathname === CUSTOMER_ROUTES.addresses) {
+    pageContent = <RequireRole allowedRoles={['CUSTOMER']}><DeliveryAddressesPage /></RequireRole>
   } else if (pathname === CUSTOMER_ROUTES.orders) {
     pageContent = (
       <RequireRole allowedRoles={['CUSTOMER']}>
@@ -303,11 +309,11 @@ function CurrentRoute() {
 
   return (
     <CustomerLayout pathname={pathname}>
-      {pageContent}
+      <RouteContent pathname={pathname}>{pageContent}</RouteContent>
     </CustomerLayout>
   )
 }
 
 export default function AppRouter() {
-  return <Suspense fallback={<div role="status" className="min-h-screen flex items-center justify-center bg-white text-ink">Đang tải trang…</div>}><CurrentRoute /></Suspense>
+  return <CurrentRoute />
 }

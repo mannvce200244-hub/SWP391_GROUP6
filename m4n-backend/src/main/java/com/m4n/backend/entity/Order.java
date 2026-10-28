@@ -57,6 +57,10 @@ public class Order {
 
     @Column(name = "shipping_address", nullable = false, length = 300)
     private String shippingAddress;
+    @Column(name = "shipping_province_id")
+    private Integer shippingProvinceId;
+    @Column(name = "shipping_ward_id")
+    private Integer shippingWardId;
 
     @Column(name = "total_amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal totalAmount;

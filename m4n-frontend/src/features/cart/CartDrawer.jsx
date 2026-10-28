@@ -1,21 +1,26 @@
+import { createPortal } from 'react-dom'
 import useDialogFocus from '../../hooks/useDialogFocus.js'
 import ErrorState from '../../components/ui/ErrorState.jsx'
 import LoadingState from '../../components/ui/LoadingState.jsx'
-import RouterLink from '../../routes/RouterLink.jsx'
 import {
   ShoppingBag,
   ChevronRight,
   ArrowRight,
   X,
 } from 'lucide-react'
-import { IconInstrument } from '../../components/ui/Icons.jsx'
+import CartDrawerItem from './CartDrawerItem.jsx'
 import useCart from './useCart.js'
 import useAuth from '../auth/useAuth.js'
 import useToast from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
+import { formatCurrencyVND } from '../../utils/currency.js'
 
 function CartDrawer({ isOpen, onClose }) {
-  const { cart, cartItemCount, updateCartItem, removeCartItem, loading, error, refreshCart } = useCart()
+  const {
+    cart, cartItemCount, updateCartItem, removeCartItem, loading, error, refreshCart,
+    selectedCartItemIds, selectedCartItems, allCartItemsSelected,
+    toggleCartItemSelection, selectAllCartItems,
+  } = useCart()
   const { isAuthenticated } = useAuth()
   const { addToast } = useToast()
   const drawerRef = useDialogFocus(isOpen, onClose)
@@ -38,8 +43,10 @@ function CartDrawer({ isOpen, onClose }) {
   if (!isOpen) return null
 
   const items = cart?.items || []
+  const selectedIds = new Set(selectedCartItemIds)
+  const selectedTotal = selectedCartItems.reduce((total, item) => total + Number(item.subtotal || 0), 0)
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true" aria-label="Giỏ hàng của bạn">
       {/* Backdrop overlay */}
       <div
@@ -49,11 +56,11 @@ function CartDrawer({ isOpen, onClose }) {
       />
 
       {/* Drawer Container */}
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div ref={drawerRef} className="w-screen max-w-md bg-white shadow-2xl flex flex-col border-l border-border animate-in slide-in-from-right duration-250">
+      <div className="fixed inset-y-0 right-0 flex w-full max-w-md pl-4 sm:pl-0">
+        <div ref={drawerRef} className="w-full min-w-0 h-full min-h-0 bg-white shadow-2xl flex flex-col border-l border-border animate-in slide-in-from-right duration-250">
           
           {/* Drawer Header */}
-          <div className="p-5 sm:p-6 border-b border-border flex items-center justify-between gap-3">
+          <div className="shrink-0 p-5 sm:p-6 border-b border-border flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-11 h-11 rounded-xl bg-brand-soft text-brand flex items-center justify-center border border-brand-border">
                 <ShoppingBag size={18} />
@@ -81,7 +88,7 @@ function CartDrawer({ isOpen, onClose }) {
           </div>
 
           {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-4">
             {!isAuthenticated ? (
               /* Require Login State */
               <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-4">
@@ -139,86 +146,47 @@ function CartDrawer({ isOpen, onClose }) {
                 </button>
               </div>
             ) : (
-              /* Items List */
-              <div className="divide-y divide-border/60">
-                {items.map((item) => (
-                  <div key={item.id} className="py-4 first:pt-0 last:pb-0 flex items-start gap-3.5">
-                    {/* Item Thumbnail */}
-                    <div className="w-16 h-16 rounded-xl bg-surface-secondary border border-border/80 flex items-center justify-center overflow-hidden shrink-0">
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.productName}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="text-brand">
-                          <IconInstrument size={24} />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Item Details */}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-bold text-ink truncate" title={item.productName}>
-                        <RouterLink href={CUSTOMER_ROUTES.productDetail(item.productId)} onClick={onClose} className="hover:text-brand transition-colors">
-                          {item.productName}
-                        </RouterLink>
-                      </h4>
-                      <p className="text-xs font-bold text-brand mt-0.5">
-                        {item.unitPriceDisplay}
-                      </p>
-
-                      {/* Quantity Controls */}
-                      <div className="flex items-center justify-between mt-2.5">
-                        <div className="inline-flex items-center border border-border rounded-lg bg-surface-secondary/60 p-0.5">
-                          <button
-                            type="button"
-                            disabled={loading || item.quantity <= 1}
-                            onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                            className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded transition-colors disabled:opacity-40 cursor-pointer"
-                            aria-label="Giảm số lượng"
-                          >
-                            -
-                          </button>
-                          <span className="w-8 text-center text-xs font-bold text-ink">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={loading}
-                            onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                            className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded transition-colors disabled:opacity-40 cursor-pointer"
-                            aria-label="Tăng số lượng"
-                          >
-                            +
-                          </button>
-                        </div>
-
-                        {/* Remove Item Button */}
-                        <button
-                          type="button"
-                          disabled={loading}
-                          onClick={() => handleRemoveItem(item)}
-                          className="text-xs text-subtle hover:text-danger font-medium transition-colors cursor-pointer"
-                        >
-                          Xóa
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-border/60">
+                  <label className="min-h-11 inline-flex items-center gap-3 text-sm font-semibold text-ink cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="selectAllCartItems"
+                      checked={allCartItemsSelected}
+                      ref={(input) => { if (input) input.indeterminate = selectedCartItems.length > 0 && !allCartItemsSelected }}
+                      disabled={loading}
+                      onChange={(event) => selectAllCartItems(event.target.checked)}
+                      className="h-5 w-5 accent-brand"
+                    />
+                    <span>Chọn tất cả</span>
+                  </label>
+                  <span className="text-xs text-muted" aria-live="polite">Đã chọn {selectedCartItems.length}/{items.length}</span>
+                </div>
+                <div className="divide-y divide-border/60">
+                  {items.map((item) => (
+                    <CartDrawerItem
+                      key={item.id}
+                      item={item}
+                      selected={selectedIds.has(item.id)}
+                      loading={loading}
+                      onToggle={toggleCartItemSelection}
+                      onQuantityChange={handleQuantityChange}
+                      onRemove={handleRemoveItem}
+                      onClose={onClose}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
           {/* Drawer Footer with Subtotal & Actions */}
           {isAuthenticated && items.length > 0 && (
-            <div className="p-5 sm:p-6 border-t border-border bg-surface-secondary/40 space-y-3">
+            <div className="shrink-0 p-5 sm:p-6 border-t border-border bg-surface-secondary/40 space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted font-medium">Tạm tính:</span>
-                <span className="text-base font-bold text-ink font-sans">
-                  {cart?.totalAmountDisplay || '0 ₫'}
+                <span className="text-muted font-medium">Tạm tính đã chọn:</span>
+                <span className="text-base font-bold text-ink font-sans tabular-nums" aria-live="polite">
+                  {formatCurrencyVND(selectedTotal)}
                 </span>
               </div>
               <p className="text-xs text-subtle">
@@ -238,26 +206,26 @@ function CartDrawer({ isOpen, onClose }) {
                 </button>
                 <button
                   type="button"
+                  disabled={loading || Boolean(error) || selectedCartItems.length === 0}
                   onClick={() => {
                     onClose()
-                    navigateTo(CUSTOMER_ROUTES.cart)
+                    navigateTo(CUSTOMER_ROUTES.checkout)
                   }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-md shadow-brand/20 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-md shadow-brand/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <span>Thanh toán</span>
                   <ChevronRight size={15} />
                 </button>
               </div>
+              {selectedCartItems.length === 0 && <p className="text-xs text-muted" role="status">Chọn ít nhất một sản phẩm để thanh toán.</p>}
             </div>
           )}
 
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
 export default CartDrawer
-
-
-

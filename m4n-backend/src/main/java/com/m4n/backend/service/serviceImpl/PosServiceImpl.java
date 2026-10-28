@@ -23,6 +23,10 @@ import com.m4n.backend.repository.InventoryRepository;
 import com.m4n.backend.repository.InvoiceRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.UserRepository;
+import com.m4n.backend.repository.PosMomoPaymentRepository;
+import com.m4n.backend.entity.PaymentState;
+import com.m4n.backend.entity.RefundState;
+import tools.jackson.databind.ObjectMapper;
 import com.m4n.backend.service.PosService;
 import com.m4n.backend.service.InventoryService;
 import com.m4n.backend.service.ProductPricingService;
@@ -67,6 +71,8 @@ public class PosServiceImpl implements PosService {
     private final VoucherService voucherService;
     private final InventoryService inventoryService;
     private final ProductPricingService productPricingService;
+    private final PosMomoPaymentRepository momoPayments;
+    private final ObjectMapper json;
 
     @Override
     @Transactional(readOnly = true)
@@ -179,6 +185,26 @@ public class PosServiceImpl implements PosService {
     @Transactional
     public PosSaleResponse finalizeSale(PosSaleRequest request) {
         User staff = getAuthenticatedStaff();
+        if (!Set.of("CASH", "BANK_TRANSFER").contains(request.getPaymentMethod().trim().toUpperCase(Locale.ROOT))) {
+            throw new IllegalArgumentException("MoMo phải được xác minh qua cổng thanh toán trước khi xuất hóa đơn.");
+        }
+        return finalizeSale(request, staff, null);
+    }
+
+    @Override
+    @Transactional
+    public void completeMomoSale(String paymentId) {
+        var payment = momoPayments.findByIdWithLock(paymentId).orElseThrow();
+        if (payment.isCancelRequested() || payment.getState() != PaymentState.SUCCEEDED || payment.getRefundState() != RefundState.NONE
+                || payment.getInvoice() != null) return;
+        PosSaleRequest request = json.readValue(payment.getBill(), PosSaleRequest.class);
+        request.setPaymentMethod("MOMO");
+        var sale = finalizeSale(request, payment.getStaff(), payment.getAmount());
+        payment.setInvoice(invoiceRepository.getReferenceById(sale.getInvoiceId()));
+        payment.setReceiptEmailQueuedAt(Instant.now());
+    }
+
+    private PosSaleResponse finalizeSale(PosSaleRequest request, User staff, BigDecimal verifiedAmount) {
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Hóa đơn POS phải có ít nhất một sản phẩm.");
@@ -238,6 +264,9 @@ public class PosServiceImpl implements PosService {
         DiscountCalculationResponse discounts = voucherService.consumeDiscounts(request.getVoucherCode(), subtotal, totalQuantity);
         BigDecimal discount = discounts.totalDiscountAmount();
         BigDecimal finalAmount = discounts.finalAmount();
+        if (verifiedAmount != null && finalAmount.compareTo(verifiedAmount) != 0) {
+            throw new IllegalStateException("Giá hoặc ưu đãi đã thay đổi trong lúc thanh toán POS.");
+        }
         String appliedVoucherCode = discounts.manualVoucher() != null ? discounts.manualVoucher().code() : null;
 
         // 3. Apply authoritative discounts and validate payment before deduction.
@@ -251,7 +280,7 @@ public class PosServiceImpl implements PosService {
                 throw new IllegalArgumentException("Số tiền khách đưa (" + formatVnd(amountReceived) + ") chưa đủ để thanh toán đơn (" + formatVnd(finalAmount) + ").");
             }
             amountChange = amountReceived.subtract(finalAmount);
-        } else if ("BANK_TRANSFER".equals(paymentMethod)) {
+        } else if ("BANK_TRANSFER".equals(paymentMethod) || "MOMO".equals(paymentMethod) && verifiedAmount != null) {
             amountReceived = finalAmount;
             amountChange = BigDecimal.ZERO;
         } else {
@@ -387,6 +416,9 @@ public class PosServiceImpl implements PosService {
     }
 
     private void validateSort(Pageable pageable) {
+        if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
+        }
         Set<String> allowedProperties = Set.of("createdAt", "id", "invoiceCode", "finalAmount");
         if (pageable.getSort().stream().anyMatch(order -> !allowedProperties.contains(order.getProperty()))) {
             throw new IllegalArgumentException("Trường sắp xếp hóa đơn không được hỗ trợ.");

@@ -231,6 +231,11 @@ function ProductListPage() {
   const hasAppliedFilters = Object.values(activeFilters).some(
     (val) => val && String(val).trim() !== '',
   )
+  const selectedGroup = CATEGORY_TABS.find((tab) => tab.id && tab.id === activeFilters.group)
+  const hasRefinements = Object.entries(activeFilters).some(
+    ([key, value]) => key !== 'group' && value && String(value).trim() !== '',
+  )
+  const isEmptyGroup = Boolean(selectedGroup) && !hasRefinements
 
   const activeFilterCount = Object.values(draftFilters).filter(
     (val) => val && String(val).trim() !== '',
@@ -248,7 +253,7 @@ function ProductListPage() {
 
           {/* Title & Description */}
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight font-sans">
-            Nhạc cụ truyền thống Việt Nam
+            {selectedGroup?.label || 'Nhạc cụ truyền thống Việt Nam'}
           </h1>
           <p className="mt-2 text-xs sm:text-sm text-muted max-w-2xl mx-auto leading-relaxed">
             Được chế tác thủ công từ danh mộc mun, cẩm lai và tre nứa già tuyển chọn bởi các nghệ nhân ưu tú tại các làng nghề di sản.
@@ -265,16 +270,16 @@ function ProductListPage() {
 
           {/* Centered Category Filter Segmented Tabs */}
           <div className="flex items-center justify-center mt-5">
-            <div className="inline-flex items-center p-1 bg-surface-secondary rounded-full border border-border shadow-2xs gap-1 max-w-full overflow-x-auto scrollbar-none">
+            <div className="grid grid-cols-2 sm:inline-flex items-center p-1 bg-surface-secondary rounded-2xl sm:rounded-full border border-border shadow-2xs gap-1 max-w-full">
               {CATEGORY_TABS.map((tab) => {
-                const isSelected = (!draftFilters.group && !tab.id) || draftFilters.group === tab.id
+                const isSelected = activeFilters.group === tab.id
                 return (
                   <button
                     key={tab.id || 'all'}
                     aria-pressed={isSelected}
                     type="button"
                     onClick={() => handleCategoryTabClick(tab.id)}
-                    className={`px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
+                    className={`min-h-11 sm:min-h-0 px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-xs font-semibold transition-colors duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
                       isSelected
                         ? 'bg-brand text-white shadow-2xs'
                         : 'text-muted hover:text-ink hover:bg-surface-muted'
@@ -387,19 +392,23 @@ function ProductListPage() {
               {!isLoading && catalog.status === 'success' && catalog.totalElements === 0 ? (
                 <EmptyState
                   message={
-                    hasAppliedFilters
+                    isEmptyGroup
+                      ? 'Dòng nhạc cụ này hiện chưa có sản phẩm để hiển thị. Bạn có thể khám phá các dòng nhạc cụ khác.'
+                      : hasAppliedFilters
                       ? 'Thử thay đổi từ khóa hoặc khoảng giá hiện tại để tìm thấy sản phẩm.'
                       : 'Danh mục hiện chưa có sản phẩm để hiển thị.'
                   }
                   title={
-                    hasAppliedFilters
+                    isEmptyGroup
+                      ? `Chưa có sản phẩm ${selectedGroup.label.toLocaleLowerCase('vi-VN')}`
+                      : hasAppliedFilters
                       ? 'Không tìm thấy sản phẩm phù hợp'
                       : 'Chưa có sản phẩm'
                   }
                 >
                   {hasAppliedFilters ? (
                     <Button onClick={resetFilters} variant="quiet">
-                      Xóa bộ lọc
+                      {isEmptyGroup ? 'Xem tất cả sản phẩm' : 'Xóa bộ lọc'}
                     </Button>
                   ) : null}
                 </EmptyState>

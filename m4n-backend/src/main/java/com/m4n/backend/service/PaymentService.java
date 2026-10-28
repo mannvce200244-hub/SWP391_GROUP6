@@ -8,6 +8,8 @@ import org.springframework.util.MultiValueMap;
 
 public interface PaymentService {
     boolean isAvailable();
+    boolean isMomoAvailable();
+    void validateMomoAmount(java.math.BigDecimal amount);
     boolean hasVerifiedFullRefund(Long orderId);
     boolean isRefundPending(Long orderId);
     boolean isPaymentPending(Long orderId);
@@ -18,5 +20,6 @@ public interface PaymentService {
     PaymentStatusResponse reconcilePayment(Long orderId, String currentEmail, String ipAddress);
     VnpayIpnResponse processIpn(MultiValueMap<String, String> parameters);
     PaymentStatusResponse refund(Long orderId, String reason, String currentEmail, String ipAddress);
+    PaymentStatusResponse refundCustomerCancellation(Long orderId, String reason, String currentEmail);
     PaymentStatusResponse reconcileRefund(Long orderId, String currentEmail, String ipAddress);
 }

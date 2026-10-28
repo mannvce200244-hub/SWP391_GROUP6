@@ -23,7 +23,17 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class})
+    @ExceptionHandler(RegistrationVerificationRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleRegistrationVerification(
+            RegistrationVerificationRequiredException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).header("Cache-Control", "no-store")
+                .body(ApiErrorResponse.builder().timestamp(Instant.now()).status(409)
+                        .error("REGISTRATION_VERIFICATION_REQUIRED").message(ex.getMessage())
+                        .path(request.getRequestURI()).email(ex.getEmail()).challenge(ex.getChallenge()).build());
+    }
+
+    @ExceptionHandler({HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
+            org.springframework.web.multipart.support.MissingServletRequestPartException.class})
     public ResponseEntity<ApiErrorResponse> handleMalformedRequest(Exception ex, HttpServletRequest request) {
         ApiErrorResponse errorResponse = ApiErrorResponse.builder()
                 .timestamp(Instant.now())
@@ -369,7 +379,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handlePaymentProvider(PaymentProviderException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ApiErrorResponse.builder().timestamp(Instant.now())
                 .status(502).error("PAYMENT_PROVIDER_UNVERIFIED")
-                .message("Chưa xác minh được kết quả từ VNPay. Vui lòng đối soát lại.").path(request.getRequestURI()).build());
+                .message("Chưa xác minh được kết quả từ cổng thanh toán. Vui lòng đối soát lại.").path(request.getRequestURI()).build());
     }
 
     @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
@@ -395,6 +405,13 @@ public class GlobalExceptionHandler {
                         .status(status.value()).error(status.getReasonPhrase())
                         .message("Định dạng dữ liệu HTTP không được hỗ trợ. Vui lòng sử dụng JSON.")
                         .path(request.getRequestURI()).build());
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleUploadTooLarge(HttpServletRequest request) {
+        return ResponseEntity.status(413).body(ApiErrorResponse.builder().timestamp(Instant.now())
+                .status(413).error("UPLOAD_TOO_LARGE").message("Mỗi ảnh tối đa 5 MB, mỗi lần lưu tối đa 10 ảnh.")
+                .path(request.getRequestURI()).build());
     }
 
     @ExceptionHandler(Exception.class)

@@ -95,6 +95,7 @@ public class ChatServiceImpl implements ChatService {
                 Math.max(pageable.getPageNumber(), 0),
                 Math.min(Math.max(pageable.getPageSize(), 1), 200)
         );
+        validatePage(boundedPageable);
         Page<ChatMessage> messages = chatMessageRepository.findByConversationIdOrderByCreatedAtDescIdDesc(conversationId, boundedPageable);
         messages.forEach(message -> {
             if (!message.getSender().getId().equals(user.getId())) {
@@ -167,6 +168,7 @@ public class ChatServiceImpl implements ChatService {
         User staff = getUserByEmail(staffEmail);
         assertOnlineStaff(staff);
 
+        validatePage(pageable);
         if (pageable.getSort().isSorted()) {
             throw new IllegalArgumentException("Danh sách hội thoại sử dụng thứ tự hoạt động cố định.");
         }
@@ -233,6 +235,12 @@ public class ChatServiceImpl implements ChatService {
         );
 
         return toConversationResponse(updated, staff.getId(), true);
+    }
+
+    private void validatePage(Pageable pageable) {
+        if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
+        }
     }
 
     private void validateReadAccess(Conversation conversation, User user) {

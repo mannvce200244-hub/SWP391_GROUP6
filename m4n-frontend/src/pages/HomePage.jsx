@@ -5,6 +5,7 @@ import ProductCard from '../features/catalog/ProductCard.jsx'
 import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import ScrollReveal from '../components/common/ScrollReveal.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
+import { ProductGridSkeleton } from '../components/ui/Skeleton.jsx'
 import productService from '../services/productService.js'
 import {
   ARTISAN,
@@ -356,9 +357,7 @@ function HomePage() {
           </div>
 
           {featuredStatus === 'loading' ? (
-            <p className="py-12 text-center text-sm text-muted" role="status">
-              Đang tải sản phẩm…
-            </p>
+            <ProductGridSkeleton count={4} className="lg:grid-cols-4" />
           ) : featuredStatus === 'error' ? (
             <ErrorState message="Không thể tải sản phẩm tiêu biểu. Vui lòng thử lại." onRetry={() => { setFeaturedStatus('loading'); setFeaturedRetry((value) => value + 1) }} />
           ) : featuredProducts.length === 0 ? (

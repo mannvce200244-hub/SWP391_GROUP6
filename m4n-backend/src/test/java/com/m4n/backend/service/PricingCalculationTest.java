@@ -26,7 +26,7 @@ class PricingCalculationTest {
         when(repository.findById(1L)).thenReturn(Optional.empty());
         Product product = Product.builder().id(1L).name("No configured weight").build();
 
-        ShippingQuote quote = new ShippingServiceImpl(repository)
+        ShippingQuote quote = new ShippingServiceImpl(repository, org.mockito.Mockito.mock(com.m4n.backend.service.GhnService.class))
                 .calculateShipping(List.of(new ShippingLine(product, 1)), BigDecimal.TEN);
 
         assertThat(quote.baseShippingFee()).isEqualByComparingTo(BigDecimal.ZERO);

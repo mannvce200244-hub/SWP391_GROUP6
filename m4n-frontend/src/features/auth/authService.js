@@ -8,13 +8,41 @@ export const authService = Object.freeze({
     })
   },
 
-  async register({ fullName, email, password, phone, address }) {
+  async register({ fullName, email, password, phone, address, challengeId, code }) {
     return apiClient.post('/auth/register', {
+      registration: {
       fullName: fullName?.trim(),
       email: email?.trim()?.toLowerCase(),
       password,
       phone: phone?.trim() || null,
       address: address?.trim() || null,
+      },
+      challengeId,
+      code,
+    })
+  },
+
+  async requestEmailOtp({ email, purpose }) {
+    return apiClient.post('/auth/email-otp', { email: email?.trim()?.toLowerCase(), purpose })
+  },
+
+  async startRegistration({ fullName, email, password, phone }) {
+    return apiClient.post('/auth/register/start', {
+      fullName: fullName?.trim(), email: email?.trim()?.toLowerCase(), password, phone: phone?.trim() || null,
+    })
+  },
+
+  async verifyRegistration({ email, challengeId, code }) {
+    return apiClient.post('/auth/register/verify', { email, challengeId, code })
+  },
+
+  async resetPasswordOtp(payload) {
+    return apiClient.post('/auth/reset-password-otp', payload)
+  },
+
+  async verifyResetOtp({ email, challengeId, code }) {
+    return apiClient.post('/auth/verify-reset-otp', {
+      email: email?.trim()?.toLowerCase(), challengeId, code,
     })
   },
 

@@ -8,9 +8,9 @@ or inventing test infrastructure.
 
 | Area | Repository evidence | Required command | Status |
 | --- | --- | --- | --- |
-| Backend | Maven Wrapper, Spring Boot test starters, one application context test | `m4n-backend\mvnw.cmd test` | AVAILABLE |
+| Backend | Maven Wrapper, Spring Boot tests, service/security/concurrency integration suites | `m4n-backend\mvnw.cmd test`; packaged gate `clean verify` | AVAILABLE |
 | Frontend static checks | ESLint and Vite build scripts | `npm run lint`, `npm run build` from `m4n-frontend/` | AVAILABLE |
-| Frontend automated tests | No project test script or test framework | None | TBD — team decision required |
+| Frontend automated tests | Existing native Node tests in `m4n-frontend/tests`, no added test framework | `node --test tests/*.test.mjs` from `m4n-frontend/` | AVAILABLE |
 | End-to-end tests | No runner, configuration, or command | None | TBD — team decision required |
 | Coverage thresholds | No approved threshold/tool | None | TBD — team decision required |
 
@@ -25,7 +25,9 @@ M4N behavior.
 - Backend change: run the narrowest relevant existing test first, then the full
   Maven test suite when practical.
 - Frontend change: run lint and build. Run frontend tests only after a project
-  test command/framework has been explicitly approved and configured.
+  test command/framework has been explicitly approved and configured. The
+  existing native Node tests are part of the current verification baseline;
+  adding a new framework still requires approval.
 - API integration: verify both sides agree with `API_CONTRACT_RULES.md`; test
   safe success and applicable validation/authentication/authorization/conflict/
   failure behavior supported by the approved contract.

@@ -70,7 +70,7 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
       <div
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[100] flex flex-col gap-2.5 max-w-sm w-[calc(100%-2rem)] sm:w-[calc(100%-3rem)] pointer-events-none"
+        className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[100] flex flex-col gap-2.5 max-w-sm w-[calc(100%-2rem)] sm:w-[calc(100%-3rem)] pointer-events-none"
         aria-label="Thông báo hệ thống"
       >
         {toasts.map((toast) => {

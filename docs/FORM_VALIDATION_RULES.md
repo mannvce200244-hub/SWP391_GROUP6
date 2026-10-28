@@ -61,7 +61,7 @@ Exact password policy, confirmation requirement, autocomplete values, and recove
 
 For every numeric input, validate that the parsed value is numeric and finite before applying range rules.
 
-- **Cart/POS quantity:** integer and greater than 0; reject `NaN`, negative, zero, and decimal values.
+- **Cart/POS/direct purchase quantity:** integer and greater than 0; reject `NaN`, negative, zero, and decimal values. Direct purchase requires a positive product ID and quantity within Java Integer range; malformed/duplicate URL parameters block checkout. Server rechecks active product, stock, pricing and discounts (user correction, 2026-10-15).
 - **Inventory input:** never allow a negative quantity to be submitted. The exact operation-specific minimum/maximum is TBD.
 - **Product listed price:** numeric, finite, strictly positive and within NUMERIC(14,2), without silent rounding. Charged prices can be zero under an approved 100% program.
 - **MinimumOrderValue:** numeric, finite, and greater than or equal to 0 when editing the approved voucher condition.
@@ -143,6 +143,8 @@ row does not authorize implementation of its form.
 | Product create/update | Material, dimensions, audio/vocal range, origin | TBD | String/reference/structured value TBD | Enforce only an approved representation, unit, and limit | Authoritative validation | TBD | Product detail concepts are approved; field contracts are not | TBD |
 | Product create/update | Image/video | TBD | File/URL TBD | File type, size, count, URL, and upload behavior TBD | Validate approved media/storage contract | TBD | Product images/video are in scope | TBD |
 | Cart / POS bill | Quantity | Yes when an item is present | Integer | Numeric, finite integer `> 0`; control duplicate/spam updates | Recheck quantity, current stock, and operation rules | “Số lượng phải là số nguyên lớn hơn 0.” | BR-ORDER-01; BR-INVENTORY-01/02/03; BR-POS-01 | APPROVED |
+| POS MoMo sandbox | Customer email | Required only for MoMo card | Email string, max 255 | Trim, email format, native email input; never collect card data | `@NotBlank`, `@Email`, max 255, lowercase snapshot | “Vui lòng nhập email hợp lệ của khách hàng để thanh toán thẻ MoMo.” | User-approved POS MoMo extension; provider card contract | APPROVED |
+| POS MoMo sandbox | Payment ID / expected amount | Required transport metadata | `pos-` + 32 lowercase hex characters / integer VND | Generate ID once before request; keep unknown outcome for reconciliation | Owner-bound idempotency; backend recalculation, amount equal to acknowledged preview and within 1,000–10,000,000 VND | Reload bill if price changed; reconcile unknown transaction | BR-POS-01; BR-PAYMENT-01 | APPROVED |
 | Voucher create/update | Code | TBD | String | Trim/format only after the contract is approved | Validate uniqueness and approved constraints | TBD | Voucher management is in scope; code rules are not defined | TBD |
 | Voucher create/update | DiscountRate | Required for approved percentage formula | Percent input | Numeric, finite, `0 <= value <= 100`; wire representation TBD | Recalculate authoritative discount; enforce approved representation/rounding | “Tỷ lệ giảm giá phải từ 0 đến 100.” | BR-VOUCHER-01 | APPROVED range; representation TBD |
 | Voucher create/update | MinimumOrderValue | Required for approved voucher condition | Money input | Numeric, finite, and `>= 0` | Enforce `OrderAmount >= MinimumOrderValue` | “Giá trị đơn hàng tối thiểu không được âm.” | BR-VOUCHER-01 | APPROVED constraint; representation TBD |
@@ -199,3 +201,23 @@ monetary intermediate/final totals must fit their database columns.
 - [ ] No TBD constraint was silently invented.
 
 If any applicable check fails, the form is not complete.
+
+## Approved customer-flow fields — 2026-10-12
+
+| Field | Rules |
+| --- | --- |
+| Email OTP request | Existing valid email ≤255 characters, trimmed/lowercased on backend; purpose exactly REGISTER or RESET_PASSWORD |
+| Registration steps (2026-10-16) | Accepted details persist an unverified CUSTOMER; hide all profile/password inputs, clear plaintext passwords from memory and show only OTP. Login resumes verification when credentials match. Store only email/challenge metadata in the tab; verification uses no resubmitted profile/password. |
+| OTP proof | Required challenge ID ≤36 characters and code exactly six ASCII digits; email/purpose binding, expiry and attempts validated by backend |
+| OTP reset | Existing password rules (8–72 characters, ≤72 UTF-8 bytes), matching confirmation; no password/code persisted in browser storage |
+| Delivery address | When GHN enabled: positive province/ward IDs, verified hierarchy, required street details ≤200 characters; canonical full address ≤300 |
+| Carrier preview recipient | Required name ≤150 and existing Vietnamese mobile format; preview blocked until complete |
+| Saved recipient address | Same checkout name/mobile/email/address/notes limits; multiple owned entries, optional notes ≤500; structured GHN address required when enabled; update/delete send loaded version |
+| Fee acknowledgment | Nonnegative money (≤13 integer /2 fraction digits), required for GHN Place Order; must match backend's newly calculated net fee |
+| Product images | JPEG/PNG only, ≤10 files/submission, ≤5 MB/file, backend-decoded ≤16 megapixels; safe reencoding and randomized storage names |
+| GHN package dimensions | Existing product dimensions field ≤100 characters; carrier use requires positive integer length x width x height cm, each 1–200, and positive billable weight; parcel limits in CUSTOMER_FLOW_INTEGRATIONS.md |
+
+Native OTP inputs permit paste/password-manager one-time-code autofill. Provider
+unavailability returns safe actionable copy; errors preserve other form fields.
+No bank/MoMo credentials are accepted by checkout. Missing API configuration
+does not generate simulated OTP, shipping rates or successful payments.

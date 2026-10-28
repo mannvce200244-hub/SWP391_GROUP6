@@ -1,5 +1,9 @@
 import PosScannerDialog from '../features/pos/PosScannerDialog.jsx'
 import PosReceiptDialog from '../features/pos/PosReceiptDialog.jsx'
+import PosMomoPaymentPanel from '../features/pos/PosMomoPaymentPanel.jsx'
+import posMomoService, { posPaymentReturnId } from '../services/posMomoService.js'
+import paymentService from '../services/paymentService.js'
+import Input from '../components/ui/Input.jsx'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import useAuth from '../features/auth/useAuth.js'
 import useToast from '../components/ui/useToast.js'
@@ -21,7 +25,6 @@ import {
   Package,
   Store,
   Banknote,
-  QrCode,
 } from 'lucide-react'
 
 function PosDashboardPage() {
@@ -49,7 +52,14 @@ function PosDashboardPage() {
   })
 
   // Payment & Customer State
-  const [paymentMethod, setPaymentMethod] = useState('CASH') // CASH, BANK_TRANSFER
+  const [paymentMethod, setPaymentMethod] = useState('CASH')
+  const [customerEmail, setCustomerEmail] = useState('')
+  const [emailError, setEmailError] = useState('')
+  const [momoAvailable, setMomoAvailable] = useState(null)
+  const [paymentOptionsError, setPaymentOptionsError] = useState('')
+  const paymentStorageKey = `m4n-pos-momo-${user?.id}`
+  const [momoPaymentId, setMomoPaymentId] = useState(() => posPaymentReturnId(window.location.search)
+    || posPaymentReturnId(`m4nPosPaymentId=${localStorage.getItem(paymentStorageKey) || ''}`))
   const [amountReceived, setAmountReceived] = useState('')
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -64,6 +74,15 @@ function PosDashboardPage() {
   // Success Modal State
   const [successSale, setSuccessSale] = useState(null)
   const salePreview = usePosSalePreview(billItems, voucherState.applied ? voucherCode.trim() : '')
+
+  useEffect(() => {
+    let active = true
+    paymentService.getOptions().then((options) => { if (active) setMomoAvailable(options.momoAvailable) })
+      .catch((err) => { if (active) setPaymentOptionsError(err.message) })
+    return () => { active = false }
+  }, [])
+
+  const showMomoInvoice = useCallback((invoice) => setSuccessSale(invoice), [])
 
   // 1. Fetch Catalog (Debounced)
   const loadCatalog = useCallback(async (keyword) => {
@@ -94,7 +113,7 @@ function PosDashboardPage() {
 
   // 2. Add product to Bill
   const handleAddToBill = useCallback((product) => {
-    if (salePending.current || successSale) return
+    if (salePending.current || successSale || momoPaymentId) return
     voucherPreviewVersionRef.current += 1
     setVoucherState((previous) => previous.applied || previous.loading
       ? { applied: false, discount: 0, message: 'Hóa đơn đã thay đổi. Vui lòng áp dụng lại voucher.', loading: false }
@@ -124,9 +143,9 @@ function PosDashboardPage() {
     })
     addToast({
       message: `Đã thêm '${product.name}' vào đơn hàng.`,
-      type: 'info',
+      type: 'success',
     })
-  }, [addToast, successSale])
+  }, [addToast, successSale, momoPaymentId])
 
   // 3. Update quantity
   const handleUpdateQty = (productId, delta) => {
@@ -255,6 +274,7 @@ function PosDashboardPage() {
   const numReceived = Number.parseInt(amountReceived, 10) || 0
   const amountChange = paymentMethod === 'CASH' ? Math.max(0, numReceived - finalAmount) : 0
   const cashInsufficient = paymentMethod === 'CASH' && Boolean(amountReceived) && numReceived < finalAmount
+  const momoAmountInvalid = paymentMethod === 'MOMO' && salePreview.data && (Number(finalAmount) < 1000 || Number(finalAmount) > 10_000_000)
 
   // Automatically update amountReceived when exact cash shortcut is clicked
   const handleSetExactCash = () => {
@@ -263,7 +283,7 @@ function PosDashboardPage() {
 
   // 8. Finalize Sale
   const handleFinalizeSale = async () => {
-    if (salePending.current || successSale || salePreview.loading || salePreview.error || !salePreview.data || salePreview.data.stockWarnings?.length) return
+    if (salePending.current || successSale || momoPaymentId || momoAmountInvalid || salePreview.loading || salePreview.error || !salePreview.data || salePreview.data.stockWarnings?.length) return
     if (billItems.length === 0) {
       addToast({ message: 'Vui lòng chọn ít nhất một nhạc cụ để thanh toán.', type: 'error' })
       return
@@ -284,9 +304,31 @@ function PosDashboardPage() {
       return
     }
 
+    if (paymentMethod === 'MOMO' && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail.trim()) || customerEmail.trim().length > 255)) {
+      setEmailError('Vui lòng nhập email hợp lệ của khách hàng để thanh toán thẻ MoMo.')
+      document.getElementById('pos-momo-email')?.focus()
+      return
+    }
+
     salePending.current = true
     setSubmittingSale(true)
     try {
+      if (paymentMethod === 'MOMO') {
+        const id = `pos-${crypto.randomUUID().replaceAll('-', '')}`
+        localStorage.setItem(paymentStorageKey, id)
+        try {
+          const payment = await posMomoService.create({ id, expectedAmount: finalAmount, customerEmail: customerEmail.trim(),
+            sale: { items: billItems.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+              voucherCode: voucherState.applied ? voucherCode.trim() : null, paymentMethod: 'MOMO', customerName, customerPhone } })
+          setMomoPaymentId(id)
+          if (payment.paymentUrl) posMomoService.open(payment)
+        } catch (err) {
+          // Preserve the intent even after a timeout: query it before permitting another charge.
+          setMomoPaymentId(id)
+          throw err
+        }
+        return
+      }
       const res = await finalizeSale({
         items: billItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
         voucherCode: voucherState.applied ? voucherCode : null,
@@ -315,6 +357,9 @@ function PosDashboardPage() {
 
   // 9. Reset POS for new sale
   const handleNewSale = () => {
+    localStorage.removeItem(paymentStorageKey)
+    setMomoPaymentId(null)
+    if (new URLSearchParams(window.location.search).has('m4nPosPaymentId')) window.history.replaceState({}, '', window.location.pathname)
     billGeneration.current += 1
     salePreview.retry()
     voucherPreviewVersionRef.current += 1
@@ -325,11 +370,24 @@ function PosDashboardPage() {
     setAmountReceived('')
     setCustomerName('')
     setCustomerPhone('')
+    setCustomerEmail('')
+    setEmailError('')
+    loadCatalog(searchKeyword)
+  }
+
+  const closeMomoPayment = () => {
+    if (successSale) { handleNewSale(); return }
+    localStorage.removeItem(paymentStorageKey)
+    setMomoPaymentId(null)
+    if (new URLSearchParams(window.location.search).has('m4nPosPaymentId')) window.history.replaceState({}, '', window.location.pathname)
+    salePreview.retry()
+    loadCatalog(searchKeyword)
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <fieldset disabled={submittingSale || Boolean(successSale)} className="contents">
+      {momoPaymentId && <PosMomoPaymentPanel key={momoPaymentId} id={momoPaymentId} onClose={closeMomoPayment} onNewSale={handleNewSale} onInvoice={showMomoInvoice} />}
+      <fieldset disabled={submittingSale || Boolean(successSale) || Boolean(momoPaymentId)} className="contents">
       {/* Top POS Action Toolbar */}
       <div className="bg-surface rounded-2xl border border-border p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Left: Product Search */}
@@ -638,33 +696,34 @@ function PosDashboardPage() {
             {/* Payment Method Selector */}
             <div className="flex flex-col gap-1.5 pt-2 border-t border-border/60">
               <span className="font-bold text-xs text-ink uppercase tracking-wider">Phương thức thanh toán</span>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
+                  aria-pressed={paymentMethod === 'CASH'}
                   onClick={() => setPaymentMethod('CASH')}
-                  className={`py-2.5 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                  className={`min-h-12 py-2.5 px-4 rounded-xl border text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand cursor-pointer flex items-center justify-center gap-2 ${
                     paymentMethod === 'CASH'
                       ? 'border-brand bg-[#F6F7F8] text-brand shadow-xs'
                       : 'border-border bg-surface text-muted hover:text-ink'
                   }`}
                 >
-                  <Banknote size={18} />
+                  <Banknote size={18} aria-hidden="true" />
                   <span>Tiền mặt</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('BANK_TRANSFER')}
-                  className={`py-2.5 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                    paymentMethod === 'BANK_TRANSFER'
-                      ? 'border-brand bg-[#F6F7F8] text-brand shadow-xs'
-                      : 'border-border bg-surface text-muted hover:text-ink'
-                  }`}
-                >
-                  <QrCode size={18} />
-                  <span>Chuyển khoản</span>
+                <button type="button" disabled={momoAvailable !== true} aria-pressed={paymentMethod === 'MOMO'}
+                  onClick={() => setPaymentMethod('MOMO')}
+                  className={`min-h-12 px-3 rounded-xl border text-sm font-semibold focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50 ${paymentMethod === 'MOMO' ? 'border-brand bg-surface-secondary text-brand' : 'border-border bg-white text-secondary hover:text-ink'}`}>
+                  MoMo · Thẻ
                 </button>
               </div>
+              {momoAvailable === false && <p className="text-xs text-muted">MoMo chưa được cấu hình cho môi trường này.</p>}
+              {paymentOptionsError && <p role="alert" className="text-xs text-danger">Không tải được phương thức MoMo. {paymentOptionsError} Tải lại trang để thử lại.</p>}
             </div>
+
+            {paymentMethod === 'MOMO' && <Input id="pos-momo-email" name="customerEmail" type="email" autoComplete="email"
+              label="Email nhận hóa đơn" required maxLength={255} spellCheck={false} value={customerEmail}
+              onChange={(e) => { setCustomerEmail(e.target.value); setEmailError('') }} error={emailError}
+              helperText="Hóa đơn PDF sẽ được gửi đến email này sau khi thanh toán thành công. MoMo sandbox hỗ trợ thẻ từ 1.000 đến 10.000.000 ₫." />}
 
             {/* Cash Calculations */}
             {paymentMethod === 'CASH' && (
@@ -729,9 +788,10 @@ function PosDashboardPage() {
             </div>
 
             {/* Checkout Action Button */}
+            {momoAmountInvalid && <p role="alert" className="text-xs text-danger">Tổng tiền vượt phạm vi thanh toán thẻ MoMo (1.000–10.000.000 ₫). Vui lòng chọn phương thức khác.</p>}
             <button
               type="button"
-              disabled={submittingSale || billItems.length === 0 || cashInsufficient || salePreview.loading || Boolean(salePreview.error) || !salePreview.data || Boolean(salePreview.data?.stockWarnings?.length)}
+              disabled={submittingSale || billItems.length === 0 || cashInsufficient || Boolean(momoAmountInvalid) || salePreview.loading || Boolean(salePreview.error) || !salePreview.data || Boolean(salePreview.data?.stockWarnings?.length)}
               onClick={handleFinalizeSale}
               className="w-full mt-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
@@ -743,7 +803,7 @@ function PosDashboardPage() {
               ) : (
                 <>
                   <Check size={18} />
-                  <span>HOÀN TẤT THANH TOÁN ({formatCurrencyVND(finalAmount)})</span>
+                  <span>{paymentMethod === 'MOMO' ? 'THANH TOÁN THẺ QUA MOMO' : 'HOÀN TẤT THANH TOÁN'} ({formatCurrencyVND(finalAmount)})</span>
                 </>
               )}
             </button>

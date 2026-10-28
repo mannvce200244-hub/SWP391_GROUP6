@@ -4,7 +4,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import com.m4n.backend.validation.ValidationPatterns;
+
+import java.util.List;
 
 public record PlaceOrderRequest(
         @NotBlank(message = "Họ tên người nhận không được để trống")
@@ -32,9 +36,30 @@ public record PlaceOrderRequest(
 
         @Size(max = 500, message = "Ghi chú không được vượt quá 500 ký tự")
         String notes,
-        @Size(max = 50, message = "Mã voucher vận chuyển không quá 50 ký tự") String shippingVoucherCode
+        @Size(max = 50, message = "Mã voucher vận chuyển không quá 50 ký tự") String shippingVoucherCode,
+
+        @Size(min = 1, max = 100, message = "Vui lòng chọn từ 1 đến 100 sản phẩm trong giỏ hàng")
+        List<@NotNull(message = "Mục giỏ hàng không hợp lệ") @Positive(message = "Mục giỏ hàng không hợp lệ") Long> cartItemIds,
+        @jakarta.validation.Valid DeliveryAddressRequest deliveryAddress,
+        @jakarta.validation.constraints.DecimalMin("0") @jakarta.validation.constraints.Digits(integer = 13, fraction = 2) java.math.BigDecimal expectedShippingFee,
+        @jakarta.validation.Valid DirectPurchaseRequest directPurchase
 ) {
+    public PlaceOrderRequest(String name, String phone, String email, String address, String paymentMethod,
+            String voucherCode, String notes, String shippingVoucherCode, List<Long> cartItemIds,
+            DeliveryAddressRequest deliveryAddress, java.math.BigDecimal expectedShippingFee) {
+        this(name, phone, email, address, paymentMethod, voucherCode, notes, shippingVoucherCode,
+                cartItemIds, deliveryAddress, expectedShippingFee, null);
+    }
+    public PlaceOrderRequest(String name, String phone, String email, String address, String paymentMethod,
+            String voucherCode, String notes, String shippingVoucherCode, List<Long> cartItemIds) {
+        this(name, phone, email, address, paymentMethod, voucherCode, notes, shippingVoucherCode, cartItemIds, null, null);
+    }
     public PlaceOrderRequest(String name, String phone, String email, String address, String paymentMethod, String voucherCode, String notes) {
-        this(name, phone, email, address, paymentMethod, voucherCode, notes, null);
+        this(name, phone, email, address, paymentMethod, voucherCode, notes, null, null);
+    }
+
+    public PlaceOrderRequest(String name, String phone, String email, String address, String paymentMethod,
+                             String voucherCode, String notes, String shippingVoucherCode) {
+        this(name, phone, email, address, paymentMethod, voucherCode, notes, shippingVoucherCode, null);
     }
 }

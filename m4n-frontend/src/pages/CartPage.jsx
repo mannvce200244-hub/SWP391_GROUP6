@@ -12,13 +12,30 @@ import {
 import { IconInstrument } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
+import { formatCurrencyVND } from '../utils/currency.js'
 
 function CartPage() {
-  const { cart, cartItemCount, updateCartItem, removeCartItem, loading, error, refreshCart } = useCart()
+  const {
+    cart,
+    cartItemCount,
+    updateCartItem,
+    removeCartItem,
+    loading,
+    error,
+    refreshCart,
+    selectedCartItemIds,
+    selectedCartItems,
+    allCartItemsSelected,
+    toggleCartItemSelection,
+    selectAllCartItems,
+  } = useCart()
   const { isAuthenticated } = useAuth()
   const { addToast } = useToast()
 
   const items = cart?.items || []
+  const selectedIdSet = new Set(selectedCartItemIds)
+  const selectedQuantity = selectedCartItems.reduce((total, item) => total + item.quantity, 0)
+  const selectedTotal = selectedCartItems.reduce((total, item) => total + Number(item.subtotal || 0), 0)
 
   const handleQuantityChange = async (item, quantity) => {
     const result = await updateCartItem(item.id, quantity)
@@ -128,10 +145,35 @@ function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8 items-start">
             
             {/* Left: Items List */}
-            <div className="rounded-[32px] bg-white border border-border/80 p-6 sm:p-8 shadow-sm divide-y divide-border/60">
-              {items.map((item) => (
+            <div className="rounded-[32px] bg-white border border-border/80 p-6 sm:p-8 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border/60">
+                <label className="min-h-11 inline-flex items-center gap-3 text-sm font-semibold text-ink cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allCartItemsSelected}
+                    onChange={(event) => selectAllCartItems(event.target.checked)}
+                    className="h-5 w-5 accent-brand"
+                  />
+                  <span>Chọn tất cả</span>
+                </label>
+                <span className="text-sm text-muted" aria-live="polite">
+                  Đã chọn {selectedCartItems.length}/{items.length} sản phẩm
+                </span>
+              </div>
+
+              <div className="divide-y divide-border/60">
+                {items.map((item) => (
                 <div key={item.id} className="py-6 first:pt-0 last:pb-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4 min-w-0">
+                    <label className="min-h-11 min-w-11 inline-flex items-center justify-center cursor-pointer shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={selectedIdSet.has(item.id)}
+                        onChange={() => toggleCartItemSelection(item.id)}
+                        className="h-5 w-5 accent-brand"
+                      />
+                      <span className="sr-only">Chọn {item.productName} để thanh toán</span>
+                    </label>
                     <div className="w-20 h-20 rounded-2xl bg-surface-secondary border border-border/80 flex items-center justify-center overflow-hidden shrink-0">
                       {item.imageUrl ? (
                         <img
@@ -205,7 +247,8 @@ function CartPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {/* Right: Summary Box */}
@@ -216,31 +259,37 @@ function CartPage() {
 
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between text-muted">
-                  <span>Số lượng nhạc cụ:</span>
-                  <span className="font-bold text-ink">{cartItemCount} sản phẩm</span>
+                  <span>Số lượng đã chọn:</span>
+                  <span className="font-bold text-ink">{selectedQuantity} sản phẩm</span>
                 </div>
                 <div className="flex items-center justify-between text-muted">
                   <span>Tạm tính tiền hàng:</span>
-                  <span className="font-bold text-ink">{cart?.totalAmountDisplay}</span>
+                  <span className="font-bold text-ink">{formatCurrencyVND(selectedTotal)}</span>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-border/60 flex items-baseline justify-between">
                 <span className="text-sm font-bold text-ink">Tổng tạm tính:</span>
                 <span className="text-2xl font-bold text-brand font-sans">
-                  {cart?.totalAmountDisplay}
+                  {formatCurrencyVND(selectedTotal)}
                 </span>
               </div>
 
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || selectedCartItems.length === 0}
                 onClick={() => navigateTo(CUSTOMER_ROUTES.checkout)}
-                className="w-full h-12 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+                className="w-full h-12 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span>Tiến hành thanh toán</span>
                 <ChevronRight size={16} />
               </button>
+
+              {selectedCartItems.length === 0 && (
+                <p role="status" className="text-sm text-danger text-center">
+                  Vui lòng chọn ít nhất một sản phẩm để thanh toán.
+                </p>
+              )}
 
               <div className="pt-2 flex items-center gap-2 text-xs text-muted">
                 <Shield size={14} className="text-brand shrink-0" />

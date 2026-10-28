@@ -52,20 +52,27 @@ public class PaymentServiceImpl implements PaymentService {
     private final VnpayProperties properties;
     private final VnpayGateway gateway;
     private final TransactionTemplate transaction;
+    private final com.m4n.backend.service.MomoPaymentService momo;
 
     public PaymentServiceImpl(OrderRepository orderRepository, PaymentAttemptRepository paymentRepository,
             UserRepository userRepository, VnpayProperties properties, VnpayGateway gateway,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager, com.m4n.backend.service.MomoPaymentService momo) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.userRepository = userRepository;
         this.properties = properties;
         this.gateway = gateway;
         this.transaction = new TransactionTemplate(transactionManager);
+        this.momo = momo;
     }
 
     @Override public boolean isAvailable() { return properties.isAvailable(); }
-    @Override public PaymentOptionsResponse getOptions() { return new PaymentOptionsResponse(isAvailable()); }
+    @Override public boolean isMomoAvailable() { return momo.isAvailable(); }
+    @Override public PaymentStatusResponse refundCustomerCancellation(Long id, String reason, String email) {
+        return momo.refundCustomerCancellation(id, reason, email);
+    }
+    @Override public void validateMomoAmount(BigDecimal amount) { momo.validateAmount(amount); }
+    @Override public PaymentOptionsResponse getOptions() { return new PaymentOptionsResponse(isAvailable(), isMomoAvailable()); }
     @Override public boolean hasVerifiedFullRefund(Long id) {
         return paymentRepository.existsByOrderIdAndRefundState(id, RefundState.SUCCEEDED);
     }
@@ -125,6 +132,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public PaymentStatusResponse getStatus(Long id, String email) {
+        if (isMomo(id)) return momo.status(id, email);
         Order order = orderRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng."));
         User user = actor(email);
         requireCanRead(order, user);
@@ -151,6 +159,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentStatusResponse reconcilePayment(Long id, String email, String ipAddress) {
+        if (isMomo(id)) return momo.reconcile(id, email);
         requireAvailable();
         Snapshot snapshot = transaction.execute(status -> {
             Order order = lockOrder(id);
@@ -177,6 +186,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentStatusResponse refund(Long id, String reason, String email, String ipAddress) {
+        if (isMomo(id)) return momo.refund(id, reason, email);
         requireAvailable();
         Snapshot snapshot = transaction.execute(status -> {
             Order order = lockOrder(id);
@@ -212,6 +222,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentStatusResponse reconcileRefund(Long id, String email, String ipAddress) {
+        if (isMomo(id)) return momo.reconcileRefund(id, email);
         requireAvailable();
         Snapshot snapshot = transaction.execute(status -> {
             lockOrder(id);
@@ -324,6 +335,7 @@ public class PaymentServiceImpl implements PaymentService {
             requireCanRead(order, user); return response(order, latest(id), user, message); });
     }
     private Order lockOrder(Long id) { return orderRepository.findByIdWithLock(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng.")); }
+    private boolean isMomo(Long id) { return orderRepository.findById(id).map(order -> "MOMO".equals(order.getPaymentMethod())).orElse(false); }
     private PaymentAttempt latest(Long id) { return paymentRepository.findFirstByOrderIdOrderByIdDesc(id).orElse(null); }
     private PaymentAttempt successful(Long id) { return paymentRepository.findFirstByOrderIdAndStateOrderByIdDesc(id, PaymentState.SUCCEEDED)
             .orElseThrow(() -> new IllegalStateException("Không có thanh toán VNPay đã xác minh để hoàn tiền.")); }

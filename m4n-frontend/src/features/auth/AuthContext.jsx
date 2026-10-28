@@ -103,6 +103,13 @@ export function AuthProvider({ children }) {
     return updated
   }, [])
 
+  const resetPasswordOtp = useCallback(async (payload) => {
+    const response = await authService.resetPasswordOtp(payload)
+    authTokenStorage.clearToken()
+    setUser(null)
+    return response
+  }, [])
+
   const refreshUser = useCallback(async () => {
     try {
       const currentUser = await authService.getCurrentUser()
@@ -129,10 +136,11 @@ export function AuthProvider({ children }) {
       changePassword,
       forgotPassword,
       resetPassword,
+      resetPasswordOtp,
       updateProfile,
       refreshUser,
     }),
-    [user, isLoading, login, register, logout, logoutAll, changePassword, forgotPassword, resetPassword, updateProfile, refreshUser],
+    [user, isLoading, login, register, logout, logoutAll, changePassword, forgotPassword, resetPassword, resetPasswordOtp, updateProfile, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

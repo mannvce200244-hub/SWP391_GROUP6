@@ -1,0 +1,15 @@
+{
+  "manifestUnchanged": true,
+  "lockfileChanges": [
+    {
+      "path": "node_modules/brace-expansion",
+      "before": "5.0.9",
+      "after": "5.0.12"
+    },
+    {
+      "path": "node_modules/source-map-js",
+      "before": "1.2.1",
+      "after": "1.2.2"
+    }
+  ]
+}

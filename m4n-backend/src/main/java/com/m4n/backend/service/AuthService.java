@@ -14,6 +14,10 @@ public interface AuthService {
 
     UserResponse register(RegisterRequest request);
 
+    UserResponse registerUnverified(RegisterRequest request);
+
+    UserResponse completePendingRegistration(String email, String challengeId);
+
     LoginResult login(LoginRequest request, String userAgent, String ipAddress);
 
     LoginResult login(LoginRequest request);

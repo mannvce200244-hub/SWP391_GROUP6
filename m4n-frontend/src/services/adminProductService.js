@@ -1,5 +1,12 @@
 import apiClient from '../api/apiClient.js'
 
+function productFormData(payload, files) {
+  const form = new FormData()
+  form.append('product', new Blob([JSON.stringify(payload)], { type: 'application/json' }))
+  files.forEach((file) => form.append('images', file))
+  return form
+}
+
 export const adminProductService = Object.freeze({
   async listProducts({
     keyword,
@@ -29,12 +36,14 @@ export const adminProductService = Object.freeze({
     return apiClient.get(`/admin/products/${id}`)
   },
 
-  async createProduct(payload) {
-    return apiClient.post('/admin/products', payload)
+  async createProduct(payload, files = []) {
+    return files.length ? apiClient.post('/admin/products/with-images', productFormData(payload, files))
+      : apiClient.post('/admin/products', payload)
   },
 
-  async updateProduct(id, payload) {
-    return apiClient.put(`/admin/products/${id}`, payload)
+  async updateProduct(id, payload, files = []) {
+    return files.length ? apiClient.put(`/admin/products/${id}/with-images`, productFormData(payload, files))
+      : apiClient.put(`/admin/products/${id}`, payload)
   },
 
   async updateStatus(id, isActive) {

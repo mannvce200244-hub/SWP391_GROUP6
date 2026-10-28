@@ -21,7 +21,7 @@ Confirmed prerequisites and tooling:
 - Checked-in Maven Wrapper (`mvnw` / `mvnw.cmd`).
 - Spring Boot 4.1.1, Spring Data JPA, Hibernate 7, Jakarta Bean Validation, Spring Security.
 - PostgreSQL 14+ (`m4n_db`).
-- OpenAPI 3 / Swagger UI via `springdoc-openapi` (v2.8.5).
+- OpenAPI 3 / Swagger UI via `springdoc-openapi` (v3.1.1, compatible with Spring Boot 4).
 
 From `m4n-backend/`:
 
@@ -39,7 +39,8 @@ API Documentation endpoints when backend is running:
 
 ## Frontend
 
-The repository uses npm, confirmed by `package-lock.json`. Node.js 20 LTS or newer is recommended.
+The repository uses npm, confirmed by `package-lock.json`. Vite 8 requires
+Node.js `^20.19.0 || >=22.12.0`; this audit used Node.js 22.21.1.
 
 From `m4n-frontend/`:
 
@@ -54,6 +55,17 @@ These scripts are defined in `m4n-frontend/package.json`.
 
 Environment variables:
 - `VITE_API_BASE_URL`: Base URL for backend APIs (e.g. `http://localhost:8080/api/v1`). Template provided in `.env.example`.
+- `.env.production` selects same-origin `/api/v1` for production builds;
+  process environment overrides take precedence. Serve `dist` behind the HTTPS
+  reverse proxy described in [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md).
+- For a local HTTPS tunnel demo, set `VITE_API_BASE_URL=/api/v1`,
+  `DEV_API_PROXY_TARGET=http://localhost:8080` and `DEV_TUNNEL_HOST` to the exact
+  frontend tunnel hostname in the ignored frontend `.env.local`. Vite proxies
+  browser APIs on the frontend origin, preserving HttpOnly/SameSite refresh
+  cookies. Add that frontend HTTPS origin to backend `CORS_ALLOWED_ORIGINS`;
+  configure `FRONTEND_URL`, `COOKIE_SECURE=true` and the MoMo return/IPN URLs,
+  then restart the backend. Never use `allowedHosts: true` or wildcard CORS.
+  Tunnel hostnames must be updated when a new quick tunnel is started.
 
 Before frontend implementation, follow the sequence in
 [`../m4n-frontend/AGENTS.md`](../m4n-frontend/AGENTS.md). Every changed UI must
@@ -74,16 +86,57 @@ client/server exchange must follow
   - `CORS_ALLOWED_ORIGINS`: Allowed CORS origins (default: `http://localhost:5173`)
 - JPA DDL Strategy: `update` is the current development configuration; a versioned migration/deployment strategy remains TBD.
 - Before deploying the session invalidation repair, apply `docs/migrations/20261010_user_session_version.sql` to the configured PostgreSQL schema. It backfills existing users with authentication generation `0` and sets a non-null default. Existing JWTs without the generation claim are rejected; a valid refresh session can obtain a new JWT, otherwise re-login is required. Development JPA update also uses a `BIGINT DEFAULT 0` column definition; production deployment must apply the explicit SQL first.
-- `m4n-backend/.env.example` documents actual keys. Spring Boot does not automatically load `.env`: export values into the process environment or use approved external configuration.
+- `m4n-backend/.env.example` documents actual keys. The project's `DotenvEnvironmentPostProcessor`, registered through the Spring Boot 4 `org.springframework.boot.EnvironmentPostProcessor` factory, loads the local `.env` when starting from the backend folder or workspace root. Exported process environment variables take precedence. Restart the backend after changing `.env`; never commit that file or its credentials.
 - Backend test resources include deterministic signing and password fixtures for tests only. PostgreSQL connection credentials remain external; run integration tests against a dedicated local test database when available.
 - Normal startup does not create sample products/orders/users. Development fixtures are opt-in and preserve existing product media/barcodes on repeated startup.
 - Startup initializes the canonical roles using normal data writes; it does not alter enum constraints. Apply the role/order-status migration before starting against an older schema. The deployment application role does not need `ALTER TABLE` privileges.
 - Resend reset delivery and VNPay 2.1 sandbox are opt-in and require external provider credentials. With missing configuration reset delivery returns uniform unavailable and VNPay is disabled. See `EXTERNAL_INTEGRATIONS.md`; no provider keys are available for live verification.
 - Initial SUPER_ADMIN provisioning is opt-in with external credentials and never overwrites an existing privileged account. Disable the bootstrap flag and remove its password from deployment configuration after initial setup.
 - Invoice export embeds a Unicode font. Set `INVOICE_PDF_FONT_PATH` to a readable, licensed TTF with Vietnamese glyphs on the deployment server. Without it common system fonts are tried; a missing font fails clearly instead of corrupting text.
+- POS MoMo invoices are emailed as PDFs to the payment's saved customer email. `POS_INVOICE_EMAIL_ENABLED=true` (default) uses the same `GMAIL_USERNAME`/`GMAIL_APP_PASSWORD` SMTP configuration. Apply `20261016_pos_invoice_email.sql` first. A bounded worker checks committed pending receipts every 10 seconds, leasing each attempt for five minutes before retry. SMTP/PDF failure never reverses the sale. Historical invoices are not emailed. A crash after SMTP acceptance but before saving the sent timestamp can cause a duplicate receipt on retry; delivery is at least once, not an exactly-once SMTP guarantee.
 - Shipping charging defaults disabled. Configure product billable weights/surcharges and persisted shipping settings in `/admin/pricing` before enabling. Existing order/invoice snapshots are unchanged by new settings.
 - New feature SQL files in `docs/migrations/` are reviewable PostgreSQL deployment scripts. Follow [`migrations/README.md`](migrations/README.md) for order and checks before production startup with `ddl-auto=validate`; `ddl-auto=update` remains for development only. A packaged migration engine is not selected or added.
+- `SPRING_PROFILES_ACTIVE=prod` selects validated schema, Secure cookies,
+  disabled development seeding/Swagger and early deployment configuration
+  checks. See [`PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md) for the exact
+  HTTPS/OTP/media setup and sandbox-payment restrictions.
+- The user-approved Vercel/Railway sandbox demo uses the explicit
+  `MOMO_SANDBOX_DEPLOYMENT_ENABLED=true` opt-in with `prod`. Follow
+  [`VERCEL_RAILWAY_DEPLOYMENT.md`](VERCEL_RAILWAY_DEPLOYMENT.md) for the API
+  proxy, permanent callbacks, Railway `PORT`, secrets and hosting acceptance.
 - Never commit secrets into source control.
+- The approved 2026-10-12 extension adds Gmail SMTP OTP, GHN address/fee quotes,
+  MoMo sandbox and image uploads. Follow [`CUSTOMER_FLOW_INTEGRATIONS.md`](CUSTOMER_FLOW_INTEGRATIONS.md)
+  for variables, product package measurements, callback URLs and API contracts.
+  Apply the three new scripts in `migrations/README.md` before schema validation.
+  No SMS integration is enabled without a selected SMS provider.
+
+## Local Java build troubleshooting
+
+Use JDK 21 for the IntelliJ Project SDK, module SDK and Maven runner. Maven's
+`pom.xml` remains authoritative for Java 21 and annotation processing. Do not
+run two compilers against `m4n-backend/target/classes` concurrently.
+
+The local VS Code workspace disables `java.autobuild.enabled`; build backend
+code with Maven or IntelliJ instead. This avoids the VS Code Eclipse compiler
+overwriting Maven classes with failed Lombok constructor compilation output.
+VS Code Java debugging must be preceded by a successful Maven build.
+
+If startup reports `ClassFormatError: Invalid method Code length 0` for a
+Lombok entity, inspect its compiled output with `javap -p -c`. An empty
+constructor or `Unresolved compilation problems` is a broken build artifact.
+Stop the backend, select JDK 21, then from `m4n-backend/` rebuild:
+
+```powershell
+$env:JAVA_HOME = 'C:/Program Files/Java/jdk-21'
+.\mvnw.cmd clean compile
+.\mvnw.cmd spring-boot:run
+```
+
+Reload the IDE project/workspace after changing its settings. Do not change
+entity fields, database records or Java source level to work around malformed
+bytecode. Run the existing integration suite against a disposable test
+database as described above when checking a full clean build.
 
 ## Verification
 

@@ -17,6 +17,21 @@ import java.util.Objects;
 @Service @RequiredArgsConstructor
 public class ShippingServiceImpl implements ShippingService {
     private final ShippingSettingsRepository settingsRepository;
+    private final GhnService carrier;
+
+    @Override public boolean requiresAddress() { return carrier.getOptions().carrierEnabled(); }
+
+    @Override @Transactional(readOnly = true)
+    public ShippingQuote calculateCarrierShipping(List<ShippingLine> lines, BigDecimal subtotal,
+            com.m4n.backend.dto.request.DeliveryAddressRequest address, String name, String phone) {
+        CarrierShippingQuote quote = carrier.quote(lines, address, name, phone);
+        MoneyValidation.requireSupported(quote.fee());
+        ShippingSettings settings = settingsRepository.findById(1L).orElse(null);
+        boolean free = settings != null && settings.isFreeShippingEnabled() && settings.getFreeShippingThreshold() != null
+                && subtotal.compareTo(settings.getFreeShippingThreshold()) >= 0;
+        return new ShippingQuote(quote.fee(), free ? quote.fee() : BigDecimal.ZERO,
+                free ? BigDecimal.ZERO : quote.fee(), free, quote.fullAddress());
+    }
 
     @Override @Transactional
     public ShippingSettingsResponse getSettings() { return toResponse(settings()); }

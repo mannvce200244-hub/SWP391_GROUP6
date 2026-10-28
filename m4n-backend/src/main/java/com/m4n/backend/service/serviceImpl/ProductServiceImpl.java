@@ -300,12 +300,14 @@ public class ProductServiceImpl implements ProductService {
         boolean needsUpdate = false;
         if (autoGenerateCode) {
             String catPrefix = (category.getCode() != null && !category.getCode().isBlank())
-                    ? category.getCode().trim().toUpperCase()
+                    ? category.getCode().trim().toUpperCase(java.util.Locale.ROOT)
                     : "INS";
             Long prodId = savedProduct.getId() != null ? savedProduct.getId() : 1L;
+            int prefixLimit = 50 - 5 - Math.max(4, prodId.toString().length());
+            catPrefix = catPrefix.substring(0, Math.min(catPrefix.length(), prefixLimit));
             String generatedCode = String.format("M4N-%s-%04d", catPrefix, prodId);
             if (productRepository.existsByCodeIgnoreCase(generatedCode)) {
-                generatedCode = String.format("M4N-%s-%06d", catPrefix, prodId);
+                generatedCode = "M4N-" + UUID.randomUUID().toString().toUpperCase(java.util.Locale.ROOT);
             }
             savedProduct.setCode(generatedCode);
             needsUpdate = true;

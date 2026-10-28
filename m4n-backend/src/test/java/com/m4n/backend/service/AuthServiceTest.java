@@ -15,6 +15,7 @@ import com.m4n.backend.mapper.UserMapper;
 import com.m4n.backend.repository.PasswordResetTokenRepository;
 import com.m4n.backend.repository.RoleRepository;
 import com.m4n.backend.repository.UserRepository;
+import com.m4n.backend.repository.EmailOtpChallengeRepository;
 import com.m4n.backend.security.JwtService;
 import com.m4n.backend.service.serviceImpl.AuthServiceImpl;
 import com.m4n.backend.util.TokenHashUtil;
@@ -68,6 +69,7 @@ class AuthServiceTest {
     @Mock
     private PasswordResetNotifier passwordResetNotifier;
     @Mock private PasswordResetRequestService passwordResetRequestService;
+    @Mock private EmailOtpChallengeRepository emailOtpChallenges;
 
     private UserMapper userMapper;
     private AuthService authService;
@@ -85,8 +87,24 @@ class AuthServiceTest {
                 refreshTokenService,
                 passwordResetTokenRepository,
                 passwordResetNotifier,
-                passwordResetRequestService
+                passwordResetRequestService,
+                emailOtpChallenges
         );
+    }
+
+    @Test
+    void registrationEmailNormalizationMatchesOtpRegardlessOfServerLocale() {
+        java.util.Locale previous = java.util.Locale.getDefault();
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("tr-TR"));
+            when(userRepository.existsByEmailIgnoreCase("instrument@example.test")).thenReturn(true);
+            assertThatThrownBy(() -> authService.register(new RegisterRequest(
+                    "Customer", " INSTRUMENT@example.test ", "SecurePassword123!", null)))
+                    .isInstanceOf(DuplicateResourceException.class);
+            verify(userRepository).existsByEmailIgnoreCase("instrument@example.test");
+        } finally {
+            java.util.Locale.setDefault(previous);
+        }
     }
 
     @Test

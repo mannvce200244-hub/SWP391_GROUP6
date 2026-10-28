@@ -35,8 +35,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Transactional
     public TokenPair createRefreshToken(User user, String userAgent, String ipAddress) {
         user = lockUser(user.getId());
-        if (!user.isActive()) {
-            throw new DisabledException("Account is inactive.");
+        if (!user.isActive() || !user.isEmailVerified()) {
+            throw new DisabledException("Account is inactive or email is unverified.");
         }
         String rawToken = TokenHashUtil.generateSecureRandomToken();
         String tokenHash = TokenHashUtil.hashToken(rawToken);
@@ -79,9 +79,9 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
             throw new BadCredentialsException("Refresh token has expired.");
         }
 
-        if (!user.isActive()) {
+        if (!user.isActive() || !user.isEmailVerified()) {
             log.warn("Attempted refresh with inactive user: {}", user.getEmail());
-            throw new DisabledException("Account is inactive.");
+            throw new DisabledException("Account is inactive or email is unverified.");
         }
 
         // Generate new rotated token

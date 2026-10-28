@@ -76,6 +76,7 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     private void validateSort(Pageable pageable) {
+        validatePage(pageable);
         Set<String> allowedProperties = Set.of("id", "quantity", "updatedAt");
         if (pageable.getSort().stream().anyMatch(order -> !allowedProperties.contains(order.getProperty()))) {
             throw new IllegalArgumentException("Trường sắp xếp tồn kho không được hỗ trợ.");
@@ -95,6 +96,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public Page<InventoryMovementResponse> listMovements(Long productId, String type, Pageable pageable) {
+        validatePage(pageable);
         if (pageable.getSort().stream().anyMatch(order -> !Set.of("id", "createdAt").contains(order.getProperty()))) {
             throw new IllegalArgumentException("Trường sắp xếp lịch sử kho không được hỗ trợ.");
         }
@@ -111,6 +113,12 @@ public class InventoryServiceImpl implements InventoryService {
                     movement.getRejectedQuantity() == null ? 0 : movement.getRejectedQuantity(), movement.getRejectionReason(),
                     movement.getReason(), movement.getActorEmail(), movement.getCreatedAt(), movement.getSourceType(), movement.getSourceId());
         });
+    }
+
+    private void validatePage(Pageable pageable) {
+        if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
+        }
     }
 
     private InventoryItemResponse mapToResponse(Inventory inventory, Map<Long, String> primaryImages) {

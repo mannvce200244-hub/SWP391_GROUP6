@@ -20,6 +20,7 @@ public class CustomUserPrincipal implements UserDetails {
     private final String fullName;
     private final RoleName role;
     private final boolean active;
+    private final boolean emailVerified;
     private final long sessionVersion;
     private final Collection<? extends GrantedAuthority> authorities;
 
@@ -30,6 +31,7 @@ public class CustomUserPrincipal implements UserDetails {
         this.fullName = user.getFullName();
         this.role = user.getRole() != null ? user.getRole().getName() : null;
         this.active = user.isActive();
+        this.emailVerified = user.isEmailVerified();
         this.sessionVersion = user.getSessionVersion();
 
         if (this.role != null) {
@@ -71,6 +73,6 @@ public class CustomUserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return active;
+        return active && emailVerified;
     }
 }

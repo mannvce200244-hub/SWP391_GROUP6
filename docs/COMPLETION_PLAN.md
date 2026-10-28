@@ -39,6 +39,7 @@ online stock allocation, customer receipt completion or completed-only revenue.
 - An insufficient-stock paid order can wait and be retried by authorized staff.
   A paid order cannot be cancelled before a verified full refund is persisted.
 - Refund is a separate Admin/Super Admin operation with explicit confirmation.
+- User-approved exception (2026-10-16): an owning Customer may explicitly confirm refund-and-cancel for a paid MoMo order still awaiting confirmation. This requests full refund and cancels only after verified success, following BR-ORDER-02. Standalone and other refunds remain Admin/Super Admin operations.
   It calls the configured provider and validates its signed result; browser
   return parameters and manually asserted success never authorize payment/refund.
 - Existing product money is not silently rounded to satisfy provider rules. An

@@ -17,6 +17,10 @@ import com.m4n.backend.mapper.UserMapper;
 import com.m4n.backend.repository.PasswordResetTokenRepository;
 import com.m4n.backend.repository.RoleRepository;
 import com.m4n.backend.repository.UserRepository;
+import com.m4n.backend.repository.EmailOtpChallengeRepository;
+import com.m4n.backend.dto.response.EmailOtpResponse;
+import com.m4n.backend.exception.InvalidEmailOtpException;
+import com.m4n.backend.exception.RegistrationVerificationRequiredException;
 import com.m4n.backend.security.JwtService;
 import com.m4n.backend.service.AuthService;
 import com.m4n.backend.service.PasswordResetNotifier;
@@ -38,6 +42,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.nio.charset.StandardCharsets;
 
 @Slf4j
@@ -54,6 +59,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordResetNotifier passwordResetNotifier;
     private final PasswordResetRequestService passwordResetRequestService;
+    private final EmailOtpChallengeRepository emailOtpChallenges;
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -65,7 +71,8 @@ public class AuthServiceImpl implements AuthService {
             RefreshTokenService refreshTokenService,
             PasswordResetTokenRepository passwordResetTokenRepository,
             PasswordResetNotifier passwordResetNotifier,
-            PasswordResetRequestService passwordResetRequestService
+            PasswordResetRequestService passwordResetRequestService,
+            EmailOtpChallengeRepository emailOtpChallenges
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -77,13 +84,38 @@ public class AuthServiceImpl implements AuthService {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.passwordResetNotifier = passwordResetNotifier;
         this.passwordResetRequestService = passwordResetRequestService;
+        this.emailOtpChallenges = emailOtpChallenges;
     }
 
     @Override
     @Transactional
     public UserResponse register(RegisterRequest request) {
         validatePasswordBytes(request.password());
-        String normalizedEmail = request.email().trim().toLowerCase();
+        return createCustomer(request, true);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse registerUnverified(RegisterRequest request) {
+        validatePasswordBytes(request.password());
+        return createCustomer(request, false);
+    }
+
+    @Override
+    @Transactional
+    public UserResponse completePendingRegistration(String email, String challengeId) {
+        var challenge = emailOtpChallenges.findLocked(TokenHashUtil.hashToken("REGISTER:" + email)).orElseThrow(InvalidEmailOtpException::new);
+        if (!challenge.isConsumed() || !challengeId.equals(challenge.getChallengeId())) {
+            throw new InvalidEmailOtpException();
+        }
+        User user = userRepository.findByEmailIgnoreCaseWithLock(email).orElseThrow(InvalidEmailOtpException::new);
+        if (user.isEmailVerified()) throw new InvalidEmailOtpException();
+        user.setEmailVerified(true);
+        return userMapper.toResponse(userRepository.save(user));
+    }
+
+    private UserResponse createCustomer(RegisterRequest request, boolean emailVerified) {
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new DuplicateResourceException("Email is already registered: " + normalizedEmail);
@@ -104,6 +136,7 @@ public class AuthServiceImpl implements AuthService {
                 .phone(request.phone() != null ? request.phone().trim() : null)
                 .address(request.address() != null ? request.address().trim() : null)
                 .isActive(true)
+                .emailVerified(emailVerified)
                 .role(customerRole)
                 .build();
 
@@ -121,11 +154,18 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public LoginResult login(LoginRequest request, String userAgent, String ipAddress) {
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
 
         // Serialize credential verification and session creation with password/status changes.
         User user = userRepository.findByEmailIgnoreCaseWithLock(normalizedEmail)
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password."));
+        if (!user.isEmailVerified()) {
+            if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+                throw new BadCredentialsException("Invalid email or password.");
+            }
+            if (!user.isActive()) throw new DisabledException("Account is inactive.");
+            throw registrationVerificationRequired(normalizedEmail);
+        }
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(normalizedEmail, request.password())
         );
@@ -145,6 +185,14 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("Login successful for user: {} ({})", user.getEmail(), user.getRole().getName());
         return new LoginResult(authResponse, tokenPair.rawRefreshToken());
+    }
+
+    private RegistrationVerificationRequiredException registrationVerificationRequired(String email) {
+        var challenge = emailOtpChallenges.findById(TokenHashUtil.hashToken("REGISTER:" + email))
+                .orElseThrow(InvalidEmailOtpException::new);
+        return new RegistrationVerificationRequiredException(email, new EmailOtpResponse(challenge.getChallengeId(),
+                challenge.getExpiresAt(), challenge.getSentAt().plusSeconds(60),
+                "Vui lòng nhập mã trong email để hoàn tất đăng ký. Nếu mã đã hết hạn, hãy gửi lại mã."));
     }
 
     @Override
@@ -174,7 +222,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void logoutAll(String currentUserEmail) {
-        String normalizedEmail = currentUserEmail.trim().toLowerCase();
+        String normalizedEmail = currentUserEmail.trim().toLowerCase(Locale.ROOT);
         User user = userRepository.findByEmailIgnoreCaseWithLock(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + normalizedEmail));
 
@@ -186,7 +234,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void changePassword(String currentUserEmail, ChangePasswordRequest request) {
         validatePasswordBytes(request.newPassword());
-        String normalizedEmail = currentUserEmail.trim().toLowerCase();
+        String normalizedEmail = currentUserEmail.trim().toLowerCase(Locale.ROOT);
         User user = userRepository.findByEmailIgnoreCaseWithLock(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + normalizedEmail));
 
@@ -216,7 +264,7 @@ public class AuthServiceImpl implements AuthService {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "Dịch vụ gửi hướng dẫn đặt lại mật khẩu chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ.");
         }
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
         try {
             passwordResetRequestService.requestReset(normalizedEmail);
         } catch (PasswordResetDeliveryException ex) {

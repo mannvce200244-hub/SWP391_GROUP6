@@ -24,6 +24,11 @@ of scope. The backend calculates and persists all amounts.
    billable weight and a nonnegative surcharge; zero surcharge means nonbulky.
    Missing weight blocks online shipping calculation when charging is enabled,
    with a clear product-specific error. POS never needs weight and has zero fee.
+   Approved 2026-10-12 extension: when GHN is explicitly enabled, its validated
+   carrier preview replaces this local base-fee formula. Existing freeship and
+   shipping voucher order below still applies. Structured address, package
+   measurements, recalculation and 409 acknowledgment behavior are defined in
+   `CUSTOMER_FLOW_INTEGRATIONS.md` and `BR-SHIPPING-02`.
 4. If subtotal meets an enabled Admin freeship threshold, shipping is zero.
    Otherwise one entered SHIPPING voucher reduces the base fee by its fixed VND
    amount, capped at the base fee. It has the same period/value/quantity/usage

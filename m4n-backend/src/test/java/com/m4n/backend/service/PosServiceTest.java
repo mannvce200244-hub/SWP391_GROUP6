@@ -47,6 +47,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,7 +94,8 @@ class PosServiceTest {
                 inventoryRepository,
                 invoiceRepository,
                 userRepository,
-                voucherService, inventoryService, productPricingService
+                voucherService, inventoryService, productPricingService,
+                mock(com.m4n.backend.repository.PosMomoPaymentRepository.class), mock(tools.jackson.databind.ObjectMapper.class)
         );
         lenient().when(voucherService.consumeDiscounts(any(), any(), anyInt())).thenAnswer(invocation ->
                 new DiscountCalculationResponse(null, null, BigDecimal.ZERO, BigDecimal.ZERO,

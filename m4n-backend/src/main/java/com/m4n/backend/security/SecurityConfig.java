@@ -73,6 +73,12 @@ public class SecurityConfig {
                         // Public Authentication endpoints
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/register",
+                                "/api/v1/auth/register/start",
+                                "/api/v1/auth/register/verify",
+                                "/api/v1/auth/email-otp",
+                                "/api/v1/auth/reset-password-otp",
+                                "/api/v1/auth/verify-reset-otp",
+                                "/api/v1/payments/momo/ipn",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout",
@@ -82,6 +88,7 @@ public class SecurityConfig {
                         // Public Catalog & Review endpoints (customers can browse instruments and reviews without logging in)
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
+                                "/api/v1/media/**",
                                 "/api/v1/categories/**",
                                 "/api/v1/artisans/**",
                                 "/api/v1/craft-villages/**",
@@ -102,6 +109,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(new AuthCookieRequestFilter(allowedOrigins, jwtAccessDeniedHandler), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

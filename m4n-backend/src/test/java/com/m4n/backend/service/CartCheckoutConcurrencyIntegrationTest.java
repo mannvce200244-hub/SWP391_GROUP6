@@ -103,6 +103,74 @@ class CartCheckoutConcurrencyIntegrationTest {
     }
 
     @Test
+    void partialCheckoutKeepsUnselectedEntriesAndRejectsStaleOrDuplicateIds() {
+        cartService.addToCart(new AddToCartRequest(product.getId(), 1));
+        Product other = productRepository.findAll().stream().filter(p -> !p.getId().equals(product.getId()) && p.isActive())
+                .filter(p -> inventoryRepository.findByProductId(p.getId()).map(i -> i.getQuantity() > 0).orElse(false))
+                .findFirst().orElseThrow();
+        cartService.addToCart(new AddToCartRequest(other.getId(), 1));
+        var cart = cartService.getMyCart();
+        Long selected = cart.items().stream().filter(i -> i.productId().equals(product.getId())).findFirst().orElseThrow().id();
+        Long retained = cart.items().stream().filter(i -> i.productId().equals(other.getId())).findFirst().orElseThrow().id();
+        var preview = orderService.previewCheckout(new com.m4n.backend.dto.request.CheckoutPreviewRequest(null, null, List.of(selected)));
+        assertThat(preview.items()).hasSize(1);
+        assertThat(preview.subtotal()).isEqualByComparingTo("1000");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> orderService.previewCheckout(
+                new com.m4n.backend.dto.request.CheckoutPreviewRequest(null, null, List.of(selected, selected))))
+                .isInstanceOf(IllegalArgumentException.class);
+        var placed = orderService.placeOrder(new PlaceOrderRequest(customer.getFullName(), "0900000000", customer.getEmail(),
+                "Test address", "COD", null, null, null, List.of(selected)));
+        assertThat(placed.finalAmount()).isEqualByComparingTo("1000");
+        assertThat(cartService.getMyCart().items()).extracting(i -> i.id()).containsExactly(retained);
+        assertThat(inventoryRepository.findByProductId(product.getId()).orElseThrow().getQuantity()).isEqualTo(5);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> orderService.previewCheckout(
+                new com.m4n.backend.dto.request.CheckoutPreviewRequest(null, null, List.of(selected))))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void directPurchasePreservesEveryCartRowIncludingThePurchasedProduct() {
+        cartService.addToCart(new AddToCartRequest(product.getId(), 3));
+        Product other = productRepository.findAll().stream().filter(p -> !p.getId().equals(product.getId()) && p.isActive())
+                .filter(p -> inventoryRepository.findByProductId(p.getId()).map(i -> i.getQuantity() > 0).orElse(false))
+                .findFirst().orElseThrow();
+        cartService.addToCart(new AddToCartRequest(other.getId(), 1));
+        var before = cartService.getMyCart();
+        var direct = new com.m4n.backend.dto.request.DirectPurchaseRequest(product.getId(), 2);
+        var request = new com.m4n.backend.dto.request.CheckoutPreviewRequest(null, null, null, null, null, null, direct);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            var preview = orderService.previewCheckout(request);
+            assertThat(preview.items()).hasSize(1);
+            assertThat(preview.items().getFirst().productId()).isEqualTo(product.getId());
+            assertThat(preview.items().getFirst().quantity()).isEqualTo(2);
+            assertThat(preview.subtotal()).isEqualByComparingTo("2000");
+            assertThat(cartService.getMyCart()).isEqualTo(before);
+        }
+        var placed = orderService.placeOrder(new PlaceOrderRequest(customer.getFullName(), "0900000000", customer.getEmail(),
+                "Test address", "COD", null, null, null, null, null, null, direct));
+        var order = orderService.getMyOrderDetail(placed.id());
+        assertThat(order.items()).hasSize(1);
+        assertThat(order.items().getFirst().quantity()).isEqualTo(2);
+        assertThat(order.totalAmount()).isEqualByComparingTo("2000");
+        assertThat(cartService.getMyCart()).isEqualTo(before);
+        assertThat(inventoryRepository.findByProductId(product.getId()).orElseThrow().getQuantity()).isEqualTo(5);
+    }
+
+    @Test
+    void directPurchaseWorksWithoutCreatingACartAndRejectsMixedSources() {
+        var direct = new com.m4n.backend.dto.request.DirectPurchaseRequest(product.getId(), 1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> orderService.previewCheckout(
+                new com.m4n.backend.dto.request.CheckoutPreviewRequest(null, null, List.of(1L), null, null, null, direct)))
+                .isInstanceOf(IllegalArgumentException.class);
+        var placed = orderService.placeOrder(new PlaceOrderRequest(customer.getFullName(), "0900000000", customer.getEmail(),
+                "Test address", "COD", null, null, null, null, null, null, direct));
+        assertThat(placed.status()).isEqualTo(OrderStatus.PENDING_CONFIRMATION);
+        assertThat(placed.totalAmount()).isEqualByComparingTo("1000");
+        assertThat(cartRepository.findByUserId(customer.getId())).isEmpty();
+        assertThat(inventoryRepository.findByProductId(product.getId()).orElseThrow().getQuantity()).isEqualTo(5);
+    }
+
+    @Test
     void simultaneousCheckoutConsumesOneCartOnlyOnceAndDoesNotReserveStock() throws Exception {
         cartService.addToCart(new AddToCartRequest(product.getId(), 1));
         PlaceOrderRequest request = new PlaceOrderRequest(customer.getFullName(), "0900000000", customer.getEmail(),

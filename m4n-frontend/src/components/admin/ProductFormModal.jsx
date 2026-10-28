@@ -51,6 +51,7 @@ export default function ProductFormModal({
 
   // Media items state
   const [mediaList, setMediaList] = useState([])
+  const [imageFiles, setImageFiles] = useState([])
   const [newMediaUrl, setNewMediaUrl] = useState('')
   const [newMediaType, setNewMediaType] = useState('IMAGE')
   const [newMediaAlt, setNewMediaAlt] = useState('')
@@ -81,6 +82,7 @@ export default function ProductFormModal({
     setDescription('')
     setIsActive(true)
     setMediaList([])
+    setImageFiles([])
     setFormErrors({})
     setServerError('')
   }, [])
@@ -332,7 +334,7 @@ export default function ProductFormModal({
           })),
         }
 
-        await adminProductService.updateProduct(productId, updatePayload)
+        await adminProductService.updateProduct(productId, updatePayload, imageFiles)
 
         addToast({
           message: `Đã cập nhật sản phẩm "${name.trim()}".`,
@@ -366,7 +368,7 @@ export default function ProductFormModal({
           })),
         }
 
-        const created = await adminProductService.createProduct(createPayload)
+        const created = await adminProductService.createProduct(createPayload, imageFiles)
         addToast({
           message: `Đã tạo mới sản phẩm "${name.trim()}". Mã: ${created.code || 'đã tạo tự động'}. Tồn kho = 0.`,
           type: 'success',
@@ -718,9 +720,11 @@ export default function ProductFormModal({
                         type="text"
                         value={dimensions}
                         onChange={(e) => setDimensions(e.target.value)}
-                        placeholder="VD: Dài 115cm x Rộng 25cm"
+                        placeholder="VD: 115 x 25 x 15 cm"
+                        aria-describedby="product-dimensions-help"
                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30"
                       />
+                      <p id="product-dimensions-help" className="mt-1.5 text-xs text-muted">Khi dùng GHN, nhập dài x rộng x cao của kiện đóng gói bằng cm (mỗi chiều 1–200 cm).</p>
                     </div>
 
                     <div>
@@ -774,6 +778,24 @@ export default function ProductFormModal({
                   </h3>
 
                   {/* Add Media Bar */}
+                  <div className="mb-4 flex flex-col gap-2">
+                    <label htmlFor="product-image-files" className="text-sm font-medium text-ink">Tải ảnh từ máy tính</label>
+                    <input id="product-image-files" name="images" type="file" accept="image/png,image/jpeg"
+                      multiple disabled={submitting} aria-describedby="product-image-help"
+                      onChange={(event) => {
+                        const files = Array.from(event.target.files || [])
+                        if (files.length > 10 || files.some((file) => file.size > 5 * 1024 * 1024 || !['image/png', 'image/jpeg'].includes(file.type))) {
+                          setFormErrors((current) => ({ ...current, media: 'Chọn tối đa 10 ảnh JPEG/PNG, mỗi ảnh tối đa 5 MB.' }))
+                          event.target.value = ''
+                          setImageFiles([])
+                          return
+                        }
+                        setImageFiles(files)
+                        setFormErrors((current) => ({ ...current, media: undefined }))
+                      }} />
+                    <p id="product-image-help" className="text-xs text-secondary">JPEG/PNG, tối đa 5 MB và 16 triệu điểm ảnh mỗi ảnh. Ảnh được lưu cùng sản phẩm.</p>
+                    {imageFiles.length > 0 && <p role="status" className="text-sm text-ink">Đã chọn {imageFiles.length} ảnh: {imageFiles.map((file) => file.name).join(', ')}</p>}
+                  </div>
                   <div className="p-3.5 bg-[#F6F7F8] rounded-xl border border-[#E3E6E8] mb-4.5 flex flex-col sm:flex-row gap-2.5">
                     <input
                       type="text"

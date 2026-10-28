@@ -14,8 +14,8 @@ function generatePageNumbers(currentPage, totalPages) {
   return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages]
 }
 
-function Pagination({ className = '', currentPage = 1, onPageChange, totalPages = 1 }) {
-  if (totalPages <= 1) return null
+function Pagination({ className = '', currentPage = 1, onPageChange, totalPages = 1, showSinglePage = false, disabled = false }) {
+  if (totalPages < 1 || (totalPages === 1 && !showSinglePage)) return null
 
   const pages = generatePageNumbers(currentPage, totalPages)
 
@@ -28,7 +28,7 @@ function Pagination({ className = '', currentPage = 1, onPageChange, totalPages 
       <button
         aria-label="Trang trước"
         className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-control-border bg-surface text-ink text-sm font-medium hover:bg-surface-secondary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-        disabled={currentPage <= 1}
+        disabled={disabled || currentPage <= 1}
         onClick={() => onPageChange(currentPage - 1)}
         type="button"
       >
@@ -53,9 +53,9 @@ function Pagination({ className = '', currentPage = 1, onPageChange, totalPages 
           <button
             key={page}
             aria-current={isCurrent ? 'page' : undefined}
-            disabled={isCurrent}
+            disabled={disabled || isCurrent}
             aria-label={`Trang ${page}`}
-            className={`w-11 h-11 flex items-center justify-center rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+            className={`w-11 h-11 flex items-center justify-center rounded-md text-xs font-semibold transition-colors cursor-pointer disabled:pointer-events-none ${
               isCurrent
                 ? 'bg-brand text-white shadow-xs'
                 : 'border border-control-border bg-surface text-ink hover:bg-surface-secondary'
@@ -72,7 +72,7 @@ function Pagination({ className = '', currentPage = 1, onPageChange, totalPages 
       <button
         aria-label="Trang kế tiếp"
         className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-control-border bg-surface text-ink text-sm font-medium hover:bg-surface-secondary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-        disabled={currentPage >= totalPages}
+        disabled={disabled || currentPage >= totalPages}
         onClick={() => onPageChange(currentPage + 1)}
         type="button"
       >

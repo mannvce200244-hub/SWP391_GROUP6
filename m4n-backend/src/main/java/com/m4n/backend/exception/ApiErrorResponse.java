@@ -1,6 +1,7 @@
 package com.m4n.backend.exception;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.m4n.backend.dto.response.EmailOtpResponse;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -18,4 +19,6 @@ public class ApiErrorResponse {
     private final String message;
     private final String path;
     private final Map<String, String> fieldErrors;
+    private final String email;
+    private final EmailOtpResponse challenge;
 }

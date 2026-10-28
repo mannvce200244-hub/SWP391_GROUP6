@@ -62,6 +62,9 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserSummaryResponse> listUsers(String keyword, RoleName role, Boolean isActive, Pageable pageable) {
+        if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
+        }
         var allowed = java.util.Set.of("id", "fullName", "email", "isActive", "createdAt");
         if (pageable.getSort().stream().anyMatch(order -> !allowed.contains(order.getProperty()))) {
             throw new IllegalArgumentException("Trường sắp xếp tài khoản không hợp lệ.");
@@ -99,7 +102,7 @@ public class AdminUserServiceImpl implements AdminUserService {
             }
         }
 
-        String normalizedEmail = request.email().trim().toLowerCase();
+        String normalizedEmail = request.email().trim().toLowerCase(java.util.Locale.ROOT);
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new DuplicateResourceException("Email này đã được sử dụng trong hệ thống: " + normalizedEmail);
         }
@@ -302,7 +305,7 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     private User getOperator(String email) {
-        String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+        String normalizedEmail = email != null ? email.trim().toLowerCase(java.util.Locale.ROOT) : "";
         User operator = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Operator user not found: " + normalizedEmail));
         if (!operator.isActive() || (operator.getRole().getName() != RoleName.ADMIN

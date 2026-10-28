@@ -3,7 +3,15 @@ package com.m4n.backend.controller;
 import com.m4n.backend.dto.request.ChangePasswordRequest;
 import com.m4n.backend.dto.request.ForgotPasswordRequest;
 import com.m4n.backend.dto.request.LoginRequest;
+import com.m4n.backend.dto.request.VerifiedRegisterRequest;
+import com.m4n.backend.dto.request.EmailOtpRequest;
+import com.m4n.backend.dto.request.OtpResetPasswordRequest;
+import com.m4n.backend.dto.request.VerifyResetOtpRequest;
 import com.m4n.backend.dto.request.RegisterRequest;
+import com.m4n.backend.dto.request.VerifyRegistrationRequest;
+import com.m4n.backend.dto.response.VerifiedResetOtpResponse;
+import com.m4n.backend.dto.response.EmailOtpResponse;
+import com.m4n.backend.service.EmailOtpService;
 import com.m4n.backend.dto.request.ResetPasswordRequest;
 import com.m4n.backend.dto.response.AuthResponse;
 import com.m4n.backend.dto.response.MessageResponse;
@@ -33,17 +41,47 @@ public class AuthController {
 
     private final AuthService authService;
     private final AuthCookieService authCookieService;
+    private final EmailOtpService emailOtpService;
 
-    public AuthController(AuthService authService, AuthCookieService authCookieService) {
+    public AuthController(AuthService authService, AuthCookieService authCookieService, EmailOtpService emailOtpService) {
         this.authService = authService;
         this.authCookieService = authCookieService;
+        this.emailOtpService = emailOtpService;
     }
 
     @PostMapping("/register")
     @Operation(summary = "Register a new Customer account", description = "Creates a new customer account. Role is automatically set to CUSTOMER.")
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        UserResponse response = authService.register(request);
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody VerifiedRegisterRequest request) {
+        UserResponse response = emailOtpService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/email-otp")
+    public EmailOtpResponse requestEmailOtp(@Valid @RequestBody EmailOtpRequest request) {
+        return emailOtpService.requestCode(request);
+    }
+
+    @PostMapping("/register/start")
+    public EmailOtpResponse startRegistration(@Valid @RequestBody RegisterRequest request) {
+        return emailOtpService.startRegistration(request);
+    }
+
+    @PostMapping("/register/verify")
+    public ResponseEntity<UserResponse> verifyRegistration(@Valid @RequestBody VerifyRegistrationRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(emailOtpService.verifyRegistration(request));
+    }
+
+    @PostMapping("/reset-password-otp")
+    public ResponseEntity<MessageResponse> resetPasswordOtp(@Valid @RequestBody OtpResetPasswordRequest request) {
+        emailOtpService.resetPassword(request);
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, authCookieService.createClearCookie().toString())
+                .body(new MessageResponse("Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới."));
+    }
+
+    @PostMapping("/verify-reset-otp")
+    public ResponseEntity<VerifiedResetOtpResponse> verifyResetOtp(@Valid @RequestBody VerifyResetOtpRequest request) {
+        return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(emailOtpService.verifyResetOtp(request));
     }
 
     @PostMapping("/login")

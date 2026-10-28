@@ -66,15 +66,17 @@ function AuthLayout({ children }) {
       {/* Main Content Card Container */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative z-10">
         <div className="w-full max-w-5xl bg-surface rounded-3xl border border-border/90 shadow-xl shadow-black/[0.04] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[600px] backdrop-blur-xs">
-          {/* Left Visual Aside (Dark Craft Atmosphere) */}
-          <aside className="hidden lg:relative lg:flex lg:col-span-5 flex-col justify-between p-8 sm:p-10 bg-footer overflow-hidden text-white group">
+          {/* Instrument photo with a bottom scrim for readable text */}
+          <aside className="hidden lg:relative lg:flex lg:col-span-5 flex-col justify-between p-8 sm:p-10 bg-surface-secondary overflow-hidden text-white">
             <img
               src={authDanBau}
               alt=""
               aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover opacity-35 filter saturate-75 group-hover:scale-103 transition-transform duration-700 ease-out"
+              width="1200"
+              height="675"
+              className="absolute inset-0 w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/30 pointer-events-none" />
+            <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-transparent pointer-events-none" />
 
             {/* Bottom Content */}
             <div className="relative z-10 flex flex-col gap-4 mt-auto pt-12">

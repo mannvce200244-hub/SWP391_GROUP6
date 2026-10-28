@@ -35,6 +35,9 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public Page<NotificationResponse> getMyNotifications(String userEmail, Pageable pageable) {
+        if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
+        }
         User user = getUserByEmail(userEmail);
         var allowed = java.util.Set.of("id", "createdAt");
         if (pageable.getSort().stream().anyMatch(order -> !allowed.contains(order.getProperty()))) {
@@ -107,7 +110,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private User getUserByEmail(String email) {
-        String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+        String normalizedEmail = email != null ? email.trim().toLowerCase(java.util.Locale.ROOT) : "";
         return userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + normalizedEmail));
     }

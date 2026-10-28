@@ -2,12 +2,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import cartService from '../../services/cartService.js'
 import useAuth from '../auth/useAuth.js'
 import { CartContext } from './cartContext.js'
+import { reconcileCartSelection } from './cartSelection.js'
+import { directCheckoutUrl } from '../checkout/directPurchase.js'
+
+const EMPTY_SELECTION = Object.freeze([])
 
 export function CartProvider({ children }) {
   const { isAuthenticated, user } = useAuth()
   const canUseCart = isAuthenticated && user?.role === 'CUSTOMER'
   const owner = canUseCart ? user.id : null
   const [state, setState] = useState({ owner: null, cart: null, loading: false, error: null })
+  const [selection, setSelection] = useState({ owner: null, selectedIds: [], knownIds: [] })
   const sequence = useRef(0)
   const pendingMutation = useRef(null)
 
@@ -74,9 +79,48 @@ export function CartProvider({ children }) {
     return mutateCart(() => cartService.updateCartItem(itemId, quantity))
   }, [mutateCart])
 
+  const buyNow = useCallback(async (productId, quantity = 1) => {
+    if (!isAuthenticated) return { success: false, requireAuth: true }
+    if (!owner) return { success: false, message: 'Chỉ tài khoản khách hàng mới có thể mua hàng.' }
+    try {
+      return { success: true, checkoutUrl: directCheckoutUrl(productId, quantity) }
+    } catch (error) {
+      return { success: false, message: error.message }
+    }
+  }, [isAuthenticated, owner])
+
   const removeCartItem = useCallback((itemId) => mutateCart(() => cartService.removeCartItem(itemId)), [mutateCart])
   const clearCart = useCallback(() => mutateCart(() => cartService.clearCart()), [mutateCart])
   const effectiveCart = owner && state.owner === owner ? state.cart : null
+
+  useEffect(() => {
+    setSelection((current) => reconcileCartSelection(current, owner, effectiveCart?.items || []))
+  }, [effectiveCart, owner])
+
+  const selectedCartItemIds = selection.owner === owner ? selection.selectedIds : EMPTY_SELECTION
+  const selectedIdSet = new Set(selectedCartItemIds)
+  const selectedCartItems = (effectiveCart?.items || []).filter((item) => selectedIdSet.has(item.id))
+  const allCartItemsSelected = Boolean(effectiveCart?.items?.length)
+    && selectedCartItems.length === effectiveCart.items.length
+
+  const toggleCartItemSelection = useCallback((itemId) => {
+    setSelection((current) => {
+      if (current.owner !== owner || !current.knownIds.includes(itemId)) return current
+      const selected = current.selectedIds.includes(itemId)
+      return {
+        ...current,
+        selectedIds: selected
+          ? current.selectedIds.filter((id) => id !== itemId)
+          : [...current.selectedIds, itemId],
+      }
+    })
+  }, [owner])
+
+  const selectAllCartItems = useCallback((selected) => {
+    setSelection((current) => current.owner === owner
+      ? { ...current, selectedIds: selected ? [...current.knownIds] : [] }
+      : current)
+  }, [owner])
 
   return (
     <CartContext.Provider value={{
@@ -85,10 +129,16 @@ export function CartProvider({ children }) {
       loading: Boolean(owner && (state.owner !== owner || state.loading)),
       error: owner && state.owner === owner ? state.error : null,
       addToCart,
+      buyNow,
       updateCartItem,
       removeCartItem,
       clearCart,
       refreshCart,
+      selectedCartItemIds,
+      selectedCartItems,
+      allCartItemsSelected,
+      toggleCartItemSelection,
+      selectAllCartItems,
     }}>
       {children}
     </CartContext.Provider>

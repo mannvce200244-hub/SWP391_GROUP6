@@ -18,6 +18,7 @@ export const CUSTOMER_ROUTES = Object.freeze({
   profile: '/profile',
   security: '/account/security',
   orders: '/account/orders',
+  addresses: '/account/addresses',
   cart: '/cart',
   checkout: '/checkout',
   paymentReturn: '/payment-return',

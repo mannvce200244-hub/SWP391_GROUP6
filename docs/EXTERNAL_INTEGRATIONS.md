@@ -2,6 +2,11 @@
 
 Approved implementation decision: 2026-10-10. This project uses existing Spring
 Web, JDK HTTP and cryptography support; no dependency or provider SDK is added.
+The approved 2026-10-12 extension adds `spring-boot-starter-mail` for Gmail SMTP
+(explicit user approval), GHN and MoMo using existing HTTP/cryptography support.
+See [`CUSTOMER_FLOW_INTEGRATIONS.md`](CUSTOMER_FLOW_INTEGRATIONS.md) for these
+contracts and configuration; the no-new-dependency decision above describes the
+original 2026-10-10 integrations only.
 The providers are optional. There are no provider accounts or keys in this
 workspace, and local verification uses synthetic responses without live calls.
 
@@ -96,7 +101,7 @@ payment change: the return page reads the order's owned backend status.
 
 | Endpoint | Access / result |
 | --- | --- |
-| `GET /api/v1/payments/options` | Public; `{vnpayAvailable}` |
+| `GET /api/v1/payments/options` | Public; `{vnpayAvailable,momoAvailable}` |
 | `POST /api/v1/payments/orders/{id}/vnpay` | Owning active CUSTOMER, unpaid VNPAY order in `PENDING_CONFIRMATION`; `{paymentUrl,transactionReference}` |
 | `GET /api/v1/payments/orders/{id}` | Owner or active ONLINE_STAFF/ADMIN/SUPER_ADMIN; payment status DTO below |
 | `POST /api/v1/payments/orders/{id}/reconcile` | Same read authorization; verifies signed server query result |

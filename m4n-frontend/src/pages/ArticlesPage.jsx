@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
+import { ArticleListSkeleton } from '../components/ui/Skeleton.jsx'
 import ArticleCard from '../features/content/ArticleCard.jsx'
 import { ARTICLE_TYPES } from '../features/content/articleContent.js'
 import Pagination from '../features/catalog/Pagination.jsx'
@@ -75,7 +76,7 @@ export default function ArticlesPage() {
       </div>
       <section aria-labelledby="articles-list-heading" aria-busy={state.status === 'loading'}>
         <h2 id="articles-list-heading" className="sr-only">Danh sách bài viết và hướng dẫn</h2>
-        {state.status === 'loading' ? <p role="status" className="py-12 text-muted">Đang tải bài viết…</p>
+        {state.status === 'loading' ? <ArticleListSkeleton />
           : state.status === 'error' ? <ErrorState message="Không thể tải bài viết lúc này. Vui lòng thử lại." onRetry={retry} />
             : !state.items.length ? <EmptyState title="Chưa có bài viết" message="Nội dung phù hợp chưa được xuất bản. Bạn có thể chọn loại nội dung khác hoặc quay lại sau." />
               : <><p className="pt-5 text-sm text-muted">{state.totalElements} bài viết & hướng dẫn</p>{state.items.map((article) => <ArticleCard key={article.id} article={article} />)}

@@ -54,6 +54,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -118,7 +119,8 @@ class CrossChannelInventoryIntegrationTest {
         inventoryService = new InventoryServiceImpl(inventoryRepository,
                 inventoryMovementRepository, productMediaRepository);
         stockDocumentService = new StockDocumentServiceImpl(stockDocumentRepository, productRepository, inventoryRepository, inventoryService);
-        posService = new PosServiceImpl(productRepository, inventoryRepository, invoiceRepository, userRepository, voucherService, inventoryService, productPricingService);
+        posService = new PosServiceImpl(productRepository, inventoryRepository, invoiceRepository, userRepository, voucherService, inventoryService, productPricingService,
+                mock(com.m4n.backend.repository.PosMomoPaymentRepository.class), mock(tools.jackson.databind.ObjectMapper.class));
         CartMapper cartMapper = new CartMapper();
         OrderMapper orderMapper = new OrderMapper(cartMapper);
         orderService = new OrderServiceImpl(
@@ -129,7 +131,9 @@ class CrossChannelInventoryIntegrationTest {
                 userRepository,
                 voucherService,
                 cartMapper,
-                orderMapper, notificationService, inventoryService, paymentService, productPricingService, shippingService
+                orderMapper, notificationService, inventoryService, paymentService, productPricingService, shippingService,
+                new com.m4n.backend.service.serviceImpl.PendingOrderCancellationServiceImpl(orderRepository, voucherService, notificationService),
+                org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class)
         );
 
         Category cat = Category.builder().id(1L).name("Nhạc cụ dây").build();

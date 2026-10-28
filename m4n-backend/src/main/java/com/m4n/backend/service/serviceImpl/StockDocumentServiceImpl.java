@@ -109,6 +109,9 @@ public class StockDocumentServiceImpl implements StockDocumentService {
 
     @Override
     public Page<StockDocumentResponse> list(Long productId, StockDocumentType type, StockDocumentStatus status, Pageable pageable) {
+        if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
+        }
         if (pageable.getSort().stream().anyMatch(order -> !Set.of("id", "createdAt", "confirmedAt").contains(order.getProperty()))) {
             throw new IllegalArgumentException("Trường sắp xếp phiếu kho không được hỗ trợ.");
         }

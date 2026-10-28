@@ -95,6 +95,24 @@ public class RbacSecurityAuthorizationIntegrationTest {
         }
     }
 
+    @Test
+    @WithMockUser(username = "customer@m4n.vn", roles = {"CUSTOMER"})
+    void directPurchaseRequiresPositiveProductAndQuantityOnPreviewAndOrder() throws Exception {
+        for (String direct : new String[]{"{}", "{\"productId\":1,\"quantity\":0}",
+                "{\"productId\":0,\"quantity\":1}", "{\"productId\":1,\"quantity\":-1}"}) {
+            mockMvc.perform(post("/api/v1/checkout/preview").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"directPurchase\":" + direct + "}"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {"customerName":"Test customer","customerPhone":"0900000000",
+                             "customerEmail":"test@example.test","shippingAddress":"Test address",
+                             "paymentMethod":"COD","directPurchase":%s}
+                            """.formatted(direct)))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
     // ==========================================
     // 2. ONLINE_STAFF ROLE ACCESS CONTROL
     // ==========================================

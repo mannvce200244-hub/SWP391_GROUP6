@@ -15,7 +15,7 @@ function ProductDetailInfo({ product }) {
   const [quantity, setQuantity] = useState(1)
   const [isAdding, setIsAdding] = useState(false)
   const [isBuying, setIsBuying] = useState(false)
-  const { addToCart } = useCart()
+  const { addToCart, buyNow } = useCart()
   const { isAuthenticated, user } = useAuth()
   const { addToast } = useToast()
 
@@ -72,7 +72,7 @@ function ProductDetailInfo({ product }) {
 
     try {
       setIsBuying(true)
-      const result = await addToCart(product.id, quantity)
+      const result = await buyNow(product.id, quantity)
 
       if (result.requireAuth) {
         addToast({
@@ -88,7 +88,7 @@ function ProductDetailInfo({ product }) {
           message: `Đã chọn mua ${quantity} nhạc cụ "${product.name}".`,
           type: 'success',
         })
-        navigateTo(CUSTOMER_ROUTES.checkout)
+        navigateTo(result.checkoutUrl)
       } else {
         addToast({
           message: result.message || 'Không thể tiến hành mua hàng.',

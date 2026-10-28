@@ -102,7 +102,9 @@ class OrderServiceTest {
         orderService = new OrderServiceImpl(
                 orderRepository, cartRepository, productRepository,
                 inventoryRepository, userRepository, voucherService, cartMapper, orderMapper,
-                notificationService, inventoryService, paymentService, productPricingService, shippingService
+                notificationService, inventoryService, paymentService, productPricingService, shippingService,
+                new com.m4n.backend.service.serviceImpl.PendingOrderCancellationServiceImpl(orderRepository, voucherService, notificationService),
+                org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class)
         );
         lenient().when(voucherService.consumeDiscounts(any(), any(), anyInt())).thenAnswer(invocation ->
                 new DiscountCalculationResponse(null, null, BigDecimal.ZERO, BigDecimal.ZERO,
@@ -139,6 +141,34 @@ class OrderServiceTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void directPreviewRejectsInactiveProductsAndInvalidQuantitiesWithoutAccessingCart() {
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        var unavailable = new com.m4n.backend.dto.request.DirectPurchaseRequest(testProduct.getId(), 1);
+        assertThatThrownBy(() -> orderService.previewCheckout(new com.m4n.backend.dto.request.CheckoutPreviewRequest(
+                null, null, null, null, null, null, unavailable))).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("không còn kinh doanh");
+        var invalid = new com.m4n.backend.dto.request.DirectPurchaseRequest(testProduct.getId(), 0);
+        assertThatThrownBy(() -> orderService.previewCheckout(new com.m4n.backend.dto.request.CheckoutPreviewRequest(
+                null, null, null, null, null, null, invalid))).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("không hợp lệ");
+        org.mockito.Mockito.verifyNoInteractions(cartRepository, orderRepository);
+    }
+
+    @Test
+    void directOrderRejectsInsufficientStockWithoutModifyingCartOrInventory() {
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(productRepository.findByIdAndIsActiveTrue(testProduct.getId())).thenReturn(Optional.of(testProduct));
+        when(inventoryRepository.findByProductId(testProduct.getId())).thenReturn(Optional.of(
+                Inventory.builder().product(testProduct).quantity(1).build()));
+        var direct = new com.m4n.backend.dto.request.DirectPurchaseRequest(testProduct.getId(), 2);
+        assertThatThrownBy(() -> orderService.placeOrder(new PlaceOrderRequest(testUser.getFullName(), "0900000000",
+                testUser.getEmail(), "Test address", "COD", null, null, null, null, null, null, direct)))
+                .isInstanceOf(com.m4n.backend.exception.InsufficientStockException.class);
+        org.mockito.Mockito.verifyNoInteractions(cartRepository, orderRepository);
+        verify(inventoryRepository, never()).save(any());
     }
 
     @Test
@@ -185,6 +215,69 @@ class OrderServiceTest {
         // CRITICAL: Verify inventory was NEVER modified during place order!
         verify(inventoryRepository, never()).findByProductIdWithLock(any());
         verify(inventoryRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Checkout creates an order from selected cart items and keeps unselected items")
+    void placeOrder_withSelectedItems_shouldKeepUnselectedItemsInCart() {
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
+
+        Product unselectedProduct = Product.builder()
+                .id(11L)
+                .code("SAO-TRUC-01")
+                .name("Sáo Trúc")
+                .price(new BigDecimal("500000.00"))
+                .isActive(true)
+                .build();
+        Cart cart = Cart.builder().id(1L).user(testUser).items(new ArrayList<>()).build();
+        CartItem selectedItem = CartItem.builder().id(5L).cart(cart).product(testProduct).quantity(2).build();
+        CartItem unselectedItem = CartItem.builder().id(6L).cart(cart).product(unselectedProduct).quantity(1).build();
+        cart.getItems().add(selectedItem);
+        cart.getItems().add(unselectedItem);
+
+        when(cartRepository.findWithItemsByUserId(testUser.getId())).thenReturn(Optional.of(cart));
+        when(productRepository.findByIdAndIsActiveTrue(testProduct.getId())).thenReturn(Optional.of(testProduct));
+        when(inventoryRepository.findByProductId(testProduct.getId())).thenReturn(Optional.of(
+                Inventory.builder().product(testProduct).quantity(2).build()));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order order = invocation.getArgument(0);
+            order.setId(99L);
+            return order;
+        });
+
+        PlaceOrderRequest request = new PlaceOrderRequest(
+                "Nguyen Van Khach", "0912345678", "test.customer@m4n.vn",
+                "123 Nguyen Trai, Ha Noi", "COD", null, null, null, List.of(5L)
+        );
+
+        OrderResponse response = orderService.placeOrder(request);
+
+        assertThat(response.totalAmount()).isEqualByComparingTo("5000000.00");
+        assertThat(response.itemCount()).isEqualTo(2);
+        assertThat(cart.getItems()).containsExactly(unselectedItem);
+        verify(productRepository, never()).findByIdAndIsActiveTrue(unselectedProduct.getId());
+        verify(inventoryRepository, never()).findByProductId(unselectedProduct.getId());
+    }
+
+    @Test
+    @DisplayName("Checkout rejects cart item IDs that do not belong to the authenticated cart")
+    void placeOrder_withForeignCartItemId_shouldRejectBeforeCreatingOrder() {
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        Cart cart = Cart.builder().id(1L).user(testUser).items(new ArrayList<>()).build();
+        cart.getItems().add(CartItem.builder().id(5L).cart(cart).product(testProduct).quantity(1).build());
+        when(cartRepository.findWithItemsByUserId(testUser.getId())).thenReturn(Optional.of(cart));
+
+        PlaceOrderRequest request = new PlaceOrderRequest(
+                "Nguyen Van Khach", "0912345678", "test.customer@m4n.vn",
+                "123 Nguyen Trai, Ha Noi", "COD", null, null, null, List.of(999L)
+        );
+
+        assertThatThrownBy(() -> orderService.placeOrder(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("không còn thuộc giỏ hàng");
+        verify(orderRepository, never()).save(any(Order.class));
+        verify(productRepository, never()).findByIdAndIsActiveTrue(any());
+        assertThat(cart.getItems()).hasSize(1);
     }
 
     @Test

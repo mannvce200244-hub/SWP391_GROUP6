@@ -1,7 +1,7 @@
 import { authTokenStorage } from '../features/auth/authTokenStorage.js'
 
 const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
+  import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? 'http://localhost:8080/api/v1' : '/api/v1')
 ).replace(/\/+$/, '')
 
 export const AUTH_UNAUTHORIZED_EVENT = 'm4n:auth-unauthorized'
@@ -41,7 +41,7 @@ let refreshPromise = null
 
 function isAuthExemptEndpoint(endpoint) {
   const normalized = endpoint.toLowerCase().split('?')[0]
-  return ['/auth/login', '/auth/register', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password', '/auth/logout'].includes(normalized)
+  return ['/auth/login', '/auth/register', '/auth/register/start', '/auth/register/verify', '/auth/email-otp', '/auth/verify-reset-otp', '/auth/reset-password-otp', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password', '/auth/logout'].includes(normalized)
 }
 
 function clearSession() {
@@ -92,11 +92,17 @@ async function request(endpoint, options = {}, isRetry = false) {
 
   const headers = {
     Accept: 'application/json',
+    'X-Requested-With': 'M4N',
     ...options.headers,
   }
 
   const token = isAuthExemptEndpoint(endpoint) ? null : authTokenStorage.getToken()
   const sessionRevision = authTokenStorage.getSessionRevision()
+  const requireCurrentSession = () => {
+    if (!isAuthExemptEndpoint(endpoint) && authTokenStorage.getSessionRevision() !== sessionRevision) {
+      throw new ApiError('Phiên đăng nhập đã thay đổi. Vui lòng thử lại.', 401)
+    }
+  }
   if (token && !headers.Authorization) {
     headers.Authorization = `Bearer ${token}`
   }
@@ -115,9 +121,7 @@ async function request(endpoint, options = {}, isRetry = false) {
   try {
     const response = await fetch(url, config)
 
-    if (!isAuthExemptEndpoint(endpoint) && authTokenStorage.getSessionRevision() !== sessionRevision) {
-      throw new ApiError('Phiên đăng nhập đã thay đổi. Vui lòng thử lại.', 401)
-    }
+    requireCurrentSession()
 
     if (response.status === 204) {
       return null
@@ -125,8 +129,13 @@ async function request(endpoint, options = {}, isRetry = false) {
 
     const contentType = response.headers.get('content-type') || ''
     const isJson = contentType.includes('application/json')
-    if (response.ok && options.responseType === 'blob') return response.blob()
+    if (response.ok && options.responseType === 'blob') {
+      const file = await response.blob()
+      requireCurrentSession()
+      return file
+    }
     const payload = isJson ? await response.json() : await response.text()
+    requireCurrentSession()
 
     if (!response.ok) {
       // Check for automatic refresh on 401
@@ -143,8 +152,10 @@ async function request(endpoint, options = {}, isRetry = false) {
       if (response.status === 401 && isRetry && authTokenStorage.getToken() === token) clearSession()
 
       const validationMessage = getValidationMessage(payload)
+      const unavailableMessage = response.status === 503 && typeof payload?.message === 'string'
+        ? payload.message : null
       const errorMessage =
-        (response.status >= 500 ? 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.' : validationMessage) ||
+        unavailableMessage || (response.status >= 500 ? 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.' : validationMessage) ||
         (typeof payload === 'object' && payload !== null && payload.message) ||
         `Yêu cầu không thành công (HTTP ${response.status}).`
       throw new ApiError(errorMessage, response.status, payload)

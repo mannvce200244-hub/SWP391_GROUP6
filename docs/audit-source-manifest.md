@@ -1,5 +1,9 @@
 # Audited application source changes
 
+For changes after this 2026-10-11 manifest, see
+[`audit-assets/verification/20261012-source-changes.json`](audit-assets/verification/20261012-source-changes.json)
+and [`audit-customer-flow-20261012.md`](audit-customer-flow-20261012.md).
+
 Regenerated after the final source freeze on 2026-10-11. Source files are compared byte for byte (SHA-256) with the original `m4n-audit-20261010-01a12519/frontend-src` and `backend-src` snapshots. Only file paths, classifications, counts and current line counts are included; file contents, credentials and secret values are excluded.
 
 Build output, installed dependencies, public assets outside `src`, documentation and module configuration outside `src` are excluded from the source comparison. Binary files have no text line count; removed files have 0 current lines. Frontend native regression tests added during this audit are listed separately because the original snapshot contains only the source directories.

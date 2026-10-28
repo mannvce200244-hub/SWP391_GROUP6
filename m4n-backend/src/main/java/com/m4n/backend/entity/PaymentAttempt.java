@@ -23,13 +23,15 @@ public class PaymentAttempt {
     private Instant expiresAt;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private PaymentState state;
-    @Column(length = 15)
+    @Column(length = 32)
     private String transactionNo;
+    @Column(length = 2000)
+    private String paymentUrl;
     @Column(length = 20)
     private String bankCode;
     @Column(length = 14)
     private String payDate;
-    @Column(length = 2)
+    @Column(length = 10)
     private String responseCode;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private RefundState refundState;
@@ -43,8 +45,8 @@ public class PaymentAttempt {
     private String refundCreateBy;
     @Column(length = 32)
     private String refundResponseId;
-    @Column(length = 15)
+    @Column(length = 32)
     private String refundTransactionNo;
-    @Column(length = 2)
+    @Column(length = 10)
     private String refundResponseCode;
 }

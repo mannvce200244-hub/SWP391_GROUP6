@@ -7,8 +7,14 @@ import Button from '../../components/ui/Button.jsx'
 import { CircleX } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 import AppLoadingScreen from '../../components/ui/AppLoadingScreen.jsx'
+import { paymentReturnOrderId } from '../../services/paymentService.js'
+import { posPaymentReturnId } from '../../services/posMomoService.js'
 
-function getRoleHome(role) {
+function getRoleHome(role, paymentOrderId, posPaymentId) {
+  if (role === 'POS_STAFF' && posPaymentId) return `${CUSTOMER_ROUTES.pos}?m4nPosPaymentId=${encodeURIComponent(posPaymentId)}`
+  if (role === 'CUSTOMER' && paymentOrderId) {
+    return `${CUSTOMER_ROUTES.paymentReturn}?m4nOrderId=${encodeURIComponent(paymentOrderId)}`
+  }
   switch (role) {
     case 'ADMIN':
     case 'SUPER_ADMIN':
@@ -30,12 +36,15 @@ function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [generalError, setGeneralError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [paymentOrderId] = useState(() => new URLSearchParams(window.location.search).has('m4nOrderId')
+    ? paymentReturnOrderId(window.location.search) : null)
+  const [posPaymentId] = useState(() => posPaymentReturnId(window.location.search))
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigateTo(getRoleHome(user.role))
+      navigateTo(getRoleHome(user.role, paymentOrderId, posPaymentId))
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user, paymentOrderId, posPaymentId])
 
   if (isLoading || (isAuthenticated && user)) {
     return <AppLoadingScreen message="Đang chuyển đến khu vực làm việc…" />
@@ -83,8 +92,14 @@ function LoginPage() {
         type: 'success',
       })
 
-      navigateTo(getRoleHome(authenticatedUser.role))
+      navigateTo(getRoleHome(authenticatedUser.role, paymentOrderId, posPaymentId))
     } catch (err) {
+      if (err.code === 'REGISTRATION_VERIFICATION_REQUIRED' && err.data?.email && err.data?.challenge) {
+        sessionStorage.setItem('m4n-registration-otp', JSON.stringify({ ...err.data.challenge, email: err.data.email }))
+        setPassword('')
+        navigateTo(CUSTOMER_ROUTES.register)
+        return
+      }
       if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       const message =
         err?.status === 401

@@ -186,7 +186,7 @@ export default function CustomerOrderDetailDialog({ isOpen, order, loading, onCl
                       <span className="text-sm font-bold text-ink">Tổng thanh toán:</span>
                       <span className="text-lg font-bold text-brand font-sans">{order.finalAmountDisplay}</span>
                     </div>
-                    {order.paymentMethod === 'VNPAY' && <button type="button" onClick={() => { onClose(); navigateTo(`${CUSTOMER_ROUTES.paymentReturn}?orderId=${encodeURIComponent(order.id)}`) }} className="h-11 px-4 rounded-lg border border-border font-semibold text-brand">Kiểm tra / thanh toán VNPay</button>}
+                    {['VNPAY', 'MOMO'].includes(order.paymentMethod) && <button type="button" onClick={() => { onClose(); navigateTo(`${CUSTOMER_ROUTES.paymentReturn}?orderId=${encodeURIComponent(order.id)}`) }} className="h-11 px-4 rounded-lg border border-border font-semibold text-brand">Kiểm tra / thanh toán {order.paymentMethod === 'MOMO' ? 'MoMo' : 'VNPay'}</button>}
                   </div>
                 </>
               ) : null}
@@ -194,13 +194,13 @@ export default function CustomerOrderDetailDialog({ isOpen, order, loading, onCl
 
             {/* Modal Footer */}
             <div className="shrink-0 p-3 sm:p-5 border-t border-border/60 bg-white flex flex-wrap items-center gap-2">
-              {order?.canCustomerCancel && order.status === 'PENDING_CONFIRMATION' && (
+              {order?.status === 'PENDING_CONFIRMATION' && (
                 <button
                   type="button"
                   onClick={() => onCancel(order)}
                   className="px-4 py-2.5 rounded-xl border border-rose-300 text-rose-600 hover:bg-surface-secondary text-xs font-bold transition-all cursor-pointer"
                 >
-                  Hủy đơn hàng này
+                  {order.canCustomerCancel ? 'Hủy đơn hàng này' : 'Thông tin hủy đơn'}
                 </button>
               )}
 

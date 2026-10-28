@@ -4,6 +4,7 @@ import useDialogFocus from '../../hooks/useDialogFocus.js'
 import useToast from '../../components/ui/useToast.js'
 import { downloadInvoicePdf, openInvoicePdf } from '../../services/posService.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
+import { posPaymentMethodLabel } from '../../services/posMomoService.js'
 
 export default function PosReceiptDialog({ sale, staffName, onNewSale }) {
   const dialogRef = useDialogFocus(true, onNewSale)
@@ -55,7 +56,7 @@ export default function PosReceiptDialog({ sale, staffName, onNewSale }) {
                 <div className="flex justify-between">
                   <span className="text-muted">Phương thức:</span>
                   <span className="font-medium text-ink">
-                    {sale.paymentMethod === 'CASH' ? 'Tiền mặt' : sale.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : 'Chưa xác định'}
+                    {posPaymentMethodLabel(sale.paymentMethod)}
                   </span>
                 </div>
                 {sale.paymentMethod === 'CASH' && sale.amountReceived && (

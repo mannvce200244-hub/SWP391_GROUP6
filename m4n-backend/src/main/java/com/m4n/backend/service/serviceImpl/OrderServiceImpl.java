@@ -2,6 +2,7 @@ package com.m4n.backend.service.serviceImpl;
 
 import com.m4n.backend.dto.request.CheckoutPreviewRequest;
 import com.m4n.backend.dto.request.PlaceOrderRequest;
+import com.m4n.backend.dto.request.DirectPurchaseRequest;
 import com.m4n.backend.dto.response.CartItemResponse;
 import com.m4n.backend.dto.response.CheckoutPreviewResponse;
 import com.m4n.backend.dto.response.DiscountCalculationResponse;
@@ -33,6 +34,7 @@ import com.m4n.backend.service.NotificationService;
 import com.m4n.backend.service.OrderService;
 import com.m4n.backend.service.InventoryService;
 import com.m4n.backend.service.PaymentService;
+import com.m4n.backend.service.PendingOrderCancellationService;
 import com.m4n.backend.service.ProductPricingService;
 import com.m4n.backend.service.ProductPrice;
 import com.m4n.backend.service.ShippingService;
@@ -49,6 +51,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Year;
@@ -57,6 +61,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
@@ -81,6 +86,8 @@ public class OrderServiceImpl implements OrderService {
     private final PaymentService paymentService;
     private final ProductPricingService productPricingService;
     private final ShippingService shippingService;
+    private final PendingOrderCancellationService pendingCancellation;
+    private final TransactionTemplate transaction;
 
     @Autowired
     public OrderServiceImpl(
@@ -96,7 +103,9 @@ public class OrderServiceImpl implements OrderService {
             InventoryService inventoryService,
             PaymentService paymentService,
             ProductPricingService productPricingService,
-            ShippingService shippingService
+            ShippingService shippingService,
+            PendingOrderCancellationService pendingCancellation,
+            PlatformTransactionManager transactionManager
     ) {
         this.orderRepository = orderRepository;
         this.cartRepository = cartRepository;
@@ -111,15 +120,21 @@ public class OrderServiceImpl implements OrderService {
         this.paymentService = paymentService;
         this.productPricingService = productPricingService;
         this.shippingService = shippingService;
+        this.pendingCancellation = pendingCancellation;
+        this.transaction = new TransactionTemplate(transactionManager);
     }
 
     @Override
     @Transactional(readOnly = true)
     public CheckoutPreviewResponse previewCheckout(CheckoutPreviewRequest request) {
         User user = getAuthenticatedUser(false);
-        Cart cart = cartRepository.findWithItemsByUserId(user.getId()).orElse(null);
+        DirectPurchaseRequest directPurchase = request == null ? null : request.directPurchase();
+        Cart cart = directPurchase == null ? cartRepository.findWithItemsByUserId(user.getId()).orElse(null) : null;
 
-        if (cart == null || cart.getItems() == null || cart.getItems().isEmpty()) {
+        if (directPurchase == null && (cart == null || cart.getItems() == null || cart.getItems().isEmpty())) {
+            if (request != null && request.cartItemIds() != null) {
+                throw new IllegalArgumentException("Sản phẩm được chọn không còn thuộc giỏ hàng của bạn.");
+            }
             return new CheckoutPreviewResponse(
                     Collections.emptyList(), 0,
                     BigDecimal.ZERO, cartMapper.formatPriceDisplay(BigDecimal.ZERO),
@@ -131,14 +146,15 @@ public class OrderServiceImpl implements OrderService {
             );
         }
 
+        List<CartItem> selectedItems = checkoutItems(cart, request == null ? null : request.cartItemIds(), directPurchase);
         List<CartItemResponse> previewItems = new ArrayList<>();
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal originalTotal = BigDecimal.ZERO;
         int totalItems = 0;
-        Map<Long, Product> products = sellableProducts(cart);
+        Map<Long, Product> products = sellableProducts(selectedItems);
         Map<Long, ProductPrice> prices = productPricingService.resolvePrices(new ArrayList<>(products.values()));
 
-        for (CartItem item : cart.getItems()) {
+        for (CartItem item : selectedItems) {
             // Load fresh product from DB for authoritative price and sellability
             ProductPrice pricing = prices.get(item.getProduct().getId());
             BigDecimal unitPrice = pricing.chargedUnitPrice();
@@ -151,10 +167,16 @@ public class OrderServiceImpl implements OrderService {
         }
 
         String voucherCode = request != null ? request.voucherCode() : null;
+        if (shippingService.requiresAddress() && request == null) {
+            throw new IllegalArgumentException("Vui lòng cung cấp địa chỉ và người nhận để tính phí GHN.");
+        }
         DiscountCalculationResponse discounts = voucherService.calculateDiscounts(voucherCode, subtotal, totalItems);
         VoucherValidationResponse manual = discounts.manualVoucher();
         BigDecimal discount = discounts.totalDiscountAmount();
-        ShippingQuote shipping = shippingQuote(cart, products, subtotal);
+        ShippingQuote shipping = shippingService.requiresAddress()
+                ? shippingService.calculateCarrierShipping(shippingLines(selectedItems, products), subtotal,
+                    request.deliveryAddress(), request.recipientName(), request.recipientPhone())
+                : shippingQuote(selectedItems, products, subtotal);
         VoucherValidationResponse shippingVoucher = voucherService.calculateShippingDiscount(request == null ? null : request.shippingVoucherCode(),
                 shipping.shippingFee(), subtotal, totalItems);
         BigDecimal shippingVoucherDiscount = shippingVoucher != null && shippingVoucher.isValid() ? shippingVoucher.discountAmount() : BigDecimal.ZERO;
@@ -193,7 +215,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse placeOrder(PlaceOrderRequest request) {
         User user = getAuthenticatedUser(true);
         String paymentMethod = request.paymentMethod().trim().toUpperCase(Locale.ROOT);
-        if (!Set.of("COD", "VNPAY").contains(paymentMethod)) {
+        if (!Set.of("COD", "VNPAY", "MOMO").contains(paymentMethod)) {
             throw new IllegalArgumentException("Phương thức thanh toán không hợp lệ.");
         }
         if ("VNPAY".equals(paymentMethod) && !paymentService.isAvailable()) {
@@ -201,22 +223,26 @@ public class OrderServiceImpl implements OrderService {
                     "Thanh toán trực tuyến chưa được kích hoạt. Vui lòng chọn thanh toán khi nhận hàng (COD)."
             );
         }
-        Cart cart = cartRepository.findWithItemsByUserId(user.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Giỏ hàng của bạn đang trống. Không thể đặt hàng."));
+        if ("MOMO".equals(paymentMethod) && !paymentService.isMomoAvailable()) {
+            throw new IllegalArgumentException("MoMo chưa được kích hoạt. Vui lòng chọn COD.");
+        }
+        Cart cart = request.directPurchase() == null ? cartRepository.findWithItemsByUserId(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Giỏ hàng của bạn đang trống. Không thể đặt hàng.")) : null;
 
-        if (cart.getItems() == null || cart.getItems().isEmpty()) {
+        if (cart != null && (cart.getItems() == null || cart.getItems().isEmpty())) {
             throw new IllegalArgumentException("Giỏ hàng của bạn đang trống. Vui lòng chọn sản phẩm trước khi thanh toán.");
         }
 
+        List<CartItem> selectedItems = checkoutItems(cart, request.cartItemIds(), request.directPurchase());
         BigDecimal subtotal = BigDecimal.ZERO;
         BigDecimal originalTotal = BigDecimal.ZERO;
         int totalQuantity = 0;
         List<OrderItem> orderItems = new ArrayList<>();
-        Map<Long, Product> products = sellableProducts(cart);
+        Map<Long, Product> products = sellableProducts(selectedItems);
         Map<Long, ProductPrice> prices = productPricingService.resolvePrices(new ArrayList<>(products.values()));
 
         // Validate and build snapshots using authoritative database product data
-        for (CartItem cartItem : cart.getItems()) {
+        for (CartItem cartItem : selectedItems) {
             Product product = products.get(cartItem.getProduct().getId());
             ProductPrice pricing = prices.get(product.getId());
             BigDecimal unitPrice = pricing.chargedUnitPrice();
@@ -254,17 +280,25 @@ public class OrderServiceImpl implements OrderService {
 
         MoneyValidation.requireSupported(originalTotal);
         MoneyValidation.requireSupported(subtotal);
-        ShippingQuote shipping = shippingQuote(cart, products, subtotal);
+        ShippingQuote shipping = shippingService.requiresAddress()
+                ? shippingService.calculateCarrierShipping(shippingLines(selectedItems, products), subtotal,
+                    request.deliveryAddress(), request.customerName(), request.customerPhone())
+                : shippingQuote(selectedItems, products, subtotal);
         DiscountCalculationResponse discounts = voucherService.consumeDiscounts(request.voucherCode(), subtotal, totalQuantity);
         BigDecimal discount = discounts.totalDiscountAmount();
         VoucherValidationResponse shippingVoucher = voucherService.consumeShippingDiscount(request.shippingVoucherCode(), shipping.shippingFee(), subtotal, totalQuantity);
         BigDecimal shippingVoucherDiscount = shippingVoucher != null && shippingVoucher.isValid() ? shippingVoucher.discountAmount() : BigDecimal.ZERO;
         BigDecimal shippingFee = shipping.shippingFee().subtract(shippingVoucherDiscount);
         BigDecimal finalAmount = discounts.finalAmount().add(shippingFee);
+        if (shippingService.requiresAddress() && (request.expectedShippingFee() == null
+                || request.expectedShippingFee().compareTo(shippingFee) != 0)) {
+            throw new IllegalStateException("Phí vận chuyển đã thay đổi. Vui lòng tải lại tổng tiền và xác nhận trước khi đặt hàng.");
+        }
         MoneyValidation.requireSupported(finalAmount);
         if ("VNPAY".equals(paymentMethod)) {
             paymentService.validatePaymentAmount(finalAmount);
         }
+        if ("MOMO".equals(paymentMethod)) paymentService.validateMomoAmount(finalAmount);
         String appliedVoucherCode = discounts.manualVoucher() != null ? discounts.manualVoucher().code() : null;
 
         // Include a UUID rather than a six-digit random suffix with a small collision space.
@@ -276,7 +310,9 @@ public class OrderServiceImpl implements OrderService {
                 .customerName(request.customerName().trim())
                 .customerPhone(request.customerPhone().trim())
                 .customerEmail(request.customerEmail().trim())
-                .shippingAddress(request.shippingAddress().trim())
+                .shippingAddress(shipping.fullAddress() == null ? request.shippingAddress().trim() : shipping.fullAddress())
+                .shippingProvinceId(shipping.fullAddress() == null ? null : request.deliveryAddress().provinceId())
+                .shippingWardId(shipping.fullAddress() == null ? null : request.deliveryAddress().wardId())
                 .totalAmount(subtotal)
                 .discountAmount(discount)
                 .manualDiscountAmount(discounts.manualDiscountAmount())
@@ -312,10 +348,9 @@ public class OrderServiceImpl implements OrderService {
                 "Đơn hàng " + orderCode + " đang chờ xác nhận từ nhân viên.",
                 NotificationType.ORDER, "/account/orders");
 
-        // Clear cart items atomically after order creation
-        // The managed collection owns orphan removal. Explicit delete followed
-        // by clear can delete the same snapshot again on a later Hibernate flush.
-        cart.getItems().clear();
+        // Remove only the purchased entries. Unselected products remain in the
+        // managed cart collection; orphan removal deletes the selected rows.
+        if (cart != null) cart.getItems().removeAll(selectedItems);
 
         // CRITICAL INVARIANT: DO NOT DEDUCT INVENTORY AT PLACE ORDER TIME.
         log.info("Successfully placed online order: {} with status PENDING_CONFIRMATION. Inventory was NOT deducted.", orderCode);
@@ -349,45 +384,44 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
     public OrderDetailResponse customerCancelOrder(Long orderId, String reason) {
+        if (reason != null && reason.length() > 500) throw new IllegalArgumentException("Lý do hủy tối đa 500 ký tự.");
         User user = getAuthenticatedUser();
-        // Lock the order row so the status check is serialized against concurrent confirm/cancel
+        OrderDetailResponse completed = transaction.execute(status -> {
+            Order order = customerCancellationOrder(orderId, user);
+            if (order.getStatus() == OrderStatus.CANCELLED) {
+                if ("MOMO".equals(order.getPaymentMethod()) && order.isPaid()
+                        && paymentService.hasVerifiedFullRefund(orderId)) return orderDetail(order, true);
+                throw new IllegalArgumentException("Đơn hàng đã bị hủy.");
+            }
+            if ("MOMO".equals(order.getPaymentMethod()) && order.isPaid()
+                    && !paymentService.hasVerifiedFullRefund(orderId)) return null;
+            requireRefundBeforeCancellation(order);
+            return orderDetail(pendingCancellation.complete(order, reason), true);
+        });
+        if (completed != null) return completed;
+        // Persist the refund intent before provider I/O; never hold the order lock across the network call.
+        paymentService.refundCustomerCancellation(orderId, reason, user.getEmail());
+        return transaction.execute(status -> {
+            Order order = customerCancellationOrder(orderId, user);
+            if (order.getStatus() != OrderStatus.CANCELLED && paymentService.hasVerifiedFullRefund(orderId)) {
+                order = pendingCancellation.complete(order, reason);
+            }
+            return orderDetail(order, true);
+        });
+    }
+
+    private Order customerCancellationOrder(Long orderId, User user) {
         Order order = orderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Đơn hàng không tồn tại: " + orderId));
-
-        if (order.getUser() == null || !order.getUser().getId().equals(user.getId())) {
+        if (user.getRole().getName() != RoleName.CUSTOMER || order.getUser() == null
+                || !order.getUser().getId().equals(user.getId())) {
             throw new AccessDeniedException("Bạn không có quyền thao tác trên đơn hàng này");
         }
-
-        // BR-ORDER-02: Customer may self-cancel only when Order.status = PENDING_CONFIRMATION
-        if (order.getStatus() != OrderStatus.PENDING_CONFIRMATION) {
-            throw new IllegalArgumentException(
-                    "Quý khách chỉ có thể tự hủy đơn hàng khi đơn đang ở trạng thái 'Chờ xác nhận'. " +
-                    "Đối với đơn đã xác nhận hoặc đang xử lý, vui lòng liên hệ trực tiếp với M4N."
-            );
+        if (order.getStatus() != OrderStatus.PENDING_CONFIRMATION && order.getStatus() != OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("Quý khách chỉ có thể tự hủy đơn hàng khi đơn đang ở trạng thái 'Chờ xác nhận'. Đối với đơn đã xác nhận hoặc đang xử lý, vui lòng liên hệ trực tiếp với M4N.");
         }
-
-        requireRefundBeforeCancellation(order);
-        order.setStatus(OrderStatus.CANCELLED);
-        voucherService.releaseUsage(order.getVoucherCode());
-        voucherService.releaseUsage(order.getAutomaticPromotionCode());
-        voucherService.releaseUsage(order.getShippingVoucherCode());
-        String cancelNote = "[Khách hàng tự hủy]";
-        if (reason != null && !reason.trim().isEmpty()) {
-            cancelNote += " Lý do: " + reason.trim();
-        }
-        order.setNotes(order.getNotes() != null ? order.getNotes() + " | " + cancelNote : cancelNote);
-
-        // Inventory was never deducted during PENDING_CONFIRMATION, so no restoration needed
-        Order savedOrder = orderRepository.save(order);
-        log.info("Customer cancelled pending order: {}", order.getOrderCode());
-
-        notifyUser(user, "Hủy đơn hàng thành công",
-                "Quý khách đã hủy thành công đơn hàng " + order.getOrderCode() + ".",
-                NotificationType.ORDER, "/account/orders");
-
-        return orderDetail(savedOrder, true);
+        return order;
     }
 
     @Override
@@ -701,6 +735,9 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void validateSort(Pageable pageable) {
+        if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
+        }
         Set<String> allowedProperties = Set.of("createdAt", "id", "orderCode", "status", "finalAmount");
         if (pageable.getSort().stream().anyMatch(order -> !allowedProperties.contains(order.getProperty()))) {
             throw new IllegalArgumentException("Trường sắp xếp đơn hàng không được hỗ trợ.");
@@ -714,20 +751,23 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderDetailResponse orderDetail(Order order, boolean isCustomer) {
-        boolean onlinePayment = "VNPAY".equalsIgnoreCase(order.getPaymentMethod());
+        boolean onlinePayment = isOnlinePayment(order);
         boolean refunded = onlinePayment && order.isPaid()
                 && paymentService.hasVerifiedFullRefund(order.getId());
         boolean pendingPayment = onlinePayment && paymentService.isPaymentPending(order.getId());
-        boolean paymentAllowsCancellation = !"VNPAY".equalsIgnoreCase(order.getPaymentMethod())
+        boolean paymentAllowsCancellation = !onlinePayment
                 || (!pendingPayment && (!order.isPaid() || refunded));
-        boolean canCustomerCancel = isCustomer && order.getStatus() == OrderStatus.PENDING_CONFIRMATION && paymentAllowsCancellation;
+        boolean customerMomoRefund = "MOMO".equals(order.getPaymentMethod()) && order.isPaid()
+                && paymentService.isMomoAvailable() && !pendingPayment;
+        boolean canCustomerCancel = isCustomer && order.getStatus() == OrderStatus.PENDING_CONFIRMATION
+                && (paymentAllowsCancellation || customerMomoRefund);
         boolean canStaffCancel = !isCustomer && paymentAllowsCancellation
                 && List.of(OrderStatus.PENDING_CONFIRMATION, OrderStatus.OUT_OF_STOCK_WAITING, OrderStatus.CONFIRMED).contains(order.getStatus());
         return orderMapper.toOrderDetailResponse(order, canCustomerCancel, canStaffCancel);
     }
 
     private void requireVerifiedOnlinePayment(Order order) {
-        if ("VNPAY".equalsIgnoreCase(order.getPaymentMethod())
+        if (isOnlinePayment(order)
                 && (!order.isPaid() || paymentService.hasVerifiedFullRefund(order.getId())
                 || paymentService.isRefundPending(order.getId()))) {
             throw new IllegalStateException("Đơn hàng cần thanh toán trực tuyến thành công và không đang hoàn tiền trước khi xử lý.");
@@ -735,7 +775,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void requireRefundBeforeCancellation(Order order) {
-        if (!"VNPAY".equalsIgnoreCase(order.getPaymentMethod())) {
+        if (!isOnlinePayment(order)) {
             return;
         }
         if (paymentService.isPaymentPending(order.getId())) {
@@ -744,6 +784,10 @@ public class OrderServiceImpl implements OrderService {
         if (order.isPaid() && !paymentService.hasVerifiedFullRefund(order.getId())) {
             throw new IllegalStateException("Vui lòng hoàn tiền trực tuyến thành công trước khi hủy đơn hàng đã thanh toán.");
         }
+    }
+
+    private boolean isOnlinePayment(Order order) {
+        return "VNPAY".equalsIgnoreCase(order.getPaymentMethod()) || "MOMO".equalsIgnoreCase(order.getPaymentMethod());
     }
 
     private void recordOrderMovement(Order order, Inventory inventory, int quantity, int before, String type, String reason) {
@@ -757,18 +801,60 @@ public class OrderServiceImpl implements OrderService {
         return "M4N-" + year + "-" + UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
     }
 
-    private Map<Long, Product> sellableProducts(Cart cart) {
+    private List<CartItem> checkoutItems(Cart cart, List<Long> requestedItemIds, DirectPurchaseRequest directPurchase) {
+        if (directPurchase != null) {
+            if (requestedItemIds != null) {
+                throw new IllegalArgumentException("Chỉ chọn mua trực tiếp hoặc thanh toán giỏ hàng trong một yêu cầu.");
+            }
+            if (directPurchase.productId() == null || directPurchase.productId() <= 0
+                    || directPurchase.quantity() == null || directPurchase.quantity() <= 0) {
+                throw new IllegalArgumentException("Sản phẩm và số lượng mua trực tiếp không hợp lệ.");
+            }
+            Product product = productRepository.findByIdAndIsActiveTrue(directPurchase.productId())
+                    .orElseThrow(() -> new IllegalArgumentException("Sản phẩm hiện không còn kinh doanh."));
+            // An unpersisted line reuses the same server pricing, voucher and shipping
+            // calculations. It is never attached to or saved in a customer's cart.
+            return List.of(CartItem.builder().product(product).quantity(directPurchase.quantity()).build());
+        }
+        if (requestedItemIds == null) {
+            return new ArrayList<>(cart.getItems());
+        }
+        if (requestedItemIds.isEmpty() || requestedItemIds.size() > 100) {
+            throw new IllegalArgumentException("Vui lòng chọn ít nhất một sản phẩm để thanh toán.");
+        }
+        if (requestedItemIds.stream().anyMatch(id -> id == null || id <= 0)) {
+            throw new IllegalArgumentException("Danh sách sản phẩm được chọn không hợp lệ.");
+        }
+
+        LinkedHashSet<Long> uniqueIds = new LinkedHashSet<>(requestedItemIds);
+        if (uniqueIds.size() != requestedItemIds.size()) {
+            throw new IllegalArgumentException("Danh sách sản phẩm được chọn chứa mục bị trùng.");
+        }
+
+        List<CartItem> selectedItems = cart.getItems().stream()
+                .filter(item -> uniqueIds.contains(item.getId()))
+                .toList();
+        if (selectedItems.size() != uniqueIds.size()) {
+            throw new IllegalArgumentException("Một hoặc nhiều sản phẩm được chọn không còn thuộc giỏ hàng của bạn.");
+        }
+        return selectedItems;
+    }
+
+    private Map<Long, Product> sellableProducts(List<CartItem> cartItems) {
         Map<Long, Product> products = new LinkedHashMap<>();
-        for (CartItem item : cart.getItems()) {
+        for (CartItem item : cartItems) {
             products.computeIfAbsent(item.getProduct().getId(), id -> productRepository.findByIdAndIsActiveTrue(id)
                     .orElseThrow(() -> new IllegalArgumentException("Sản phẩm '" + item.getProduct().getName() + "' hiện không còn kinh doanh.")));
         }
         return products;
     }
 
-    private ShippingQuote shippingQuote(Cart cart, Map<Long, Product> products, BigDecimal subtotal) {
-        return shippingService.calculateShipping(cart.getItems().stream()
-                .map(item -> new ShippingLine(products.get(item.getProduct().getId()), item.getQuantity())).toList(), subtotal);
+    private ShippingQuote shippingQuote(List<CartItem> cartItems, Map<Long, Product> products, BigDecimal subtotal) {
+        return shippingService.calculateShipping(shippingLines(cartItems, products), subtotal);
+    }
+
+    private List<ShippingLine> shippingLines(List<CartItem> items, Map<Long, Product> products) {
+        return items.stream().map(item -> new ShippingLine(products.get(item.getProduct().getId()), item.getQuantity())).toList();
     }
 
     private User getAuthenticatedUser() {

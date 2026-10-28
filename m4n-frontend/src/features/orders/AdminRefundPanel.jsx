@@ -19,7 +19,7 @@ export default function AdminRefundPanel({ order, onUpdated }) {
     let active = true
     paymentService.getStatus(order.id)
       .then((result) => { if (active) { setStatus(result); setError('') } })
-      .catch((err) => { if (active) setError(err.message || 'Không thể tải trạng thái VNPay.') })
+      .catch((err) => { if (active) setError(err.message || 'Không thể tải trạng thái thanh toán.') })
     return () => { active = false }
   }, [order.id, retry])
 
@@ -49,13 +49,13 @@ export default function AdminRefundPanel({ order, onUpdated }) {
 
   return (
     <section className="border border-border rounded-xl bg-white p-4 space-y-3">
-      <h3 className="text-sm font-semibold">Giao dịch VNPay</h3>
+      <h3 className="text-sm font-semibold">Giao dịch {order.paymentMethod === 'MOMO' ? 'MoMo' : 'VNPay'}</h3>
       {!status && !error && <p className="text-xs text-muted" role="status">Đang kiểm tra giao dịch…</p>}
       {status && <>
         <p role="status" className="text-sm text-muted">{status.message}</p>
         {status.canRefund && <>
           <Input id={`refund-reason-${order.id}`} label="Lý do hoàn tiền" required maxLength={500} value={reason} disabled={Boolean(busy)} onChange={(event) => setReason(event.target.value)} />
-          <p className="text-xs text-muted">Hoàn toàn bộ {formatCurrencyVND(order.finalAmount)}. Chỉ hủy đơn sau khi VNPay xác nhận hoàn tiền thành công.</p>
+          <p className="text-xs text-muted">Hoàn toàn bộ {formatCurrencyVND(order.finalAmount)}. Chỉ hủy đơn sau khi cổng thanh toán xác nhận hoàn tiền thành công.</p>
           <Button disabled={Boolean(busy) || !reason.trim()} onClick={() => setConfirmOpen(true)}>Hoàn tiền toàn phần</Button>
         </>}
         <div className="flex flex-wrap gap-2">

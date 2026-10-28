@@ -1,0 +1,1 @@
+org.springframework.boot.EnvironmentPostProcessor=com.m4n.backend.config.DotenvEnvironmentPostProcessor

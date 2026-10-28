@@ -1,5 +1,9 @@
 # M4N completion and verification — phase 2
 
+Latest customer-flow extension: [`audit-customer-flow-20261012.md`](audit-customer-flow-20261012.md).
+The results and dependency statements below describe the 2026-10-11 phase only;
+they do not verify or describe the subsequent Gmail/GHN/MoMo/upload changes.
+
 This report supersedes the remaining-gap section from phase 1. The user requested
 implementation and delegated routine choices. Provider accounts/keys are not
 available; no dependency or version was added. The original local source snapshot

@@ -12,6 +12,16 @@ This file is the source of truth for M4N business behavior. Rule identifiers org
 - **Related actors:** Customer, Online Staff, Admin.
 - **Related entities:** Order, Order Item, Product, Inventory.
 
+## BR-CART-01 — Checkout only selected cart items
+
+- **Description:** A Customer may buy part of the current cart without removing the remaining products.
+- **Preconditions:** The authenticated Customer selects one or more cart items and opens checkout.
+- **Rule:** Checkout preview and Place Order use only the selected cart-item IDs. The backend verifies every selected ID belongs to the authenticated Customer's current cart, recalculates authoritative prices, discounts and shipping from that subset, and rejects an empty, duplicate, invalid or stale selection. After successful order creation, remove only the purchased cart items; unselected items remain in the cart unchanged.
+- **Result:** The order contains exactly the selected products and the Customer can continue shopping with the unselected products.
+- **Invalid cases:** Using client product IDs/quantities to override selected cart rows or trusting client totals; accepting another Customer's cart item; clearing the whole cart after a partial checkout.
+- **Related actors:** Customer.
+- **Related entities:** Cart, Cart Item, Order, Order Item, Product.
+
 ## BR-INVENTORY-01 — Confirmation reserves stock by deduction
 
 - **Description:** Stock is committed only when Online Staff or Admin confirms an online order.
@@ -38,6 +48,7 @@ This file is the source of truth for M4N business behavior. Rule identifiers org
 - **Preconditions:** A Customer requests cancellation of their online order.
 - **Rule:** The Customer may self-cancel only when `Order.status = PENDING_CONFIRMATION`. From `CONFIRMED` onward, cancellation must go through Staff/Admin under the approved workflow.
 - **Result:** A pending order can be self-cancelled; a confirmed-or-later order is referred to Staff/Admin.
+- **User-approved MoMo extension (2026-10-16):** The owning Customer may confirm cancellation of a paid MoMo order while it is `PENDING_CONFIRMATION`. The backend persists an idempotent full-refund request, calls MoMo outside the database transaction and cancels only when the provider verifies successful full refund. Pending/unknown or failed refunds leave the order unchanged; pending refund retries reuse the persisted request identifier. Verified completion also finishes the requested cancellation when an Admin reconciles the same customer-initiated refund. Confirmation/shipping remains blocked while refund is pending or successful. This customer action does not authorize arbitrary refunds or cancellation after confirmation.
 - **Invalid cases:** Customer self-cancellation through the normal function after confirmation; bypassing ownership or authorization checks.
 - **Related actors:** Customer, Online Staff, Admin.
 - **Related entities:** Order.
@@ -65,7 +76,7 @@ This file is the source of truth for M4N business behavior. Rule identifiers org
 
 - **Description:** Payment status and order processing status are separate backend-owned concerns.
 - **Preconditions:** A Customer places an online order or Staff completes it.
-- **Rule:** The client never supplies authoritative `isPaid`, payment success, discount, or final amount. COD orders are created unpaid and remain unpaid through confirmation; legitimate COD completion marks them paid. Configured VNPay 2.1 accepts only provider results verified by the backend (`EXTERNAL_INTEGRATIONS.md`). Payment never confirms/deducts inventory/completes an order. A paid order may be cancelled only after a verified full refund; pending/unknown payment attempts must first be reconciled (`COMPLETION_PLAN.md`).
+- **Rule:** The client never supplies authoritative `isPaid`, payment success, discount, or final amount. COD orders are created unpaid and remain unpaid through confirmation; legitimate COD completion marks them paid. Configured VNPay 2.1 and MoMo sandbox accept only provider results verified by the backend (`EXTERNAL_INTEGRATIONS.md`, `CUSTOMER_FLOW_INTEGRATIONS.md`). Payment never confirms/deducts inventory/completes an order. A paid order may be cancelled only after a verified full refund; pending/unknown payment attempts must first be reconciled (`COMPLETION_PLAN.md`). A full refund has its own persisted status and does not erase the historical charged flag.
 - **Result:** COD follows a safe lifecycle, and no fake online payment success path exists.
 - **Invalid cases:** Treating `CONFIRMED` as paid; trusting client payment flags/totals; accepting an unverified provider result.
 - **Related actors:** Customer, Online Staff, Admin.
@@ -94,6 +105,11 @@ concurrent assignment and account changes must not leave a disabled/demoted staf
 member owning an open conversation.
 
 ## BR-POS-01 — POS completes and deducts immediately
+
+- **User-approved receipt email (2026-10-16):** queue a PDF receipt for the persisted MoMo customer email in the same transaction that issues the invoice. Deliver only after commit, independently of the browser return or cashier session. Failed/cancelled/refunded payments without an invoice never queue receipts. SMTP failure leaves the sale intact and the delivery pending for retry. Provider callbacks and reconciliation must not enqueue additional receipts for an existing invoice.
+- **User-approved pending-bill cancellation (2026-10-16):** The owning active POS Staff may explicitly cancel a MoMo bill before invoice issuance. Persist `cancel_requested` while locking the same intent used for settlement; cancelled intents cannot create an invoice or consume stock/vouchers. If money was already recorded or a later verified IPN/query reports a charge, allocate and request a full refund using the existing durable refund lifecycle. Provider timeouts do not undo cancellation or falsely establish refund success. The cashier may open a fresh bill after the server accepts cancellation; unresolved payment/refund state remains available for reconciliation. If settlement already issued an invoice, reject this pending-bill cancellation instead of silently undoing the sale.
+
+- **User-approved MoMo extension (2026-10-16):** MoMo sandbox card checkout uses a durable, immutable POS bill intent owned by its cashier, with customer email required by the provider. No invoice, stock deduction or voucher consumption occurs when the intent is created. Verify signed IPN or server-to-server reconciliation, then create exactly one invoice and deduct stock/consume voucher usage atomically. Recheck stock, current pricing and discounts; if the charged amount cannot produce a valid invoice, roll back the entire sale and automatically request a full refund. Persist a pending refund before external I/O; retries of unknown outcomes reuse its identifier. A provider-confirmed failed refund can be retried with a new refund identifier. Pending/failed refunds never produce an invoice or a successful-sale message. Only the owning active POS Staff may open/reconcile this intent. Browser return parameters cannot establish payment success. Persisted charged state is historical and is not erased by refunds.
 
 - **Description:** A POS transaction is distinct from the online order-confirmation workflow.
 - **Preconditions:** POS Staff confirms a successful showroom payment.
@@ -175,6 +191,28 @@ The user delegated the Stage 1 calculation decision during the project audit.
 - **Related actors:** Customer, Online Staff, POS Staff, Admin.
 - **Related entities:** User, PasswordResetToken, RefreshToken.
 
+## BR-AUTH-09 — Email OTP registration and password reset
+
+- Account email uniqueness (user clarification 2026-10-16): one account per email across all roles, including unverified and inactive users. Trim surrounding whitespace and compare case-insensitively; persist new emails in lowercase. Backend pre-checks and a PostgreSQL unique expression index enforce this invariant, including concurrent requests. Duplicate registration returns HTTP 409 `EMAIL_ALREADY_EXISTS`.
+
+- Registration continuation (user approval 2026-10-16): registration details create a CUSTOMER in `users` with a BCrypt password hash and `email_verified=false`, atomically with accepted OTP delivery. The UI then shows only OTP entry. This unverified account receives no access/refresh token and cannot access protected endpoints. A later login with matching email/password returns `REGISTRATION_VERIFICATION_REQUIRED` and OTP metadata; a wrong password stays a generic authentication failure. Expired/locked OTP requires resend. Verification changes the same User to `email_verified=true` atomically with OTP consumption. Repeated signup cannot overwrite existing credentials/profile. Historical verified accounts keep their current login behavior; `is_active` remains the independent administrative status.
+
+- **Approved extension:** 2026-10-12, Gmail SMTP with a Google app password. Google account two-step verification enables app-password access; it does not deliver application OTP or SMS by itself.
+- User clarification (2026-10-16): password recovery shows only the OTP field first. Backend verification consumes the OTP and issues a single-use reset credential, hashed at rest and expiring at the original challenge deadline. Only after verification does the form show new/confirm password. Resending invalidates previously issued reset credentials. The credential stays in browser memory; reload requires a new OTP if the prior OTP was already consumed. Final reset retains password validation and revokes existing sessions.
+- Public registration creates an unverified CUSTOMER; a valid email OTP is required before granting account access. Challenges are bound to normalized email and purpose (`REGISTER` or `RESET_PASSWORD`), last 10 minutes, permit at most five guesses, and are consumed once in the same transaction as account verification (or legacy verified registration), combined reset, or issuance of a reset credential after verification. Only a BCrypt code hash is stored.
+- Resend replaces the previous challenge, with a 60-second cooldown and at most ten sends per email/purpose per hour. Invalid guesses persist even when verification fails. Concurrent attempts cannot consume a challenge twice.
+- User clarification (2026-10-15): show the server's resend countdown beside the OTP input. Resending keeps the OTP screen and stored account profile; successful resend clears the entered code and replaces the challenge. A newly generated code differs from the previous code, and only the newest challenge/code pair can verify. Registration delivery failure preserves the previously delivered challenge.
+- Password reset has account-independent responses and sends only to active accounts. Reset revokes existing sessions and invalidates legacy reset links. The approved legacy reset-link API remains usable for already issued links/configured Resend delivery.
+- Unconfigured OTP delivery is unavailable for every email; delivery failure never creates an account or falsely confirms password reset. No development endpoint returns an OTP.
+- SMS is deferred until an actual SMS provider is selected and configured.
+
+## BR-SHIPPING-02 — Carrier quote and administrative address
+
+- **Approved extension:** 2026-10-12, GHN. When enabled, checkout requires current province/ward IDs and street details. The backend verifies the hierarchy from GHN, constructs the canonical address and quotes the selected products only.
+- The backend recalculates the quote at Place Order. `expectedShippingFee` acknowledges the preview after freeship/shipping voucher; it is never an authoritative fee. A changed or missing acknowledgment rejects the operation with 409, preserving cart and voucher usage.
+- Apply existing freeship and shipping voucher rules to the returned carrier fee. A carrier error/missing configuration blocks quoting and never becomes free shipping or an implicit local fallback. When GHN is disabled, explicitly configured local shipping rules remain available.
+- Product billable weight and package dimensions must meet the carrier contract. The current parcel model and limits are documented in `CUSTOMER_FLOW_INTEGRATIONS.md`; it must not silently estimate missing measurements. Carrier quoting does not create a shipment or advance fulfillment.
+
 ## BR-AUTH-04 — Inactive account access blocking
 
 - **Description:** Inactive (`isActive = false`) user accounts are blocked from login, refresh, and protected endpoints.
@@ -231,6 +269,14 @@ The user delegated the Stage 1 calculation decision during the project audit.
 - **Invalid cases:** Blindly updating user records without version checking; overwriting newer changes.
 - **Related actors:** Admin, Super Admin.
 - **Related entities:** User.
+
+## BR-ADDRESS-01 — Saved delivery addresses (approved 2026-10-15)
+
+- Active Customers may create, page through, update and delete multiple recipient addresses belonging to their authenticated account. Other users' entries are never exposed; foreign IDs return 404.
+- Each entry contains name, Vietnamese mobile, notification email, delivery address and optional order notes. Existing checkout field limits apply. When GHN is enabled, province/ward hierarchy is verified and the full address is canonicalized by the backend.
+- Update/delete require the loaded version; stale edits return 409. Customer identity is never supplied by the client.
+- Selecting an entry copies its fields into the current checkout. Per-order edits do not modify the saved entry. Saving, changing or deleting an address does not rewrite an existing order's recipient snapshot.
+- Buy now uses a separate direct-purchase input containing the chosen product ID and positive integer quantity. Preview and Place Order must revalidate sellability, stock, prices, vouchers and shipping on the backend. Opening, editing and completing direct checkout must never add, update or remove cart rows, including an existing row for the same product (user correction, 2026-10-15). Mixing direct purchase with cart-item IDs is rejected. Existing selected-item checkout remains available.
 
 ## BR-SUPPORT-01 — Customer ↔ Online Staff Support Chat & In-App Notifications
 

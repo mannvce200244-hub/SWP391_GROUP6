@@ -1,7 +1,7 @@
 import Input from '../../components/ui/Input.jsx'
 import FormField from '../../components/ui/FormField.jsx'
 
-export default function CheckoutRecipientFields({ value, errors, onChange }) {
+export default function CheckoutRecipientFields({ value, errors, onChange, carrierEnabled = false }) {
   return (
     <section className="rounded-[28px] bg-white border border-border/80 p-6 sm:p-7 shadow-xs space-y-5">
       <h2 className="text-base sm:text-lg font-bold text-ink pb-3 border-b border-border/60">
@@ -45,7 +45,7 @@ export default function CheckoutRecipientFields({ value, errors, onChange }) {
           error={errors.customerEmail}
           onChange={onChange}
         />
-        <div className="sm:col-span-2"><Input
+        {!carrierEnabled && <div className="sm:col-span-2"><Input
           id="shippingAddress"
           name="shippingAddress"
           label="Địa chỉ nhận hàng chi tiết"
@@ -55,7 +55,7 @@ export default function CheckoutRecipientFields({ value, errors, onChange }) {
           value={value.shippingAddress}
           error={errors.shippingAddress}
           onChange={onChange}
-        /></div>
+        /></div>}
         <FormField className="sm:col-span-2" id="notes" label="Ghi chú đơn hàng (tùy chọn)" error={errors.notes}>
           <textarea
             id="notes"

@@ -2,7 +2,10 @@ import useDialogFocus from '../hooks/useDialogFocus.js'
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Eye, Printer, Search, X } from 'lucide-react'
 import posService from '../services/posService.js'
+import { posPaymentMethodLabel } from '../services/posMomoService.js'
 import useToast from '../components/ui/useToast.js'
+import PosMomoPendingPayments from '../features/pos/PosMomoPendingPayments.jsx'
+import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 
 const DATE_FORMATTER = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -162,7 +165,7 @@ export default function PosTransactionHistoryPage() {
                     <td className="px-4 py-3 font-semibold text-ink">{invoice.invoiceCode}</td>
                     <td className="px-4 py-3 text-secondary">{formatDate(invoice.createdAt)}</td>
                     <td className="px-4 py-3 text-ink">{invoice.customerName || 'Khách lẻ tại quầy'}</td>
-                    <td className="px-4 py-3 text-secondary">{invoice.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</td>
+                    <td className="px-4 py-3 text-secondary">{posPaymentMethodLabel(invoice.paymentMethod)}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-ink">{invoice.formattedFinalAmount}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1.5">
@@ -217,6 +220,8 @@ export default function PosTransactionHistoryPage() {
         )}
       </div>
 
+      <PosMomoPendingPayments onSelect={(id) => navigateTo(`${CUSTOMER_ROUTES.pos}?m4nPosPaymentId=${encodeURIComponent(id)}`)} />
+
       {selectedInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button type="button" className="absolute inset-0 bg-black/50" onClick={() => setSelectedInvoice(null)} aria-label="Đóng chi tiết hóa đơn" />
@@ -234,7 +239,7 @@ export default function PosTransactionHistoryPage() {
 
             <dl className="grid grid-cols-1 gap-3 py-4 text-sm sm:grid-cols-2">
               <div><dt className="text-muted">Khách hàng</dt><dd className="font-semibold text-ink">{selectedInvoice.customerName || 'Khách lẻ tại quầy'}</dd></div>
-              <div><dt className="text-muted">Phương thức</dt><dd className="font-semibold text-ink">{selectedInvoice.paymentMethod === 'CASH' ? 'Tiền mặt' : 'Chuyển khoản'}</dd></div>
+              <div><dt className="text-muted">Phương thức</dt><dd className="font-semibold text-ink">{posPaymentMethodLabel(selectedInvoice.paymentMethod)}</dd></div>
             </dl>
 
             <div className="overflow-x-auto rounded-lg border border-border">

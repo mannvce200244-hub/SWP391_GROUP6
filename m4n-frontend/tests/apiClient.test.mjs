@@ -6,25 +6,112 @@ import authTokenStorage from '../src/features/auth/authTokenStorage.js'
 const tokenModuleUrl = new URL('../src/features/auth/authTokenStorage.js', import.meta.url).href
 const source = (await readFile(new URL('../src/api/apiClient.js', import.meta.url), 'utf8'))
   .replace("'../features/auth/authTokenStorage.js'", JSON.stringify(tokenModuleUrl))
-  .replace('import.meta.env.VITE_API_BASE_URL', "'http://localhost:8080/api/v1'")
 let moduleNumber = 0
 
-async function createClient(t) {
+async function createClient(t, apiBase = 'http://localhost:8080/api/v1', dev = true) {
   const originalFetch = globalThis.fetch
   authTokenStorage.clearToken()
   t.after(() => { globalThis.fetch = originalFetch; authTokenStorage.clearToken() })
-  return (await import(`data:text/javascript;base64,${Buffer.from(`${source}\n// ${++moduleNumber}`).toString('base64')}`)).apiClient
+  const configuredSource = source.replace('import.meta.env.VITE_API_BASE_URL', JSON.stringify(apiBase))
+    .replace('import.meta.env.DEV', JSON.stringify(dev))
+  return (await import(`data:text/javascript;base64,${Buffer.from(`${configuredSource}\n// ${++moduleNumber}`).toString('base64')}`)).apiClient
 }
+
+test('production without an API override uses the current site instead of localhost', async (t) => {
+  const api = await createClient(t, '', false)
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, '/api/v1/auth/refresh')
+    assert.equal(options.headers['X-Requested-With'], 'M4N')
+    assert.equal(options.credentials, 'include')
+    return json({ accessToken: 'test-token', user: { id: 1 } })
+  }
+  assert.equal(api.getBaseUrl(), '/api/v1')
+  await api.refreshSession()
+})
+
+test('development retains localhost fallback and explicit production API configuration is preserved', async (t) => {
+  assert.equal((await createClient(t, '', true)).getBaseUrl(), 'http://localhost:8080/api/v1')
+  assert.equal((await createClient(t, 'https://api.example.test/api/v1/', false)).getBaseUrl(), 'https://api.example.test/api/v1')
+})
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 }
+
+test('reset OTP rejection does not refresh a session or retry a single-use verification', async (t) => {
+  const api = await createClient(t)
+  authTokenStorage.setToken('existing-session')
+  const calls = []
+  globalThis.fetch = async (url) => {
+    calls.push(url)
+    return json({ message: 'Mã xác thực không hợp lệ.' }, 401)
+  }
+  await assert.rejects(api.post('/auth/verify-reset-otp', { email: 'test@example.test', challengeId: 'fixture', code: '000000' }),
+    (error) => error.status === 401)
+  assert.deepEqual(calls, ['http://localhost:8080/api/v1/auth/verify-reset-otp'])
+  assert.equal(authTokenStorage.getToken(), 'existing-session')
+})
+
+test('pending registration endpoints do not refresh or retry after rejection', async (t) => {
+  const api = await createClient(t)
+  authTokenStorage.setToken('existing-session')
+  const calls = []
+  globalThis.fetch = async (url) => { calls.push(url); return json({ message: 'Rejected' }, 401) }
+  for (const path of ['/auth/register/start', '/auth/register/verify']) {
+    await assert.rejects(api.post(path, {}), (error) => error.status === 401)
+  }
+  assert.deepEqual(calls, ['http://localhost:8080/api/v1/auth/register/start', 'http://localhost:8080/api/v1/auth/register/verify'])
+  assert.equal(authTokenStorage.getToken(), 'existing-session')
+})
 
 function deferred() {
   let resolve
   const promise = new Promise((done) => { resolve = done })
   return { promise, resolve }
 }
+
+test('a JSON body finishing after an account switch cannot expose the previous account response', async (t) => {
+  const api = await createClient(t)
+  authTokenStorage.setToken('previous-account')
+  const parsing = deferred()
+  const started = deferred()
+  globalThis.fetch = async () => ({
+    ok: true, status: 200, headers: new Headers({ 'Content-Type': 'application/json' }),
+    json: async () => { started.resolve(); await parsing.promise; return { privateData: 'previous account' } },
+  })
+  const read = api.get('/profile')
+  await started.promise
+  authTokenStorage.setToken('next-account')
+  parsing.resolve()
+  await assert.rejects(read, (error) => error.status === 401)
+  assert.equal(authTokenStorage.getToken(), 'next-account')
+})
+
+test('an invoice download finishing after logout cannot return the previous session file', async (t) => {
+  const api = await createClient(t)
+  authTokenStorage.setToken('previous-account')
+  const downloading = deferred()
+  const started = deferred()
+  globalThis.fetch = async () => ({
+    ok: true, status: 200, headers: new Headers({ 'Content-Type': 'application/pdf' }),
+    blob: async () => { started.resolve(); await downloading.promise; return new Blob(['private invoice']) },
+  })
+  const read = api.getBlob('/pos/invoices/1/pdf')
+  await started.promise
+  authTokenStorage.clearToken()
+  downloading.resolve()
+  await assert.rejects(read, (error) => error.status === 401)
+})
+
+test('unavailable OTP delivery has actionable copy while unexpected failures stay sanitized', async (t) => {
+  const api = await createClient(t)
+  globalThis.fetch = async () => json({ message: 'Dịch vụ OTP email chưa được cấu hình.' }, 503)
+  await assert.rejects(api.post('/auth/email-otp', { email: 'customer@example.test', purpose: 'REGISTER' }),
+    (error) => error.status === 503 && error.message === 'Dịch vụ OTP email chưa được cấu hình.')
+  globalThis.fetch = async () => json({ message: 'internal stack trace' }, 500)
+  await assert.rejects(api.post('/auth/email-otp', {}),
+    (error) => error.status === 500 && !error.message.includes('stack trace'))
+})
 
 test('initial hydration and concurrent 401 responses share one refresh', async (t) => {
   const api = await createClient(t)

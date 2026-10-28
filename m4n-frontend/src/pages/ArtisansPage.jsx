@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
+import Skeleton from '../components/ui/Skeleton.jsx'
 import Pagination from '../features/catalog/Pagination.jsx'
 import ArtisanCard from '../features/artisans/ArtisanCard.jsx'
 import ArtisanFilters from '../features/artisans/ArtisanFilters.jsx'
@@ -252,11 +253,12 @@ function ArtisansPage() {
 
           {/* Grid of Results / Empty / Skeleton State */}
           {data.loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div role="status" aria-label="Đang tải nghệ nhân và làng nghề…" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <span className="sr-only">Đang tải nghệ nhân và làng nghề…</span>
               {[1, 2, 3, 4, 5, 6].map((idx) => (
-                <div
+                <Skeleton
                   key={idx}
-                  className="aspect-4/5 rounded-2xl bg-surface-secondary/60 border border-border animate-pulse"
+                  className="aspect-4/5 w-full rounded-2xl border border-border"
                 />
               ))}
             </div>

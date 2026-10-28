@@ -261,7 +261,7 @@ export default function AdminOrderDetailDialog({ selectedOrderId, orderDetail, d
                       </span>
                     </div>
                   </div>
-                  {orderDetail.paymentMethod === 'VNPAY' && <AdminRefundPanel key={orderDetail.id} order={orderDetail} onUpdated={onPaymentUpdated} />}
+                  {['VNPAY', 'MOMO'].includes(orderDetail.paymentMethod) && <AdminRefundPanel key={orderDetail.id} order={orderDetail} onUpdated={onPaymentUpdated} />}
                 </>
               ) : null}
             </div>

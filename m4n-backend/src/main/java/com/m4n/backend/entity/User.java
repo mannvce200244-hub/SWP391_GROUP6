@@ -52,6 +52,10 @@ public class User {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    @Builder.Default
+    @Column(name = "email_verified", nullable = false, columnDefinition = "boolean default true")
+    private boolean emailVerified = true;
+
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;

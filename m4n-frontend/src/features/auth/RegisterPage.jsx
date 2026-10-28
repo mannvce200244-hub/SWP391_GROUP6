@@ -1,29 +1,41 @@
 import { useState } from 'react'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
-import useAuth from './useAuth.js'
-import Input from '../../components/ui/Input.jsx'
+import authService from './authService.js'
+import EmailOtpField from './EmailOtpField.jsx'
+import RegistrationDetailsFields from './RegistrationDetailsFields.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { CircleX, CircleCheck } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 import { isValidVietnameseMobile, VIETNAMESE_MOBILE_ERROR } from '../../utils/phone.js'
 
 function RegisterPage() {
-  const { register } = useAuth()
   const { addToast } = useToast()
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [form, setForm] = useState({ fullName: '', email: '', phone: '', password: '', confirmPassword: '' })
+  const { fullName, email, phone, password, confirmPassword } = form
+  const [challenge, setChallenge] = useState(() => {
+    try {
+      const stored = JSON.parse(sessionStorage.getItem('m4n-registration-otp') || 'null')
+      return stored?.email && stored?.challengeId ? stored : null
+    } catch { return null }
+  })
+  const [code, setCode] = useState('')
 
   const [fieldErrors, setFieldErrors] = useState({})
   const [generalError, setGeneralError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isResending, setIsResending] = useState(false)
+  const isBusy = isSubmitting || isResending
   const [isSuccess, setIsSuccess] = useState(false)
 
   const validate = () => {
     const errors = {}
+    if (challenge) {
+      if (!/^[0-9]{6}$/.test(code)) errors.code = 'Vui lòng nhập mã OTP gồm 6 chữ số.'
+      setFieldErrors(errors)
+      if (errors.code) document.getElementById('reg-otp')?.focus()
+      return Object.keys(errors).length === 0
+    }
     const trimmedName = fullName.trim()
     const trimmedEmail = email.trim()
     const trimmedPhone = phone.trim()
@@ -69,7 +81,7 @@ function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (isSubmitting) return
+    if (isBusy) return
     setGeneralError('')
 
     if (!validate()) {
@@ -79,22 +91,31 @@ function RegisterPage() {
     setIsSubmitting(true)
 
     try {
-      await register({
-        fullName: fullName.trim(),
-        email: email.trim(),
-        phone: phone.trim() || undefined,
-        password,
+      if (!challenge) {
+        const response = await authService.startRegistration({ fullName, email, phone, password })
+        const nextChallenge = { ...response, email: email.trim().toLowerCase() }
+        setChallenge(nextChallenge)
+        sessionStorage.setItem('m4n-registration-otp', JSON.stringify(nextChallenge))
+        setForm((previous) => ({ ...previous, password: '', confirmPassword: '' }))
+        addToast({ message: response.message, type: 'success' })
+        return
+      }
+      await authService.verifyRegistration({
+        email: challenge.email,
+        challengeId: challenge.challengeId,
+        code,
       })
+      sessionStorage.removeItem('m4n-registration-otp')
       setIsSuccess(true)
       addToast({
-        message: 'Tài khoản đã được tạo thành công!',
+        message: 'Xác minh email thành công! Bạn có thể đăng nhập.',
         type: 'success',
       })
     } catch (err) {
-      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
+      if (err.fieldErrors) setFieldErrors(Object.fromEntries(Object.entries(err.fieldErrors).map(([field, message]) => [field.replace(/^registration\./, ''), message])))
       const message =
         err?.status === 409
-          ? 'Địa chỉ email này đã được đăng ký trên hệ thống.'
+          ? 'Email này đã được đăng ký. Vui lòng đăng nhập để tiếp tục hoặc xác minh email.'
           : err?.message || 'Đăng ký không thành công. Vui lòng kiểm tra lại thông tin.'
       setGeneralError(message)
     } finally {
@@ -102,23 +123,43 @@ function RegisterPage() {
     }
   }
 
+  const handleResend = async () => {
+    if (isBusy || Date.now() < Date.parse(challenge.resendAt)) return
+    setIsResending(true)
+    setGeneralError('')
+    try {
+      const response = await authService.requestEmailOtp({ email: challenge.email, purpose: 'REGISTER' })
+      const nextChallenge = { ...response, email: challenge.email }
+      setChallenge(nextChallenge)
+      sessionStorage.setItem('m4n-registration-otp', JSON.stringify(nextChallenge))
+      setCode('')
+      setFieldErrors((previous) => ({ ...previous, code: undefined }))
+      addToast({ message: 'Đã gửi mã mới. Vui lòng dùng mã trong email mới nhất.', type: 'success' })
+    } catch (error) {
+      setGeneralError(error.message || 'Chưa thể gửi lại mã. Vui lòng thử lại.')
+    } finally {
+      setIsResending(false)
+    }
+  }
+
   return (
     <div className="w-full max-w-xl mx-auto flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink font-sans">Tạo tài khoản</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink font-sans">{challenge && !isSuccess ? 'Xác minh email' : 'Tạo tài khoản'}</h1>
         <p className="text-sm sm:text-base text-muted leading-relaxed">
-          Tạo tài khoản M4N để theo dõi đơn hàng và quản lý thông tin cá nhân.
+          {challenge && !isSuccess ? 'Nhập mã OTP trong email để hoàn tất đăng ký. Thông tin của bạn đã được lưu.'
+            : 'Tạo tài khoản M4N để theo dõi đơn hàng và quản lý thông tin cá nhân.'}
         </p>
       </header>
 
       {isSuccess ? (
-        <div className="flex flex-col items-center text-center py-6 px-4 gap-3 bg-jade-soft/30 border border-jade-border rounded-xl" role="status">
-          <div className="w-14 h-14 rounded-full bg-jade-soft flex items-center justify-center text-jade mb-2">
-            <CircleCheck size={32} />
+        <div className="flex flex-col items-center text-center py-6 px-4 gap-3 bg-[#F6F7F8] border border-jade-border rounded-xl" role="status">
+          <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-jade mb-2">
+            <CircleCheck size={32} aria-hidden="true" />
           </div>
           <h2 className="text-xl font-bold text-ink">Đăng ký thành công!</h2>
           <p className="text-sm text-muted leading-relaxed max-w-sm">
-            Tài khoản cho <strong>{email}</strong> đã được khởi tạo an toàn. Bạn có thể đăng nhập ngay để bắt đầu trải nghiệm.
+            Email <strong>{challenge?.email || email}</strong> đã được xác minh. Bạn có thể đăng nhập ngay để bắt đầu trải nghiệm.
           </p>
           <Button
             type="button"
@@ -134,135 +175,52 @@ function RegisterPage() {
           {generalError && (
             <div
               role="alert"
-              className="flex items-start gap-2.5 p-3.5 rounded-lg border border-danger-border bg-danger-soft text-danger text-sm leading-snug"
+              className="flex items-start gap-2.5 p-3.5 rounded-lg border border-danger-border bg-white text-danger text-sm leading-snug"
               aria-live="assertive"
             >
-              <CircleX size={18} className="shrink-0 mt-0.5" />
+              <CircleX size={18} aria-hidden="true" className="shrink-0 mt-0.5" />
               <span>{generalError}</span>
             </div>
           )}
 
           <form className="flex flex-col gap-5" onSubmit={handleSubmit} noValidate>
-            <Input
-              id="reg-fullname"
-              name="name"
-              type="text"
-              label="Họ và tên"
-              autoComplete="name"
-              required
-              placeholder="Ví dụ: Nguyễn Văn An"
-              value={fullName}
-              error={fieldErrors.fullName}
-              disabled={isSubmitting}
-              onChange={(e) => {
-                setFullName(e.target.value)
-                if (fieldErrors.fullName) {
-                  setFieldErrors((prev) => ({ ...prev, fullName: undefined }))
+            {challenge && <p className="text-sm text-muted break-words">Email xác minh: <strong>{challenge.email}</strong></p>}
+            {!challenge && <RegistrationDetailsFields values={form} errors={fieldErrors} disabled={isBusy}
+              onEmailBlur={() => {
+                if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+                  setFieldErrors((previous) => ({ ...previous, email: 'Định dạng email không hợp lệ.' }))
                 }
               }}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                id="reg-email"
-                name="email"
-                type="email"
-                label="Địa chỉ Email"
-                autoComplete="email"
-                required
-                placeholder="tenban@m4n.vn"
-                value={email}
-                error={fieldErrors.email}
-                disabled={isSubmitting}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  if (fieldErrors.email) {
-                    setFieldErrors((prev) => ({ ...prev, email: undefined }))
-                  }
-                }}
-                onBlur={() => {
-                  if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-                    setFieldErrors((prev) => ({ ...prev, email: 'Định dạng email không hợp lệ.' }))
-                  }
-                }}
-              />
-
-              <Input
-                id="reg-phone"
-                name="tel"
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                label="Số điện thoại"
-                autoComplete="tel"
-                placeholder="0901234567"
-                helperText="10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09."
-                value={phone}
-                error={fieldErrors.phone}
-                disabled={isSubmitting}
-                onChange={(e) => {
-                  setPhone(e.target.value)
-                  if (fieldErrors.phone) {
-                    setFieldErrors((prev) => ({ ...prev, phone: undefined }))
-                  }
-                }}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                id="reg-password"
-                name="new-password"
-                type="password"
-                label="Mật khẩu"
-                autoComplete="new-password"
-                required
-                allowTogglePassword
-                helperText="Tối thiểu 8 ký tự."
-                placeholder="Ít nhất 8 ký tự"
-                value={password}
-                error={fieldErrors.password}
-                disabled={isSubmitting}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  if (fieldErrors.password) {
-                    setFieldErrors((prev) => ({ ...prev, password: undefined }))
-                  }
-                }}
-              />
-
-              <Input
-                id="reg-confirm-password"
-                name="confirm-password"
-                type="password"
-                label="Xác nhận mật khẩu"
-                autoComplete="new-password"
-                required
-                allowTogglePassword
-                placeholder="Nhập lại mật khẩu"
-                value={confirmPassword}
-                error={fieldErrors.confirmPassword}
-                disabled={isSubmitting}
-                onChange={(e) => {
-                  setConfirmPassword(e.target.value)
-                  if (fieldErrors.confirmPassword) {
-                    setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }))
-                  }
-                }}
-              />
-            </div>
-
+              onChange={(name, value) => {
+                setForm((previous) => ({ ...previous, [name]: value }))
+                setFieldErrors((previous) => ({ ...previous, [name]: undefined }))
+              }} />}
+            {challenge && (
+              <EmailOtpField key={challenge.challengeId} id="reg-otp" challenge={challenge}
+                code={code} onCodeChange={(value) => {
+                  setCode(value)
+                  setFieldErrors((previous) => ({ ...previous, code: undefined }))
+                }} error={fieldErrors.code} disabled={isBusy} isResending={isResending} onResend={handleResend} />
+            )}
             <div className="pt-3">
               <Button
                 type="submit"
                 variant="primary"
                 className="w-full h-12"
                 loading={isSubmitting}
-                loadingLabel="Đang tạo tài khoản…"
+                disabled={isResending}
+                loadingLabel={challenge ? 'Đang xác thực…' : 'Đang gửi mã…'}
               >
-                Tạo tài khoản
+                {challenge ? 'Xác minh email' : 'Gửi mã xác thực email'}
               </Button>
             </div>
+            {challenge && <Button type="button" variant="secondary" disabled={isBusy} onClick={() => {
+              sessionStorage.removeItem('m4n-registration-otp')
+              setChallenge(null)
+              setCode('')
+              setFieldErrors({})
+              setGeneralError('')
+            }}>Đăng ký bằng email khác</Button>}
           </form>
 
           <footer className="pt-4 border-t border-border flex items-center justify-center text-sm text-muted">

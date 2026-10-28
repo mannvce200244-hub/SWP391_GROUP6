@@ -217,6 +217,35 @@ summary:focus-visible,
   will-change: auto;
 }
 
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  vertical-align: middle;
+  background-color: var(--color-surface-secondary);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, #FFFFFF, transparent);
+  transform: translateX(-100%);
+  animation: skeleton-sweep 1.6s ease-in-out infinite;
+}
+
+.loading-reveal {
+  animation: loading-reveal 180ms ease-out 100ms both;
+}
+
+@keyframes skeleton-sweep {
+  to { transform: translateX(100%); }
+}
+
+@keyframes loading-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -231,6 +260,14 @@ summary:focus-visible,
   .scroll-reveal {
     opacity: 1;
     transform: none;
+  }
+
+  .skeleton::after {
+    display: none;
+  }
+
+  .loading-reveal {
+    animation: none;
   }
 }
 

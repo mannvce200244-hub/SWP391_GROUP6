@@ -55,10 +55,11 @@ export default function ShippingSettingsForm() {
   return (
     <section className="bg-white border border-border rounded-xl p-5 space-y-4">
       <h2 className="text-lg font-semibold">Phí vận chuyển online</h2>
-      <p className="text-sm text-muted">Phí = tổng kg × đơn giá/kg + phụ phí cồng kềnh theo số lượng. Thiết lập khối lượng tính cước và phụ phí trong từng sản phẩm trước khi bật. POS luôn có phí 0đ.</p>
+      <p className="text-sm text-muted">Cách tính nội bộ: tổng kg × đơn giá/kg + phụ phí cồng kềnh theo số lượng. Thiết lập khối lượng tính cước và phụ phí trong từng sản phẩm trước khi bật. POS luôn có phí 0đ.</p>
+      <p className="text-sm text-muted">Nếu cửa hàng dùng GHN, phí gốc được lấy từ GHN; bật/tắt và đơn giá theo kg dưới đây chỉ điều khiển cách tính nội bộ. Miễn phí tự động theo ngưỡng vẫn áp dụng cho phí GHN.</p>
       {!form && !error ? <LoadingState message="Đang tải cấu hình…" /> : form && <form onSubmit={save} noValidate className="space-y-4">
         <fieldset disabled={busy} className="space-y-4">
-          <label className="flex items-center gap-3 text-sm min-h-11"><input type="checkbox" checked={form.enabled} onChange={(event) => change('enabled', event.target.checked)} />Bật tính phí vận chuyển</label>
+          <label className="flex items-center gap-3 text-sm min-h-11"><input type="checkbox" checked={form.enabled} onChange={(event) => change('enabled', event.target.checked)} />Bật tính phí vận chuyển nội bộ</label>
           <div className="grid sm:grid-cols-2 gap-4">
             <Input id="shipping-ratePerKg" type="number" min="0" max="999999999999.99" step="0.01" label="Đơn giá / kg (đ)" required value={form.ratePerKg} error={errors.ratePerKg} helperText="Ví dụ 15.000đ/kg; mức phí do bạn cấu hình." onChange={(event) => change('ratePerKg', event.target.value)} />
             <Input id="shipping-freeShippingThreshold" type="number" min="0" max="9999999999999" step="1" label="Ngưỡng miễn phí tiền hàng (đ)" disabled={!form.freeShippingEnabled} required={form.freeShippingEnabled} value={form.freeShippingThreshold ?? ''} error={errors.freeShippingThreshold} helperText="Tính trên tiền hàng sau giảm theo sản phẩm, trước voucher đơn." onChange={(event) => change('freeShippingThreshold', event.target.value)} />

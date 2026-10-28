@@ -37,6 +37,9 @@ export function formatDate(dateStr) {
 export function getPaymentMethodBadge(method) {
   if (!method) return { label: 'Chưa rõ', className: 'bg-[#F6F7F8] text-zinc-600 border-zinc-200' }
   const m = String(method).toUpperCase()
+  if (m === 'MOMO' || m === 'VNPAY') {
+    return { label: m === 'MOMO' ? 'MoMo' : 'VNPay', className: 'bg-[#F6F7F8] text-blue-700 border-blue-200' }
+  }
   if (m === 'COD') {
     return { label: 'COD', className: 'bg-[#F6F7F8] text-zinc-700 border-zinc-200' }
   }
