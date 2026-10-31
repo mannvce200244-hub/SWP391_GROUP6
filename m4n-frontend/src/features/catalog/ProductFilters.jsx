@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useId, useState, useEffect } from 'react'
+import { X, ChevronDown } from 'lucide-react'
 import PRODUCT_GROUPS from '../../constants/productGroups.js'
+import categoryService from '../../services/categoryService.js'
 import Button from '../../components/ui/Button.jsx'
-import { IconX } from '../../components/ui/Icons.jsx'
 import validateProductFilters from './productFilterValidation.js'
 
 const EDITABLE_FILTERS = new Set([
@@ -35,6 +36,29 @@ function ProductFilters({
   value,
 }) {
   const [errors, setErrors] = useState({})
+  const [categories, setCategories] = useState([])
+  const [categoryStatus, setCategoryStatus] = useState('loading')
+  const [categoryRetry, setCategoryRetry] = useState(0)
+  const fieldId = useId()
+
+  useEffect(() => {
+    let active = true
+    categoryService.getCategories()
+      .then((data) => {
+        if (!active) return
+        if (!Array.isArray(data)) throw new Error('Danh sách danh mục không hợp lệ.')
+        setCategories(data)
+        setCategoryStatus(data.length > 0 ? 'success' : 'empty')
+      })
+      .catch(() => { if (active) setCategoryStatus('error') })
+    return () => {
+      active = false
+    }
+  }, [categoryRetry])
+
+  const groupOptions = categories.length > 0
+    ? categories.map((c) => ({ value: c.code, label: c.name }))
+    : PRODUCT_GROUPS
 
   const handleChange = (name, nextValue) => {
     if (!EDITABLE_FILTERS.has(name)) return
@@ -78,6 +102,8 @@ function ProductFilters({
     const validation = validateProductFilters(value)
     if (Object.keys(validation.errors).length > 0) {
       setErrors(validation.errors)
+      const field = Object.keys(validation.errors)[0]
+      document.getElementById(`${fieldId}-${field === 'minPrice' ? 'min-price' : 'max-price'}`)?.focus()
       return
     }
     setErrors({})
@@ -119,14 +145,14 @@ function ProductFilters({
       {/* 1. Dòng nhạc cụ (Dropdown select) */}
       <div className="flex flex-col gap-1.5">
         <label
-          htmlFor="catalog-group-select"
+          htmlFor={`${fieldId}-group-select`}
           className="text-xs font-bold uppercase tracking-wider text-muted"
         >
           Dòng nhạc cụ
         </label>
         <div className="relative">
           <select
-            id="catalog-group-select"
+            id={`${fieldId}-group-select`}
             name="group"
             value={value.group || ''}
             onChange={(e) => handleGroupChange(e.target.value)}
@@ -134,18 +160,35 @@ function ProductFilters({
             className="w-full appearance-none bg-white border border-border hover:border-border-strong rounded-lg px-3 py-2 text-xs font-medium text-ink focus:outline-none focus:ring-2 focus:ring-brand/15 focus:border-brand cursor-pointer transition-all pr-8 shadow-2xs disabled:bg-surface-secondary disabled:cursor-not-allowed"
           >
             <option value="">Tất cả dòng nhạc cụ</option>
-            {PRODUCT_GROUPS.map((group) => (
+            {groupOptions.map((group) => (
               <option key={group.value} value={group.value}>
                 {group.label}
               </option>
             ))}
           </select>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronDown size={16} />
           </div>
         </div>
+        {categoryStatus === 'loading' && (
+          <p className="text-xs text-muted" role="status">Đang tải danh mục; bạn vẫn có thể dùng các nhóm nhạc cụ mặc định.</p>
+        )}
+        {categoryStatus === 'empty' && (
+          <p className="text-xs text-muted" role="status">Danh mục hiện chưa có dữ liệu. Đang dùng các nhóm nhạc cụ mặc định.</p>
+        )}
+        {categoryStatus === 'error' && (
+          <div className="text-xs text-muted">
+            <p role="alert">Không thể tải danh mục. Bạn vẫn có thể dùng các nhóm nhạc cụ mặc định.</p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => { setCategoryStatus('loading'); setCategoryRetry((current) => current + 1) }}
+              className="min-h-11 cursor-pointer font-semibold text-brand underline underline-offset-2 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            >
+              Thử tải lại danh mục
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="border-t border-border/60" />
@@ -170,6 +213,7 @@ function ProductFilters({
                     : 'border-border bg-white hover:bg-surface-secondary hover:border-border-strong text-muted hover:text-ink'
                 }`}
                 onClick={() => handleApplyPreset(preset)}
+                disabled={busy}
                 type="button"
               >
                 {preset.label}
@@ -181,7 +225,7 @@ function ProductFilters({
         {/* Custom Price Inputs */}
         <div className="flex items-center gap-2 pt-1">
           <div className="flex-1 min-w-0">
-            <label className="sr-only" htmlFor="catalog-min-price">
+            <label className="sr-only" htmlFor={`${fieldId}-min-price`}>
               Giá từ
             </label>
             <div className="relative">
@@ -191,7 +235,9 @@ function ProductFilters({
                 className={`w-full h-9 px-2.5 pr-6 text-xs bg-white text-ink rounded-lg border transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20 ${
                   errors.minPrice ? 'border-brand' : 'border-control-border'
                 }`}
-                id="catalog-min-price"
+                id={`${fieldId}-min-price`}
+                aria-invalid={Boolean(errors.minPrice)}
+                aria-describedby={errors.minPrice ? `${fieldId}-price-error` : undefined}
                 inputMode="decimal"
                 name="minPrice"
                 onChange={(e) => handleChange('minPrice', e.target.value)}
@@ -208,7 +254,7 @@ function ProductFilters({
           <span className="text-muted text-xs shrink-0">đến</span>
 
           <div className="flex-1 min-w-0">
-            <label className="sr-only" htmlFor="catalog-max-price">
+            <label className="sr-only" htmlFor={`${fieldId}-max-price`}>
               Giá đến
             </label>
             <div className="relative">
@@ -218,7 +264,9 @@ function ProductFilters({
                 className={`w-full h-9 px-2.5 pr-6 text-xs bg-white text-ink rounded-lg border transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20 ${
                   errors.maxPrice ? 'border-brand' : 'border-control-border'
                 }`}
-                id="catalog-max-price"
+                id={`${fieldId}-max-price`}
+                aria-invalid={Boolean(errors.maxPrice)}
+                aria-describedby={errors.maxPrice ? `${fieldId}-price-error` : undefined}
                 inputMode="decimal"
                 name="maxPrice"
                 onChange={(e) => handleChange('maxPrice', e.target.value)}
@@ -234,7 +282,7 @@ function ProductFilters({
         </div>
 
         {(errors.minPrice || errors.maxPrice) && (
-          <p className="text-xs text-brand leading-tight" role="alert">
+          <p id={`${fieldId}-price-error`} className="text-xs text-brand leading-tight" role="alert">
             {errors.minPrice || errors.maxPrice}
           </p>
         )}
@@ -244,14 +292,14 @@ function ProductFilters({
 
       {/* 3. Làng nghề truyền thống */}
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="catalog-craft-village">
+        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor={`${fieldId}-craft-village`}>
           Làng nghề truyền thống
         </label>
         <div className="relative">
           <input
             autoComplete="off"
             className="w-full h-9 px-2.5 pr-7 text-xs bg-white text-ink rounded-lg border border-control-border placeholder:text-subtle transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20"
-            id="catalog-craft-village"
+            id={`${fieldId}-craft-village`}
             name="craftVillage"
             onChange={(e) => handleChange('craftVillage', e.target.value)}
             placeholder="Ví dụ: Đào Xá, Trúc Sơn..."
@@ -265,7 +313,7 @@ function ProductFilters({
               onClick={() => handleChange('craftVillage', '')}
               type="button"
             >
-              <IconX size={13} />
+              <X size={13} />
             </button>
           ) : null}
         </div>
@@ -293,14 +341,14 @@ function ProductFilters({
 
       {/* 4. Nghệ nhân chế tác */}
       <div className="flex flex-col gap-1.5">
-        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="catalog-artisan">
+        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor={`${fieldId}-artisan`}>
           Nghệ nhân chế tác
         </label>
         <div className="relative">
           <input
             autoComplete="off"
             className="w-full h-9 px-2.5 pr-7 text-xs bg-white text-ink rounded-lg border border-control-border placeholder:text-subtle transition-colors focus-visible:outline-none focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand/20"
-            id="catalog-artisan"
+            id={`${fieldId}-artisan`}
             name="artisan"
             onChange={(e) => handleChange('artisan', e.target.value)}
             placeholder="Tên nghệ nhân..."
@@ -314,7 +362,7 @@ function ProductFilters({
               onClick={() => handleChange('artisan', '')}
               type="button"
             >
-              <IconX size={13} />
+              <X size={13} />
             </button>
           ) : null}
         </div>

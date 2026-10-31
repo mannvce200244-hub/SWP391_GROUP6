@@ -5,6 +5,10 @@ export async function searchProducts(keyword = '') {
   return apiClient.get(`/pos/products/search${query}`)
 }
 
+export async function searchCustomers(query) {
+  return apiClient.get(`/pos/customers?q=${encodeURIComponent(query.trim())}`)
+}
+
 export async function lookupBarcode(codeOrBarcode) {
   if (!codeOrBarcode || !codeOrBarcode.trim()) {
     throw new Error('Mã barcode hoặc mã sản phẩm không được để trống')
@@ -27,6 +31,8 @@ export async function finalizeSale({
   voucherCode = '',
   paymentMethod = 'CASH',
   amountReceived = null,
+  customerId = null,
+  posCustomerId = null,
   customerName = '',
   customerPhone = '',
   notes = '',
@@ -39,6 +45,8 @@ export async function finalizeSale({
     voucherCode: voucherCode ? voucherCode.trim() : null,
     paymentMethod,
     amountReceived: amountReceived !== null ? Number(amountReceived) : null,
+    customerId,
+    posCustomerId,
     customerName: customerName ? customerName.trim() : null,
     customerPhone: customerPhone ? customerPhone.trim() : null,
     notes: notes ? notes.trim() : null,
@@ -49,9 +57,41 @@ export async function getInvoice(id) {
   return apiClient.get(`/pos/invoices/${encodeURIComponent(id)}`)
 }
 
-export function getInvoicePdfUrl(id) {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
-  return `${baseUrl}/pos/invoices/${encodeURIComponent(id)}/pdf`
+export async function downloadInvoicePdf(id) {
+  const blob = await apiClient.getBlob(`/pos/invoices/${encodeURIComponent(id)}/pdf`)
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `Invoice-${id}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => window.URL.revokeObjectURL(url), 30000)
+}
+
+export async function openInvoicePdf(id) {
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) throw new Error('Trình duyệt chặn cửa sổ PDF. Vui lòng cho phép cửa sổ bật lên hoặc tải hóa đơn PDF.')
+  printWindow.opener = null
+  try {
+    const blob = await apiClient.getBlob(`/pos/invoices/${encodeURIComponent(id)}/pdf`)
+    const url = window.URL.createObjectURL(blob)
+    printWindow.location.href = url
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+  } catch (error) {
+    printWindow.close()
+    throw error
+  }
+}
+
+export async function listInvoices({ page = 0, size = 15, search = '' } = {}) {
+  const params = new URLSearchParams()
+  params.append('page', page)
+  params.append('size', size)
+  if (search && search.trim()) {
+    params.append('search', search.trim())
+  }
+  return apiClient.get(`/pos/invoices?${params.toString()}`)
 }
 
 export default {
@@ -60,5 +100,7 @@ export default {
   previewSale,
   finalizeSale,
   getInvoice,
-  getInvoicePdfUrl,
+  downloadInvoicePdf,
+  openInvoicePdf,
+  listInvoices,
 }

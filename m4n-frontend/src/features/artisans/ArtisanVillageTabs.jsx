@@ -1,17 +1,16 @@
 function ArtisanVillageTabs({
   activeTab = 'artisans',
-  artisanCount = 0,
+  artisanCount,
   onChangeTab,
-  villageCount = 0,
+  villageCount,
 }) {
   return (
     <div
       aria-label="Chuyển đổi góc nhìn khám phá"
       className="inline-flex items-center p-1.5 rounded-xl bg-surface-secondary border border-border/80 shadow-2xs self-start"
-      role="tablist"
     >
       <button
-        aria-selected={activeTab === 'artisans'}
+        aria-pressed={activeTab === 'artisans'}
         className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
           activeTab === 'artisans'
             ? 'bg-surface text-ink shadow-xs border border-border font-bold'
@@ -19,7 +18,6 @@ function ArtisanVillageTabs({
         }`}
         id="tab-artisans"
         onClick={() => onChangeTab('artisans')}
-        role="tab"
         type="button"
       >
         <span>Nghệ nhân</span>
@@ -30,12 +28,12 @@ function ArtisanVillageTabs({
               : 'bg-surface text-muted'
           }`}
         >
-          {artisanCount}
+          {artisanCount ?? '—'}
         </span>
       </button>
 
       <button
-        aria-selected={activeTab === 'villages'}
+        aria-pressed={activeTab === 'villages'}
         className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
           activeTab === 'villages'
             ? 'bg-surface text-ink shadow-xs border border-border font-bold'
@@ -43,7 +41,6 @@ function ArtisanVillageTabs({
         }`}
         id="tab-villages"
         onClick={() => onChangeTab('villages')}
-        role="tab"
         type="button"
       >
         <span>Làng nghề</span>
@@ -54,7 +51,7 @@ function ArtisanVillageTabs({
               : 'bg-surface text-muted'
           }`}
         >
-          {villageCount}
+          {villageCount ?? '—'}
         </span>
       </button>
     </div>

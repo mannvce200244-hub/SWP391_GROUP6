@@ -34,9 +34,11 @@ public class AdminCategoryController {
     private final CategoryService categoryService;
 
     @GetMapping
-    @Operation(summary = "List all categories with product counts", description = "Returns all categories for back-office management.")
-    public ResponseEntity<List<CategoryDetailResponse>> listAdminCategories() {
-        return ResponseEntity.ok(categoryService.listAdminCategories());
+    @Operation(summary = "List all categories with product counts", description = "Returns all categories for back-office management with optional search query.")
+    public ResponseEntity<List<CategoryDetailResponse>> listAdminCategories(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String search
+    ) {
+        return ResponseEntity.ok(categoryService.listAdminCategories(search));
     }
 
     @GetMapping("/{id}")

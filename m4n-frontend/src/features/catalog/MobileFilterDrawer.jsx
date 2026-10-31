@@ -1,7 +1,6 @@
-import { useEffect, useRef } from 'react'
-import { IconX } from '../../components/ui/Icons.jsx'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
+import { X } from 'lucide-react'
 import ProductFilters from './ProductFilters.jsx'
-import validateProductFilters from './productFilterValidation.js'
 
 function MobileFilterDrawer({
   busy = false,
@@ -12,32 +11,7 @@ function MobileFilterDrawer({
   onReset,
   value,
 }) {
-  const drawerRef = useRef(null)
-
-  // Lock body scroll when drawer is open
-  useEffect(() => {
-    if (isOpen) {
-      const originalOverflow = document.body.style.overflow
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = originalOverflow
-      }
-    }
-  }, [isOpen])
-
-  // Handle Escape key
-  useEffect(() => {
-    if (!isOpen) return
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        onClose()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  const drawerRef = useDialogFocus(isOpen, onClose)
 
   if (!isOpen) return null
 
@@ -47,11 +21,7 @@ function MobileFilterDrawer({
   }
 
   const handleApplyClick = () => {
-    const validation = validateProductFilters(value)
-    if (Object.keys(validation.errors).length > 0) {
-      return
-    }
-    handleApplyAndClose(validation.normalizedFilters)
+    drawerRef.current?.querySelector('form')?.requestSubmit()
   }
 
   const handleResetAndClose = () => {
@@ -76,6 +46,7 @@ function MobileFilterDrawer({
       {/* Slide-over Drawer Panel */}
       <div
         ref={drawerRef}
+        tabIndex={-1}
         className="relative w-full max-w-sm h-full bg-surface shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-200"
       >
         {/* Drawer Header */}
@@ -97,7 +68,7 @@ function MobileFilterDrawer({
             onClick={onClose}
             type="button"
           >
-            <IconX size={20} />
+            <X size={20} />
           </button>
         </div>
 
@@ -116,7 +87,7 @@ function MobileFilterDrawer({
         {/* Drawer Footer Actions */}
         <div className="p-4 border-t border-border bg-surface flex items-center gap-3 shrink-0">
           <button
-            className="flex-1 h-10 px-4 rounded-md border border-control-border text-ink text-xs font-semibold hover:bg-surface-secondary transition-colors cursor-pointer text-center"
+            className="flex-1 h-10 px-4 rounded-md border border-control-border text-ink text-sm font-semibold hover:bg-surface-secondary transition-colors cursor-pointer text-center"
             disabled={busy}
             onClick={handleResetAndClose}
             type="button"
@@ -124,7 +95,7 @@ function MobileFilterDrawer({
             Đặt lại
           </button>
           <button
-            className="flex-1 h-10 px-4 rounded-md bg-brand text-white text-xs font-semibold hover:bg-brand-hover active:bg-brand-deep transition-all duration-150 shadow-xs cursor-pointer text-center"
+            className="flex-1 h-10 px-4 rounded-md bg-brand text-white text-sm font-semibold hover:bg-brand-hover active:bg-brand-deep transition-all duration-150 shadow-xs cursor-pointer text-center"
             disabled={busy}
             onClick={handleApplyClick}
             type="button"

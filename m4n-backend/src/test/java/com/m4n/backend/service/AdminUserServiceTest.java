@@ -7,12 +7,12 @@ import com.m4n.backend.dto.response.UserDetailResponse;
 import com.m4n.backend.entity.Role;
 import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
-import com.m4n.backend.exception.DuplicateResourceException;
 import com.m4n.backend.exception.StaleVersionException;
 import com.m4n.backend.mapper.UserMapper;
 import com.m4n.backend.repository.RoleRepository;
+import com.m4n.backend.repository.ConversationRepository;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.AdminUserServiceImpl;
+import com.m4n.backend.service.serviceImpl.AdminUserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,6 +46,9 @@ class AdminUserServiceTest {
     @Mock
     private RefreshTokenService refreshTokenService;
 
+    @Mock
+    private ConversationRepository conversationRepository;
+
     private AdminUserService adminUserService;
     private final UserMapper userMapper = new UserMapper();
 
@@ -66,7 +69,8 @@ class AdminUserServiceTest {
                 roleRepository,
                 passwordEncoder,
                 userMapper,
-                refreshTokenService
+                refreshTokenService,
+                conversationRepository
         );
 
         adminRole = Role.builder().id(1L).name(RoleName.ADMIN).build();
@@ -231,11 +235,34 @@ class AdminUserServiceTest {
     }
 
     @Test
+    @DisplayName("Regular Admin cannot edit another ADMIN's contact data")
+    void updateUser_asAdmin_targetAdmin_throwsAccessDenied() {
+        User targetAdmin = User.builder()
+                .id(99L)
+                .email("peer-admin@m4n.vn")
+                .role(adminRole)
+                .version(1L)
+                .build();
+        when(userRepository.findByEmailIgnoreCase("admin@m4n.vn"))
+                .thenReturn(Optional.of(adminOperator));
+        when(userRepository.findById(99L)).thenReturn(Optional.of(targetAdmin));
+
+        UpdateUserRequest request = new UpdateUserRequest(
+                "Peer Admin Updated", "0909999999", "Da Nang", 1L);
+
+        assertThatThrownBy(() -> adminUserService.updateUser(99L, request, "admin@m4n.vn"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("Chỉ Super Admin");
+
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
     @DisplayName("Regular Admin cannot change role of ADMIN - throws AccessDeniedException")
     void changeRole_asAdmin_targetAdmin_throwsAccessDenied() {
         when(userRepository.findByEmailIgnoreCase("admin@m4n.vn")).thenReturn(Optional.of(adminOperator));
         User targetAdmin = User.builder().id(99L).role(adminRole).version(1L).build();
-        when(userRepository.findById(99L)).thenReturn(Optional.of(targetAdmin));
+        when(userRepository.findByIdWithLock(99L)).thenReturn(Optional.of(targetAdmin));
 
         ChangeUserRoleRequest request = new ChangeUserRoleRequest(RoleName.POS_STAFF, 1L);
 
@@ -250,8 +277,8 @@ class AdminUserServiceTest {
     @DisplayName("Last active Super Admin cannot be demoted - invariant enforcement")
     void changeRole_lastSuperAdmin_throwsIllegalStateException() {
         when(userRepository.findByEmailIgnoreCase("superadmin@m4n.vn")).thenReturn(Optional.of(superAdminOperator));
-        when(userRepository.findById(20L)).thenReturn(Optional.of(superAdminOperator));
-        when(userRepository.countByRole_NameAndIsActiveTrue(RoleName.SUPER_ADMIN)).thenReturn(1L); // ONLY ONE active!
+        when(userRepository.findByIdWithLock(20L)).thenReturn(Optional.of(superAdminOperator));
+        when(userRepository.findActiveByRoleNameWithLock(RoleName.SUPER_ADMIN)).thenReturn(java.util.List.of(superAdminOperator)); // ONLY ONE active!
 
         ChangeUserRoleRequest demoteRequest = new ChangeUserRoleRequest(RoleName.ADMIN, 1L);
 
@@ -266,7 +293,7 @@ class AdminUserServiceTest {
     @DisplayName("Successful role change revokes target user's active sessions")
     void changeRole_success_revokesSessions() {
         when(userRepository.findByEmailIgnoreCase("superadmin@m4n.vn")).thenReturn(Optional.of(superAdminOperator));
-        when(userRepository.findById(30L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findByIdWithLock(30L)).thenReturn(Optional.of(staffUser));
         when(roleRepository.findByName(RoleName.POS_STAFF)).thenReturn(Optional.of(posStaffRole));
         when(userRepository.save(any(User.class))).thenReturn(staffUser);
 
@@ -282,7 +309,7 @@ class AdminUserServiceTest {
     @DisplayName("Operator cannot self-disable account")
     void disableUser_selfDisable_throwsIllegalArgumentException() {
         when(userRepository.findByEmailIgnoreCase("superadmin@m4n.vn")).thenReturn(Optional.of(superAdminOperator));
-        when(userRepository.findById(20L)).thenReturn(Optional.of(superAdminOperator));
+        when(userRepository.findByIdWithLock(20L)).thenReturn(Optional.of(superAdminOperator));
 
         assertThatThrownBy(() -> adminUserService.disableUser(20L, 1L, "superadmin@m4n.vn"))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -293,8 +320,8 @@ class AdminUserServiceTest {
     @DisplayName("Last active Super Admin cannot be disabled")
     void disableUser_lastSuperAdmin_throwsIllegalStateException() {
         when(userRepository.findByEmailIgnoreCase("superadmin@m4n.vn")).thenReturn(Optional.of(superAdminOperator));
-        when(userRepository.findById(40L)).thenReturn(Optional.of(superAdminUser));
-        when(userRepository.countByRole_NameAndIsActiveTrue(RoleName.SUPER_ADMIN)).thenReturn(1L);
+        when(userRepository.findByIdWithLock(40L)).thenReturn(Optional.of(superAdminUser));
+        when(userRepository.findActiveByRoleNameWithLock(RoleName.SUPER_ADMIN)).thenReturn(java.util.List.of(superAdminUser));
 
         assertThatThrownBy(() -> adminUserService.disableUser(40L, 1L, "superadmin@m4n.vn"))
                 .isInstanceOf(IllegalStateException.class)
@@ -305,7 +332,7 @@ class AdminUserServiceTest {
     @DisplayName("Disabling account revokes active sessions")
     void disableUser_success_revokesSessions() {
         when(userRepository.findByEmailIgnoreCase("superadmin@m4n.vn")).thenReturn(Optional.of(superAdminOperator));
-        when(userRepository.findById(30L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findByIdWithLock(30L)).thenReturn(Optional.of(staffUser));
         when(userRepository.save(any(User.class))).thenReturn(staffUser);
 
         UserDetailResponse response = adminUserService.disableUser(30L, 1L, "superadmin@m4n.vn");

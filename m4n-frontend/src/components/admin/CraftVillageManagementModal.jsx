@@ -1,23 +1,29 @@
 import { useState, useEffect, useCallback } from 'react'
 import craftVillageService from '../../services/craftVillageService.js'
 import useToast from '../ui/useToast.js'
-import { IconLandmark, IconX } from '../ui/Icons.jsx'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
+import { Landmark, X } from 'lucide-react'
+import ConfirmDialog from '../ui/ConfirmDialog.jsx'
 
-export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess }) {
+export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess, initialVillage = null }) {
   const { addToast } = useToast()
   const [villages, setVillages] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [editingVillage, setEditingVillage] = useState(null)
+  const [editingVillage, setEditingVillage] = useState(initialVillage)
   const [search, setSearch] = useState('')
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null)
+  const [modalDeleting, setModalDeleting] = useState(false)
 
   // Form fields
-  const [name, setName] = useState('')
-  const [location, setLocation] = useState('')
-  const [description, setDescription] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  const [name, setName] = useState(() => initialVillage?.name || '')
+  const [location, setLocation] = useState(() => initialVillage?.location || '')
+  const [description, setDescription] = useState(() => initialVillage?.description || '')
+  const [imageUrl, setImageUrl] = useState(() => initialVillage?.imageUrl || '')
   const [formErrors, setFormErrors] = useState({})
   const [serverError, setServerError] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
+
 
   const resetForm = useCallback(() => {
     setEditingVillage(null)
@@ -31,11 +37,13 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
 
   const fetchVillages = useCallback(async () => {
     setLoading(true)
+    setLoadFailed(false)
     setServerError('')
     try {
       const data = await craftVillageService.getAdminCraftVillages()
       setVillages(data || [])
     } catch (err) {
+      setLoadFailed(true)
       setServerError(err.message || 'Không thể tải dữ liệu làng nghề')
     } finally {
       setLoading(false)
@@ -56,6 +64,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
       })
       .catch((err) => {
         if (active) {
+          setLoadFailed(true)
           setServerError(err.message || 'Không thể tải dữ liệu làng nghề')
           setLoading(false)
         }
@@ -67,11 +76,15 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
   }, [isOpen])
 
   const handleClose = () => {
+    if (submitting || modalDeleting) return
     resetForm()
     onClose()
   }
 
+  const dialogRef = useDialogFocus(isOpen, () => handleClose(), submitting || modalDeleting)
+
   const startEdit = (v) => {
+    if (submitting || modalDeleting) return
     setEditingVillage(v)
     setName(v.name)
     setLocation(v.location)
@@ -93,12 +106,15 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
     } else if (location.trim().length > 255) {
       errors.location = 'Địa chỉ không được vượt quá 255 ký tự'
     }
+    if (imageUrl.trim().length > 500) errors.imageUrl = 'URL hình ảnh tối đa 500 ký tự.'
     setFormErrors(errors)
+    if (Object.keys(errors).length) document.getElementById("craftvillage-" + Object.keys(errors)[0])?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (submitting || modalDeleting || loading || loadFailed) return
     if (!validate()) return
 
     setSubmitting(true)
@@ -128,32 +144,37 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
       await fetchVillages()
       if (onSuccess) onSuccess()
     } catch (err) {
+      setFormErrors(err.fieldErrors || err.data?.fieldErrors || {})
       setServerError(err.message || 'Đã xảy ra lỗi khi lưu làng nghề')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handleDelete = async (v) => {
+  const handleDelete = (v) => {
+    if (submitting || modalDeleting) return
     if (v.artisanCount > 0 || v.productCount > 0) {
       addToast({
-        message: `Không thể xóa làng nghề "${v.name}" vì đang có ${v.artisanCount} nghệ nhân và ${v.productCount} sản phẩm liên kết.`,
+        message: `Không thể xóa làng nghề "${v.name}" vì đang có ${v.artisanCount} nghệ nhân và ${v.productCount} sản phẩm liên kết. Vui lòng gỡ các liên kết trước.`,
         type: 'error',
+        duration: 5000,
       })
       return
     }
+    setDeleteConfirmTarget(v)
+  }
 
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa làng nghề "${v.name}"?`)) {
-      return
-    }
-
+  const confirmDeleteVillage = async () => {
+    if (!deleteConfirmTarget || modalDeleting || submitting) return
+    setModalDeleting(true)
     try {
-      await craftVillageService.deleteCraftVillage(v.id)
+      await craftVillageService.deleteCraftVillage(deleteConfirmTarget.id)
       addToast({
-        message: `Đã xóa làng nghề "${v.name}".`,
+        message: `Đã xóa làng nghề "${deleteConfirmTarget.name}".`,
         type: 'success',
       })
-      if (editingVillage?.id === v.id) resetForm()
+      if (editingVillage?.id === deleteConfirmTarget.id) resetForm()
+      setDeleteConfirmTarget(null)
       await fetchVillages()
       if (onSuccess) onSuccess()
     } catch (err) {
@@ -161,6 +182,8 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
         message: err.message || 'Không thể xóa làng nghề này',
         type: 'error',
       })
+    } finally {
+      setModalDeleting(false)
     }
   }
 
@@ -174,6 +197,8 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
@@ -184,7 +209,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
         <div className="px-6 py-4 border-b border-[#E5E8EB] flex items-center justify-between bg-[#FFFFFF]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center font-bold text-sm">
-              <IconLandmark size={20} />
+              <Landmark size={20} />
             </div>
             <div>
               <h2 id="village-modal-title" className="text-lg font-bold text-[#17191B]">
@@ -201,7 +226,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
             className="w-9 h-9 rounded-xl flex items-center justify-center text-secondary hover:text-[#17191B] hover:bg-[#F2F4F5] transition-colors cursor-pointer"
             aria-label="Đóng"
           >
-            <IconX size={18} />
+            <X size={18} />
           </button>
         </div>
 
@@ -214,66 +239,69 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
             </h3>
 
             {serverError && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+              <div role="alert" className="mb-4 p-3 rounded-lg bg-[#FFFFFF] border border-rose-200 text-rose-700 text-xs">
                 {serverError}
+                {loadFailed && <button type="button" onClick={fetchVillages} className="block mt-2 underline">Tải lại dữ liệu</button>}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <fieldset disabled={submitting || modalDeleting} className="contents">
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="craftvillage-name" className="block text-sm font-semibold text-[#17191B] mb-1.5">
                   Tên làng nghề <span className="text-rose-500">*</span>
                 </label>
-                <input
+                <input id="craftvillage-name" name="name" maxLength={150} aria-invalid={Boolean(formErrors.name)} aria-describedby={formErrors.name ? "craftvillage-name-error" : undefined}
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="VD: Làng Đào Xá..."
                   className={`w-full px-3.5 py-2 text-sm rounded-xl border ${
-                    formErrors.name ? 'border-rose-400 bg-rose-50/30' : 'border-[#E5E8EB]'
+                    formErrors.name ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E5E8EB]'
                   } bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30`}
                 />
                 {formErrors.name && (
-                  <span className="text-xs text-rose-500 mt-1 block">{formErrors.name}</span>
+                  <span id="craftvillage-name-error" role="alert" className="text-xs text-rose-500 mt-1 block">{formErrors.name}</span>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="craftvillage-location" className="block text-sm font-semibold text-[#17191B] mb-1.5">
                   Địa chỉ / Vị trí <span className="text-rose-500">*</span>
                 </label>
-                <input
+                <input id="craftvillage-location" name="location" maxLength={255} aria-invalid={Boolean(formErrors.location)} aria-describedby={formErrors.location ? "craftvillage-location-error" : undefined}
                   type="text"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="VD: Ứng Hòa, Hà Nội..."
                   className={`w-full px-3.5 py-2 text-sm rounded-xl border ${
-                    formErrors.location ? 'border-rose-400 bg-rose-50/30' : 'border-[#E5E8EB]'
+                    formErrors.location ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E5E8EB]'
                   } bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30`}
                 />
                 {formErrors.location && (
-                  <span className="text-xs text-rose-500 mt-1 block">{formErrors.location}</span>
+                  <span id="craftvillage-location-error" role="alert" className="text-xs text-rose-500 mt-1 block">{formErrors.location}</span>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="craftvillage-imageUrl" className="block text-sm font-semibold text-[#17191B] mb-1.5">
                   URL hình ảnh
                 </label>
-                <input
+                <input id="craftvillage-imageUrl" name="imageUrl" maxLength={500} aria-invalid={Boolean(formErrors.imageUrl)}
                   type="text"
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                   placeholder="https://... hoặc /assets/..."
                   className="w-full px-3.5 py-2 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30"
                 />
+                {formErrors.imageUrl && <p role="alert" className="text-xs text-danger">{formErrors.imageUrl}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="craftvillage-description" className="block text-sm font-semibold text-[#17191B] mb-1.5">
                   Lịch sử & Mô tả
                 </label>
-                <textarea
+                <textarea id="craftvillage-description" name="description" aria-invalid={Boolean(formErrors.description)}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
@@ -285,7 +313,7 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
               <div className="flex items-center gap-2 pt-2">
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || modalDeleting || loading || loadFailed}
                   className="flex-1 py-2.5 px-4 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-semibold shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? 'Đang lưu...' : editingVillage ? 'Cập nhật' : 'Thêm mới'}
@@ -293,28 +321,32 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
                 {editingVillage && (
                   <button
                     type="button"
-                    onClick={resetForm}
+                    onClick={() => { if (!submitting && !modalDeleting) resetForm() }}
                     className="py-2.5 px-4 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] hover:bg-[#F2F4F5] text-sm font-medium text-zinc-700 transition-colors cursor-pointer"
                   >
                     Hủy
                   </button>
                 )}
               </div>
+            </fieldset>
             </form>
           </div>
 
           {/* Right / Bottom: Village List */}
           <div className="lg:col-span-7 bg-[#FFFFFF] p-5 rounded-xl border border-[#E5E8EB] shadow-2xs flex flex-col">
-            <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[#E5E8EB]">
-              <h3 className="text-sm font-bold text-[#17191B]">
+            <div className="flex flex-col gap-2.5 mb-3 pb-2 border-b border-[#E5E8EB] sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="shrink-0 text-sm font-bold text-[#17191B]">
                 Danh sách ({villages.length})
               </h3>
               <input
                 type="text"
+                name="craftVillageSearch"
+                aria-label="Tìm làng nghề"
+                autoComplete="off"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm tên hoặc địa chỉ..."
-                className="px-3.5 py-1.5 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 w-48"
+                placeholder="Tìm tên hoặc địa chỉ…"
+                className="box-border h-9 w-full min-w-0 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] px-3.5 text-sm text-[#17191B] transition-[border-color,box-shadow] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 sm:w-48 sm:min-w-48 sm:max-w-48 sm:shrink-0"
               />
             </div>
 
@@ -322,6 +354,8 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
               <div className="py-12 text-center text-sm text-secondary">
                 Đang tải dữ liệu làng nghề...
               </div>
+            ) : loadFailed ? (
+              <p className="py-12 text-center text-sm text-secondary">Danh sách chưa tải được. Vui lòng tải lại dữ liệu.</p>
             ) : filteredVillages.length === 0 ? (
               <div className="py-12 text-center text-sm text-secondary">
                 Không tìm thấy làng nghề nào phù hợp.
@@ -379,23 +413,22 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
                             <button
                               type="button"
                               onClick={() => startEdit(v)}
-                              className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-xs font-medium transition-colors cursor-pointer"
+                              className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-[13px] font-medium transition-colors cursor-pointer"
                             >
                               Sửa
                             </button>
                             <button
                               type="button"
                               onClick={() => handleDelete(v)}
-                              disabled={inUse}
                               title={
                                 inUse
                                   ? 'Không thể xóa làng nghề đang có nghệ nhân hoặc sản phẩm liên kết'
                                   : 'Xóa làng nghề'
                               }
-                              className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                              className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
                                 inUse
-                                  ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400'
-                                  : 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer'
+                                  ? 'bg-[#F6F7F8] text-zinc-400 hover:bg-[#E3E6E8] cursor-pointer'
+                                  : 'bg-surface-secondary hover:bg-surface-secondary text-rose-600 cursor-pointer'
                               }`}
                             >
                               Xóa
@@ -422,6 +455,19 @@ export default function CraftVillageManagementModal({ isOpen, onClose, onSuccess
           </button>
         </div>
       </div>
+
+      {deleteConfirmTarget && (
+        <ConfirmDialog
+          isOpen
+          title="Xóa làng nghề"
+          description={`Bạn có chắc chắn muốn xóa làng nghề "${deleteConfirmTarget.name}"?`}
+          confirmLabel="Xóa"
+          variant="danger"
+          isLoading={modalDeleting}
+          onConfirm={confirmDeleteVillage}
+          onCancel={() => { if (!modalDeleting) setDeleteConfirmTarget(null) }}
+        />
+      )}
     </div>
   )
 }

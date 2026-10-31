@@ -10,18 +10,19 @@ import {
   navigateTo,
 } from '../../routes/customerRoutes.js'
 import {
-  IconUser,
-  IconLock,
-  IconDashboard,
-  IconPackage,
-  IconCreditCard,
-  IconLogOut,
-  IconSearch,
-  IconShoppingBag,
-  IconMenu,
-  IconX,
-} from '../ui/Icons.jsx'
+  UserRound,
+  Lock,
+  LayoutDashboard,
+  Package,
+  CreditCard,
+  LogOut,
+  Search,
+  ShoppingBag,
+  Menu,
+  X,
+} from 'lucide-react'
 import NotificationBell from './NotificationBell.jsx'
+import useToast from '../ui/useToast.js'
 
 const ROLE_LABELS = Object.freeze({
   CUSTOMER: 'Khách hàng',
@@ -33,6 +34,7 @@ const ROLE_LABELS = Object.freeze({
 
 function SiteHeader({ pathname }) {
   const { user, isAuthenticated, logout } = useAuth()
+  const { addToast } = useToast()
   const { cartItemCount } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
@@ -45,6 +47,7 @@ function SiteHeader({ pathname }) {
   const isArtisansRoute =
     pathname === CUSTOMER_ROUTES.artisans ||
     pathname.startsWith(`${CUSTOMER_ROUTES.artisans}/`)
+  const isArticlesRoute = pathname === CUSTOMER_ROUTES.articles || pathname.startsWith(`${CUSTOMER_ROUTES.articles}/`)
 
   const closeMobileMenu = () => setMobileMenuOpen(false)
   const closeAccountMenu = () => setAccountMenuOpen(false)
@@ -91,11 +94,16 @@ function SiteHeader({ pathname }) {
   const handleLogout = async () => {
     closeAccountMenu()
     closeMobileMenu()
-    await logout()
-    navigateTo(CUSTOMER_ROUTES.login)
+    try {
+      await logout()
+      navigateTo(CUSTOMER_ROUTES.login)
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể đăng xuất. Vui lòng thử lại.', type: 'error' })
+    }
   }
 
   const roleName = user?.role ? (ROLE_LABELS[user.role] || user.role) : ''
+  const canUseCustomerCommerce = !isAuthenticated || user?.role === 'CUSTOMER'
 
   return (
     <header className={`sticky top-0 z-40 w-full transition-all duration-200 ${isScrolled ? 'bg-surface/95 backdrop-blur-md shadow-xs border-b border-border' : 'bg-surface border-b border-border/80'}`}>
@@ -111,7 +119,7 @@ function SiteHeader({ pathname }) {
         </RouterLink>
 
         {/* Center: Main Navigation */}
-        <nav aria-label="Điều hướng chính" className="hidden md:flex items-center gap-1">
+        <nav aria-label="Điều hướng chính" className="hidden lg:flex items-center gap-1">
           <ul className="flex items-center gap-1 list-none m-0 p-0">
             <li>
               <RouterLink
@@ -152,6 +160,8 @@ function SiteHeader({ pathname }) {
                 Nghệ nhân & Làng nghề
               </RouterLink>
             </li>
+            <li><RouterLink href={CUSTOMER_ROUTES.articles} aria-current={isArticlesRoute ? 'page' : undefined}
+              className={`px-3.5 py-1.5 rounded-lg text-sm transition-colors ${isArticlesRoute ? 'text-brand font-semibold bg-[#F6F7F8]' : 'text-ink hover:text-brand hover:bg-surface-secondary font-medium'}`}>Bài viết & Hướng dẫn</RouterLink></li>
           </ul>
         </nav>
 
@@ -164,27 +174,29 @@ function SiteHeader({ pathname }) {
             onClick={closeMobileMenu}
             title="Tìm kiếm sản phẩm"
           >
-            <IconSearch size={20} className="w-5 h-5 shrink-0" />
+            <Search size={20} className="w-5 h-5 shrink-0" />
             <span className="hidden lg:inline text-xs font-medium">Tìm kiếm</span>
           </RouterLink>
 
-          <button
-            type="button"
-            aria-label={`Giỏ hàng (${cartItemCount} sản phẩm)`}
-            className="inline-flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary text-sm font-medium transition-colors cursor-pointer relative"
-            onClick={() => setCartDrawerOpen(true)}
-            title="Giỏ hàng"
-          >
-            <span className="relative flex items-center">
-              <IconShoppingBag size={20} className="w-5 h-5 shrink-0" />
-              {cartItemCount > 0 && (
-                <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 text-xs font-bold text-white bg-brand rounded-full" aria-hidden="true">
-                  {cartItemCount}
-                </span>
-              )}
-            </span>
-            <span className="hidden lg:inline text-xs font-medium ml-1">Giỏ hàng</span>
-          </button>
+          {canUseCustomerCommerce && (
+            <button
+              type="button"
+              aria-label={`Giỏ hàng (${cartItemCount} sản phẩm)`}
+              className="inline-flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary text-sm font-medium transition-colors cursor-pointer relative"
+              onClick={() => setCartDrawerOpen(true)}
+              title="Giỏ hàng"
+            >
+              <span className="relative flex items-center">
+                <ShoppingBag size={20} className="w-5 h-5 shrink-0" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 text-xs font-bold text-white bg-brand rounded-full" aria-hidden="true">
+                    {cartItemCount}
+                  </span>
+                )}
+              </span>
+              <span className="hidden lg:inline text-xs font-medium ml-1">Giỏ hàng</span>
+            </button>
+          )}
 
           {/* In-app Notifications */}
           <NotificationBell />
@@ -200,7 +212,7 @@ function SiteHeader({ pathname }) {
                 aria-label={`Tài khoản: ${user.fullName || user.email}`}
                 title={user.fullName || user.email}
               >
-                <IconUser size={20} className="w-5 h-5 shrink-0" />
+                <UserRound size={20} className="w-5 h-5 shrink-0" />
                 <span className="hidden sm:inline text-xs font-medium max-w-[100px] truncate">
                   {user.fullName ? user.fullName.split(' ').pop() : 'Tài khoản'}
                 </span>
@@ -213,7 +225,7 @@ function SiteHeader({ pathname }) {
                 onClick={closeMobileMenu}
                 title="Đăng nhập"
               >
-                <IconUser size={20} className="w-5 h-5 shrink-0" />
+                <UserRound size={20} className="w-5 h-5 shrink-0" />
                 <span className="hidden sm:inline text-xs font-medium">Đăng nhập</span>
               </RouterLink>
             )}
@@ -235,22 +247,24 @@ function SiteHeader({ pathname }) {
                       onClick={closeAccountMenu}
                       role="menuitem"
                     >
-                      <IconUser size={16} />
+                      <UserRound size={16} />
                       <span>Hồ sơ cá nhân</span>
                     </RouterLink>
                   </li>
 
-                  <li>
-                    <RouterLink
-                      href={CUSTOMER_ROUTES.orders}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-ink hover:bg-surface-secondary hover:text-brand transition-colors cursor-pointer"
-                      onClick={closeAccountMenu}
-                      role="menuitem"
-                    >
-                      <IconPackage size={16} />
-                      <span>Đơn hàng của tôi</span>
-                    </RouterLink>
-                  </li>
+                  {user.role === 'CUSTOMER' && (
+                    <li>
+                      <RouterLink
+                        href={CUSTOMER_ROUTES.orders}
+                        className="flex items-center gap-2.5 px-4 py-2 text-sm text-ink hover:bg-surface-secondary hover:text-brand transition-colors cursor-pointer"
+                        onClick={closeAccountMenu}
+                        role="menuitem"
+                      >
+                        <Package size={16} />
+                        <span>Đơn hàng của tôi</span>
+                      </RouterLink>
+                    </li>
+                  )}
 
                   <li>
                     <RouterLink
@@ -259,7 +273,7 @@ function SiteHeader({ pathname }) {
                       onClick={closeAccountMenu}
                       role="menuitem"
                     >
-                      <IconLock size={16} />
+                      <Lock size={16} />
                       <span>Bảo mật & Mật khẩu</span>
                     </RouterLink>
                   </li>
@@ -272,7 +286,7 @@ function SiteHeader({ pathname }) {
                         onClick={closeAccountMenu}
                         role="menuitem"
                       >
-                        <IconDashboard size={16} />
+                        <LayoutDashboard size={16} />
                         <span>Bảng điều khiển Quản trị</span>
                       </RouterLink>
                     </li>
@@ -286,7 +300,7 @@ function SiteHeader({ pathname }) {
                         onClick={closeAccountMenu}
                         role="menuitem"
                       >
-                        <IconPackage size={16} />
+                        <Package size={16} />
                         <span>Bàn làm việc Nhân viên</span>
                       </RouterLink>
                     </li>
@@ -300,7 +314,7 @@ function SiteHeader({ pathname }) {
                         onClick={closeAccountMenu}
                         role="menuitem"
                       >
-                        <IconCreditCard size={16} />
+                        <CreditCard size={16} />
                         <span>Bàn làm việc POS</span>
                       </RouterLink>
                     </li>
@@ -315,7 +329,7 @@ function SiteHeader({ pathname }) {
                       onClick={handleLogout}
                       role="menuitem"
                     >
-                      <IconLogOut size={16} />
+                      <LogOut size={16} />
                       <span>Đăng xuất</span>
                     </button>
                   </li>
@@ -328,14 +342,14 @@ function SiteHeader({ pathname }) {
           <button
             aria-expanded={mobileMenuOpen}
             aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu điều hướng'}
-            className="md:hidden p-2 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary transition-colors cursor-pointer"
+            className="lg:hidden p-2 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary transition-colors cursor-pointer"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
             type="button"
           >
             {mobileMenuOpen ? (
-              <IconX size={22} className="w-6 h-6" />
+              <X size={22} className="w-6 h-6" />
             ) : (
-              <IconMenu size={22} className="w-6 h-6" />
+              <Menu size={22} className="w-6 h-6" />
             )}
           </button>
         </div>
@@ -343,7 +357,7 @@ function SiteHeader({ pathname }) {
 
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen ? (
-        <div className="md:hidden fixed inset-x-0 top-16 bg-surface border-b border-border shadow-lg p-4 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <div className="lg:hidden fixed inset-x-0 top-16 bg-surface border-b border-border shadow-lg p-4 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto">
           <nav aria-label="Điều hướng di động">
             <ul className="flex flex-col gap-1 list-none p-0 m-0">
               <li>
@@ -388,27 +402,31 @@ function SiteHeader({ pathname }) {
                   Nghệ nhân & Làng nghề
                 </RouterLink>
               </li>
+              <li><RouterLink href={CUSTOMER_ROUTES.articles} onClick={closeMobileMenu} aria-current={isArticlesRoute ? 'page' : undefined}
+                className={`block min-h-11 px-3.5 py-2.5 rounded-lg text-sm transition-colors ${isArticlesRoute ? 'text-brand font-semibold bg-[#F6F7F8]' : 'text-ink hover:text-brand hover:bg-surface-secondary font-medium'}`}>Bài viết & Hướng dẫn</RouterLink></li>
 
-              <li>
-                <button
-                  type="button"
-                  className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-lg text-sm text-ink hover:text-brand hover:bg-surface-secondary font-medium transition-colors text-left cursor-pointer"
-                  onClick={() => {
-                    closeMobileMenu()
-                    setCartDrawerOpen(true)
-                  }}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <IconShoppingBag size={20} className="w-5 h-5 shrink-0 text-ink/70" />
-                    Giỏ hàng
-                  </span>
-                  {cartItemCount > 0 && (
-                    <span className="px-2 py-0.5 text-xs font-bold text-white bg-brand rounded-full">
-                      {cartItemCount}
+              {canUseCustomerCommerce && (
+                <li>
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-lg text-sm text-ink hover:text-brand hover:bg-surface-secondary font-medium transition-colors text-left cursor-pointer"
+                    onClick={() => {
+                      closeMobileMenu()
+                      setCartDrawerOpen(true)
+                    }}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <ShoppingBag size={20} className="w-5 h-5 shrink-0 text-ink/70" />
+                      Giỏ hàng
                     </span>
-                  )}
-                </button>
-              </li>
+                    {cartItemCount > 0 && (
+                      <span className="px-2 py-0.5 text-xs font-bold text-white bg-brand rounded-full">
+                        {cartItemCount}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              )}
 
               {/* Mobile Auth Actions */}
               {isAuthenticated && user ? (
@@ -427,15 +445,17 @@ function SiteHeader({ pathname }) {
                       Hồ sơ cá nhân
                     </RouterLink>
                   </li>
-                  <li>
-                    <RouterLink
-                      className="flex items-center gap-2 px-3.5 py-2 text-sm text-ink hover:text-brand hover:bg-surface-secondary rounded-lg font-medium"
-                      href={CUSTOMER_ROUTES.orders}
-                      onClick={closeMobileMenu}
-                    >
-                      Đơn hàng của tôi
-                    </RouterLink>
-                  </li>
+                  {user.role === 'CUSTOMER' && (
+                    <li>
+                      <RouterLink
+                        className="flex items-center gap-2 px-3.5 py-2 text-sm text-ink hover:text-brand hover:bg-surface-secondary rounded-lg font-medium"
+                        href={CUSTOMER_ROUTES.orders}
+                        onClick={closeMobileMenu}
+                      >
+                        Đơn hàng của tôi
+                      </RouterLink>
+                    </li>
+                  )}
                   <li>
                     <RouterLink
                       className="flex items-center gap-2 px-3.5 py-2 text-sm text-ink hover:text-brand hover:bg-surface-secondary rounded-lg font-medium"
@@ -517,13 +537,14 @@ function SiteHeader({ pathname }) {
       ) : null}
 
       {/* Slide-over Cart Drawer */}
-      <CartDrawer
-        isOpen={cartDrawerOpen}
-        onClose={() => setCartDrawerOpen(false)}
-      />
+      {canUseCustomerCommerce && (
+        <CartDrawer
+          isOpen={cartDrawerOpen}
+          onClose={() => setCartDrawerOpen(false)}
+        />
+      )}
     </header>
   )
 }
 
 export default SiteHeader
-

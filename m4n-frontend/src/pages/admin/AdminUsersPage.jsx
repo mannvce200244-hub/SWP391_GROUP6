@@ -1,22 +1,41 @@
 import { useState, useEffect, useMemo } from 'react'
 import adminUserService from '../../services/adminUserService.js'
+import { generateTemporaryPassword } from '../../utils/adminStaffPassword.js'
+import AdminUserTable from '../../components/admin/AdminUserTable.jsx'
+import AdminUserDetailModal from '../../components/admin/AdminUserDetailModal.jsx'
+import AdminStaffCreateModal from '../../components/admin/AdminStaffCreateModal.jsx'
 import useAuth from '../../features/auth/useAuth.js'
 import useToast from '../../components/ui/useToast.js'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
+import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
+import { ROUTE_CHANGE_EVENT } from '../../routes/customerRoutes.js'
+import { isValidVietnameseMobile, VIETNAMESE_MOBILE_ERROR } from '../../utils/phone.js'
 import {
-  IconChevronDown,
-  IconSearch,
-  IconShield,
-  IconAlertCircle,
-  IconX,
-} from '../../components/ui/Icons.jsx'
+  ChevronDown,
+  Search,
+  CircleAlert,
+} from 'lucide-react'
 
 const ROLE_DEFINITIONS = Object.freeze({
-  CUSTOMER: { label: 'Khách hàng', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-200' },
-  ONLINE_STAFF: { label: 'Nhân viên Online', bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-200' },
-  POS_STAFF: { label: 'Nhân viên POS', bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200' },
-  ADMIN: { label: 'Quản trị viên', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
-  SUPER_ADMIN: { label: 'Super Admin', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+  CUSTOMER: { label: 'Khách hàng', bg: 'bg-[#F6F7F8]', text: 'text-slate-700', border: 'border-slate-200' },
+  ONLINE_STAFF: { label: 'Nhân viên Online', bg: 'bg-[#F6F7F8]', text: 'text-sky-700', border: 'border-sky-200' },
+  POS_STAFF: { label: 'Nhân viên POS', bg: 'bg-[#F6F7F8]', text: 'text-amber-800', border: 'border-amber-200' },
+  ADMIN: { label: 'Quản trị viên', bg: 'bg-[#F6F7F8]', text: 'text-indigo-700', border: 'border-indigo-200' },
+  SUPER_ADMIN: { label: 'Super Admin', bg: 'bg-[#F6F7F8]', text: 'text-emerald-700', border: 'border-emerald-200' },
 })
+
+function mapFieldErrors(error, aliases = {}) {
+  const source = error?.fieldErrors || error?.data?.fieldErrors
+  if (!source || typeof source !== 'object') return {}
+
+  return Object.entries(source).reduce((mapped, [field, message]) => {
+    const targetField = aliases[field] || field
+    if (typeof message === 'string' && message.trim()) {
+      mapped[targetField] = message.trim()
+    }
+    return mapped
+  }, {})
+}
 
 export function AdminUsersPage() {
   const { user: currentUser } = useAuth()
@@ -28,6 +47,8 @@ export function AdminUsersPage() {
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize] = useState(10)
   const [isLoading, setIsLoading] = useState(true)
+  const [listError, setListError] = useState('')
+  const [statusConfirmOpen, setStatusConfirmOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   // Filters
@@ -43,6 +64,7 @@ export function AdminUsersPage() {
   const [conflictMessage, setConflictMessage] = useState('')
   const [selectedUser, setSelectedUser] = useState(null)
   const [isActionLoading, setIsActionLoading] = useState(false)
+  const [createdStaffCredentials, setCreatedStaffCredentials] = useState(null)
 
   // Forms
   const [createForm, setCreateForm] = useState({
@@ -57,6 +79,11 @@ export function AdminUsersPage() {
     address: '',
     newRole: '',
   })
+  const [createFieldErrors, setCreateFieldErrors] = useState({})
+  const [editFieldErrors, setEditFieldErrors] = useState({})
+
+  const closeDetailModal = () => { if (!isActionLoading) setDetailModalOpen(false) }
+  const closeConflictModal = () => { if (!isActionLoading) setConflictModalOpen(false) }
 
   // Debounce search
   useEffect(() => {
@@ -66,6 +93,35 @@ export function AdminUsersPage() {
     }, 350)
     return () => clearTimeout(timer)
   }, [searchTerm])
+
+  // Listen for query params e.g. ?tab=customers or ?tab=staff
+  useEffect(() => {
+    const handleUrlTab = () => {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab')
+      if (tab === 'customers') {
+        setRoleFilter('CUSTOMER')
+        setCurrentPage(0)
+      } else if (tab === 'staff') {
+        setRoleFilter((prev) =>
+          ['ONLINE_STAFF', 'POS_STAFF', 'ADMIN', 'SUPER_ADMIN'].includes(prev)
+            ? prev
+            : 'ONLINE_STAFF'
+        )
+        setCurrentPage(0)
+      } else if (tab === 'all') {
+        setRoleFilter('ALL')
+        setCurrentPage(0)
+      }
+    }
+    handleUrlTab()
+    window.addEventListener('popstate', handleUrlTab)
+    window.addEventListener(ROUTE_CHANGE_EVENT, handleUrlTab)
+    return () => {
+      window.removeEventListener('popstate', handleUrlTab)
+      window.removeEventListener(ROUTE_CHANGE_EVENT, handleUrlTab)
+    }
+  }, [])
 
   const refreshUsers = () => setRefreshKey((k) => k + 1)
 
@@ -78,16 +134,20 @@ export function AdminUsersPage() {
         ? false
         : undefined
 
-    adminUserService
-      .listUsers({
+    Promise.resolve().then(() => {
+      if (!active) return null
+      setIsLoading(true)
+      setListError('')
+      return adminUserService.listUsers({
         search: debouncedSearch,
         role: roleFilter,
         isActive: activeParam,
         page: currentPage,
         size: pageSize,
       })
+    })
       .then((data) => {
-        if (active) {
+        if (active && data) {
           setUsers(data?.content || [])
           setTotalElements(data?.totalElements || 0)
           setTotalPages(data?.totalPages || 1)
@@ -97,10 +157,9 @@ export function AdminUsersPage() {
       .catch((err) => {
         if (active) {
           setIsLoading(false)
-          addToast({
-            message: err.message || 'Không thể tải danh sách tài khoản.',
-            type: 'error',
-          })
+          setUsers([])
+          setTotalElements(0)
+          setListError(err.message || 'Không thể tải danh sách tài khoản.')
         }
       })
 
@@ -119,8 +178,69 @@ export function AdminUsersPage() {
     return ['ONLINE_STAFF', 'POS_STAFF']
   }, [isSuperAdmin])
 
+  const closeCreateModal = () => {
+    if (isActionLoading) return
+    setCreateModalOpen(false)
+    setCreatedStaffCredentials(null)
+    setCreateFieldErrors({})
+    setCreateForm({
+      fullName: '',
+      email: '',
+      password: '',
+      role: 'ONLINE_STAFF',
+    })
+  }
+
+  const conflictDialogRef = useDialogFocus(conflictModalOpen, closeConflictModal, isActionLoading)
+
+  const openCreateModal = () => {
+    if (isActionLoading) return
+    try {
+      setCreatedStaffCredentials(null)
+      setCreateFieldErrors({})
+      setCreateForm({
+        fullName: '',
+        email: '',
+        password: generateTemporaryPassword(),
+        role: 'ONLINE_STAFF',
+      })
+      setCreateModalOpen(true)
+    } catch (error) {
+      addToast({
+        message: error.message || 'Không thể tạo mật khẩu tạm thời an toàn.',
+        type: 'error',
+      })
+    }
+  }
+
+  const regenerateTemporaryPassword = () => {
+    try {
+      setCreateForm((current) => ({ ...current, password: generateTemporaryPassword() }))
+      setCreateFieldErrors((current) => ({ ...current, password: undefined }))
+      addToast({ message: 'Đã tạo mật khẩu tạm thời mới.', type: 'info' })
+    } catch (error) {
+      addToast({
+        message: error.message || 'Không thể tạo mật khẩu tạm thời an toàn.',
+        type: 'error',
+      })
+    }
+  }
+
+  const copyToClipboard = async (value, successMessage) => {
+    try {
+      await navigator.clipboard.writeText(value)
+      addToast({ message: successMessage, type: 'success' })
+    } catch {
+      addToast({
+        message: 'Không thể sao chép tự động. Vui lòng chọn và sao chép thủ công.',
+        type: 'error',
+      })
+    }
+  }
+
   // Open detail / edit modal
   const handleOpenDetail = async (userSummary) => {
+    if (isActionLoading) return
     try {
       setIsActionLoading(true)
       const fullDetail = await adminUserService.getUserById(userSummary.id)
@@ -131,6 +251,7 @@ export function AdminUsersPage() {
         address: fullDetail.address || '',
         newRole: fullDetail.role || '',
       })
+      setEditFieldErrors({})
       setDetailModalOpen(true)
     } catch (err) {
       addToast({
@@ -144,10 +265,12 @@ export function AdminUsersPage() {
 
   // Refresh user data on 409 conflict
   const handleReloadConflictUser = async () => {
+    if (isActionLoading) return
     if (!selectedUser?.id) {
       setConflictModalOpen(false)
       return
     }
+    setIsActionLoading(true)
     try {
       const refreshed = await adminUserService.getUserById(selectedUser.id)
       setSelectedUser(refreshed)
@@ -163,37 +286,56 @@ export function AdminUsersPage() {
         message: 'Đã tải lại dữ liệu mới nhất thành công.',
         type: 'info',
       })
-    } catch {
-      setConflictModalOpen(false)
+    } catch (err) {
+      setConflictMessage(err.message || 'Không thể tải lại dữ liệu. Vui lòng thử lại.')
+    } finally {
+      setIsActionLoading(false)
     }
   }
 
   // Handle Save Profile updates
   const handleSaveProfile = async (e) => {
     e.preventDefault()
-    if (!selectedUser) return
+    if (!selectedUser || isActionLoading) return
+
+    const errors = {}
+    const fullName = editForm.fullName.trim()
+    const phone = editForm.phone.trim()
+    const address = editForm.address.trim()
+    if (!fullName) errors.fullName = 'Họ và tên không được để trống.'
+    else if (fullName.length > 150) errors.fullName = 'Họ và tên tối đa 150 ký tự.'
+    if (phone && !isValidVietnameseMobile(phone)) errors.phone = VIETNAMESE_MOBILE_ERROR
+    if (address.length > 255) errors.address = 'Địa chỉ tối đa 255 ký tự.'
+    setEditFieldErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      addToast({ message: 'Vui lòng sửa các trường được báo lỗi trước khi lưu.', type: 'error' })
+      return
+    }
+
     setIsActionLoading(true)
     try {
       const updated = await adminUserService.updateUser(selectedUser.id, {
-        fullName: editForm.fullName,
-        phone: editForm.phone,
-        address: editForm.address,
+        fullName,
+        phone: phone || null,
+        address: address || null,
         expectedVersion: selectedUser.version,
       })
       setSelectedUser(updated)
+      setEditFieldErrors({})
       addToast({
         message: 'Cập nhật thông tin tài khoản thành công.',
         type: 'success',
       })
       refreshUsers()
     } catch (err) {
-      if (err.status === 409 || err.code === 'USER_MODIFIED_BY_ANOTHER_OPERATOR' || err.code === 'STALE_USER_VERSION') {
+      if (['USER_MODIFIED_BY_ANOTHER_OPERATOR', 'STALE_USER_VERSION'].includes(err.code || err.data?.error)) {
         setConflictMessage(
           err.message ||
             'Dữ liệu người dùng này vừa được thay đổi bởi quản trị viên khác. Vui lòng tải lại dữ liệu mới nhất.'
         )
         setConflictModalOpen(true)
       } else {
+        setEditFieldErrors(mapFieldErrors(err))
         addToast({
           message: err.message || 'Lỗi khi cập nhật thông tin.',
           type: 'error',
@@ -206,7 +348,7 @@ export function AdminUsersPage() {
 
   // Handle Role Change
   const handleChangeRole = async () => {
-    if (!selectedUser || !editForm.newRole || editForm.newRole === selectedUser.role) return
+    if (isActionLoading || !selectedUser || !editForm.newRole || editForm.newRole === selectedUser.role) return
     setIsActionLoading(true)
     try {
       const updated = await adminUserService.changeRole(selectedUser.id, {
@@ -220,7 +362,7 @@ export function AdminUsersPage() {
       })
       refreshUsers()
     } catch (err) {
-      if (err.status === 409 || err.code === 'USER_MODIFIED_BY_ANOTHER_OPERATOR' || err.code === 'STALE_USER_VERSION') {
+      if (['USER_MODIFIED_BY_ANOTHER_OPERATOR', 'STALE_USER_VERSION'].includes(err.code || err.data?.error)) {
         setConflictMessage(
           err.message ||
             'Vai trò hoặc trạng thái tài khoản vừa được thay đổi bởi quản trị viên khác.'
@@ -239,7 +381,7 @@ export function AdminUsersPage() {
 
   // Handle Disable / Reactivate toggle
   const handleToggleStatus = async () => {
-    if (!selectedUser) return
+    if (!selectedUser || isActionLoading) return
     setIsActionLoading(true)
     try {
       let updated
@@ -263,7 +405,7 @@ export function AdminUsersPage() {
       setSelectedUser(updated)
       refreshUsers()
     } catch (err) {
-      if (err.status === 409 || err.code === 'USER_MODIFIED_BY_ANOTHER_OPERATOR' || err.code === 'STALE_USER_VERSION') {
+      if (['USER_MODIFIED_BY_ANOTHER_OPERATOR', 'STALE_USER_VERSION'].includes(err.code || err.data?.error)) {
         setConflictMessage(
           err.message ||
             'Trạng thái tài khoản vừa được cập nhật bởi quản trị viên khác.'
@@ -283,22 +425,49 @@ export function AdminUsersPage() {
   // Handle Create Staff
   const handleCreateStaff = async (e) => {
     e.preventDefault()
+    if (isActionLoading) return
+
+    const errors = {}
+    const fullName = createForm.fullName.trim()
+    const email = createForm.email.trim()
+    if (!fullName) errors.fullName = 'Họ và tên không được để trống.'
+    else if (fullName.length > 150) errors.fullName = 'Họ và tên tối đa 150 ký tự.'
+    if (!email) errors.email = 'Email không được để trống.'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Định dạng email không hợp lệ.'
+    if (email.length > 255) errors.email = 'Email tối đa 255 ký tự.'
+    if (!createForm.password) errors.password = 'Mật khẩu ban đầu không được để trống.'
+    else if (createForm.password.length < 8 || createForm.password.length > 72) {
+      errors.password = 'Mật khẩu ban đầu phải từ 8 đến 72 ký tự.'
+    }
+    if (new TextEncoder().encode(createForm.password).length > 72) errors.password = 'Mật khẩu tối đa 72 byte UTF-8; ký tự có dấu có thể chiếm nhiều byte.'
+    if (!allowedCreateRoles.includes(createForm.role)) {
+      errors.role = 'Vai trò nhân viên không hợp lệ.'
+    }
+    setCreateFieldErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      addToast({ message: 'Vui lòng sửa các trường được báo lỗi trước khi tạo tài khoản.', type: 'error' })
+      return
+    }
+
     setIsActionLoading(true)
     try {
-      await adminUserService.createStaff(createForm)
+      const temporaryPassword = createForm.password
+      await adminUserService.createStaff({ ...createForm, fullName, email })
       addToast({
-        message: `Đã khởi tạo tài khoản nhân sự [${createForm.email}] thành công.`,
+        message: `Đã khởi tạo tài khoản nhân sự [${email}] thành công.`,
         type: 'success',
       })
-      setCreateModalOpen(false)
+      setCreatedStaffCredentials({ email, password: temporaryPassword })
       setCreateForm({
         fullName: '',
         email: '',
         password: '',
         role: 'ONLINE_STAFF',
       })
+      setCreateFieldErrors({})
       refreshUsers()
     } catch (err) {
+      setCreateFieldErrors(mapFieldErrors(err, { initialPassword: 'password' }))
       addToast({
         message: err.message || 'Không thể tạo nhân sự mới.',
         type: 'error',
@@ -318,8 +487,8 @@ export function AdminUsersPage() {
   const isSelf = selectedUser?.id === currentUser?.id
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto w-full">
-      {/* Page Header */}
+    <div className="flex flex-col gap-6 w-full">
+      {/* 1. Header Toolbar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-[#E5E8EB] shadow-2xs">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-[#17191B] tracking-tight">
@@ -333,10 +502,24 @@ export function AdminUsersPage() {
         <button
           type="button"
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0D9488] text-white text-sm font-semibold hover:bg-[#0F766E] transition-colors shadow-2xs cursor-pointer"
-          onClick={() => setCreateModalOpen(true)}
+          onClick={openCreateModal}
         >
           <span>+ Thêm nhân viên</span>
         </button>
+      </div>
+
+      <div className="flex items-center gap-1.5 p-1 bg-white border border-[#E5E8EB] rounded-xl shadow-2xs overflow-x-auto" aria-label="Nhóm tài khoản">
+        {['ALL', ...Object.keys(ROLE_DEFINITIONS)].filter((role) => isSuperAdmin || role !== 'SUPER_ADMIN').map((role) => (
+          <button
+            key={role}
+            type="button"
+            aria-pressed={roleFilter === role}
+            onClick={() => { setRoleFilter(role); setCurrentPage(0) }}
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap cursor-pointer ${roleFilter === role ? 'bg-brand text-white shadow-xs' : 'text-zinc-600 hover:text-zinc-900 hover:bg-[#F6F7F8]'}`}
+          >
+            {role === 'ALL' ? 'Tất cả tài khoản' : ROLE_DEFINITIONS[role].label}
+          </button>
+        ))}
       </div>
 
       {/* Toolbar: Search, Role filter, Status filter */}
@@ -344,12 +527,15 @@ export function AdminUsersPage() {
         {/* Search */}
         <div className="relative flex-1 min-w-[240px]">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary">
-            <IconSearch size={16} />
+            <Search size={16} />
           </div>
           <input
             type="text"
-            className="w-full pl-10 pr-4 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-sm text-[#17191B] placeholder-muted focus:bg-white focus:outline-none focus:border-[#0D9488] transition-all"
-            placeholder="Tìm theo họ tên hoặc email..."
+            name="userSearch"
+            aria-label="Tìm tài khoản"
+            autoComplete="off"
+            className="box-border w-full min-w-0 pl-10 pr-4 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-sm text-[#17191B] placeholder-muted focus:bg-white focus:outline-none focus:border-[#0D9488] transition-[background-color,border-color,box-shadow]"
+            placeholder="Tìm theo họ tên hoặc email…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -360,6 +546,7 @@ export function AdminUsersPage() {
           <div className="relative min-w-[150px]">
             <select
               className="w-full appearance-none pl-3 pr-8 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-sm font-medium text-[#17191B] focus:bg-white focus:outline-none focus:border-[#0D9488] cursor-pointer"
+              name="roleFilter" aria-label="Lọc theo vai trò"
               value={roleFilter}
               onChange={(e) => {
                 setRoleFilter(e.target.value)
@@ -373,13 +560,14 @@ export function AdminUsersPage() {
               <option value="ADMIN">Quản trị viên</option>
               <option value="SUPER_ADMIN">Super Admin</option>
             </select>
-            <IconChevronDown size={14} className="absolute right-2.5 top-3 text-secondary pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-2.5 top-3 text-secondary pointer-events-none" />
           </div>
 
           {/* Status Filter */}
           <div className="relative min-w-[150px]">
             <select
               className="w-full appearance-none pl-3 pr-8 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-sm font-medium text-[#17191B] focus:bg-white focus:outline-none focus:border-[#0D9488] cursor-pointer"
+              name="statusFilter" aria-label="Lọc theo trạng thái"
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value)
@@ -390,416 +578,82 @@ export function AdminUsersPage() {
               <option value="ACTIVE">Đang hoạt động</option>
               <option value="DISABLED">Đã vô hiệu hóa</option>
             </select>
-            <IconChevronDown size={14} className="absolute right-2.5 top-3 text-secondary pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-2.5 top-3 text-secondary pointer-events-none" />
           </div>
         </div>
       </div>
 
-      {/* Users Table Container */}
-      <div className="bg-white rounded-2xl border border-[#E5E8EB] shadow-2xs overflow-hidden flex flex-col">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#E5E8EB] bg-[#F6F7F8] text-xs font-semibold text-secondary">
-                <th className="py-3.5 px-4 sm:px-6">Người dùng</th>
-                <th className="py-3.5 px-4">Vai trò</th>
-                <th className="py-3.5 px-4">Trạng thái</th>
-                <th className="py-3.5 px-4">Ngày tạo</th>
-                <th className="py-3.5 px-4 sm:px-6 text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5E8EB] text-sm">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-secondary">
-                    <div className="inline-flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full border-2 border-[#0D9488] border-t-transparent animate-spin" />
-                      <span>Đang tải danh sách tài khoản...</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : users.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-secondary">
-                    Không tìm thấy người dùng phù hợp.
-                  </td>
-                </tr>
-              ) : (
-                users.map((u) => {
-                  const roleStyle = ROLE_DEFINITIONS[u.role] || ROLE_DEFINITIONS.CUSTOMER
-                  return (
-                    <tr key={u.id} className="hover:bg-[#F6F7F8]/50 transition-colors">
-                      <td className="py-3.5 px-4 sm:px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-zinc-100 text-secondary font-bold text-xs flex items-center justify-center border border-zinc-200 shrink-0">
-                            {u.fullName ? u.fullName.charAt(0).toUpperCase() : 'U'}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-semibold text-[#17191B] truncate max-w-[200px]">
-                              {u.fullName}
-                            </span>
-                            <span className="text-xs text-secondary truncate max-w-[200px]">
-                              {u.email}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
+      {listError && <div role="alert" className="rounded-xl border border-danger bg-white p-4 text-sm text-danger">{listError} <button type="button" onClick={refreshUsers} className="underline">Tải lại danh sách</button></div>}
+      <AdminUserTable
+        users={users}
+        isLoading={isLoading}
+        isActionLoading={isActionLoading}
+        listError={listError}
+        ROLE_DEFINITIONS={ROLE_DEFINITIONS}
+        totalElements={totalElements}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        setCurrentPage={setCurrentPage}
+        handleOpenDetail={handleOpenDetail}
+      />
 
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${roleStyle.bg} ${roleStyle.text} ${roleStyle.border}`}
-                        >
-                          {u.role === 'SUPER_ADMIN' && <IconShield size={13} className="shrink-0" />}
-                          <span>{roleStyle.label}</span>
-                        </span>
-                      </td>
+      {createModalOpen && <AdminStaffCreateModal
+        createdStaffCredentials={createdStaffCredentials}
+        createForm={createForm}
+        setCreateForm={setCreateForm}
+        createFieldErrors={createFieldErrors}
+        setCreateFieldErrors={setCreateFieldErrors}
+        isActionLoading={isActionLoading}
+        allowedCreateRoles={allowedCreateRoles}
+        ROLE_DEFINITIONS={ROLE_DEFINITIONS}
+        closeCreateModal={closeCreateModal}
+        copyToClipboard={copyToClipboard}
+        regenerateTemporaryPassword={regenerateTemporaryPassword}
+        handleCreateStaff={handleCreateStaff}
+      />}
 
-                      <td className="py-3.5 px-4">
-                        {u.isActive ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                            <span>Hoạt động</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600">
-                            <span className="w-2 h-2 rounded-full bg-red-500" />
-                            <span>Vô hiệu hóa</span>
-                          </span>
-                        )}
-                      </td>
+      {detailModalOpen && selectedUser && <AdminUserDetailModal
+        selectedUser={selectedUser}
+        editForm={editForm}
+        setEditForm={setEditForm}
+        editFieldErrors={editFieldErrors}
+        setEditFieldErrors={setEditFieldErrors}
+        isActionLoading={isActionLoading}
+        ROLE_DEFINITIONS={ROLE_DEFINITIONS}
+        isSuperAdmin={isSuperAdmin}
+        isSelf={isSelf}
+        canActorManageTargetRole={canActorManageTargetRole}
+        closeDetailModal={closeDetailModal}
+        handleSaveProfile={handleSaveProfile}
+        handleChangeRole={handleChangeRole}
+        setStatusConfirmOpen={setStatusConfirmOpen}
+      />}
 
-                      <td className="py-3.5 px-4 text-secondary text-xs">
-                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : '—'}
-                      </td>
-
-                      <td className="py-3.5 px-4 sm:px-6 text-right">
-                        <button
-                          type="button"
-                          className="px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-white hover:bg-[#F6F7F8] text-xs font-medium text-[#17191B] hover:text-[#0D9488] transition-colors cursor-pointer shadow-2xs"
-                          onClick={() => handleOpenDetail(u)}
-                        >
-                          Chi tiết
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Bar */}
-        <div className="px-4 sm:px-6 py-3 border-t border-[#E5E8EB] bg-[#F6F7F8] flex items-center justify-between text-sm text-secondary">
-          <span>
-            Hiển thị <strong>{users.length}</strong> / <strong>{totalElements}</strong> tài khoản
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-white hover:bg-[#F6F7F8] disabled:opacity-40 disabled:cursor-not-allowed font-medium text-[#17191B] cursor-pointer"
-              disabled={currentPage <= 0}
-              onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-            >
-              Trang trước
-            </button>
-            <span className="px-2 font-medium">
-              Trang {currentPage + 1} / {totalPages || 1}
-            </span>
-            <button
-              type="button"
-              className="px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-white hover:bg-[#F6F7F8] disabled:opacity-40 disabled:cursor-not-allowed font-medium text-[#17191B] cursor-pointer"
-              disabled={currentPage >= totalPages - 1}
-              onClick={() => setCurrentPage((p) => p + 1)}
-            >
-              Trang sau
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* MODAL 1: CREATE STAFF */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-[#E5E8EB] shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center pb-3 border-b border-[#E5E8EB] mb-4">
-              <h2 className="text-lg font-bold text-[#17191B]">Thêm nhân sự mới</h2>
-              <button
-                type="button"
-                className="text-secondary hover:text-[#17191B] cursor-pointer p-1 rounded-lg hover:bg-zinc-100 transition-colors"
-                onClick={() => setCreateModalOpen(false)}
-                aria-label="Đóng"
-              >
-                <IconX size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateStaff} className="flex flex-col gap-4 text-sm">
-              <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Họ và tên <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
-                  placeholder="Ví dụ: Nguyễn Văn A"
-                  value={createForm.fullName}
-                  onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Email đăng nhập <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
-                  placeholder="staff@m4n.vn"
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Mật khẩu khởi tạo <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
-                  placeholder="Tối thiểu 8 ký tự"
-                  value={createForm.password}
-                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Vai trò phân công <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none bg-white font-medium cursor-pointer"
-                  value={createForm.role}
-                  onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-                >
-                  {allowedCreateRoles.map((r) => (
-                    <option key={r} value={r}>
-                      {ROLE_DEFINITIONS[r]?.label || r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-2.5 pt-3 border-t border-[#E5E8EB] mt-2">
-                <button
-                  type="button"
-                  className="px-4 py-2.5 rounded-xl border border-[#E5E8EB] text-zinc-700 hover:bg-[#F6F7F8] font-semibold text-sm cursor-pointer"
-                  onClick={() => setCreateModalOpen(false)}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isActionLoading}
-                  className="px-5 py-2.5 rounded-xl bg-[#0D9488] text-white font-semibold text-sm hover:bg-[#0F766E] disabled:opacity-50 cursor-pointer shadow-2xs"
-                >
-                  {isActionLoading ? 'Đang tạo...' : 'Tạo tài khoản'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 2: USER DETAIL & PRIVILEGE MANAGEMENT */}
-      {detailModalOpen && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-[#E5E8EB] shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-3 border-b border-[#E5E8EB] mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-[#17191B]">Chi tiết tài khoản</h2>
-                <span className="text-xs text-secondary font-mono">ID: #{selectedUser.id}</span>
-              </div>
-              <button
-                type="button"
-                className="text-secondary hover:text-[#17191B] cursor-pointer p-1 rounded-lg hover:bg-zinc-100 transition-colors"
-                onClick={() => setDetailModalOpen(false)}
-                aria-label="Đóng"
-              >
-                <IconX size={18} />
-              </button>
-            </div>
-
-            {/* Profile editing form */}
-            <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 text-sm">
-              <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Email tài khoản (Bất biến)
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={selectedUser.email}
-                  className="w-full px-3.5 py-2 bg-[#F6F7F8] border border-[#E5E8EB] rounded-xl text-secondary font-mono text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Họ và tên
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.fullName}
-                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                  className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                    Số điện thoại
-                  </label>
-                  <input
-                    type="tel"
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                    Địa chỉ
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.address}
-                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                    className="w-full px-3.5 py-2 text-sm border border-[#E5E8EB] rounded-xl focus:border-[#0D9488] focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={isActionLoading}
-                  className="px-4 py-2 rounded-xl bg-[#0D9488] text-white font-semibold text-sm hover:bg-[#0F766E] disabled:opacity-50 cursor-pointer shadow-2xs"
-                >
-                  {isActionLoading ? 'Đang lưu...' : 'Lưu thông tin liên hệ'}
-                </button>
-              </div>
-            </form>
-
-            {/* Privileged Role & Status Section */}
-            <div className="mt-6 pt-5 border-t border-[#E5E8EB] flex flex-col gap-4 text-sm">
-              <h3 className="font-bold text-xs uppercase tracking-wider text-secondary">
-                Phân quyền & Kiểm soát truy cập
-              </h3>
-
-              {/* Role Change Control */}
-              <div className="p-4 rounded-xl bg-[#F6F7F8] border border-[#E5E8EB] flex flex-col gap-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-zinc-700">Vai trò hiện tại:</span>
-                  <span className="font-bold text-[#0D9488]">
-                    {ROLE_DEFINITIONS[selectedUser.role]?.label || selectedUser.role}
-                  </span>
-                </div>
-
-                {canActorManageTargetRole(selectedUser.role) ? (
-                  <div className="flex items-center gap-2">
-                    <select
-                      className="flex-1 px-3.5 py-2 border border-[#E5E8EB] rounded-xl bg-white text-sm font-medium focus:border-[#0D9488] focus:outline-none cursor-pointer"
-                      value={editForm.newRole}
-                      onChange={(e) => setEditForm({ ...editForm, newRole: e.target.value })}
-                    >
-                      {Object.keys(ROLE_DEFINITIONS)
-                        .filter((r) => isSuperAdmin || (r !== 'ADMIN' && r !== 'SUPER_ADMIN'))
-                        .map((r) => (
-                          <option key={r} value={r}>
-                            {ROLE_DEFINITIONS[r]?.label}
-                          </option>
-                        ))}
-                    </select>
-
-                    <button
-                      type="button"
-                      disabled={isActionLoading || editForm.newRole === selectedUser.role}
-                      onClick={handleChangeRole}
-                      className="px-4 py-2 rounded-xl bg-[#17191B] text-white font-semibold text-sm hover:bg-zinc-800 disabled:opacity-40 cursor-pointer"
-                    >
-                      Đổi vai trò
-                    </button>
-                  </div>
-                ) : (
-                  <div className="text-xs text-amber-800 bg-amber-50 p-3 rounded-xl border border-amber-200 flex items-center gap-2">
-                    <IconAlertCircle size={15} className="shrink-0 text-amber-700" />
-                    <span>Chỉ Super Admin mới có thẩm quyền sửa đổi vai trò của tài khoản Quản trị viên.</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Account Status Control */}
-              <div className="p-4 rounded-xl bg-[#F6F7F8] border border-[#E5E8EB] flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="font-semibold text-zinc-700">Trạng thái tài khoản:</span>
-                  <span className="text-xs text-secondary">
-                    {selectedUser.isActive
-                      ? 'Tài khoản có quyền truy cập hệ thống bình thường.'
-                      : 'Đã khóa truy cập và thu hồi mọi phiên làm việc.'}
-                  </span>
-                </div>
-
-                {isSelf ? (
-                  <span className="text-xs text-muted font-semibold px-2.5 py-1 bg-zinc-200 rounded-lg">
-                    Không thể tự khóa
-                  </span>
-                ) : !canActorManageTargetRole(selectedUser.role) ? (
-                  <span className="text-xs text-amber-700 font-semibold">
-                    Cần quyền Super Admin
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={isActionLoading}
-                    onClick={handleToggleStatus}
-                    className={`px-4 py-2 rounded-xl font-semibold text-xs transition-colors cursor-pointer shadow-2xs ${
-                      selectedUser.isActive
-                        ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
-                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-                    }`}
-                  >
-                    {selectedUser.isActive ? 'Vô hiệu hóa tài khoản' : 'Kích hoạt lại'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={statusConfirmOpen}
+        title={selectedUser?.isActive ? 'Vô hiệu hóa tài khoản?' : 'Kích hoạt tài khoản?'}
+        description={selectedUser?.isActive ? 'Tài khoản sẽ không thể đăng nhập và các phiên đăng nhập hiện tại sẽ bị thu hồi.' : 'Tài khoản sẽ có thể đăng nhập trở lại.'}
+        confirmLabel={selectedUser?.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+        variant={selectedUser?.isActive ? 'danger' : 'default'}
+        isLoading={isActionLoading}
+        onConfirm={async () => { await handleToggleStatus(); setStatusConfirmOpen(false) }}
+        onCancel={() => { if (!isActionLoading) setStatusConfirmOpen(false) }}
+      />
 
       {/* MODAL 3: 409 CONFLICT DIALOG (LOST-UPDATE PROTECTION) */}
       {conflictModalOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-red-200 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
+          <div ref={conflictDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="user-conflict-title" className="bg-white rounded-2xl border border-red-200 shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3 text-red-600 mb-3">
-              <IconAlertCircle size={22} className="shrink-0 text-rose-600" />
-              <h2 className="text-base font-bold text-[#17191B]">Xung đột phiên làm việc (HTTP 409)</h2>
+              <CircleAlert size={22} className="shrink-0 text-rose-600" />
+              <h2 id="user-conflict-title" className="text-base font-bold text-[#17191B]">Dữ liệu tài khoản đã thay đổi</h2>
             </div>
 
-            <p className="text-sm text-secondary mb-4 leading-relaxed">
+            <p role="alert" className="text-sm text-secondary mb-4 leading-relaxed">
               {conflictMessage}
             </p>
 
-            <div className="bg-amber-50 p-3.5 rounded-xl border border-amber-200 text-xs text-amber-800 mb-5">
+            <div className="bg-[#F6F7F8] p-3.5 rounded-xl border border-amber-200 text-xs text-amber-800 mb-5">
               Để bảo vệ tính toàn vẹn dữ liệu, các thay đổi vừa rồi chưa được lưu đè. Vui lòng tải lại dữ liệu mới nhất trước khi chỉnh sửa tiếp.
             </div>
 
@@ -807,7 +661,7 @@ export function AdminUsersPage() {
               <button
                 type="button"
                 className="px-4 py-2 rounded-xl bg-[#0D9488] text-white font-semibold text-sm hover:bg-[#0F766E] transition-colors cursor-pointer shadow-2xs"
-                onClick={handleReloadConflictUser}
+                disabled={isActionLoading} onClick={handleReloadConflictUser}
               >
                 Tải dữ liệu mới nhất
               </button>

@@ -1,38 +1,67 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import useAuth from './useAuth.js'
 import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { IconAlertCircle } from '../../components/ui/Icons.jsx'
+import { CircleX } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
+import AppLoadingScreen from '../../components/ui/AppLoadingScreen.jsx'
+import { paymentReturnOrderId } from '../../services/paymentService.js'
+import { posPaymentReturnId } from '../../services/posMomoService.js'
+import GoogleLoginButton from './GoogleLoginButton.jsx'
+
+function getRoleHome(role, paymentOrderId, posPaymentId) {
+  if (role === 'POS_STAFF' && posPaymentId) return `${CUSTOMER_ROUTES.pos}?m4nPosPaymentId=${encodeURIComponent(posPaymentId)}`
+  if (role === 'CUSTOMER' && paymentOrderId) {
+    return `${CUSTOMER_ROUTES.paymentReturn}?m4nOrderId=${encodeURIComponent(paymentOrderId)}`
+  }
+  switch (role) {
+    case 'ADMIN':
+    case 'SUPER_ADMIN':
+      return CUSTOMER_ROUTES.admin
+    case 'ONLINE_STAFF':
+      return CUSTOMER_ROUTES.staff
+    case 'POS_STAFF':
+      return CUSTOMER_ROUTES.pos
+    default:
+      return CUSTOMER_ROUTES.home
+  }
+}
 
 function LoginPage() {
-  const { login, isAuthenticated, user } = useAuth()
+  const { login, isAuthenticated, isLoading, user } = useAuth()
   const { addToast } = useToast()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
-  const [generalError, setGeneralError] = useState('')
+  const [generalError, setGeneralError] = useState(() => {
+    const outcome = new URLSearchParams(window.location.search).get('google')
+    if (outcome === 'cancelled') return 'Bạn đã hủy đăng nhập Google. Bạn có thể thử lại hoặc dùng email và mật khẩu.'
+    if (outcome === 'not_allowed') return 'Không thể đăng nhập tài khoản này bằng Google. Vui lòng dùng email và mật khẩu hoặc liên hệ hỗ trợ.'
+    if (outcome === 'failed') return 'Đăng nhập Google chưa thành công. Vui lòng thử lại.'
+    if (outcome === 'success') return 'Chưa thể hoàn tất phiên đăng nhập Google. Vui lòng thử lại.'
+    return ''
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [paymentOrderId] = useState(() => new URLSearchParams(window.location.search).has('m4nOrderId')
+    ? paymentReturnOrderId(window.location.search)
+    : new URLSearchParams(window.location.search).has('google')
+      ? paymentReturnOrderId(`?m4nOrderId=${encodeURIComponent(sessionStorage.getItem('m4n-google-return-order') || '')}`) : null)
+  const [posPaymentId] = useState(() => posPaymentReturnId(window.location.search))
 
-  // Role-based redirection if already logged in
-  if (isAuthenticated && user) {
-    switch (user.role) {
-      case 'ADMIN':
-        navigateTo(CUSTOMER_ROUTES.admin)
-        break
-      case 'ONLINE_STAFF':
-        navigateTo(CUSTOMER_ROUTES.staff)
-        break
-      case 'POS_STAFF':
-        navigateTo(CUSTOMER_ROUTES.pos)
-        break
-      default:
-        navigateTo(CUSTOMER_ROUTES.home)
-        break
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('google')) sessionStorage.removeItem('m4n-google-return-order')
+  }, [])
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigateTo(getRoleHome(user.role, paymentOrderId, posPaymentId))
     }
-    return null
+  }, [isAuthenticated, user, paymentOrderId, posPaymentId])
+
+  if (isLoading || (isAuthenticated && user)) {
+    return <AppLoadingScreen message="Đang chuyển đến khu vực làm việc…" />
   }
 
   const validate = () => {
@@ -50,11 +79,14 @@ function LoginPage() {
     }
 
     setFieldErrors(errors)
+    if (errors.email) document.getElementById('login-email')?.focus()
+    else if (errors.password) document.getElementById('login-password')?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGeneralError('')
 
     if (!validate()) {
@@ -74,21 +106,15 @@ function LoginPage() {
         type: 'success',
       })
 
-      switch (authenticatedUser.role) {
-        case 'ADMIN':
-          navigateTo(CUSTOMER_ROUTES.admin)
-          break
-        case 'ONLINE_STAFF':
-          navigateTo(CUSTOMER_ROUTES.staff)
-          break
-        case 'POS_STAFF':
-          navigateTo(CUSTOMER_ROUTES.pos)
-          break
-        default:
-          navigateTo(CUSTOMER_ROUTES.home)
-          break
-      }
+      navigateTo(getRoleHome(authenticatedUser.role, paymentOrderId, posPaymentId))
     } catch (err) {
+      if (err.code === 'REGISTRATION_VERIFICATION_REQUIRED' && err.data?.email && err.data?.challenge) {
+        sessionStorage.setItem('m4n-registration-otp', JSON.stringify({ ...err.data.challenge, email: err.data.email }))
+        setPassword('')
+        navigateTo(CUSTOMER_ROUTES.register)
+        return
+      }
+      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       const message =
         err?.status === 401
           ? 'Email hoặc mật khẩu không chính xác.'
@@ -113,10 +139,10 @@ function LoginPage() {
       {generalError && (
         <div
           role="alert"
-          className="flex items-start gap-2.5 p-3.5 rounded-lg border border-brand-border bg-brand-soft text-brand text-sm leading-snug"
+          className="flex items-start gap-2.5 p-3.5 rounded-lg border border-danger-border bg-danger-soft text-danger text-sm leading-snug"
           aria-live="assertive"
         >
-          <IconAlertCircle size={18} className="shrink-0 mt-0.5" />
+          <CircleX size={18} className="shrink-0 mt-0.5" />
           <span>{generalError}</span>
         </div>
       )}
@@ -186,6 +212,8 @@ function LoginPage() {
           </Button>
         </div>
       </form>
+
+      <GoogleLoginButton disabled={isSubmitting} paymentOrderId={paymentOrderId} />
 
       <footer className="pt-4 border-t border-border flex items-center justify-center text-sm text-muted">
         <p>

@@ -7,7 +7,7 @@ import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.mapper.UserMapper;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.ProfileServiceImpl;
+import com.m4n.backend.service.serviceImpl.ProfileServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

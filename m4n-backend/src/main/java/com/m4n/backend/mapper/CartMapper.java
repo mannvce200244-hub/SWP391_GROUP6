@@ -6,6 +6,7 @@ import com.m4n.backend.entity.Cart;
 import com.m4n.backend.entity.CartItem;
 import com.m4n.backend.entity.Product;
 import com.m4n.backend.entity.ProductMedia;
+import com.m4n.backend.service.ProductPrice;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -13,6 +14,7 @@ import java.text.NumberFormat;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Component
 public class CartMapper {
@@ -27,13 +29,13 @@ public class CartMapper {
         return formatter.format(price) + " ₫";
     }
 
-    public CartItemResponse toCartItemResponse(CartItem item) {
+    public CartItemResponse toCartItemResponse(CartItem item, ProductPrice pricing) {
         if (item == null) {
             return null;
         }
 
         Product product = item.getProduct();
-        BigDecimal unitPrice = product != null ? product.getPrice() : BigDecimal.ZERO;
+        BigDecimal unitPrice = pricing.chargedUnitPrice();
         BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
 
         String imageUrl = null;
@@ -55,17 +57,19 @@ public class CartMapper {
                 item.getQuantity(),
                 subtotal,
                 formatPriceDisplay(subtotal),
-                imageUrl
+                imageUrl,
+                pricing.originalUnitPrice(),
+                pricing.productDiscountAmount()
         );
     }
 
-    public CartResponse toCartResponse(Cart cart) {
+    public CartResponse toCartResponse(Cart cart, Map<Long, ProductPrice> prices) {
         if (cart == null) {
-            return new CartResponse(null, 0, Collections.emptyList(), BigDecimal.ZERO, formatPriceDisplay(BigDecimal.ZERO));
+            return new CartResponse(null, 0, Collections.emptyList(), BigDecimal.ZERO, formatPriceDisplay(BigDecimal.ZERO), BigDecimal.ZERO, BigDecimal.ZERO);
         }
 
         List<CartItemResponse> itemResponses = cart.getItems() != null
-                ? cart.getItems().stream().map(this::toCartItemResponse).toList()
+                ? cart.getItems().stream().map(item -> toCartItemResponse(item, prices.get(item.getProduct().getId()))).toList()
                 : Collections.emptyList();
 
         int totalItems = cart.getItems() != null
@@ -75,13 +79,18 @@ public class CartMapper {
         BigDecimal totalAmount = itemResponses.stream()
                 .map(CartItemResponse::subtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal originalTotal = itemResponses.stream()
+                .map(item -> item.originalUnitPrice().multiply(BigDecimal.valueOf(item.quantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return new CartResponse(
                 cart.getId(),
                 totalItems,
                 itemResponses,
                 totalAmount,
-                formatPriceDisplay(totalAmount)
+                formatPriceDisplay(totalAmount),
+                originalTotal,
+                originalTotal.subtract(totalAmount)
         );
     }
 }

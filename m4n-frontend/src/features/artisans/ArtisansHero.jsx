@@ -1,6 +1,6 @@
 import EditorialEyebrow from '../../components/common/EditorialEyebrow.jsx'
 
-function ArtisansHero({ stats = { artisans: 8, crafts: 6, villages: 8 } }) {
+function ArtisansHero({ stats }) {
   return (
     <section
       aria-labelledby="artisans-hero-title"
@@ -22,30 +22,23 @@ function ArtisansHero({ stats = { artisans: 8, crafts: 6, villages: 8 } }) {
           </h1>
 
           <p className="text-sm sm:text-base text-muted leading-relaxed max-w-2xl">
-            Khám phá câu chuyện của những nghệ nhân tài hoa và các làng nghề trăm năm tuổi tạo nên thanh âm mộc mạc của nhạc cụ truyền thống Việt Nam.
+            Khám phá câu chuyện của những nghệ nhân và làng nghề chế tác nhạc cụ truyền thống Việt Nam.
           </p>
 
           {/* Authentic Metrics Strip */}
           <div className="pt-3 flex flex-wrap items-center gap-6 sm:gap-8 border-t border-border/70 max-w-lg">
             <div className="flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-extrabold text-ink font-sans">
-                {String(stats.artisans).padStart(2, '0')}+
+                {stats?.artisans == null ? '—' : String(stats.artisans).padStart(2, '0')}
               </span>
               <span className="text-xs text-muted font-medium">Nghệ nhân</span>
             </div>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-extrabold text-brand font-sans">
-                {String(stats.villages).padStart(2, '0')}+
+                {stats?.villages == null ? '—' : String(stats.villages).padStart(2, '0')}
               </span>
               <span className="text-xs text-muted font-medium">Làng nghề</span>
-            </div>
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-extrabold text-jade font-sans">
-                {String(stats.crafts).padStart(2, '0')}
-              </span>
-              <span className="text-xs text-muted font-medium">Ngành nghề</span>
             </div>
           </div>
         </div>
@@ -54,12 +47,12 @@ function ArtisansHero({ stats = { artisans: 8, crafts: 6, villages: 8 } }) {
         <div className="lg:col-span-5">
           <div className="relative rounded-2xl overflow-hidden border border-border shadow-xs bg-surface-secondary aspect-16/10 sm:aspect-2/1 lg:aspect-16/10 group">
             <img
-              alt="Nghệ nhân chế tác nhạc cụ truyền thống tại xưởng thủ công"
+              alt="Không gian cửa hàng nhạc cụ thực tế tại Việt Nam"
               className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500 ease-out"
               decoding="async"
               fetchPriority="high"
               height="400"
-              src="/assets/images/auth-craft-showcase.jpg"
+              src="/assets/images/vietnamese-instrument-shop.jpg"
               width="600"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent pointer-events-none" />
@@ -69,7 +62,7 @@ function ArtisansHero({ stats = { artisans: 8, crafts: 6, villages: 8 } }) {
               aria-hidden="true"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />
-              <span className="font-semibold text-white/95">Kỹ nghệ thủ công truyền thống</span>
+              <span className="font-semibold text-white/95">Ảnh tư liệu thực tế tại Việt Nam</span>
             </div>
           </div>
         </div>

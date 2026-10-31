@@ -1,22 +1,24 @@
 import { useState } from 'react'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
-import useAuth from './useAuth.js'
+import authService from './authService.js'
 import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { IconCheckCircle } from '../../components/ui/Icons.jsx'
+import { CircleCheck } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 
 function ForgotPasswordPage() {
-  const { forgotPassword } = useAuth()
   const { addToast } = useToast()
   const [email, setEmail] = useState('')
   const [fieldError, setFieldError] = useState('')
+  const [generalError, setGeneralError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSubmitted, setIsSubmitted] = useState(false)
+  const [challenge, setChallenge] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
+    setGeneralError('')
     const trimmedEmail = email.trim()
 
     if (!trimmedEmail) {
@@ -32,15 +34,15 @@ function ForgotPasswordPage() {
     setIsSubmitting(true)
 
     try {
-      await forgotPassword({ email: trimmedEmail })
-      setIsSubmitted(true)
+      const response = await authService.requestEmailOtp({ email: trimmedEmail, purpose: 'RESET_PASSWORD' })
+      setChallenge(response)
+      sessionStorage.setItem('m4n-reset-otp', JSON.stringify({ ...response, email: trimmedEmail }))
       addToast({
-        message: 'Đã gửi hướng dẫn nếu email tồn tại trên hệ thống.',
+        message: 'Đã tiếp nhận yêu cầu đặt lại mật khẩu.',
         type: 'success',
       })
-    } catch {
-      // Always show generic success state to protect user privacy (BR-AUTH-03)
-      setIsSubmitted(true)
+    } catch (error) {
+      setGeneralError(error.message || 'Không thể gửi yêu cầu lúc này. Vui lòng kiểm tra kết nối và thử lại.')
     } finally {
       setIsSubmitting(false)
     }
@@ -55,29 +57,27 @@ function ForgotPasswordPage() {
         </p>
       </header>
 
-      {isSubmitted ? (
-        <div className="flex flex-col items-center text-center py-6 px-4 gap-3 bg-jade-soft/30 border border-jade-border rounded-xl" role="status">
-          <div className="w-14 h-14 rounded-full bg-jade-soft flex items-center justify-center text-jade mb-2">
-            <IconCheckCircle size={32} />
+      {challenge ? (
+        <div className="flex flex-col items-center text-center py-6 px-4 gap-3 bg-[#F6F7F8] border border-jade-border rounded-xl" role="status">
+          <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-jade mb-2">
+            <CircleCheck size={32} />
           </div>
-          <h2 className="text-xl font-bold text-ink">Đã gửi hướng dẫn</h2>
+          <h2 className="text-xl font-bold text-ink">Đã tiếp nhận yêu cầu</h2>
           <p className="text-sm text-muted leading-relaxed max-w-sm">
-            Nếu địa chỉ <strong>{email}</strong> tồn tại trong hệ thống, bạn sẽ nhận được liên kết đặt lại mật khẩu trong ít phút.
-          </p>
-          <p className="text-xs text-muted/80 bg-surface-secondary p-2.5 rounded-lg border border-border">
-            *Môi trường thử nghiệm (DEV): Đường dẫn xác thực cũng được ghi nhận tại console backend.
+            {challenge.message} Mã có hiệu lực 10 phút.
           </p>
           <Button
             type="button"
             variant="primary"
             className="w-full mt-2"
-            onClick={() => navigateTo(CUSTOMER_ROUTES.login)}
+            onClick={() => navigateTo(CUSTOMER_ROUTES.resetPassword)}
           >
-            Quay lại Đăng nhập
+            Nhập mã OTP
           </Button>
         </div>
       ) : (
         <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
+          {generalError && <p role="alert" className="text-sm text-danger">{generalError}</p>}
           <Input
             id="forgot-email"
             name="email"
@@ -101,9 +101,9 @@ function ForgotPasswordPage() {
               variant="primary"
               className="w-full"
               loading={isSubmitting}
-              loadingLabel="Đang gửi hướng dẫn…"
+              loadingLabel="Đang gửi mã OTP…"
             >
-              Gửi hướng dẫn
+              Gửi mã OTP email
             </Button>
           </div>
         </form>

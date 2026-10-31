@@ -9,7 +9,7 @@ function InventoryDonutChart({ inventory = {} }) {
 
   const pctAvailable = Math.round((available / sumForPct) * 100)
   const pctLowStock = Math.round((lowStock / sumForPct) * 100)
-  const pctOutOfStock = Math.max(0, 100 - pctAvailable - pctLowStock)
+  const pctOutOfStock = totalModels > 0 ? Math.max(0, 100 - pctAvailable - pctLowStock) : 0
 
   // SVG Donut calculation
   const size = 160
@@ -29,25 +29,22 @@ function InventoryDonutChart({ inventory = {} }) {
     {
       label: 'Sẵn sàng / Đủ hàng',
       count: available,
-      color: '#1F6B5A',
       bgColor: 'bg-emerald-500',
-      tagColor: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+      tagColor: 'text-emerald-700 bg-surface-secondary border-emerald-200',
       pct: pctAvailable,
     },
     {
       label: 'Sắp hết hàng',
       count: lowStock,
-      color: '#D97706',
       bgColor: 'bg-amber-500',
-      tagColor: 'text-amber-700 bg-amber-50 border-amber-200',
+      tagColor: 'text-amber-800 bg-[#F6F7F8] border-amber-200',
       pct: pctLowStock,
     },
     {
       label: 'Hết hàng',
       count: outOfStock,
-      color: '#DC2626',
       bgColor: 'bg-rose-500',
-      tagColor: 'text-rose-700 bg-rose-50 border-rose-200',
+      tagColor: 'text-rose-700 bg-surface-secondary border-rose-200',
       pct: pctOutOfStock,
     },
   ]

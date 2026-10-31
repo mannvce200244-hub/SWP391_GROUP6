@@ -18,8 +18,20 @@ export const adminUserService = Object.freeze({
     return apiClient.get(`/admin/users/${id}`)
   },
 
-  async createStaff(payload) {
-    return apiClient.post('/admin/users/staff', payload)
+  async getCustomerOrderHistory(id, { page = 0, size = 5 } = {}) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) })
+    return apiClient.get(`/admin/users/${id}/orders?${params.toString()}`)
+  },
+
+  async createStaff({ fullName, email, password, role, phone, address }) {
+    return apiClient.post('/admin/users/staff', {
+      fullName,
+      email,
+      initialPassword: password,
+      role,
+      phone: phone || null,
+      address: address || null,
+    })
   },
 
   async updateUser(id, payload) {

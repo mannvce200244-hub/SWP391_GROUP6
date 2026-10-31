@@ -3,7 +3,7 @@ import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import { ProductGridSkeleton } from '../components/ui/Skeleton.jsx'
 import Button from '../components/ui/Button.jsx'
-import { IconFilter } from '../components/ui/Icons.jsx'
+import { Filter } from 'lucide-react'
 import ProductFilters from '../features/catalog/ProductFilters.jsx'
 import ProductGrid from '../features/catalog/ProductGrid.jsx'
 import ProductSearch from '../features/catalog/ProductSearch.jsx'
@@ -91,6 +91,7 @@ function ProductListPage() {
     errorMessage: '',
   })
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [requestSequence, setRequestSequence] = useState(0)
 
   // Listen for browser Back/Forward (popstate) to restore state from URL
   useEffect(() => {
@@ -131,6 +132,10 @@ function ProductListPage() {
       })
       .then((data) => {
         if (active) {
+          if (data.totalPages > 0 && currentPage > data.totalPages) {
+            setCurrentPage(data.totalPages)
+            return
+          }
           setIsLoading(false)
           setCatalog({
             status: 'success',
@@ -157,13 +162,14 @@ function ProductListPage() {
     return () => {
       active = false
     }
-  }, [activeFilters, currentPage, sortBy])
+  }, [activeFilters, currentPage, sortBy, requestSequence])
 
   const applyFilters = useCallback((nextFilters) => {
     setDraftFilters(nextFilters)
     setActiveFilters(nextFilters)
     setCurrentPage(1)
     setIsLoading(true)
+    setRequestSequence((current) => current + 1)
   }, [])
 
   const resetFilters = useCallback(() => {
@@ -171,6 +177,7 @@ function ProductListPage() {
     setActiveFilters(EMPTY_FILTERS)
     setCurrentPage(1)
     setIsLoading(true)
+    setRequestSequence((current) => current + 1)
   }, [])
 
   const handleSearchSubmit = useCallback((keyword) => {
@@ -219,39 +226,16 @@ function ProductListPage() {
 
   const retry = useCallback(() => {
     setIsLoading(true)
-    const backendSort = SORT_MAPPINGS[sortBy] || 'createdAt,desc'
-    productService
-      .listProductsPage({
-        ...activeFilters,
-        page: currentPage,
-        size: ITEMS_PER_PAGE,
-        sort: backendSort,
-      })
-      .then((data) => {
-        setIsLoading(false)
-        setCatalog({
-          status: 'success',
-          products: data.products || [],
-          totalPages: data.totalPages || 1,
-          totalElements: data.totalElements || 0,
-          errorMessage: '',
-        })
-      })
-      .catch((err) => {
-        setIsLoading(false)
-        setCatalog({
-          status: 'error',
-          products: [],
-          totalPages: 1,
-          totalElements: 0,
-          errorMessage: err.message || 'Không thể tải danh sách sản phẩm.',
-        })
-      })
-  }, [activeFilters, currentPage, sortBy])
-
+    setRequestSequence((current) => current + 1)
+  }, [])
   const hasAppliedFilters = Object.values(activeFilters).some(
     (val) => val && String(val).trim() !== '',
   )
+  const selectedGroup = CATEGORY_TABS.find((tab) => tab.id && tab.id === activeFilters.group)
+  const hasRefinements = Object.entries(activeFilters).some(
+    ([key, value]) => key !== 'group' && value && String(value).trim() !== '',
+  )
+  const isEmptyGroup = Boolean(selectedGroup) && !hasRefinements
 
   const activeFilterCount = Object.values(draftFilters).filter(
     (val) => val && String(val).trim() !== '',
@@ -269,7 +253,7 @@ function ProductListPage() {
 
           {/* Title & Description */}
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-ink tracking-tight font-sans">
-            Nhạc cụ truyền thống Việt Nam
+            {selectedGroup?.label || 'Nhạc cụ truyền thống Việt Nam'}
           </h1>
           <p className="mt-2 text-xs sm:text-sm text-muted max-w-2xl mx-auto leading-relaxed">
             Được chế tác thủ công từ danh mộc mun, cẩm lai và tre nứa già tuyển chọn bởi các nghệ nhân ưu tú tại các làng nghề di sản.
@@ -286,15 +270,16 @@ function ProductListPage() {
 
           {/* Centered Category Filter Segmented Tabs */}
           <div className="flex items-center justify-center mt-5">
-            <div className="inline-flex items-center p-1 bg-surface-secondary rounded-full border border-border shadow-2xs gap-1 max-w-full overflow-x-auto scrollbar-none">
+            <div className="grid grid-cols-2 sm:inline-flex items-center p-1 bg-surface-secondary rounded-2xl sm:rounded-full border border-border shadow-2xs gap-1 max-w-full">
               {CATEGORY_TABS.map((tab) => {
-                const isSelected = (!draftFilters.group && !tab.id) || draftFilters.group === tab.id
+                const isSelected = activeFilters.group === tab.id
                 return (
                   <button
                     key={tab.id || 'all'}
+                    aria-pressed={isSelected}
                     type="button"
                     onClick={() => handleCategoryTabClick(tab.id)}
-                    className={`px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-xs font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
+                    className={`min-h-11 sm:min-h-0 px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-xs font-semibold transition-colors duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
                       isSelected
                         ? 'bg-brand text-white shadow-2xs'
                         : 'text-muted hover:text-ink hover:bg-surface-muted'
@@ -380,7 +365,7 @@ function ProductListPage() {
                   onClick={() => setMobileDrawerOpen(true)}
                   type="button"
                 >
-                  <IconFilter className="text-brand" size={15} />
+                  <Filter className="text-brand" size={15} />
                   <span>Bộ lọc</span>
                   {activeFilterCount > 0 && (
                     <span className="inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-semibold text-white bg-brand rounded-full leading-none">
@@ -407,19 +392,23 @@ function ProductListPage() {
               {!isLoading && catalog.status === 'success' && catalog.totalElements === 0 ? (
                 <EmptyState
                   message={
-                    hasAppliedFilters
+                    isEmptyGroup
+                      ? 'Dòng nhạc cụ này hiện chưa có sản phẩm để hiển thị. Bạn có thể khám phá các dòng nhạc cụ khác.'
+                      : hasAppliedFilters
                       ? 'Thử thay đổi từ khóa hoặc khoảng giá hiện tại để tìm thấy sản phẩm.'
                       : 'Danh mục hiện chưa có sản phẩm để hiển thị.'
                   }
                   title={
-                    hasAppliedFilters
+                    isEmptyGroup
+                      ? `Chưa có sản phẩm ${selectedGroup.label.toLocaleLowerCase('vi-VN')}`
+                      : hasAppliedFilters
                       ? 'Không tìm thấy sản phẩm phù hợp'
                       : 'Chưa có sản phẩm'
                   }
                 >
                   {hasAppliedFilters ? (
                     <Button onClick={resetFilters} variant="quiet">
-                      Xóa bộ lọc
+                      {isEmptyGroup ? 'Xem tất cả sản phẩm' : 'Xóa bộ lọc'}
                     </Button>
                   ) : null}
                 </EmptyState>
@@ -457,3 +446,4 @@ function ProductListPage() {
 }
 
 export default ProductListPage
+

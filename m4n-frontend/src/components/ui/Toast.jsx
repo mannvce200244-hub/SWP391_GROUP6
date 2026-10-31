@@ -1,55 +1,68 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { ToastContext } from './ToastContext.js'
 import {
-  IconCircleCheck,
-  IconCircleX,
-  IconTriangleAlert,
-  IconInfo,
-  IconX,
-} from './Icons.jsx'
+  CircleCheck,
+  CircleX,
+  TriangleAlert,
+  Info,
+  X,
+} from 'lucide-react'
 
 const TOAST_THEMES = {
   success: {
-    border: 'border-jade-border/80',
-    bg: 'bg-jade-soft/40',
-    text: 'text-jade',
-    Icon: IconCircleCheck,
+    border: 'border-success-border',
+    accent: 'bg-success',
+    text: 'text-success',
+    Icon: CircleCheck,
   },
   error: {
     border: 'border-danger-border',
-    bg: 'bg-danger-soft/40',
+    accent: 'bg-danger',
     text: 'text-danger',
-    Icon: IconCircleX,
+    Icon: CircleX,
   },
   warning: {
-    border: 'border-warning-border',
-    bg: 'bg-warning-soft/40',
-    text: 'text-warning',
-    Icon: IconTriangleAlert,
+    border: 'border-coral-border',
+    accent: 'bg-coral',
+    text: 'text-coral',
+    Icon: TriangleAlert,
   },
   info: {
-    border: 'border-border',
-    bg: 'bg-surface-secondary',
-    text: 'text-secondary',
-    Icon: IconInfo,
+    border: 'border-brand-border',
+    accent: 'bg-brand',
+    text: 'text-brand',
+    Icon: Info,
   },
 }
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
+  const timers = useRef(new Map())
+
+  useEffect(() => {
+    const pendingTimers = timers.current
+    return () => {
+      pendingTimers.forEach(clearTimeout)
+      pendingTimers.clear()
+    }
+  }, [])
 
   const addToast = useCallback(({ message, type = 'success', duration = 3500 }) => {
     const id = Date.now() + Math.random().toString(36).slice(2, 7)
     setToasts((prev) => [...prev, { id, message, type }])
 
     if (duration > 0) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id))
+        timers.current.delete(id)
       }, duration)
+      timers.current.set(id, timer)
     }
   }, [])
 
   const removeToast = useCallback((id) => {
+    clearTimeout(timers.current.get(id))
+    timers.current.delete(id)
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
@@ -57,9 +70,8 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
       <div
-        className="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm w-[calc(100%-3rem)] pointer-events-none"
-        aria-live="polite"
-        role="status"
+        className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[100] flex flex-col gap-2.5 max-w-sm w-[calc(100%-2rem)] sm:w-[calc(100%-3rem)] pointer-events-none"
+        aria-label="Thông báo hệ thống"
       >
         {toasts.map((toast) => {
           const theme = TOAST_THEMES[toast.type] || TOAST_THEMES.info
@@ -67,9 +79,16 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={toast.id}
-              className={`pointer-events-auto flex items-center gap-3 p-3.5 rounded-lg border shadow-md bg-surface text-ink text-sm ${theme.border} ${theme.bg}`}
+              role={toast.type === 'error' ? 'alert' : 'status'}
+              aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+              aria-atomic="true"
+              className={`pointer-events-auto relative flex items-center gap-3 overflow-hidden rounded-lg border bg-white px-3.5 pb-3.5 pt-4 text-sm text-ink shadow-md ${theme.border}`}
             >
-              <span className={`shrink-0 ${theme.text}`}>
+              <span
+                className={`absolute inset-x-0 top-0 h-1 ${theme.accent}`}
+                aria-hidden="true"
+              />
+              <span className={`shrink-0 ${theme.text}`} aria-hidden="true">
                 <ToastIcon size={18} />
               </span>
               <span className="flex-1 font-medium text-ink leading-snug">{toast.message}</span>
@@ -79,7 +98,7 @@ export function ToastProvider({ children }) {
                 onClick={() => removeToast(toast.id)}
                 aria-label="Đóng thông báo"
               >
-                <IconX size={16} />
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
           )

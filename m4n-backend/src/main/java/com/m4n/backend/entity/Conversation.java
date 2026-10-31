@@ -28,7 +28,8 @@ import java.time.Instant;
         indexes = {
                 @Index(name = "idx_conversations_customer_id", columnList = "customer_id"),
                 @Index(name = "idx_conversations_assigned_staff_id", columnList = "assigned_staff_id"),
-                @Index(name = "idx_conversations_status", columnList = "status")
+                @Index(name = "idx_conversations_status", columnList = "status"),
+                @Index(name = "idx_conversations_queue", columnList = "status, assigned_staff_id, last_message_at")
         }
 )
 @Getter
@@ -60,6 +61,12 @@ public class Conversation {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Column(name = "last_message_at")
+    private Instant lastMessageAt;
+
+    @Column(name = "closed_at")
+    private Instant closedAt;
 
     @PrePersist
     protected void onCreate() {

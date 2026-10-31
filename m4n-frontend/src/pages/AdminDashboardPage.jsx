@@ -4,12 +4,12 @@ import { formatCurrencyVND } from '../utils/currency.js'
 import RevenueTrendChart from '../components/admin/RevenueTrendChart.jsx'
 import InventoryDonutChart from '../components/admin/InventoryDonutChart.jsx'
 import {
-  IconInstrument,
-  IconPackage,
-  IconCheck,
-  IconClose,
-  IconStore,
-} from '../components/ui/Icons.jsx'
+  Package,
+  Check,
+  X,
+  Store,
+} from 'lucide-react'
+import { IconInstrument } from '../components/ui/Icons.jsx'
 import prodDanTranh from '../assets/images/prod-dan-tranh.jpg'
 import prodDanBau from '../assets/images/prod-dan-bau.jpg'
 import prodDanNguyet from '../assets/images/prod-dan-nguyet.jpg'
@@ -48,28 +48,42 @@ function getStatusBadge(status, label) {
   switch (status) {
     case 'COMPLETED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-emerald-700 border border-emerald-200">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>{label || 'Hoàn thành'}</span>
         </span>
       )
     case 'CONFIRMED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-sky-700 border border-sky-200">
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
           <span>{label || 'Đã xác nhận'}</span>
         </span>
       )
+    case 'SHIPPING':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-blue-700 border border-blue-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span>{label || 'Đang giao hàng'}</span>
+        </span>
+      )
+    case 'DELIVERED':
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-violet-700 border border-violet-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+          <span>{label || 'Đã giao hàng'}</span>
+        </span>
+      )
     case 'OUT_OF_STOCK_WAITING':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F6F7F8] text-amber-800 border border-amber-200">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
           <span>{label || 'Chờ bổ sung kho'}</span>
         </span>
       )
     case 'CANCELLED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-rose-700 border border-rose-200">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
           <span>{label || 'Đã hủy'}</span>
         </span>
@@ -77,7 +91,7 @@ function getStatusBadge(status, label) {
     case 'PENDING_CONFIRMATION':
     default:
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-300">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F6F7F8] text-amber-800 border border-amber-300">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
           <span>{label || 'Chờ xác nhận'}</span>
         </span>
@@ -119,6 +133,7 @@ function AdminDashboardPage() {
   }, [period, retryCount])
 
   const handlePeriodChange = (newPeriod) => {
+    if (newPeriod === period) return
     setPeriod(newPeriod)
     setDashboardState((prev) => ({ ...prev, status: 'loading' }))
   }
@@ -153,7 +168,7 @@ function AdminDashboardPage() {
 
         {/* TailAdmin-style Segmented Period Selector */}
         <div
-          className="inline-flex items-center p-1 bg-[#F5F7FA] rounded-xl border border-[#E5E8EB] self-start sm:self-auto"
+          className="inline-flex items-center p-1 bg-[#F6F7F8] rounded-xl border border-[#E5E8EB] self-start sm:self-auto"
           role="tablist"
           aria-label="Chọn kỳ báo cáo"
         >
@@ -181,7 +196,7 @@ function AdminDashboardPage() {
 
       {/* Global Error Notice if request fails */}
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-between text-xs sm:text-sm">
+        <div className="p-4 rounded-2xl bg-surface-secondary border border-rose-200 text-rose-800 flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-2">
             <span className="font-bold">Lỗi:</span>
             <span>{error}</span>
@@ -205,7 +220,7 @@ function AdminDashboardPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Doanh thu</span>
             <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-brand flex items-center justify-center shrink-0">
-              <IconStore size={18} />
+              <Store size={18} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -228,7 +243,7 @@ function AdminDashboardPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Tổng đơn hàng</span>
             <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-secondary flex items-center justify-center shrink-0">
-              <IconPackage size={18} />
+              <Package size={18} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -251,7 +266,7 @@ function AdminDashboardPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Đơn hoàn thành</span>
             <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-jade flex items-center justify-center shrink-0">
-              <IconCheck size={18} />
+              <Check size={18} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -274,7 +289,7 @@ function AdminDashboardPage() {
           <div className="flex items-start justify-between gap-3 mb-3">
             <span className="text-xs font-semibold text-zinc-500">Đơn đã hủy</span>
             <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border/80 text-danger flex items-center justify-center shrink-0">
-              <IconClose size={18} />
+              <X size={18} />
             </div>
           </div>
           <div className="flex flex-col gap-1">
@@ -305,7 +320,7 @@ function AdminDashboardPage() {
                 Thống kê doanh thu theo {PERIOD_OPTIONS.find((p) => p.id === period)?.label.toLowerCase()}
               </p>
             </div>
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 text-[#0D9488] border border-teal-200 self-start sm:self-auto">
+            <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-surface-secondary text-[#0D9488] border border-teal-200 self-start sm:self-auto">
               {PERIOD_OPTIONS.find((p) => p.id === period)?.label}
             </span>
           </div>
@@ -385,7 +400,7 @@ function AdminDashboardPage() {
                   {topProducts.map((prod) => {
                     const thumb = PRODUCT_IMAGE_MAP[prod.productCode]
                     return (
-                      <tr key={prod.productId} className="hover:bg-[#F9FAFB] transition-colors">
+                      <tr key={prod.productId} className="hover:bg-[#F6F7F8] transition-colors">
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-zinc-100 overflow-hidden shrink-0 border border-border flex items-center justify-center">
@@ -463,7 +478,7 @@ function AdminDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-[#F2F4F5]">
                   {recentOrders.map((ord) => (
-                    <tr key={ord.id} className="hover:bg-[#F9FAFB] transition-colors">
+                    <tr key={ord.id} className="hover:bg-[#F6F7F8] transition-colors">
                       <td className="py-3 px-2.5">
                         <div className="flex flex-col">
                           <span className="font-bold text-[#17191B] font-mono text-xs">

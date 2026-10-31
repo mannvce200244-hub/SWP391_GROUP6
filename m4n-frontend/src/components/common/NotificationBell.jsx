@@ -1,61 +1,77 @@
 import { useState, useEffect, useRef } from 'react'
 import notificationService from '../../services/notificationService.js'
 import useAuth from '../../features/auth/useAuth.js'
+import useToast from '../ui/useToast.js'
 import {
-  IconBell,
-  IconMessageSquare,
-  IconPackage,
-  IconShield,
-} from '../ui/Icons.jsx'
+  Bell,
+  MessageSquare,
+  Package,
+  Shield,
+} from 'lucide-react'
 
-export function NotificationBell() {
+function NotificationBellContent() {
   const { isAuthenticated } = useAuth()
+  const { addToast } = useToast()
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [markingAll, setMarkingAll] = useState(false)
+  const pendingReads = useRef(new Set())
+  const markingAllRef = useRef(false)
+  const mutationRevision = useRef(0)
+  const countRequest = useRef(0)
   const containerRef = useRef(null)
+
+  useEffect(() => notificationService.subscribeReadChanges(() => {
+    mutationRevision.current += 1
+    countRequest.current += 1
+    setRefreshKey((key) => key + 1)
+  }), [])
 
   useEffect(() => {
     let active = true
     if (isAuthenticated) {
-      notificationService
-        .getUnreadCount()
-        .then((count) => {
-          if (active) setUnreadCount(count)
-        })
-        .catch(() => {})
-
-      const interval = setInterval(() => {
+      const refreshCount = () => {
+        if (pendingReads.current.size || markingAllRef.current) return
+        const revision = mutationRevision.current
+        const request = ++countRequest.current
         notificationService
           .getUnreadCount()
           .then((count) => {
-            if (active) setUnreadCount(count)
+            if (active && request === countRequest.current && revision === mutationRevision.current) setUnreadCount(count)
           })
-          .catch(() => {})
-      }, 30000)
+          .catch(() => { if (active && revision === mutationRevision.current) setError('Không thể cập nhật thông báo. Vui lòng thử lại.') })
+      }
+      refreshCount()
+      const interval = setInterval(refreshCount, 30000)
 
       return () => {
         active = false
         clearInterval(interval)
       }
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, refreshKey])
 
   useEffect(() => {
     let active = true
     if (isOpen && isAuthenticated) {
+      if (pendingReads.current.size || markingAllRef.current) return undefined
+      const revision = mutationRevision.current
       notificationService
         .getRecentNotifications()
         .then((data) => {
-          if (active) {
+          if (active && revision === mutationRevision.current) {
             setNotifications(Array.isArray(data) ? data : [])
+            setError('')
             setIsLoading(false)
           }
         })
         .catch(() => {
-          if (active) {
-            setNotifications([])
+          if (active && revision === mutationRevision.current) {
+            setError('Không thể tải thông báo. Vui lòng thử lại.')
             setIsLoading(false)
           }
         })
@@ -63,7 +79,7 @@ export function NotificationBell() {
     return () => {
       active = false
     }
-  }, [isOpen, isAuthenticated])
+  }, [isOpen, isAuthenticated, refreshKey])
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -87,25 +103,38 @@ export function NotificationBell() {
   }, [isOpen])
 
   const handleMarkAsRead = async (id, isRead) => {
-    if (isRead) return
+    if (isRead || pendingReads.current.has(id) || markingAllRef.current) return
+    pendingReads.current.add(id)
+    mutationRevision.current += 1
     try {
       await notificationService.markAsRead(id)
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       )
-      setUnreadCount((prev) => Math.max(0, prev - 1))
-    } catch {
-      // Ignored
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể đánh dấu thông báo đã đọc.', type: 'error' })
+    } finally {
+      pendingReads.current.delete(id)
+      mutationRevision.current += 1
+      setRefreshKey((key) => key + 1)
     }
   }
 
   const handleMarkAllAsRead = async () => {
+    if (markingAllRef.current || pendingReads.current.size) return
+    markingAllRef.current = true
+    mutationRevision.current += 1
+    setMarkingAll(true)
     try {
       await notificationService.markAllAsRead()
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
-      setUnreadCount(0)
-    } catch {
-      // Ignored
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể đánh dấu tất cả đã đọc.', type: 'error' })
+    } finally {
+      markingAllRef.current = false
+      mutationRevision.current += 1
+      setRefreshKey((key) => key + 1)
+      setMarkingAll(false)
     }
   }
 
@@ -116,12 +145,15 @@ export function NotificationBell() {
       <button
         type="button"
         className="relative p-2 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary transition-colors cursor-pointer"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => {
+          if (!isOpen) setIsLoading(true)
+          setIsOpen((prev) => !prev)
+        }}
         aria-expanded={isOpen}
         aria-label={`Thông báo hệ thống, ${unreadCount} chưa đọc`}
         title="Thông báo"
       >
-        <IconBell size={20} className="w-5 h-5" />
+        <Bell size={20} aria-hidden="true" />
 
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 min-w-4 h-4 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center leading-none shadow-xs">
@@ -131,12 +163,12 @@ export function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-border shadow-xl py-3 z-50 animate-in fade-in zoom-in-95">
+        <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl border border-border shadow-xl py-3 z-50 animate-in fade-in zoom-in-95">
           <div className="px-4 pb-2.5 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-bold text-ink text-sm">Thông báo</span>
               {unreadCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+                <span className="px-2 py-0.5 rounded-full bg-surface-secondary text-red-700 text-xs font-semibold">
                   {unreadCount} mới
                 </span>
               )}
@@ -146,38 +178,45 @@ export function NotificationBell() {
                 type="button"
                 className="text-xs text-brand hover:underline font-medium cursor-pointer"
                 onClick={handleMarkAllAsRead}
+                disabled={markingAll}
               >
                 Đánh dấu tất cả đã đọc
               </button>
             )}
           </div>
 
-          <div className="max-h-80 overflow-y-auto divide-y divide-border/50">
+          <div className="max-h-80 overflow-y-auto divide-y divide-border/50" aria-live="polite" aria-busy={isLoading}>
             {isLoading ? (
               <div className="py-8 text-center text-xs text-muted">
-                Đang tải thông báo...
+                Đang tải thông báo…
+              </div>
+            ) : error ? (
+              <div className="p-4 text-sm text-danger" role="alert">
+                <p>{error}</p>
+                <button type="button" className="mt-2 underline" onClick={() => { setIsLoading(true); setRefreshKey((key) => key + 1) }}>Thử lại</button>
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-8 text-center text-xs text-muted flex flex-col items-center gap-2">
-                <IconBell size={24} className="text-muted/70" />
+                <Bell size={24} className="text-muted/70" />
                 <span>Bạn không có thông báo mới nào.</span>
               </div>
             ) : (
               notifications.map((n) => {
                 const ItemIcon =
                   n.type === 'CHAT'
-                    ? IconMessageSquare
+                    ? MessageSquare
                     : n.type === 'ORDER'
-                    ? IconPackage
+                    ? Package
                     : n.type === 'SECURITY'
-                    ? IconShield
-                    : IconBell
+                    ? Shield
+                    : Bell
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={n.id}
                     onClick={() => handleMarkAsRead(n.id, n.isRead)}
-                    className={`p-3.5 transition-colors cursor-pointer flex gap-3 items-start ${
-                      n.isRead ? 'bg-white hover:bg-slate-50' : 'bg-jade-soft/20 hover:bg-jade-soft/40'
+                    className={`w-full text-left p-3.5 transition-colors cursor-pointer flex gap-3 items-start ${
+                      n.isRead ? 'bg-white hover:bg-surface-secondary' : 'bg-surface-secondary hover:bg-white'
                     }`}
                   >
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-surface-secondary text-secondary border border-border/80">
@@ -199,7 +238,7 @@ export function NotificationBell() {
                         {n.createdAt ? new Date(n.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : ''}
                       </span>
                     </div>
-                  </div>
+                  </button>
                 )
               })
             )}
@@ -208,6 +247,11 @@ export function NotificationBell() {
       )}
     </div>
   )
+}
+
+export function NotificationBell() {
+  const { user, isAuthenticated } = useAuth()
+  return isAuthenticated ? <NotificationBellContent key={user?.id} /> : null
 }
 
 export default NotificationBell

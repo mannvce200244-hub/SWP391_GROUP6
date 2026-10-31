@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import categoryService from '../../services/categoryService.js'
 import useToast from '../ui/useToast.js'
-import { IconLayers, IconX } from '../ui/Icons.jsx'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
+import { ConfirmDialog } from '../ui/ConfirmDialog.jsx'
+import { Layers, X } from 'lucide-react'
 
 export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) {
   const { addToast } = useToast()
   const [categories, setCategories] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [search, setSearch] = useState('')
@@ -17,6 +19,11 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
   const [description, setDescription] = useState('')
   const [formErrors, setFormErrors] = useState({})
   const [serverError, setServerError] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [catToDelete, setCatToDelete] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+
 
   const resetForm = useCallback(() => {
     setEditingCategory(null)
@@ -29,11 +36,13 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
 
   const fetchCategories = useCallback(async () => {
     setLoading(true)
+    setLoadFailed(false)
     setServerError('')
     try {
       const data = await categoryService.getAdminCategories()
       setCategories(data || [])
     } catch (err) {
+      setLoadFailed(true)
       setServerError(err.message || 'Không thể tải danh sách danh mục')
     } finally {
       setLoading(false)
@@ -54,6 +63,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
       })
       .catch((err) => {
         if (active) {
+          setLoadFailed(true)
           setServerError(err.message || 'Không thể tải danh sách danh mục')
           setLoading(false)
         }
@@ -65,11 +75,15 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
   }, [isOpen])
 
   const handleClose = () => {
+    if (submitting || deleting) return
     resetForm()
     onClose()
   }
 
+  const dialogRef = useDialogFocus(isOpen, () => handleClose(), submitting || deleting)
+
   const startEdit = (cat) => {
+    if (submitting || deleting) return
     setEditingCategory(cat)
     setCode(cat.code)
     setName(cat.name)
@@ -93,11 +107,13 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
       errors.name = 'Tên danh mục không được vượt quá 150 ký tự'
     }
     setFormErrors(errors)
+    if (Object.keys(errors).length) document.getElementById("category-" + Object.keys(errors)[0])?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (submitting || deleting || loading || loadFailed) return
     if (!validate()) return
 
     setSubmitting(true)
@@ -127,32 +143,39 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
       await fetchCategories()
       if (onSuccess) onSuccess()
     } catch (err) {
+      setFormErrors(err.fieldErrors || err.data?.fieldErrors || {})
       setServerError(err.message || 'Đã xảy ra lỗi khi lưu danh mục')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handleDelete = async (cat) => {
+  const handleDelete = (cat) => {
+    if (submitting || deleting) return
     if (cat.productCount > 0) {
       addToast({
-        message: `Không thể xóa danh mục "${cat.name}" vì đang có ${cat.productCount} sản phẩm liên kết.`,
+        message: `Không thể xóa danh mục "${cat.name}" vì đang có ${cat.productCount} sản phẩm liên kết. Vui lòng chuyển sản phẩm sang danh mục khác trước.`,
         type: 'error',
+        duration: 5000,
       })
       return
     }
+    setCatToDelete(cat)
+    setDeleteConfirmOpen(true)
+  }
 
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa danh mục "${cat.name}"?`)) {
-      return
-    }
-
+  const handleConfirmDelete = async () => {
+    if (!catToDelete || deleting || submitting) return
+    setDeleting(true)
     try {
-      await categoryService.deleteCategory(cat.id)
+      await categoryService.deleteCategory(catToDelete.id)
       addToast({
-        message: `Đã xóa danh mục "${cat.name}".`,
+        message: `Đã xóa danh mục "${catToDelete.name}".`,
         type: 'success',
       })
-      if (editingCategory?.id === cat.id) resetForm()
+      if (editingCategory?.id === catToDelete.id) resetForm()
+      setDeleteConfirmOpen(false)
+      setCatToDelete(null)
       await fetchCategories()
       if (onSuccess) onSuccess()
     } catch (err) {
@@ -160,6 +183,8 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
         message: err.message || 'Không thể xóa danh mục này',
         type: 'error',
       })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -173,6 +198,8 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
@@ -183,7 +210,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
         <div className="px-6 py-4 border-b border-[#E5E8EB] flex items-center justify-between bg-[#FFFFFF]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center font-bold text-sm">
-              <IconLayers size={20} />
+              <Layers size={20} />
             </div>
             <div>
               <h2 id="category-modal-title" className="text-lg font-bold text-[#17191B]">
@@ -200,7 +227,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
             className="w-9 h-9 rounded-xl flex items-center justify-center text-secondary hover:text-[#17191B] hover:bg-[#F2F4F5] transition-colors cursor-pointer"
             aria-label="Đóng"
           >
-            <IconX size={18} />
+            <X size={18} />
           </button>
         </div>
 
@@ -213,28 +240,30 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
             </h3>
 
             {serverError && (
-              <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+              <div role="alert" className="mb-4 p-3 rounded-lg bg-[#FFFFFF] border border-rose-200 text-rose-700 text-xs">
                 {serverError}
+                {loadFailed && <button type="button" onClick={fetchCategories} className="block mt-2 underline">Tải lại dữ liệu</button>}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              <fieldset disabled={submitting || deleting} className="contents">
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="category-code" className="block text-sm font-semibold text-[#17191B] mb-1.5">
                   Mã danh mục <span className="text-rose-500">*</span>
                 </label>
-                <input
+                <input id="category-code" name="code" maxLength={50} aria-invalid={Boolean(formErrors.code)} aria-describedby={formErrors.code ? "category-code-error" : undefined}
                   type="text"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   disabled={Boolean(editingCategory)}
                   placeholder="VD: DAY, HOI, GO..."
                   className={`w-full px-3.5 py-2 text-sm rounded-xl border ${
-                    formErrors.code ? 'border-rose-400 bg-rose-50/30' : 'border-[#E5E8EB]'
+                    formErrors.code ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E5E8EB]'
                   } ${editingCategory ? 'bg-zinc-100 text-zinc-500 cursor-not-allowed' : 'bg-[#FFFFFF] text-[#17191B]'} focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 font-mono`}
                 />
                 {formErrors.code && (
-                  <span className="text-xs text-rose-500 mt-1 block">{formErrors.code}</span>
+                  <span id="category-code-error" role="alert" className="text-xs text-rose-500 mt-1 block">{formErrors.code}</span>
                 )}
                 <span className="text-xs text-muted mt-0.5 block">
                   {editingCategory ? 'Không thể đổi mã sau khi tạo' : 'Viết hoa, không dấu, tối đa 50 ký tự'}
@@ -242,28 +271,28 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="category-name" className="block text-sm font-semibold text-[#17191B] mb-1.5">
                   Tên danh mục <span className="text-rose-500">*</span>
                 </label>
-                <input
+                <input id="category-name" name="name" maxLength={150} aria-invalid={Boolean(formErrors.name)} aria-describedby={formErrors.name ? "category-name-error" : undefined}
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="VD: Nhạc cụ dây, Nhạc cụ hơi..."
                   className={`w-full px-3.5 py-2 text-sm rounded-xl border ${
-                    formErrors.name ? 'border-rose-400 bg-rose-50/30' : 'border-[#E5E8EB]'
+                    formErrors.name ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E5E8EB]'
                   } bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30`}
                 />
                 {formErrors.name && (
-                  <span className="text-xs text-rose-500 mt-1 block">{formErrors.name}</span>
+                  <span id="category-name-error" role="alert" className="text-xs text-rose-500 mt-1 block">{formErrors.name}</span>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="category-description" className="block text-sm font-semibold text-[#17191B] mb-1.5">
                   Mô tả
                 </label>
-                <textarea
+                <textarea id="category-description" name="description" aria-invalid={Boolean(formErrors.description)}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
@@ -275,7 +304,7 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
               <div className="flex items-center gap-2 pt-2">
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || deleting || loading || loadFailed}
                   className="flex-1 py-2.5 px-4 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] text-white text-sm font-semibold shadow-2xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? 'Đang lưu...' : editingCategory ? 'Cập nhật' : 'Thêm mới'}
@@ -283,30 +312,34 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
                 {editingCategory && (
                   <button
                     type="button"
-                    onClick={resetForm}
+                    onClick={() => { if (!submitting && !deleting) resetForm() }}
                     className="py-2.5 px-4 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] hover:bg-[#F2F4F5] text-sm font-medium text-zinc-700 transition-colors cursor-pointer"
                   >
                     Hủy
                   </button>
                 )}
               </div>
+            </fieldset>
             </form>
           </div>
 
           {/* Right / Bottom: Category List */}
           <div className="lg:col-span-7 bg-[#FFFFFF] p-5 rounded-xl border border-[#E5E8EB] shadow-2xs flex flex-col">
-            <div className="flex items-center justify-between gap-3 mb-3 pb-2 border-b border-[#E5E8EB]">
+            <div className="flex flex-col gap-2.5 mb-3 pb-2 border-b border-[#E5E8EB] sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-[#17191B]">
+                <h3 className="shrink-0 text-sm font-bold text-[#17191B]">
                   Danh sách ({categories.length})
                 </h3>
               </div>
               <input
                 type="text"
+                name="categorySearch"
+                aria-label="Tìm danh mục"
+                autoComplete="off"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Tìm mã hoặc tên..."
-                className="px-3.5 py-1.5 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 w-48"
+                placeholder="Tìm mã hoặc tên…"
+                className="box-border h-9 w-full min-w-0 rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] px-3.5 text-sm text-[#17191B] transition-[border-color,box-shadow] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 sm:w-48 sm:min-w-48 sm:max-w-48 sm:shrink-0"
               />
             </div>
 
@@ -314,6 +347,8 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
               <div className="py-12 text-center text-sm text-secondary">
                 Đang tải dữ liệu danh mục...
               </div>
+            ) : loadFailed ? (
+              <p className="py-12 text-center text-sm text-secondary">Danh sách chưa tải được. Vui lòng tải lại dữ liệu.</p>
             ) : filteredCategories.length === 0 ? (
               <div className="py-12 text-center text-sm text-secondary">
                 Không tìm thấy danh mục nào phù hợp.
@@ -363,23 +398,22 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
                           <button
                             type="button"
                             onClick={() => startEdit(cat)}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-xs font-medium transition-colors cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg bg-[#F2F4F5] hover:bg-[#E5E8EB] text-zinc-700 text-[13px] font-medium transition-colors cursor-pointer"
                           >
                             Sửa
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDelete(cat)}
-                            disabled={cat.productCount > 0}
                             title={
                               cat.productCount > 0
                                 ? 'Không thể xóa danh mục đang có sản phẩm'
                                 : 'Xóa danh mục'
                             }
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                            className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
                               cat.productCount > 0
-                                ? 'opacity-30 cursor-not-allowed bg-zinc-100 text-zinc-400'
-                                : 'bg-rose-50 hover:bg-rose-100 text-rose-600 cursor-pointer'
+                                ? 'bg-[#F6F7F8] text-zinc-400 hover:bg-[#E3E6E8] cursor-pointer'
+                                : 'bg-surface-secondary hover:bg-surface-secondary text-rose-600 cursor-pointer'
                             }`}
                           >
                             Xóa
@@ -405,6 +439,23 @@ export default function CategoryManagementModal({ isOpen, onClose, onSuccess }) 
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        title="Xóa danh mục nhạc cụ?"
+        description={`Bạn có chắc chắn muốn xóa danh mục "${catToDelete?.name}"? Thao tác này sẽ xóa vĩnh viễn danh mục khỏi hệ thống.`}
+        confirmLabel="Xóa danh mục"
+        cancelLabel="Hủy"
+        variant="danger"
+        isLoading={deleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          if (!deleting) {
+            setDeleteConfirmOpen(false)
+            setCatToDelete(null)
+          }
+        }}
+      />
     </div>
   )
 }

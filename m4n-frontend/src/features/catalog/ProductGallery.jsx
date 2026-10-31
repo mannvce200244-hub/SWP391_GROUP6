@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { IconInstrument, IconPlay } from '../../components/ui/Icons.jsx'
+import { Play } from 'lucide-react'
+import { IconInstrument } from '../../components/ui/Icons.jsx'
 import { getRenderableMedia } from './productMedia.js'
 
 function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thống' }) {
@@ -64,7 +65,6 @@ function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thốn
         <div
           aria-label="Danh sách ảnh thu nhỏ"
           className="flex items-center gap-2.5 overflow-x-auto pb-1.5 scrollbar-none"
-          role="tablist"
         >
           {validMedia.map((item, idx) => {
             const isActive = idx === safeIndex
@@ -72,21 +72,20 @@ function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thốn
             return (
               <button
                 key={`${item.url}-${idx}`}
-                aria-label={`Xem ảnh ${idx + 1}: ${item.alt || productName}`}
-                aria-selected={isActive}
+                aria-label={`Xem ${itemType === 'video' ? 'video' : 'ảnh'} ${idx + 1}: ${item.alt || productName}`}
+                aria-pressed={isActive}
                 className={`relative w-18 h-18 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden bg-surface-secondary border-2 transition-all duration-150 cursor-pointer ${
                   isActive
                     ? 'border-brand ring-2 ring-brand/20 shadow-xs'
                     : 'border-border/60 hover:border-brand/40 opacity-70 hover:opacity-100'
                 }`}
                 onClick={() => setActiveIndex(idx)}
-                role="tab"
                 type="button"
               >
                 {itemType === 'video' ? (
                   <div className="w-full h-full bg-neutral-900 flex items-center justify-center text-white relative">
                     <span className="w-7 h-7 rounded-full bg-black/60 flex items-center justify-center backdrop-blur-xs">
-                      <IconPlay size={12} className="fill-current ml-0.5" />
+                      <Play size={12} className="fill-current ml-0.5" />
                     </span>
                   </div>
                 ) : (

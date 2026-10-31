@@ -14,6 +14,9 @@ public record OrderResponse(
         String customerPhone,
         String customerEmail,
         String shippingAddress,
+        String notes,
+        String itemsSummary,
+        String imageUrl,
         BigDecimal totalAmount,
         String totalAmountDisplay,
         BigDecimal discountAmount,
@@ -24,5 +27,15 @@ public record OrderResponse(
         boolean isPaid,
         String voucherCode,
         int itemCount,
-        Instant createdAt
+        Instant createdAt,
+        BigDecimal manualDiscountAmount,
+        BigDecimal automaticDiscountAmount,
+        String automaticPromotionCode,
+        BigDecimal originalTotalAmount,
+        BigDecimal productDiscountAmount,
+        BigDecimal baseShippingFee,
+        BigDecimal shippingDiscountAmount,
+        BigDecimal shippingFee,
+        String shippingVoucherCode,
+        boolean freeShippingApplied
 ) {}

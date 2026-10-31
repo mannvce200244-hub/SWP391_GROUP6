@@ -7,6 +7,8 @@ export const CUSTOMER_ROUTES = Object.freeze({
   artisanDetail: (slugOrId) =>
     `/artisans/${encodeURIComponent(String(slugOrId))}`,
   craftVillages: '/craft-villages',
+  articles: '/articles',
+  articleDetail: (id) => `/articles/${encodeURIComponent(String(id))}`,
   craftVillageDetail: (slugOrId) =>
     `/craft-villages/${encodeURIComponent(String(slugOrId))}`,
   login: '/login',
@@ -16,20 +18,38 @@ export const CUSTOMER_ROUTES = Object.freeze({
   profile: '/profile',
   security: '/account/security',
   orders: '/account/orders',
+  addresses: '/account/addresses',
   cart: '/cart',
   checkout: '/checkout',
+  paymentReturn: '/payment-return',
   forbidden: '/403',
   staff: '/staff',
   pos: '/pos',
+  posHistory: '/pos/history',
   admin: '/admin',
   adminInstruments: '/admin/instruments',
   adminInstrumentDetail: (id) =>
     `/admin/instruments/${encodeURIComponent(String(id))}`,
-  adminStore: '/admin/store',
+  adminCategories: '/admin/categories',
+  adminArtisans: '/admin/artisans',
+  adminCraftVillages: '/admin/craft-villages',
+  adminArticles: '/admin/articles',
+  adminInventory: '/admin/inventory',
+  legacyAdminStockImport: '/admin/stock-import',
+  adminOrders: '/admin/orders',
+  adminInvoices: '/admin/invoices',
+  adminVouchers: '/admin/vouchers',
+  adminPricing: '/admin/pricing',
   adminProfile: '/admin/profile',
   adminSecurity: '/admin/security',
   adminUsers: '/admin/users',
   staffChat: '/staff/chat',
+  staffOrders: '/staff/orders',
+  staffProducts: '/staff/products',
+  staffInventory: '/staff/inventory',
+  staffNotifications: '/staff/notifications',
+  staffProfile: '/staff/profile',
+  staffSecurity: '/staff/security',
 })
 
 const ARTISAN_SECTION_ID = 'artisans'
@@ -83,6 +103,26 @@ export function isProductPath(pathname) {
   )
 }
 
+export function matchArtisanDetailPath(pathname) {
+  const detailPrefix = `${CUSTOMER_ROUTES.artisans}/`
+
+  if (!pathname.startsWith(detailPrefix)) {
+    return null
+  }
+
+  const encodedId = pathname.slice(detailPrefix.length)
+
+  if (!encodedId || encodedId.includes('/')) {
+    return null
+  }
+
+  try {
+    return decodeURIComponent(encodedId)
+  } catch {
+    return null
+  }
+}
+
 export function matchCraftVillageDetailPath(pathname) {
   const detailPrefix = `${CUSTOMER_ROUTES.craftVillages}/`
 
@@ -123,4 +163,7 @@ export function matchAdminInstrumentDetailPath(pathname) {
   }
 }
 
-
+export function matchArticleDetailPath(pathname) {
+  const match = pathname.match(/^\/articles\/([1-9]\d*)$/)
+  return match && Number.isSafeInteger(Number(match[1])) ? match[1] : null
+}

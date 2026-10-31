@@ -4,25 +4,31 @@ import ProductCard from '../catalog/ProductCard.jsx'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 import productService from '../../services/productService.js'
+import ErrorState from '../../components/ui/ErrorState.jsx'
+import EmptyState from '../../components/ui/EmptyState.jsx'
 
 function ArtisanProductsSection() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [retrySequence, setRetrySequence] = useState(0)
 
   useEffect(() => {
     let active = true
 
     productService
-      .listProducts()
+      .listProducts({ page: 1, size: 4 })
       .then((items) => {
         if (active) {
           // Take first 4 instruments from real catalog
           setProducts(items.slice(0, 4))
+          setError(null)
           setLoading(false)
         }
       })
       .catch(() => {
         if (active) {
+          setError('Không thể tải sản phẩm. Vui lòng thử lại.')
           setLoading(false)
         }
       })
@@ -30,7 +36,7 @@ function ArtisanProductsSection() {
     return () => {
       active = false
     }
-  }, [])
+  }, [retrySequence])
 
   return (
     <section
@@ -68,13 +74,15 @@ function ArtisanProductsSection() {
               <div key={i} className="aspect-square bg-surface-secondary/50 rounded-2xl animate-pulse" />
             ))}
           </div>
+        ) : error ? (
+          <ErrorState message={error} onRetry={() => { setLoading(true); setRetrySequence((current) => current + 1) }} />
         ) : products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
-        ) : null}
+        ) : <EmptyState title="Chưa có sản phẩm" message="Danh mục sản phẩm đang được cập nhật." />}
 
         <div className="sm:hidden text-center mt-2">
           <RouterLink

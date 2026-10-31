@@ -1,244 +1,251 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { CheckCircle2, MessageSquare, UserRound, X } from 'lucide-react'
 import chatService from '../../services/chatService.js'
 import useAuth from '../../features/auth/useAuth.js'
+import useToast from '../../components/ui/useToast.js'
+import LoadingState from '../../components/ui/LoadingState.jsx'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
-import { IconMessageSquare, IconX, IconUser } from '../../components/ui/Icons.jsx'
 import BrandLogo from '../../components/common/BrandLogo.jsx'
+import ErrorState from '../../components/ui/ErrorState.jsx'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
+import useChatMessages from './useChatMessages.js'
+import { formatMessageTime } from './chatMessages.js'
 
-export function CustomerChatWidget() {
-  const { isAuthenticated, user } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
+function CustomerChatPanel({ isAuthenticated, user, isOpen, onOpenChange }) {
+  const { addToast } = useToast()
   const [conversation, setConversation] = useState(null)
-  const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const [retryKey, setRetryKey] = useState(0)
   const [isSending, setIsSending] = useState(false)
-  const [unreadIncoming] = useState(0)
-
+  const [isStartingNew, setIsStartingNew] = useState(false)
   const messagesEndRef = useRef(null)
+  const requestSequence = useRef(0)
+  const mutationPending = useRef(false)
   const isCustomer = user?.role === 'CUSTOMER'
+  const ownerId = isCustomer && isAuthenticated ? user.id : null
+  const currentConversation = conversation?.ownerId === ownerId ? conversation : null
+  const dialogRef = useDialogFocus(isOpen, () => onOpenChange(false))
+  const thread = useChatMessages({
+    conversationId: currentConversation?.id, ownerId, enabled: isOpen && Boolean(ownerId),
+    isLive: currentConversation?.status === 'OPEN',
+    onConversationChange: (updated) => setConversation((current) =>
+      current?.ownerId === ownerId && current.id === updated.id ? { ...updated, ownerId } : current),
+  })
+  const { messages } = thread
+  const latestMessageId = messages.at(-1)?.id
+  const isLoading = isAuthenticated && (!currentConversation && !loadError || thread.isLoading)
 
-  const scrollToBottom = () => {
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [latestMessageId])
 
-  // Initial load when open
   useEffect(() => {
-    let active = true
-    if (isOpen && isAuthenticated && isCustomer) {
-      chatService
-        .getMyConversation()
-        .then((conv) => {
-          if (!active) return null
-          if (conv?.id) {
-            setConversation(conv)
-            return chatService.getMessages(conv.id)
-          }
-          return []
-        })
-        .then((msgs) => {
-          if (!active) return
-          if (msgs) {
-            setMessages(Array.isArray(msgs) ? msgs : [])
-          }
-          setIsLoading(false)
-          setTimeout(scrollToBottom, 50)
-        })
-        .catch(() => {
-          if (active) setIsLoading(false)
-        })
-    }
-    return () => {
-      active = false
-    }
-  }, [isOpen, isAuthenticated, isCustomer])
+    const sequence = ++requestSequence.current
+    if (!isOpen || !ownerId) return undefined
+    chatService.getMyConversation().then((nextConversation) => {
+      if (requestSequence.current === sequence) setConversation({ ...nextConversation, ownerId })
+    }).catch((error) => {
+      if (requestSequence.current === sequence) setLoadError(error.message || 'Không thể mở hỗ trợ trực tuyến.')
+    })
+    return () => { if (requestSequence.current === sequence) requestSequence.current += 1 }
+  }, [isOpen, ownerId, retryKey])
 
-  // Polling every 4 seconds when drawer is open
-  useEffect(() => {
-    if (!isOpen || !conversation?.id || !isAuthenticated || !isCustomer) return
-    const interval = setInterval(async () => {
-      try {
-        const msgs = await chatService.getMessages(conversation.id)
-        if (Array.isArray(msgs)) {
-          setMessages((prev) => {
-            if (msgs.length !== prev.length) {
-              setTimeout(scrollToBottom, 100)
-            }
-            return msgs
-          })
-        }
-      } catch {
-        // Ignored
-      }
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [isOpen, conversation?.id, isAuthenticated, isCustomer])
-
-  const handleSendMessage = async (e) => {
-    e.preventDefault()
+  const handleSendMessage = async (event) => {
+    event.preventDefault()
     const content = newMessage.trim()
-    if (!content || !conversation?.id || isSending) return
-
+    if (!content || !currentConversation?.id || currentConversation.status !== 'OPEN' || mutationPending.current) return
+    mutationPending.current = true
+    const sequence = requestSequence.current
+    const conversationId = currentConversation.id
     setIsSending(true)
     try {
-      const sentMsg = await chatService.sendMessage(conversation.id, content)
-      setMessages((prev) => [...prev, sentMsg])
+      const sentMessage = await chatService.sendMessage(conversationId, content)
+      if (requestSequence.current !== sequence) return
+      thread.appendMessage(sentMessage)
       setNewMessage('')
-      setTimeout(scrollToBottom, 50)
-    } catch {
-      // Handled
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể gửi tin nhắn.', type: 'error' })
+      if (error.status === 409) {
+        chatService.getConversation(conversationId).then((updated) => {
+          if (requestSequence.current === sequence) setConversation({ ...updated, ownerId })
+        }).catch(() => {})
+      }
     } finally {
       setIsSending(false)
+      mutationPending.current = false
     }
   }
 
-  // If user is staff or admin, don't show the customer floating widget (they have the staff workspace)
-  if (isAuthenticated && !isCustomer) return null
+  const handleStartNewConversation = async () => {
+    if (mutationPending.current) return
+    mutationPending.current = true
+    const sequence = requestSequence.current
+    setIsStartingNew(true)
+    try {
+      const updated = await chatService.startMyConversation()
+      if (requestSequence.current !== sequence) return
+      setConversation({ ...updated, ownerId })
+      setNewMessage('')
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể bắt đầu phiên hỗ trợ mới.', type: 'error' })
+    } finally {
+      setIsStartingNew(false)
+      mutationPending.current = false
+    }
+  }
+
+  const isClosed = currentConversation?.status === 'CLOSED'
+  const supportState = isClosed
+    ? 'Phiên hỗ trợ đã kết thúc'
+    : currentConversation?.assignedStaffName
+      ? `Đang hỗ trợ bởi ${currentConversation.assignedStaffName}`
+      : 'Đang chờ nhân viên tiếp nhận'
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {/* Floating Trigger Button */}
+    <div className={`fixed bottom-3 right-3 ${isOpen ? 'z-50' : 'z-40'} sm:bottom-6 sm:right-6`}>
       {!isOpen && (
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
-          className="group relative flex items-center gap-2 px-4 py-3 rounded-full bg-[#0D9488] text-white font-semibold text-xs sm:text-sm shadow-xl hover:bg-[#0F766E] hover:scale-105 transition-all cursor-pointer"
-          aria-label="Mở cửa sổ trò chuyện hỗ trợ trực tuyến"
+          onClick={() => {
+            setLoadError('')
+            setNewMessage('')
+            onOpenChange(true)
+          }}
+          className="group relative flex min-h-11 items-center gap-2 rounded-full bg-jade px-4 py-3 text-xs font-semibold text-white shadow-xl transition-colors hover:bg-jade-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade sm:text-sm"
+          aria-label="Mở cửa sổ hỗ trợ trực tuyến"
         >
-          <IconMessageSquare size={18} />
-          <span className="hidden sm:inline">Tư vấn nhạc cụ</span>
-          {unreadIncoming > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-600 text-white text-xs font-bold flex items-center justify-center">
-              {unreadIncoming}
-            </span>
-          )}
+          <MessageSquare size={18} aria-hidden="true" />
+          <span className="hidden sm:inline">Hỗ trợ trực tuyến</span>
         </button>
       )}
 
-      {/* Support Chat Box Window */}
       {isOpen && (
-        <div className="w-[340px] sm:w-[380px] h-[480px] bg-white rounded-2xl border border-border shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5">
-          {/* Header */}
-          <div className="bg-[#111315] text-white px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center shrink-0">
-                <BrandLogo variant="dark" collapsed={true} />
+        <section
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={-1}
+          className="h-[min(560px,calc(100vh-1.5rem))] w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-white shadow-2xl flex flex-col sm:h-[540px] sm:w-[390px]"
+          aria-label="Cửa sổ hỗ trợ trực tuyến"
+        >
+          <header className="border-b border-border bg-white px-4 py-3 text-ink flex items-center justify-between gap-3">
+            <div className="min-w-0 flex items-center gap-2.5">
+              <div className="w-9 h-9 shrink-0 rounded-xl bg-surface-secondary border border-border flex items-center justify-center">
+                <BrandLogo collapsed={true} />
               </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-bold leading-tight">Hỗ trợ Trực tuyến M4N</span>
-                <span className="text-xs text-emerald-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Nhân viên sẵn sàng tư vấn
-                </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold leading-tight">M4N Hỗ Trợ</h2>
+                {isAuthenticated && (
+                  <p className={`mt-0.5 truncate text-[11px] ${isClosed ? 'text-muted' : 'text-jade'}`} aria-live="polite">
+                    {supportState}
+                  </p>
+                )}
               </div>
             </div>
-
             <button
               type="button"
-              className="text-zinc-400 hover:text-white cursor-pointer p-1 transition-colors"
-              onClick={() => setIsOpen(false)}
-              aria-label="Đóng cửa sổ trò chuyện"
+              className="min-h-11 min-w-11 rounded-lg text-muted hover:bg-surface-secondary hover:text-ink flex items-center justify-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              onClick={() => onOpenChange(false)}
+              aria-label="Đóng cửa sổ hỗ trợ"
             >
-              <IconX size={16} />
+              <X size={18} aria-hidden="true" />
             </button>
-          </div>
+          </header>
 
-          {/* Messages Body */}
-          <div className="flex-1 p-4 overflow-y-auto bg-[#F6F7F8] flex flex-col gap-3">
+          <div className="flex-1 p-4 overflow-y-auto bg-surface-secondary flex flex-col gap-3" aria-live="polite">
             {!isAuthenticated ? (
-              <div className="my-auto text-center p-6 flex flex-col items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-[#0D9488]/10 flex items-center justify-center text-[#0D9488]">
-                  <IconUser size={24} />
+              <div className="m-auto p-6 text-center flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-surface-secondary text-jade flex items-center justify-center">
+                  <UserRound size={24} aria-hidden="true" />
                 </div>
-                <p className="text-xs text-zinc-600 leading-relaxed">
-                  Vui lòng đăng nhập tài khoản khách hàng để kết nối trực tiếp với nhân viên tư vấn nhạc cụ M4N.
-                </p>
+                <p className="text-sm leading-relaxed text-zinc-600">Vui lòng đăng nhập bằng tài khoản khách hàng để kết nối với nhân viên hỗ trợ.</p>
                 <button
                   type="button"
                   onClick={() => navigateTo(CUSTOMER_ROUTES.login)}
-                  className="px-4 py-2 rounded-xl bg-[#0D9488] text-white text-xs font-semibold hover:bg-[#0F766E] transition-colors cursor-pointer shadow-2xs"
+                  className="min-h-10 rounded-xl bg-jade px-4 text-sm font-semibold text-white hover:bg-jade-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade"
                 >
-                  Đăng nhập ngay
+                  Đăng nhập
                 </button>
               </div>
+            ) : loadError ? (
+              <ErrorState message={loadError} onRetry={() => { setLoadError(''); setRetryKey((value) => value + 1) }} />
             ) : isLoading ? (
-              <div className="my-auto text-center text-xs text-zinc-400">
-                Đang kết nối phiên hỗ trợ...
-              </div>
+              <LoadingState message="Đang mở phiên hỗ trợ…" />
+            ) : thread.error && messages.length === 0 ? (
+              <ErrorState message={thread.error} onRetry={thread.retry} />
             ) : messages.length === 0 ? (
-              <div className="my-auto text-center p-4 flex flex-col items-center gap-2 text-zinc-500">
-                <div className="w-10 h-10 rounded-full bg-surface-secondary flex items-center justify-center text-muted">
-                  <IconMessageSquare size={20} />
+              <div className="m-auto p-4 text-center flex flex-col items-center gap-2 text-zinc-500">
+                <div className="w-11 h-11 rounded-full bg-white border border-border flex items-center justify-center text-muted">
+                  <MessageSquare size={20} aria-hidden="true" />
                 </div>
-                <p className="text-xs font-medium">
-                  Chào bạn! Bạn cần tư vấn thông số nhạc cụ, âm sắc đàn hay quy trình đặt hàng?
-                </p>
-                <span className="text-xs text-zinc-400">
-                  Gửi tin nhắn để bắt đầu cuộc trò chuyện ngay.
-                </span>
+                <p className="text-sm font-semibold text-ink">Bạn cần M4N hỗ trợ điều gì?</p>
+                <span className="text-xs leading-relaxed text-muted">Gửi tin nhắn để nhân viên trực tuyến tiếp nhận cuộc trò chuyện.</span>
               </div>
-            ) : (
-              messages.map((m) => {
-                const isMe = m.senderRole === 'CUSTOMER'
-                return (
-                  <div
-                    key={m.id}
-                    className={`flex flex-col max-w-[80%] ${
-                      isMe ? 'self-end items-end' : 'self-start items-start'
-                    }`}
-                  >
-                    {!isMe && (
-                      <span className="text-xs font-semibold text-zinc-500 mb-0.5 ml-1">
-                        {m.senderName || 'Nhân viên M4N'}
-                      </span>
-                    )}
-                    <div
-                      className={`px-3.5 py-2 rounded-2xl text-xs leading-relaxed break-words ${
-                        isMe
-                          ? 'bg-[#0D9488] text-white rounded-br-xs'
-                          : 'bg-white text-zinc-800 border border-border rounded-bl-xs shadow-2xs'
-                      }`}
-                    >
-                      {m.content}
-                    </div>
-                    <span className="text-xs text-zinc-400 mt-1 mx-1">
-                      {m.createdAt ? new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
-                  </div>
-                )
-              })
-            )}
+            ) : messages.map((message) => {
+              const fromCustomer = message.senderRole === 'CUSTOMER'
+              return (
+                <article key={message.id} className={`flex max-w-[85%] flex-col ${fromCustomer ? 'self-end items-end' : 'self-start items-start'}`}>
+                  {!fromCustomer && <span className="mb-1 px-1 text-[11px] font-semibold text-muted">{message.senderName || 'Nhân viên M4N'}</span>}
+                  <p className={`whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${fromCustomer ? 'rounded-br-sm bg-jade text-white' : 'rounded-bl-sm border border-border bg-white text-ink shadow-xs'}`}>
+                    {message.content}
+                  </p>
+                  <time className="mt-1 px-1 text-[11px] text-muted" dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
+                </article>
+              )
+            })}
+            {(thread.hasOlder || thread.olderError) && <button type="button" disabled={thread.isLoadingOlder} onClick={thread.loadOlder} className="order-first min-h-11 shrink-0 rounded-lg border border-border bg-white px-3 text-xs font-semibold text-brand">{thread.isLoadingOlder ? 'Đang tải…' : 'Tải tin nhắn trước'}</button>}
+            {thread.olderError && <p role="alert" className="order-first text-xs text-danger">{thread.olderError}</p>}
+            {thread.error && messages.length > 0 && <p role="alert" className="text-xs text-danger">{thread.error} <button type="button" onClick={thread.retry} className="min-h-11 underline">Thử lại</button></p>}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Composer */}
-          {isAuthenticated && (
-            <form
-              onSubmit={handleSendMessage}
-              className="p-2.5 bg-white border-t border-border flex items-center gap-2"
-            >
-              <input
-                type="text"
-                className="flex-1 px-3 py-2 text-xs bg-[#F6F7F8] border border-border rounded-xl focus:outline-none focus:border-[#0D9488] focus:bg-white text-ink placeholder-zinc-400"
-                placeholder="Nhập câu hỏi của bạn..."
+          {isAuthenticated && isClosed ? (
+            <div className="border-t border-border bg-white p-4 text-center">
+              <CheckCircle2 className="mx-auto text-emerald-600" size={22} aria-hidden="true" />
+              <p className="mt-2 text-sm font-semibold text-ink">Cuộc trò chuyện đã được đóng</p>
+              <p className="mt-1 text-xs text-muted">Bạn có thể bắt đầu phiên mới nếu vẫn cần hỗ trợ.</p>
+              <button
+                type="button"
+                onClick={handleStartNewConversation}
+                disabled={isStartingNew}
+                className="mt-3 min-h-10 rounded-xl bg-jade px-4 text-sm font-semibold text-white hover:bg-jade-hover disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade"
+              >
+                {isStartingNew ? 'Đang tạo phiên mới…' : 'Bắt đầu hỗ trợ mới'}
+              </button>
+            </div>
+          ) : isAuthenticated ? (
+            <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-border flex items-end gap-2">
+              <label className="sr-only" htmlFor="customer-chat-message">Nội dung tin nhắn</label>
+              <textarea
+                id="customer-chat-message"
+                rows="2"
+                className="min-h-11 max-h-28 flex-1 resize-y rounded-xl border border-border bg-surface-secondary px-3 py-2.5 text-sm text-ink placeholder:text-muted focus:bg-white focus:outline-2 focus:outline-offset-1 focus:outline-jade"
+                placeholder="Nhập câu hỏi của bạn…"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                disabled={isSending}
-                maxLength={500}
+                onChange={(event) => setNewMessage(event.target.value)}
+                disabled={isSending || isLoading || !currentConversation}
+                maxLength={2000}
               />
               <button
                 type="submit"
-                disabled={isSending || !newMessage.trim()}
-                className="px-3.5 py-2 bg-[#0D9488] text-white text-xs font-semibold rounded-xl hover:bg-[#0F766E] disabled:opacity-40 transition-colors cursor-pointer shadow-2xs shrink-0"
+                disabled={isSending || isLoading || !currentConversation || !newMessage.trim()}
+                className="min-h-11 rounded-xl bg-jade px-4 text-sm font-semibold text-white hover:bg-jade-hover disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade"
               >
-                {isSending ? '...' : 'Gửi'}
+                {isSending ? 'Đang gửi…' : 'Gửi'}
               </button>
             </form>
-          )}
-        </div>
+          ) : null}
+        </section>
       )}
     </div>
   )
+}
+
+export function CustomerChatWidget({ isOpen, onOpenChange }) {
+  const { isAuthenticated, user } = useAuth()
+  if (isAuthenticated && user?.role !== 'CUSTOMER') return null
+  return <CustomerChatPanel key={user?.id ?? 'guest'} isAuthenticated={isAuthenticated} user={user} isOpen={isOpen} onOpenChange={onOpenChange} />
 }
 
 export default CustomerChatWidget

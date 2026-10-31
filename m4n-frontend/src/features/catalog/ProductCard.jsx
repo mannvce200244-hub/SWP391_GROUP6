@@ -3,33 +3,12 @@ import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 import { getFirstProductImage } from './productMedia.js'
 import { IconInstrument } from '../../components/ui/Icons.jsx'
-import prodSaoTruc from '../../assets/images/prod-sao-truc.jpg'
-import prodDanTranh from '../../assets/images/prod-dan-tranh.jpg'
-import catNhacCuGo from '../../assets/images/cat-nhac-cu-go.jpg'
-
-function getCategoryFallbackImage(product) {
-  const group = (product.groupName || '').toLowerCase()
-  const name = (product.name || '').toLowerCase()
-
-  if (group.includes('hơi') || name.includes('sáo') || name.includes('tiêu')) {
-    return { url: prodSaoTruc, alt: 'Nhạc cụ hơi truyền thống Việt Nam' }
-  }
-  if (group.includes('gõ') || name.includes('trống') || name.includes('mõ') || name.includes('thanh la')) {
-    return { url: catNhacCuGo, alt: 'Nhạc cụ gõ truyền thống Việt Nam' }
-  }
-  return { url: prodDanTranh, alt: 'Nhạc cụ dây truyền thống Việt Nam' }
-}
+import { formatCurrencyVND } from '../../utils/currency.js'
 
 function ProductCard({ priority = false, product }) {
   const [failedImageUrl, setFailedImageUrl] = useState(null)
   const rawImage = getFirstProductImage(product.media)
-  const fallback = getCategoryFallbackImage(product)
-  const image =
-    rawImage && failedImageUrl !== rawImage.url
-      ? rawImage
-      : failedImageUrl !== fallback.url
-        ? fallback
-        : null
+  const hasValidImage = Boolean(rawImage && failedImageUrl !== rawImage.url)
 
   // Stock status text if available in product data
   const hasStockInfo =
@@ -40,29 +19,30 @@ function ProductCard({ priority = false, product }) {
     product.inStock === true ||
     product.status === 'AVAILABLE' ||
     product.status === 'IN_STOCK' ||
-    product.availability === 'IN_STOCK'
+    product.availability === 'IN_STOCK' || product.availability === 'LOW_STOCK'
+  const isLowStock = product.availability === 'LOW_STOCK'
 
   return (
     <RouterLink
       aria-label={`Xem chi tiết ${product.name}`}
-      className="group flex flex-col h-full no-underline focus-visible:outline-none select-none rounded-xl bg-white border border-border hover:border-brand/40 p-3 hover:-translate-y-1 hover:shadow-md transition-all duration-200"
+      className="group flex flex-col h-full no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 select-none rounded-xl bg-white border border-border hover:border-brand/40 p-3 hover:-translate-y-1 hover:shadow-md transition-all duration-200"
       href={CUSTOMER_ROUTES.productDetail(product.id)}
     >
       {/* 1. Image Container (1:1 aspect ratio, smooth hover scale) */}
       <div className="aspect-square w-full overflow-hidden rounded-lg bg-surface-secondary relative flex items-center justify-center border border-border-subtle">
-        {image ? (
+        {hasValidImage ? (
           <img
             alt={
-              typeof image.alt === 'string' && image.alt.trim()
-                ? image.alt.trim()
+              typeof rawImage.alt === 'string' && rawImage.alt.trim()
+                ? rawImage.alt.trim()
                 : product.name
             }
             className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out"
             decoding="async"
             height="500"
             loading={priority ? undefined : 'lazy'}
-            onError={() => setFailedImageUrl(image.url)}
-            src={image.url}
+            onError={() => setFailedImageUrl(rawImage.url)}
+            src={rawImage.url}
             width="500"
           />
         ) : (
@@ -84,11 +64,11 @@ function ProductCard({ priority = false, product }) {
           <span
             className={`absolute bottom-2.5 right-2.5 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-xs shadow-2xs ${
               isInStock
-                ? 'bg-jade-soft text-jade border border-jade-border'
+                ? 'bg-surface-secondary text-jade border border-jade-border'
                 : 'bg-white/95 text-muted border border-border'
             }`}
           >
-            {isInStock ? 'Còn hàng' : 'Hết hàng'}
+            {isLowStock ? 'Sắp hết hàng' : isInStock ? 'Còn hàng' : 'Hết hàng'}
           </span>
         ) : null}
       </div>
@@ -116,6 +96,7 @@ function ProductCard({ priority = false, product }) {
         ) : null}
 
         {/* Price & Action Row */}
+        {Number(product.productDiscountAmount) > 0 && <p className="text-xs text-muted mt-2">Giá niêm yết: <del>{formatCurrencyVND(product.originalPrice)}</del></p>}
         <div className="mt-auto pt-2.5 flex items-baseline justify-between gap-2 border-t border-border-subtle">
           {product.priceDisplay ? (
             <p className="text-base font-extrabold text-brand tracking-tight">

@@ -13,7 +13,7 @@ import com.m4n.backend.repository.CartItemRepository;
 import com.m4n.backend.repository.CartRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.CartServiceImpl;
+import com.m4n.backend.service.serviceImpl.CartServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,9 +29,11 @@ import java.util.Collections;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class CartServiceTest {
@@ -52,10 +54,18 @@ class CartServiceTest {
     private CartService cartService;
     private User testUser;
 
+    @Mock private ProductPricingService productPricingService;
+
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(productPricingService.resolvePrices(any())).thenAnswer(inv -> {
+            java.util.List<Product> requested = inv.getArgument(0);
+            return requested.stream().collect(java.util.stream.Collectors.toMap(Product::getId,
+                    product -> new ProductPrice(product.getPrice(), product.getPrice(), BigDecimal.ZERO, null), (first, duplicate) -> first));
+        });
+
         cartMapper = new CartMapper();
-        cartService = new CartServiceImpl(cartRepository, cartItemRepository, productRepository, userRepository, cartMapper);
+        cartService = new CartServiceImpl(cartRepository, cartItemRepository, productRepository, userRepository, cartMapper, productPricingService);
 
         Role role = Role.builder().id(1L).name(RoleName.CUSTOMER).build();
         testUser = User.builder()
@@ -78,7 +88,7 @@ class CartServiceTest {
 
     @Test
     void shouldAddToCartWithoutDeductingStock() {
-        when(userRepository.findByEmailIgnoreCase("customer@m4n.vn")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmailIgnoreCaseWithLock("customer@m4n.vn")).thenReturn(Optional.of(testUser));
 
         Cart cart = Cart.builder().id(10L).user(testUser).items(new ArrayList<>()).build();
         when(cartRepository.findWithItemsByUserId(1L)).thenReturn(Optional.of(cart));
@@ -105,7 +115,7 @@ class CartServiceTest {
 
     @Test
     void shouldIncrementQuantityWhenProductAlreadyInCart() {
-        when(userRepository.findByEmailIgnoreCase("customer@m4n.vn")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmailIgnoreCaseWithLock("customer@m4n.vn")).thenReturn(Optional.of(testUser));
 
         Product product = Product.builder()
                 .id(1L)
@@ -127,5 +137,22 @@ class CartServiceTest {
 
         assertThat(existingItem.getQuantity()).isEqualTo(4);
         verify(cartItemRepository).save(existingItem);
+    }
+
+    @Test
+    void shouldRejectQuantityOverflowWithoutMutatingCart() {
+        when(userRepository.findByEmailIgnoreCaseWithLock(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        Product product = Product.builder().id(1L).price(BigDecimal.ONE).isActive(true).build();
+        Cart cart = Cart.builder().id(10L).user(testUser).items(new ArrayList<>()).build();
+        CartItem item = CartItem.builder().id(100L).cart(cart).product(product).quantity(Integer.MAX_VALUE).build();
+        cart.getItems().add(item);
+        when(cartRepository.findWithItemsByUserId(testUser.getId())).thenReturn(Optional.of(cart));
+        when(productRepository.findByIdAndIsActiveTrue(product.getId())).thenReturn(Optional.of(product));
+        when(cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId())).thenReturn(Optional.of(item));
+
+        assertThatThrownBy(() -> cartService.addToCart(new AddToCartRequest(product.getId(), 1)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("vượt quá giới hạn");
+        assertThat(item.getQuantity()).isEqualTo(Integer.MAX_VALUE);
+        verify(cartItemRepository, never()).save(any());
     }
 }

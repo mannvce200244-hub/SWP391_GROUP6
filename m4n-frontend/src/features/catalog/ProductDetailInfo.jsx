@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { IconShoppingBag, IconCheck, IconArrowRight } from '../../components/ui/Icons.jsx'
+import { ShoppingBag, ArrowRight } from 'lucide-react'
 import { useToast } from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import { useCart } from '../cart/useCart.js'
+import useAuth from '../auth/useAuth.js'
 import EditorialEyebrow from '../../components/common/EditorialEyebrow.jsx'
 import ArtisanVillageSection from './ArtisanVillageSection.jsx'
 import ProductGallery from './ProductGallery.jsx'
@@ -14,7 +15,8 @@ function ProductDetailInfo({ product }) {
   const [quantity, setQuantity] = useState(1)
   const [isAdding, setIsAdding] = useState(false)
   const [isBuying, setIsBuying] = useState(false)
-  const { addToCart } = useCart()
+  const { addToCart, buyNow } = useCart()
+  const { isAuthenticated, user } = useAuth()
   const { addToast } = useToast()
 
   if (!product) return null
@@ -26,6 +28,7 @@ function ProductDetailInfo({ product }) {
   const formattedPrice =
     product.priceDisplay ||
     (product.price != null ? formatCurrencyVND(product.price) : 'Liên hệ')
+  const canPurchase = !isAuthenticated || user?.role === 'CUSTOMER'
 
   const handleAddToCart = async () => {
     if (isOutOfStock || isAdding || isBuying) return
@@ -69,7 +72,7 @@ function ProductDetailInfo({ product }) {
 
     try {
       setIsBuying(true)
-      const result = await addToCart(product.id, quantity)
+      const result = await buyNow(product.id, quantity)
 
       if (result.requireAuth) {
         addToast({
@@ -85,6 +88,7 @@ function ProductDetailInfo({ product }) {
           message: `Đã chọn mua ${quantity} nhạc cụ "${product.name}".`,
           type: 'success',
         })
+        navigateTo(result.checkoutUrl)
       } else {
         addToast({
           message: result.message || 'Không thể tiến hành mua hàng.',
@@ -113,6 +117,7 @@ function ProductDetailInfo({ product }) {
         {/* Right Column (5 cols): Details & Purchase */}
         <div className="lg:col-span-5 flex flex-col gap-5 bg-surface p-6 sm:p-8 rounded-2xl border border-border/80 shadow-xs">
           {/* Category Tag & Code */}
+          {Number(product.productDiscountAmount) > 0 && <p className="text-sm text-jade">Giảm theo sản phẩm {formatCurrencyVND(product.productDiscountAmount)} · Giá niêm yết <del>{formatCurrencyVND(product.originalPrice)}</del></p>}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <EditorialEyebrow label={categoryName || 'Nhạc cụ truyền thống'} />
             {product.code && (
@@ -121,13 +126,13 @@ function ProductDetailInfo({ product }) {
           </div>
 
           {/* Instrument Title */}
-          <h1 className="text-2xl sm:text-3xl font-bold font-serif text-ink tracking-tight leading-snug">
+          <h1 className="text-2xl sm:text-3xl font-bold font-sans text-ink tracking-tight leading-snug">
             {product.name}
           </h1>
 
           {/* Price & Availability */}
           <div className="flex items-baseline justify-between gap-4 flex-wrap pt-1">
-            <div className="text-2xl sm:text-3xl font-bold text-ink font-serif tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-brand font-sans tracking-tight">
               {formattedPrice}
             </div>
             {isOutOfStock ? (
@@ -135,8 +140,8 @@ function ProductDetailInfo({ product }) {
                 <span className="w-2 h-2 rounded-full bg-subtle" /> Tạm hết hàng
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-jade-soft/60 text-jade border border-jade-border/70">
-                <span className="w-2 h-2 rounded-full bg-jade animate-pulse" /> Còn hàng
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-surface-secondary text-jade border border-jade-border/70">
+                <span className="w-2 h-2 rounded-full bg-jade" /> {product.availability === 'LOW_STOCK' ? 'Sắp hết hàng' : 'Có hàng tại thời điểm kiểm tra'}
               </span>
             )}
           </div>
@@ -173,6 +178,7 @@ function ProductDetailInfo({ product }) {
           </div>
 
           {/* Purchase / Add to Cart Actions */}
+          {canPurchase ? (
           <div className="pt-3 flex flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted block">
@@ -180,7 +186,7 @@ function ProductDetailInfo({ product }) {
               </label>
               {!isOutOfStock && (
                 <span className="text-xs text-jade font-medium">
-                  Sẵn sàng giao hàng
+                  Tồn kho sẽ được xác nhận khi xử lý đơn
                 </span>
               )}
             </div>
@@ -201,7 +207,7 @@ function ProductDetailInfo({ product }) {
                 onClick={handleAddToCart}
                 type="button"
               >
-                <IconShoppingBag size={18} />
+                <ShoppingBag size={18} />
                 <span>
                   {isAdding ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
                 </span>
@@ -224,26 +230,19 @@ function ProductDetailInfo({ product }) {
                     : 'Mua hàng'}
               </span>
               {!isOutOfStock && !isBuying && (
-                <IconArrowRight size={16} aria-hidden="true" />
+                <ArrowRight size={16} aria-hidden="true" />
               )}
             </button>
           </div>
+          ) : (
+            <div className="mt-2 rounded-lg border border-border bg-surface-secondary p-3 text-sm text-muted">
+              Tài khoản nhân sự chỉ có quyền xem thông tin sản phẩm. Vui lòng sử dụng đúng bàn làm việc theo vai trò.
+            </div>
+          )}
 
-          {/* Craft Trust Guarantees */}
-          <div className="mt-4 pt-4 border-t border-border/60 flex flex-col gap-2 text-xs text-muted">
-            <div className="flex items-center gap-2">
-              <IconCheck size={15} className="text-jade shrink-0 stroke-[2.5]" />
-              <span>Chế tác thủ công chuẩn quy cách di sản âm nhạc dân tộc</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <IconCheck size={15} className="text-jade shrink-0 stroke-[2.5]" />
-              <span>Kiểm định âm sắc và căn chỉnh bởi nghệ nhân</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <IconCheck size={15} className="text-jade shrink-0 stroke-[2.5]" />
-              <span>Đóng gói chuyên dụng chống sốc trong quá trình vận chuyển</span>
-            </div>
-          </div>
+          <p className="mt-4 pt-4 border-t border-border/60 text-xs text-muted">
+            Giá và tồn kho hiển thị có thể thay đổi; hệ thống xác nhận lại khi đơn hàng được xử lý.
+          </p>
         </div>
       </div>
 

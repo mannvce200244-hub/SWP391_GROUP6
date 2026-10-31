@@ -1,4 +1,4 @@
-import { IconSearch, IconX } from '../../components/ui/Icons.jsx'
+import { Search, X } from 'lucide-react'
 
 function ArtisanFilters({
   activeTab = 'artisans',
@@ -18,7 +18,7 @@ function ArtisanFilters({
   )
 
   const searchPlaceholder = isArtisans
-    ? 'Tìm theo tên nghệ nhân, nghề thủ công...'
+    ? 'Tìm theo tên nghệ nhân, tiểu sử...'
     : 'Tìm theo tên làng nghề, địa phương...'
 
   return (
@@ -31,11 +31,11 @@ function ArtisanFilters({
             {searchPlaceholder}
           </label>
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
-            <IconSearch size={18} />
+            <Search size={18} />
           </div>
           <input
             autoComplete="off"
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-control-border text-ink placeholder:text-muted/70 text-sm transition-all focus:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/15 shadow-2xs"
+            className="box-border w-full min-w-0 pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-control-border text-ink placeholder:text-muted/70 text-sm transition-[border-color,box-shadow] focus:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/15 shadow-2xs"
             id="artisan-search-input"
             onChange={(e) => onFilterChange('search', e.target.value)}
             placeholder={searchPlaceholder}
@@ -47,6 +47,7 @@ function ArtisanFilters({
         {/* Dropdowns row (7 cols on lg) */}
         <div className="lg:col-span-7 flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
           {/* Province Filter */}
+          {provinceOptions.length > 0 && (
           <div className="w-full sm:w-auto sm:flex-1">
             <label htmlFor="filter-province" className="sr-only">
               Tỉnh / Thành phố
@@ -65,8 +66,10 @@ function ArtisanFilters({
               ))}
             </select>
           </div>
+          )}
 
           {/* Craft Filter */}
+          {craftOptions.length > 0 && (
           <div className="w-full sm:w-auto sm:flex-1">
             <label htmlFor="filter-craft" className="sr-only">
               Loại nghề thủ công
@@ -85,6 +88,7 @@ function ArtisanFilters({
               ))}
             </select>
           </div>
+          )}
 
           {/* Sort Filter */}
           <div className="w-full sm:w-auto sm:flex-1">
@@ -97,12 +101,9 @@ function ArtisanFilters({
               onChange={(e) => onFilterChange('sort', e.target.value)}
               value={filters.sort || 'featured'}
             >
-              <option value="featured">Nổi bật nhất</option>
-              <option value={isArtisans ? 'experience' : 'artisans'}>
-                {isArtisans ? 'Nhiều kinh nghiệm nhất' : 'Nhiều nghệ nhân nhất'}
-              </option>
+              <option value="featured">Thứ tự mặc định</option>
               <option value="az">Tên A → Z</option>
-              <option value="newest">Mới cập nhật</option>
+              <option value="newest">Mới thêm</option>
             </select>
           </div>
         </div>
@@ -127,7 +128,7 @@ function ArtisanFilters({
             onClick={onClearFilters}
             type="button"
           >
-            <IconX size={13} />
+            <X size={14} />
             <span>Xóa bộ lọc</span>
           </button>
         )}

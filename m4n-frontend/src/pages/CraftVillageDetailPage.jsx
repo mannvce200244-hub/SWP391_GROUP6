@@ -3,6 +3,7 @@ import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import ProductCard from '../features/catalog/ProductCard.jsx'
+import RelatedArticles from '../features/content/RelatedArticles.jsx'
 import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
 import artisanService from '../services/artisanService.js'
@@ -43,12 +44,13 @@ function CraftVillageDetailPage({ slugOrId }) {
         })
 
         try {
-          const items = await productService.listProducts({ craftVillage: village.name })
+          const items = await productService.listProducts({ craftVillage: village.name, page: 1, size: 4 })
           if (active) {
             setPageState((prev) => ({
               ...prev,
               products: Array.isArray(items) ? items : [],
               productsLoading: false,
+              productsError: false,
             }))
           }
         } catch {
@@ -57,6 +59,7 @@ function CraftVillageDetailPage({ slugOrId }) {
               ...prev,
               products: [],
               productsLoading: false,
+              productsError: true,
             }))
           }
         }
@@ -210,7 +213,7 @@ function CraftVillageDetailPage({ slugOrId }) {
             decoding="async"
             fetchPriority="high"
             height="500"
-            src={village.coverImage || '/assets/images/artisan-workshop.jpg'}
+            src={village.coverImage || '/assets/images/vietnamese-instrument-shop.jpg'}
             width="1200"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10 pointer-events-none" />
@@ -236,7 +239,7 @@ function CraftVillageDetailPage({ slugOrId }) {
             </h1>
 
             <p className="text-sm sm:text-base text-white/85 font-medium max-w-2xl line-clamp-2 sm:line-clamp-none">
-              {village.metadataText || `${village.craft} · ${village.province || village.location}`}
+              {village.metadataText || [village.craft, village.province || village.location].filter(Boolean).join(' · ')}
             </p>
           </div>
         </div>
@@ -253,15 +256,9 @@ function CraftVillageDetailPage({ slugOrId }) {
             </div>
 
             <div className="prose prose-neutral max-w-none text-muted text-sm sm:text-base leading-relaxed space-y-4">
-              <p className="text-base sm:text-lg text-ink/90 font-medium leading-relaxed">
-                {village.description}
-              </p>
-              <p>
-                Trải qua hàng trăm năm gìn giữ và tiếp nối, các nghệ nhân nơi đây luôn trung thành với phương pháp chế tác thủ công tinh xảo. Từng thớ gỗ, từng sợi tơ, từng chất liệu tự nhiên đều được tuyển chọn kỹ lưỡng, mang trọn tinh hoa và hồn cốt văn hóa dân tộc Việt Nam.
-              </p>
-              <p>
-                Mỗi sản phẩm hoàn thiện không đơn thuần là một nhạc cụ hay tác phẩm thủ công, mà là kết tinh của sự kiên nhẫn, lòng say mê và tri thức bản địa tích lũy qua nhiều thế hệ truyền thừa.
-              </p>
+              {village.description ? village.description.split(/\n+/).filter(Boolean).map((paragraph, index) => (
+                <p key={index} className="text-base sm:text-lg text-ink/90 font-medium leading-relaxed break-words">{paragraph}</p>
+              )) : <p>Câu chuyện của làng nghề đang được cập nhật.</p>}
             </div>
           </div>
 
@@ -342,7 +339,7 @@ function CraftVillageDetailPage({ slugOrId }) {
                 className="text-xs sm:text-sm font-semibold text-brand hover:text-brand-hover inline-flex items-center gap-1.5 transition-colors"
                 href={`${CUSTOMER_ROUTES.products}?craftVillage=${encodeURIComponent(village.name)}`}
               >
-                Xem tất cả ({products.length}) <span aria-hidden="true">→</span>
+                Xem tất cả <span aria-hidden="true">→</span>
               </RouterLink>
             )}
           </div>
@@ -353,6 +350,8 @@ function CraftVillageDetailPage({ slugOrId }) {
                 <div key={i} className="aspect-3/4 rounded-xl bg-surface-secondary animate-pulse" />
               ))}
             </div>
+          ) : pageState.productsError ? (
+            <ErrorState message="Không thể tải sản phẩm của làng nghề. Vui lòng thử lại." onRetry={handleRetry} />
           ) : products.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {products.map((product) => (
@@ -362,7 +361,7 @@ function CraftVillageDetailPage({ slugOrId }) {
           ) : (
             <div className="rounded-2xl border border-dashed border-border bg-surface-secondary/40 p-8 sm:p-12 text-center flex flex-col items-center gap-3">
               <p className="text-sm sm:text-base font-medium text-ink">
-                Hiện tại các nhạc cụ từ {village.name} đang được nghệ nhân hoàn thiện cho đợt tuyển chọn tiếp theo.
+                Chưa có nhạc cụ từ {village.name} được công bố.
               </p>
               <p className="text-xs sm:text-sm text-muted max-w-lg">
                 Bạn có thể khám phá thêm các bộ sưu tập nhạc cụ truyền thống phong phú khác từ khắp các làng nghề Việt Nam trên M4N.
@@ -376,6 +375,7 @@ function CraftVillageDetailPage({ slugOrId }) {
             </div>
           )}
         </section>
+        <RelatedArticles key={village.id} craftVillageId={village.id} />
       </div>
     </div>
   )

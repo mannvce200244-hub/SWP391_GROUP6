@@ -1,15 +1,25 @@
-import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
-import useAuth from '../features/auth/useAuth.js'
 import {
-  IconUser,
-  IconShield,
-  IconLogOut,
-  IconPackage,
-  IconChevronRight,
-} from '../components/ui/Icons.jsx'
+  CUSTOMER_ROUTES,
+  navigateTo,
+} from '../routes/customerRoutes.js'
+import useAuth from '../features/auth/useAuth.js'
+import RouterLink from '../routes/RouterLink.jsx'
+import {
+  UserRound,
+  Shield,
+  LogOut,
+  Package,
+  MapPin,
+  ChevronRight,
+} from 'lucide-react'
 import useToast from '../components/ui/useToast.js'
 
-function AccountLayout({ children, activeTab = 'profile' }) {
+function AccountLayout({
+  children,
+  activeTab = 'profile',
+  profileRoute = CUSTOMER_ROUTES.profile,
+  securityRoute = CUSTOMER_ROUTES.security,
+}) {
   const { user, logout } = useAuth()
   const { addToast } = useToast()
 
@@ -28,6 +38,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
 
   const roleLabels = {
     ADMIN: 'Quản trị viên',
+    SUPER_ADMIN: 'Super Admin',
     ONLINE_STAFF: 'Nhân viên Online',
     POS_STAFF: 'Nhân viên Showroom POS',
   }
@@ -57,7 +68,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
               {/* User Identity Mini Card */}
               <div className="p-4 rounded-2xl bg-surface-secondary/70 border border-border/60 flex items-center gap-3.5">
                 <div
-                  className="w-13 h-13 rounded-full flex items-center justify-center shrink-0 font-black text-lg bg-brand text-white shadow-sm ring-4 ring-brand-soft select-none"
+                  className="w-13 h-13 rounded-full flex items-center justify-center shrink-0 font-bold text-lg bg-brand text-white shadow-sm ring-4 ring-brand-soft select-none"
                   aria-hidden="true"
                 >
                   {getInitials(user?.fullName || user?.email)}
@@ -85,23 +96,24 @@ function AccountLayout({ children, activeTab = 'profile' }) {
               <nav className="flex flex-col gap-1.5" aria-label="Điều hướng tài khoản">
                 <button
                   type="button"
-                  className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
+                  aria-current={activeTab === 'profile' ? 'page' : undefined}
+                  className={`group relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-[color,background-color,box-shadow] motion-reduce:transition-none ${
                     activeTab === 'profile'
                       ? 'bg-brand text-white shadow-md shadow-brand/20'
                       : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                   }`}
-                  onClick={() => navigateTo(CUSTOMER_ROUTES.profile)}
+                  onClick={() => navigateTo(profileRoute)}
                 >
                   <span className="flex items-center gap-3">
-                    <IconUser
+                    <UserRound
                       size={18}
                       className={activeTab === 'profile' ? 'text-white' : 'text-subtle group-hover:text-ink'}
                     />
                     <span>Hồ sơ cá nhân</span>
                   </span>
-                  <IconChevronRight
+                  <ChevronRight
                     size={16}
-                    className={`transition-transform ${
+                    className={`transition-transform motion-reduce:transform-none motion-reduce:transition-none ${
                       activeTab === 'profile' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
                     }`}
                   />
@@ -109,51 +121,60 @@ function AccountLayout({ children, activeTab = 'profile' }) {
 
                 <button
                   type="button"
-                  className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
+                  aria-current={activeTab === 'security' ? 'page' : undefined}
+                  className={`group relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-[color,background-color,box-shadow] motion-reduce:transition-none ${
                     activeTab === 'security'
                       ? 'bg-brand text-white shadow-md shadow-brand/20'
                       : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                   }`}
-                  onClick={() => navigateTo(CUSTOMER_ROUTES.security)}
+                  onClick={() => navigateTo(securityRoute)}
                 >
                   <span className="flex items-center gap-3">
-                    <IconShield
+                    <Shield
                       size={18}
                       className={activeTab === 'security' ? 'text-white' : 'text-subtle group-hover:text-ink'}
                     />
                     <span>Bảo mật & Mật khẩu</span>
                   </span>
-                  <IconChevronRight
+                  <ChevronRight
                     size={16}
-                    className={`transition-transform ${
+                    className={`transition-transform motion-reduce:transform-none motion-reduce:transition-none ${
                       activeTab === 'security' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
                     }`}
                   />
                 </button>
 
-                <button
-                  type="button"
-                  className={`group relative flex min-h-12 items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-all cursor-pointer ${
-                    activeTab === 'orders'
-                      ? 'bg-brand text-white shadow-md shadow-brand/20'
-                      : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
-                  }`}
-                  onClick={() => navigateTo(CUSTOMER_ROUTES.orders)}
-                >
-                  <span className="flex items-center gap-3">
-                    <IconPackage
-                      size={18}
-                      className={activeTab === 'orders' ? 'text-white' : 'text-subtle group-hover:text-ink'}
-                    />
-                    <span>Đơn hàng của tôi</span>
-                  </span>
-                  <IconChevronRight
-                    size={16}
-                    className={`transition-transform ${
-                      activeTab === 'orders' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
+                {user?.role === 'CUSTOMER' && (
+                  <button
+                    type="button"
+                    aria-current={activeTab === 'orders' ? 'page' : undefined}
+                    className={`group relative flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-[color,background-color,box-shadow] motion-reduce:transition-none ${
+                      activeTab === 'orders'
+                        ? 'bg-brand text-white shadow-md shadow-brand/20'
+                        : 'text-muted hover:text-ink hover:bg-surface-secondary/80'
                     }`}
-                  />
-                </button>
+                    onClick={() => navigateTo(CUSTOMER_ROUTES.orders)}
+                  >
+                    <span className="flex items-center gap-3">
+                      <Package
+                        size={18}
+                        className={activeTab === 'orders' ? 'text-white' : 'text-subtle group-hover:text-ink'}
+                      />
+                      <span>Đơn hàng của tôi</span>
+                    </span>
+                    <ChevronRight
+                      size={16}
+                      className={`transition-transform motion-reduce:transform-none motion-reduce:transition-none ${
+                        activeTab === 'orders' ? 'text-white' : 'text-subtle opacity-50 group-hover:opacity-100'
+                      }`}
+                    />
+                  </button>
+                )}
+                {user?.role === 'CUSTOMER' && <RouterLink href={CUSTOMER_ROUTES.addresses}
+                  aria-current={activeTab === 'addresses' ? 'page' : undefined}
+                  className={`flex min-h-12 items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-bold ${activeTab === 'addresses' ? 'bg-brand text-white' : 'text-muted hover:text-ink hover:bg-surface-secondary'}`}>
+                  <MapPin size={18} aria-hidden="true" />Địa chỉ nhận hàng
+                </RouterLink>}
               </nav>
 
               {/* Logout Action */}
@@ -163,7 +184,7 @@ function AccountLayout({ children, activeTab = 'profile' }) {
                   className="flex items-center justify-center gap-2.5 px-4 py-3 text-sm font-bold rounded-[18px] text-muted hover:text-brand hover:bg-brand-soft border border-border/80 hover:border-brand-border transition-all w-full cursor-pointer"
                   onClick={handleLogout}
                 >
-                  <IconLogOut size={16} className="shrink-0" />
+                  <LogOut size={16} className="shrink-0" />
                   <span>Đăng xuất tài khoản</span>
                 </button>
               </div>
@@ -172,9 +193,9 @@ function AccountLayout({ children, activeTab = 'profile' }) {
           </aside>
 
           {/* Right Main Content Card */}
-          <main className="flex-1 w-full min-w-0 rounded-[32px] border border-border/80 bg-white p-6 sm:p-10 shadow-sm relative overflow-hidden">
+          <div className="flex-1 w-full min-w-0 rounded-[32px] border border-border/80 bg-white p-6 sm:p-10 shadow-sm relative overflow-hidden">
             {children}
-          </main>
+          </div>
 
         </div>
       </div>

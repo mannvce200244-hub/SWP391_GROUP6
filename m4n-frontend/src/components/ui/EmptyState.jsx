@@ -1,6 +1,6 @@
-import { IconPackage } from './Icons.jsx'
+import { Package } from 'lucide-react'
 
-function EmptyState({ children, icon: Icon = IconPackage, message, title }) {
+function EmptyState({ children, icon: Icon = Package, message, title }) {
   return (
     <div className="flex flex-col items-center justify-center text-center p-8 sm:p-12 rounded-xl border border-dashed border-border bg-surface/60 max-w-lg mx-auto my-6">
       {Icon && (

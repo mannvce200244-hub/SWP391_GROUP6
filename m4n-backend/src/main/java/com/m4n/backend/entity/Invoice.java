@@ -43,6 +43,14 @@ public class Invoice {
     @JoinColumn(name = "staff_id")
     private User staff;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private User customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pos_customer_id")
+    private PosCustomer posCustomer;
+
     @Column(name = "customer_name", length = 150)
     private String customerName;
 
@@ -56,8 +64,23 @@ public class Invoice {
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal discount = BigDecimal.ZERO;
 
+    @Builder.Default
+    @Column(name = "manual_discount_amount", precision = 14, scale = 2)
+    private BigDecimal manualDiscountAmount = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(name = "automatic_discount_amount", precision = 14, scale = 2)
+    private BigDecimal automaticDiscountAmount = BigDecimal.ZERO;
+
+    @Column(name = "automatic_promotion_code", length = 50)
+    private String automaticPromotionCode;
+
     @Column(name = "final_amount", nullable = false, precision = 14, scale = 2)
     private BigDecimal finalAmount;
+    @Column(name = "original_total_amount", precision = 14, scale = 2)
+    private BigDecimal originalTotalAmount;
+    @Builder.Default @Column(name = "product_discount_amount", precision = 14, scale = 2)
+    private BigDecimal productDiscountAmount = BigDecimal.ZERO;
 
     @Column(name = "voucher_code", length = 50)
     private String voucherCode;

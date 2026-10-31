@@ -2,20 +2,25 @@ import { useState } from 'react'
 import useAuth from './useAuth.js'
 import AccountLayout from '../../layouts/AccountLayout.jsx'
 import {
-  IconAlertCircle,
-  IconCheck,
-  IconMail,
-  IconShield,
-  IconArrowRight,
-  IconUser,
-  IconPhone,
-  IconMapPin,
-  IconCamera,
-} from '../../components/ui/Icons.jsx'
+  CircleAlert,
+  Check,
+  Mail,
+  Shield,
+  ArrowRight,
+  UserRound,
+  Phone,
+  MapPin,
+  Camera,
+  LoaderCircle,
+} from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
+import { isValidVietnameseMobile, VIETNAMESE_MOBILE_ERROR } from '../../utils/phone.js'
 
-function ProfilePage() {
+function ProfilePage({
+  profileRoute = CUSTOMER_ROUTES.profile,
+  securityRoute = CUSTOMER_ROUTES.security,
+}) {
   const { user, updateProfile } = useAuth()
   const { addToast } = useToast()
 
@@ -27,6 +32,7 @@ function ProfilePage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [generalError, setGeneralError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const isCustomer = user?.role === 'CUSTOMER'
 
   // Synchronize state if user updates externally
   if (user !== prevUser) {
@@ -47,16 +53,20 @@ function ProfilePage() {
       errors.fullName = 'Họ và tên không được vượt quá 150 ký tự.'
     }
 
-    if (trimmedPhone && !/^[0-9+() -]{8,20}$/.test(trimmedPhone)) {
-      errors.phone = 'Số điện thoại không hợp lệ (từ 8 đến 20 số).'
+    if (trimmedPhone && !isValidVietnameseMobile(trimmedPhone)) {
+      errors.phone = VIETNAMESE_MOBILE_ERROR
     }
+    if (address.trim().length > 255) errors.address = 'Địa chỉ không được vượt quá 255 ký tự.'
 
     setFieldErrors(errors)
+    const ids = { fullName: 'profile-fullname', phone: 'profile-phone', address: 'profile-address' }
+    document.getElementById(ids[Object.keys(errors)[0]])?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGeneralError('')
 
     if (!validate()) {
@@ -76,6 +86,7 @@ function ProfilePage() {
         type: 'success',
       })
     } catch (err) {
+      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       const message = err?.message || 'Không thể cập nhật thông tin. Vui lòng thử lại sau.'
       setGeneralError(message)
     } finally {
@@ -98,7 +109,11 @@ function ProfilePage() {
     address.trim() !== (user?.address || '').trim()
 
   return (
-    <AccountLayout activeTab="profile">
+    <AccountLayout
+      activeTab="profile"
+      profileRoute={profileRoute}
+      securityRoute={securityRoute}
+    >
       <div className="space-y-8">
         
         {/* Profile Hero Section */}
@@ -108,7 +123,7 @@ function ProfilePage() {
             {/* Prominent Circular Avatar */}
             <div className="group relative">
               <div
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center font-black text-3xl sm:text-4xl bg-gradient-to-br from-brand to-brand-hover text-white shadow-xl shadow-brand/20 ring-4 ring-brand-soft select-none transition-transform duration-200 group-hover:scale-[1.02]"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center font-bold text-3xl sm:text-4xl bg-gradient-to-br from-brand to-brand-hover text-white shadow-xl shadow-brand/20 ring-4 ring-brand-soft select-none transition-transform duration-200 group-hover:scale-[1.02]"
                 aria-hidden="true"
               >
                 {getInitials(user?.fullName || user?.email)}
@@ -117,20 +132,22 @@ function ProfilePage() {
                 className="absolute inset-0 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-xs cursor-default"
                 title="Avatar hiển thị theo tài khoản"
               >
-                <IconCamera size={26} />
+                <Camera size={26} />
               </div>
             </div>
 
             {/* Name and Badges */}
             <div className="flex-1 min-w-0">
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-ink font-sans mb-1.5 truncate">
+              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink font-sans mb-1.5 truncate">
                 {user?.fullName || 'Người dùng M4N'}
               </h2>
               <div className="flex flex-wrap items-center gap-2 mb-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-jade-soft px-3 py-1 text-xs font-bold text-jade border border-jade-border">
                   <span className="w-1.5 h-1.5 rounded-full bg-jade animate-pulse" />
-                  {user?.role === 'ADMIN'
-                    ? 'Quản trị viên'
+                  {user?.role === 'SUPER_ADMIN'
+                    ? 'Super Admin'
+                    : user?.role === 'ADMIN'
+                      ? 'Quản trị viên'
                     : user?.role === 'ONLINE_STAFF'
                       ? 'Nhân viên Online'
                       : user?.role === 'POS_STAFF'
@@ -138,12 +155,12 @@ function ProfilePage() {
                         : 'Khách hàng thành viên'}
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-secondary px-3 py-1 text-xs font-semibold text-muted border border-border">
-                  <IconCheck size={13} className="text-jade" />
+                  <Check size={13} className="text-jade" />
                   Đã xác thực
                 </span>
               </div>
               <p className="text-xs text-muted flex items-center gap-1.5">
-                <IconMail size={14} className="text-subtle" />
+                <Mail size={14} className="text-subtle" />
                 <span>{user?.email}</span>
               </p>
             </div>
@@ -152,12 +169,12 @@ function ProfilePage() {
           {/* Quick Security Action Shortcut */}
           <button
             type="button"
-            onClick={() => navigateTo(CUSTOMER_ROUTES.security)}
+            onClick={() => navigateTo(securityRoute)}
             className="self-start sm:self-center inline-flex items-center gap-2 px-4 py-2.5 rounded-[16px] text-xs font-bold text-brand bg-brand-soft/70 hover:bg-brand-soft border border-brand-border transition-all cursor-pointer"
           >
-            <IconShield size={15} />
+            <Shield size={15} />
             <span>Bảo mật & Đổi mật khẩu</span>
-            <IconArrowRight size={13} />
+            <ArrowRight size={13} />
           </button>
         </div>
 
@@ -168,7 +185,7 @@ function ProfilePage() {
             className="flex items-start gap-3 p-4 rounded-2xl text-sm leading-relaxed bg-danger-soft border border-danger-border text-danger"
             aria-live="assertive"
           >
-            <IconAlertCircle size={20} className="shrink-0 mt-0.5" />
+            <CircleAlert size={20} className="shrink-0 mt-0.5" />
             <span>{generalError}</span>
           </div>
         )}
@@ -188,7 +205,7 @@ function ProfilePage() {
               </label>
               <div className="relative flex items-center">
                 <div className="pointer-events-none absolute left-4 text-subtle transition-colors group-focus-within:text-brand">
-                  <IconUser size={18} />
+                  <UserRound size={18} />
                 </div>
                 <input
                   id="profile-fullname"
@@ -196,6 +213,9 @@ function ProfilePage() {
                   type="text"
                   autoComplete="name"
                   required
+                  maxLength={150}
+                  aria-invalid={Boolean(fieldErrors.fullName)}
+                  aria-describedby={fieldErrors.fullName ? 'profile-fullname-error' : undefined}
                   placeholder="Nhập họ và tên của bạn"
                   value={fullName}
                   disabled={isSubmitting}
@@ -213,8 +233,8 @@ function ProfilePage() {
                 />
               </div>
               {fieldErrors.fullName && (
-                <p className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
-                  <IconAlertCircle size={13} />
+                <p id="profile-fullname-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
+                  <CircleAlert size={13} />
                   <span>{fieldErrors.fullName}</span>
                 </p>
               )}
@@ -230,14 +250,18 @@ function ProfilePage() {
               </label>
               <div className="relative flex items-center">
                 <div className="pointer-events-none absolute left-4 text-subtle transition-colors group-focus-within:text-brand">
-                  <IconPhone size={18} />
+                  <Phone size={18} />
                 </div>
                 <input
                   id="profile-phone"
                   name="tel"
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  aria-invalid={Boolean(fieldErrors.phone)}
+                  aria-describedby={fieldErrors.phone ? 'profile-phone-error' : undefined}
                   autoComplete="tel"
-                  placeholder="Ví dụ: 0912 345 678"
+                  placeholder="Ví dụ: 0912345678"
                   value={phone}
                   disabled={isSubmitting}
                   onChange={(e) => {
@@ -254,13 +278,15 @@ function ProfilePage() {
                 />
               </div>
               {fieldErrors.phone ? (
-                <p className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
-                  <IconAlertCircle size={13} />
+                <p id="profile-phone-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger flex items-center gap-1">
+                  <CircleAlert size={13} />
                   <span>{fieldErrors.phone}</span>
                 </p>
               ) : (
                 <p className="mt-1.5 text-xs text-muted">
-                  Dùng để xác nhận đơn hàng và điều phối giao nhận nhạc cụ.
+                  {isCustomer
+                    ? 'Dùng để xác nhận đơn hàng và điều phối giao nhận nhạc cụ.'
+                    : 'Dùng làm thông tin liên hệ của tài khoản.'}
                 </p>
               )}
             </div>
@@ -278,7 +304,7 @@ function ProfilePage() {
               </div>
               <div className="relative flex items-center">
                 <div className="pointer-events-none absolute left-4 text-subtle">
-                  <IconMail size={18} />
+                  <Mail size={18} />
                 </div>
                 <input
                   id="profile-email"
@@ -291,7 +317,7 @@ function ProfilePage() {
                 />
               </div>
               <p className="mt-1.5 text-xs text-muted">
-                Email tài khoản được dùng để đăng nhập và gửi thông báo đơn hàng điện tử.
+                Email tài khoản được dùng để đăng nhập và nhận thông báo trong hệ thống.
               </p>
             </div>
 
@@ -301,25 +327,35 @@ function ProfilePage() {
                 htmlFor="profile-address"
                 className="mb-2 block text-sm font-bold text-ink"
               >
-                Địa chỉ giao nhận mặc định
+                {isCustomer ? 'Địa chỉ giao nhận mặc định' : 'Địa chỉ liên hệ'}
               </label>
               <div className="relative flex">
                 <div className="pointer-events-none absolute left-4 top-4 text-subtle transition-colors group-focus-within:text-brand">
-                  <IconMapPin size={18} />
+                  <MapPin size={18} />
                 </div>
                 <textarea
                   id="profile-address"
                   name="address"
+                  autoComplete="street-address"
+                  maxLength={255}
+                  aria-invalid={Boolean(fieldErrors.address)}
+                  aria-describedby={fieldErrors.address ? 'profile-address-error' : undefined}
                   rows={3}
                   placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố..."
                   value={address}
                   disabled={isSubmitting}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    setAddress(e.target.value)
+                    if (fieldErrors.address) setFieldErrors((current) => ({ ...current, address: undefined }))
+                  }}
                   className="w-full rounded-2xl border border-border/80 bg-white p-4 pl-11 text-sm text-ink shadow-2xs min-h-[105px] resize-y transition-all duration-200 placeholder:text-subtle focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10"
                 />
               </div>
+              {fieldErrors.address && <p id="profile-address-error" aria-live="polite" className="mt-1.5 text-xs font-semibold text-danger">{fieldErrors.address}</p>}
               <p className="mt-1.5 text-xs text-muted">
-                Địa chỉ này sẽ được ưu tiên tự động điền khi bạn đặt làm hoặc mua nhạc cụ tại M4N.
+                {isCustomer
+                  ? 'Địa chỉ này sẽ được ưu tiên tự động điền khi bạn mua nhạc cụ tại M4N.'
+                  : 'Thông tin địa chỉ liên hệ của tài khoản.'}
               </p>
             </div>
 
@@ -335,7 +371,7 @@ function ProfilePage() {
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5 text-subtle">
-                  <IconCheck size={14} className="text-jade" />
+                  <Check size={14} className="text-jade" />
                   Dữ liệu hồ sơ đã được đồng bộ
                 </span>
               )}
@@ -365,26 +401,7 @@ function ProfilePage() {
               >
                 {isSubmitting ? (
                   <>
-                    <svg
-                      aria-hidden="true"
-                      className="w-4 h-4 animate-spin text-current"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
+                    <LoaderCircle className="w-4 h-4 animate-spin text-current" />
                     <span>Đang lưu thay đổi...</span>
                   </>
                 ) : (

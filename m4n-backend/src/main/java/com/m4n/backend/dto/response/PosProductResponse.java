@@ -19,6 +19,8 @@ public class PosProductResponse {
     private String barcode;
     private String name;
     private BigDecimal price;
+    private BigDecimal originalUnitPrice;
+    private BigDecimal productDiscountAmount;
     private String formattedPrice;
     private String categoryName;
     private String primaryImage;
