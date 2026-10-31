@@ -1,0 +1,138 @@
+[
+  {
+    "path": "/health",
+    "name": "Packaged health",
+    "method": "GET",
+    "expected": 200,
+    "passed": true,
+    "actual": 200
+  },
+  {
+    "path": "/payments/options",
+    "name": "Payment options",
+    "method": "GET",
+    "expected": 200,
+    "passed": true,
+    "actual": 200
+  },
+  {
+    "path": "/auth/register",
+    "name": "Registration requires OTP proof",
+    "method": "POST",
+    "expected": 400,
+    "passed": true,
+    "actual": 400
+  },
+  {
+    "path": "/auth/email-otp",
+    "name": "Registration OTP unavailable honestly",
+    "method": "POST",
+    "expected": 503,
+    "passed": true,
+    "actual": 503
+  },
+  {
+    "path": "/auth/email-otp",
+    "name": "Unknown reset OTP has same unconfigured result",
+    "method": "POST",
+    "expected": 503,
+    "passed": true,
+    "actual": 503
+  },
+  {
+    "path": "/media/invalid.png",
+    "name": "Media path validation",
+    "method": "GET",
+    "expected": 404,
+    "passed": true,
+    "actual": 404
+  },
+  {
+    "path": "/shipping/options",
+    "name": "Address options require session",
+    "method": "GET",
+    "expected": 401,
+    "passed": true,
+    "actual": 401
+  },
+  {
+    "path": "/auth/login",
+    "name": "Customer fixture login",
+    "method": "POST",
+    "expected": 200,
+    "passed": true,
+    "actual": 200
+  },
+  {
+    "path": "/shipping/options",
+    "name": "Shipping options",
+    "method": "GET",
+    "expected": 200,
+    "passed": true,
+    "actual": 200
+  },
+  {
+    "path": "/shipping/provinces",
+    "name": "GHN unconfigured without fake address",
+    "method": "GET",
+    "expected": 503,
+    "passed": true,
+    "actual": 503
+  },
+  {
+    "path": "/checkout/preview",
+    "name": "Empty selected cart rejected",
+    "method": "POST",
+    "expected": 400,
+    "passed": true,
+    "actual": 400
+  },
+  {
+    "path": "/payments/momo/ipn",
+    "name": "Forged MoMo notification rejected",
+    "method": "POST",
+    "expected": 503,
+    "passed": true,
+    "actual": 503
+  },
+  {
+    "path": "/admin/products",
+    "name": "Customer cannot create product",
+    "method": "POST",
+    "expected": 403,
+    "passed": true,
+    "actual": 403
+  },
+  {
+    "path": "/auth/logout",
+    "name": "Customer fixture logout",
+    "method": "POST",
+    "expected": 204,
+    "passed": true,
+    "actual": 204
+  },
+  {
+    "path": "/auth/login",
+    "name": "Admin fixture login",
+    "method": "POST",
+    "expected": 200,
+    "passed": true,
+    "actual": 200
+  },
+  {
+    "path": "/admin/products?page=0&size=1",
+    "name": "Admin product list",
+    "method": "GET",
+    "expected": 200,
+    "passed": true,
+    "actual": 200
+  },
+  {
+    "path": "/auth/logout",
+    "name": "Admin fixture logout",
+    "method": "POST",
+    "expected": 204,
+    "passed": true,
+    "actual": 204
+  }
+]

@@ -1,0 +1,24 @@
+[INFO] Running com.m4n.backend.service.VnpayGatewayTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.019 s -- in com.m4n.backend.service.VnpayGatewayTest
+[INFO] Running com.m4n.backend.service.VnpayPropertiesTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in com.m4n.backend.service.VnpayPropertiesTest
+[INFO] Running com.m4n.backend.service.VoucherServiceTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.090 s -- in com.m4n.backend.service.VoucherServiceTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 338, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.5.1:jar (default-jar) @ m4n-backend ---
+[INFO] Building jar: D:\m4n\m4n-backend\target\m4n-backend-0.0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- spring-boot:4.1.1:repackage (repackage) @ m4n-backend ---
+[INFO] Replacing main artifact D:\m4n\m4n-backend\target\m4n-backend-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to D:\m4n\m4n-backend\target\m4n-backend-0.0.1-SNAPSHOT.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  39.788 s
+[INFO] Finished at: 2026-10-11T18:07:39+07:00
+[INFO] ------------------------------------------------------------------------

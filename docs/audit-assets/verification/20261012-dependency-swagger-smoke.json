@@ -1,0 +1,77 @@
+[
+  {
+    "passed": true,
+    "path": "/api/v1/health",
+    "expected": 200,
+    "name": "default packaged health",
+    "actual": 200
+  },
+  {
+    "passed": true,
+    "path": "/v3/api-docs",
+    "expected": 200,
+    "name": "Development OpenAPI",
+    "actual": 200
+  },
+  {
+    "name": "Application paths and JWT security generated",
+    "passed": true
+  },
+  {
+    "passed": true,
+    "path": "/swagger-ui/index.html",
+    "expected": 200,
+    "name": "Development Swagger HTML",
+    "actual": 200
+  },
+  {
+    "name": "Swagger references bundle",
+    "passed": true
+  },
+  {
+    "passed": true,
+    "path": "/swagger-ui/swagger-ui-bundle.js",
+    "expected": 200,
+    "name": "Development Swagger JS",
+    "actual": 200
+  },
+  {
+    "passed": true,
+    "path": "/v3/api-docs/swagger-config",
+    "expected": 200,
+    "name": "Development Swagger configuration",
+    "actual": 200
+  },
+  {
+    "name": "Swagger uses application specification",
+    "passed": true
+  },
+  {
+    "passed": true,
+    "path": "/api/v1/health",
+    "expected": 200,
+    "name": "prod packaged health",
+    "actual": 200
+  },
+  {
+    "passed": true,
+    "path": "/swagger-ui/index.html",
+    "expected": 404,
+    "name": "Prod Swagger disabled",
+    "actual": 404
+  },
+  {
+    "passed": true,
+    "path": "/v3/api-docs",
+    "expected": 404,
+    "name": "Prod OpenAPI disabled",
+    "actual": 404
+  },
+  {
+    "passed": true,
+    "path": "/v3/api-docs/swagger-config",
+    "expected": 404,
+    "name": "Prod Swagger configuration disabled",
+    "actual": 404
+  }
+]

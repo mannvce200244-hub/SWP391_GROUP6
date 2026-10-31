@@ -1,0 +1,134 @@
+[
+  {
+    "name": "Production packaged health",
+    "actual": 200,
+    "path": "/api/v1/health",
+    "passed": true,
+    "expected": 200
+  },
+  {
+    "passed": true,
+    "name": "No MIME sniffing header"
+  },
+  {
+    "name": "Production payment options",
+    "actual": 200,
+    "path": "/api/v1/payments/options",
+    "passed": true,
+    "expected": 200
+  },
+  {
+    "passed": true,
+    "name": "Sandbox providers unavailable"
+  },
+  {
+    "name": "Fresh production catalog",
+    "actual": 200,
+    "path": "/api/v1/products?size=1",
+    "passed": true,
+    "expected": 200
+  },
+  {
+    "passed": true,
+    "name": "No seeded products"
+  },
+  {
+    "name": "Swagger disabled",
+    "actual": 404,
+    "path": "/swagger-ui/index.html",
+    "passed": true,
+    "expected": 404
+  },
+  {
+    "name": "OpenAPI disabled",
+    "actual": 404,
+    "path": "/v3/api-docs",
+    "passed": true,
+    "expected": 404
+  },
+  {
+    "name": "Protected orders require login",
+    "actual": 401,
+    "path": "/api/v1/orders/me",
+    "passed": true,
+    "expected": 401
+  },
+  {
+    "name": "Opt-in bootstrap login",
+    "actual": 200,
+    "path": "/api/v1/auth/login",
+    "passed": true,
+    "expected": 200
+  },
+  {
+    "passed": true,
+    "name": "Bootstrap role preserved"
+  },
+  {
+    "passed": true,
+    "name": "Secure HttpOnly SameSite auth cookie"
+  },
+  {
+    "name": "Simple refresh blocked",
+    "actual": 403,
+    "path": "/api/v1/auth/refresh",
+    "passed": true,
+    "expected": 403
+  },
+  {
+    "name": "Simple logout blocked",
+    "actual": 403,
+    "path": "/api/v1/auth/logout",
+    "passed": true,
+    "expected": 403
+  },
+  {
+    "name": "Sibling origin refresh blocked",
+    "actual": 403,
+    "path": "/api/v1/auth/refresh",
+    "passed": true,
+    "expected": 403
+  },
+  {
+    "name": "Trusted refresh survives rejected requests",
+    "actual": 200,
+    "path": "/api/v1/auth/refresh",
+    "passed": true,
+    "expected": 200
+  },
+  {
+    "name": "Production admin list",
+    "actual": 200,
+    "path": "/api/v1/admin/products?size=1",
+    "passed": true,
+    "expected": 200
+  },
+  {
+    "name": "OTP proof still mandatory",
+    "actual": 400,
+    "path": "/api/v1/auth/register",
+    "passed": true,
+    "expected": 400
+  },
+  {
+    "name": "Unknown uploaded image returns not found",
+    "actual": 404,
+    "path": "/api/v1/media/00000000-0000-0000-0000-000000000000.png",
+    "passed": true,
+    "expected": 404
+  },
+  {
+    "name": "Trusted logout",
+    "actual": 204,
+    "path": "/api/v1/auth/logout",
+    "passed": true,
+    "expected": 204
+  },
+  {
+    "name": "Revoked cookie cannot refresh",
+    "actual": 401,
+    "path": "/api/v1/auth/refresh",
+    "passed": true,
+    "expected": 401
+  }
+]
