@@ -1,4 +1,5 @@
 import Button from '../components/ui/Button.jsx'
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import LoadingState from '../components/ui/LoadingState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
@@ -21,6 +22,7 @@ import {
   Shield,
   ShoppingBag,
   TicketPercent,
+
   Trash2,
 } from 'lucide-react'
 import { IconInstrument } from '../components/ui/Icons.jsx'
@@ -78,6 +80,7 @@ function CheckoutPage() {
   const recipientPhone = carrierEnabled ? formData.customerPhone.trim() : undefined
   const shippingKey = carrierEnabled ? JSON.stringify([deliveryAddress, recipientName, recipientPhone]) : 'local'
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('COD')
+
   const [paymentOptions, setPaymentOptions] = useState(null)
   const [paymentOptionsError, setPaymentOptionsError] = useState('')
   const [optionsRetry, setOptionsRetry] = useState(0)
@@ -88,6 +91,7 @@ function CheckoutPage() {
   const [voucherLoading, setVoucherLoading] = useState(false)
   const [voucherFeedback, setVoucherFeedback] = useState(null)
   const [suggestedVouchers, setSuggestedVouchers] = useState([])
+
   const [shippingCodeInput, setShippingCodeInput] = useState('')
   const [shippingVoucher, setShippingVoucher] = useState(null)
   const [shippingFeedback, setShippingFeedback] = useState('')
@@ -135,6 +139,7 @@ function CheckoutPage() {
       active = false
     }
   }, [isAuthenticated])
+
 
   // Prefill customer profile data if user loads asynchronously
   useEffect(() => {
@@ -249,6 +254,7 @@ function CheckoutPage() {
     if (voucherLoading || cartLoading || submitting || previewLoading) return
     const trimmed = (rawCode || '').trim().toUpperCase()
     if (!trimmed) {
+
       setVoucherFeedback({ type: 'error', message: 'Vui lòng nhập mã voucher' })
       return
     }
@@ -260,6 +266,7 @@ function CheckoutPage() {
       setVoucherFeedback(null)
 
       const res = await orderService.previewCheckout(trimmed, shippingVoucher, cartItemIds, carrierAddress, recipientName, recipientPhone, directPurchase)
+
       if (requestId !== previewSequence.current) return
 
       if (res.voucherApplied) {
@@ -363,6 +370,7 @@ function CheckoutPage() {
       return
     }
 
+
     let placedOrder = null
     try {
       submissionPending.current = true
@@ -390,6 +398,7 @@ function CheckoutPage() {
       await refreshCart()
 
       if (paymentMethod === 'VNPAY' || paymentMethod === 'MOMO') {
+
         const paymentUrl = await paymentService.start(orderResponse.id, paymentMethod)
         window.location.assign(paymentUrl)
         return
@@ -432,6 +441,7 @@ function CheckoutPage() {
     ? Number(preview?.subtotal || 0)
     : items.reduce((sum, it) => sum + Number(it.subtotal || (Number(it.unitPrice || 0) * Number(it.quantity || 0))), 0)
   const currentTotalQuantity = items.reduce((count, item) => count + Number(item.quantity || 0), 0)
+
 
   if (!isAuthenticated) {
     return (
@@ -606,6 +616,7 @@ function CheckoutPage() {
                         onClick={handleApplyVoucher}
                         disabled={checkoutBusy || !voucherCodeInput.trim()}
                         className="shrink-0" loading={voucherLoading} loadingLabel="Đang kiểm tra…"
+
                       >
                         Áp dụng
                       </Button>
@@ -718,6 +729,7 @@ function CheckoutPage() {
                         )
                       })}
                     </div>
+
                   </div>
                 )}
               </div>
@@ -728,6 +740,7 @@ function CheckoutPage() {
                 {shippingVoucher ? <div className="flex flex-wrap gap-3 items-center"><strong className="font-mono">{shippingVoucher}</strong><button type="button" disabled={checkoutBusy} onClick={() => { setShippingVoucher(null); setShippingCodeInput(''); setShippingFeedback('') }} className="min-h-11 px-3 text-brand underline">Bỏ voucher ship</button></div> : <>
                   <label htmlFor="checkout-shipping-voucher" className="block text-xs font-semibold">Mã giảm ship</label>
                   <div className="flex gap-2"><input id="checkout-shipping-voucher" name="shippingVoucherCode" autoComplete="off" maxLength={50} value={shippingCodeInput} disabled={checkoutBusy} onChange={(event) => { setShippingCodeInput(event.target.value.toUpperCase()); setShippingFeedback('') }} className="min-h-11 min-w-0 flex-1 px-3 border border-border rounded-xl font-mono text-sm" /><Button variant="secondary" disabled={checkoutBusy || !shippingCodeInput.trim()} onClick={handleApplyShippingVoucher} className="shrink-0">Áp dụng</Button></div>
+
                 </>}
                 {shippingFeedback && <p role="status" className="text-xs text-muted">{shippingFeedback}</p>}
               </div>
@@ -803,6 +816,36 @@ function CheckoutPage() {
                               : 'Cổng thanh toán VNPay Sandbox. Chuyển thẳng đến màn hình nhập thẻ test NCB (9704198526191432198, OTP 123456) nhanh chóng.')
                           : 'Cổng thanh toán VNPay đang tạm bảo trì. Vui lòng chọn COD.'}
                       </p>
+                    </div>
+                  </label>
+
+                  <label className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all ${
+                    paymentMethod === 'MOMO'
+                      ? 'bg-brand-soft/20 border-brand ring-1 ring-brand'
+                      : 'bg-white border-border/80'
+                  } ${paymentOptions?.momoAvailable ? 'cursor-pointer hover:bg-surface-secondary/40' : 'opacity-60 cursor-not-allowed bg-surface-secondary/20'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="MOMO"
+                      checked={paymentMethod === 'MOMO'}
+                      disabled={!paymentOptions?.momoAvailable || checkoutBusy}
+                      onChange={() => setPaymentMethod('MOMO')}
+                      className="mt-1 text-brand focus:ring-brand"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-ink">Thẻ quốc tế qua MoMo (Sandbox)</span>
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-secondary text-pink-700 border border-pink-200">
+                          MoMo Gateway
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted mt-1">
+                        {paymentOptions?.momoAvailable
+                          ? 'Nhập thông tin thẻ thử nghiệm trên trang MoMo. Hỗ trợ đơn từ 1.000 đến 10.000.000 đồng.'
+                          : 'Cổng thanh toán MoMo đang tạm bảo trì. Vui lòng chọn COD.'}
+                      </p>
+
                     </div>
                   </label>
                 </div>
@@ -920,6 +963,7 @@ function CheckoutPage() {
                 <button
                   type="submit"
                   disabled={checkoutBusy || !hasItems || !previewCurrent || (paymentMethod === 'VNPAY' && isVnpayAmountOutOfRange)}
+
                   className="w-full h-14 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-base shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                 >
                   {submitting ? (

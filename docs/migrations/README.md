@@ -39,27 +39,6 @@ been exercised in this environment. No migration engine is introduced.
 19. `20261016_pos_momo_payments.sql`
 20. `20261016_pos_momo_cancellation.sql`
 21. `20261016_pos_invoice_email.sql`
-22. `20261022_pos_customers.sql`
-23. `20261026_google_login.sql`
-24. `20261029_stock_receipt_cost.sql`
-25. `20261030_pos_vnpay_payments.sql`
-
-The POS VNPay upgrade adds `provider`, `provider_create_date` and `refund_create_date`
-to `pos_momo_payments` while preserving existing MoMo rows (`provider = 'MOMO'`) and
-extending the database amount check to support VNPay whole-VND showroom totals
-(`5,000`–`9,999,999,999`). Apply before starting the updated backend.
-
-The batch receipt upgrade adds nullable purchase unit cost and a database check.
-Existing documents keep unknown costs; apply before starting the updated backend.
-
-The Google login upgrade adds a nullable unique Google subject to users. It does
-not link historical accounts. Apply before starting the new backend, even when
-Google login is disabled, because the User mapping includes this column.
-
-The POS customer upgrade adds phone-unique showroom profiles without login
-credentials and nullable invoice links to either an existing CUSTOMER account
-or a showroom profile. It does not infer ownership or backfill historical
-invoices from names/phone numbers. Apply before starting the updated backend.
 
 The POS invoice-email upgrade adds durable delivery timestamps and a pending
 index. It does not enqueue historical invoices. New verified MoMo settlements

@@ -273,6 +273,12 @@ function StaffLayout({ children, pathname }) {
 
           {/* Right: Operational Status, Storefront Link, Notifications */}
           <div className="flex items-center gap-3">
+            {/* System Status Pill */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-secondary border border-emerald-200 text-xs font-medium text-emerald-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Ca trực: Đang trực tuyến</span>
+            </div>
+
             {/* Shortcut to Customer Storefront */}
             <button
               type="button"

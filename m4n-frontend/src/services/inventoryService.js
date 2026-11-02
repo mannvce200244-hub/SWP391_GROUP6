@@ -22,6 +22,12 @@ export async function importStock(productId, { quantity, unitCost, notes = '' })
   })
 }
 
+export async function issueStock(productId, { quantity, reason }) {
+  return apiClient.post(`/inventory/${encodeURIComponent(productId)}/issue`, {
+    quantity: Number(quantity),
+    reason: reason.trim(),
+  })
+}
 export async function getStockDocuments({ page = 0, size = 10, productId, type = '', status = '' } = {}) {
   const params = new URLSearchParams({ page, size })
   if (productId) params.set('productId', productId)
@@ -47,6 +53,7 @@ export async function getInventoryMovements({ page = 0, size = 10, productId, ty
 export default {
   getInventory,
   importStock,
+  issueStock,
   getStockDocuments,
   confirmStockDocument,
   getInventoryMovements,

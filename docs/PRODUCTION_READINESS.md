@@ -9,9 +9,8 @@ is recorded in `audit-production-20261012.md`.
 **Not ready for a public production launch of the full requested feature set.**
 Automated local tests are necessary, but Gmail/GHN delivery, payment-provider
 acceptance, browser acceptance and the actual hosting environment must also be
-verified. Google customer login was approved on 2026-10-26 and requires reviewed
-schema migration, backend OAuth credentials and live provider acceptance; see
-GOOGLE_LOGIN_PLAN.md. SMS is not implemented because no SMS provider was selected.
+verified. Google login is proposed and awaits dependency/account-linking
+decisions. SMS is not implemented because no SMS provider was selected.
 
 The approved dependency follow-up upgraded springdoc to 3.1.1 and patched
 `brace-expansion` / `source-map-js`; full npm audit reports zero vulnerabilities.

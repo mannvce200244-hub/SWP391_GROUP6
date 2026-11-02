@@ -105,22 +105,6 @@ lên hosting.
 
 ## 4. Kiểm tra sau deploy
 
-### Đăng nhập Google (đã duyệt 2026-10-26)
-
-Áp dụng `20261026_google_login.sql` cùng các migration trước đó. Trên Railway,
-đặt `GOOGLE_LOGIN_ENABLED=true`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-(secret đã thay mới), `GOOGLE_FRONTEND_URL=https://<frontend>.vercel.app`, và
-`GOOGLE_REDIRECT_URI=https://<frontend>.vercel.app/api/v1/auth/google/callback/google`.
-Đăng ký chính xác callback này trong Google Cloud; không dùng callback Railway
-hay localhost8080 trên hosting. Giữ rewrite API cùng origin và cookie Secure
-trong `prod`. Không đưa secret vào Vercel/VITE variables. Nếu consent screen ở
-Testing, thêm tài khoản kiểm thử trong Google Cloud.
-
-Sau deploy, kiểm tra `/api/v1/auth/google/options` qua frontend trả
-`available=true`, hoàn tất đăng nhập Google, tải lại trang vẫn giữ phiên, hủy
-consent quay về lỗi có thể thử lại, và nhân viên/Admin vẫn dùng mật khẩu.
-Xem [hướng dẫn Google](GOOGLE_LOGIN_PLAN.md).
-
 Trước khi deploy, có thể chạy gate khởi động bằng cấu hình demo tổng hợp:
 
 ```powershell
