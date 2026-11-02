@@ -10,6 +10,6 @@ import java.util.List;
 @Repository
 public interface ProductMediaRepository extends JpaRepository<ProductMedia, Long> {
     List<ProductMedia> findByProductIdOrderBySortOrderAsc(Long productId);
-    List<ProductMedia> findByProductIdInOrderBySortOrderAsc(Collection<Long> productIds);
+    List<ProductMedia> findByProductIdInOrderBySortOrderAscIdAsc(Collection<Long> productIds);
     java.util.Optional<ProductMedia> findByIdAndProductId(Long id, Long productId);
 }

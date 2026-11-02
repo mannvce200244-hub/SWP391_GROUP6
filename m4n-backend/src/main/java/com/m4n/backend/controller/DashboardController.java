@@ -24,8 +24,9 @@ public class DashboardController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     @Operation(summary = "Get admin dashboard metrics", description = "Returns aggregated revenue, orders, inventory status, trend series, and top selling products.")
     public ResponseEntity<DashboardSummaryResponse> getDashboard(
-            @RequestParam(defaultValue = "month") String period
+            @RequestParam(defaultValue = "month") String period,
+            @RequestParam(required = false) Integer year
     ) {
-        return ResponseEntity.ok(dashboardService.getDashboardSummary(period));
+        return ResponseEntity.ok(dashboardService.getDashboardSummary(period, year));
     }
 }

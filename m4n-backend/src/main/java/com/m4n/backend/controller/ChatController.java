@@ -2,6 +2,7 @@ package com.m4n.backend.controller;
 
 import com.m4n.backend.dto.request.ChatMessageRequest;
 import com.m4n.backend.dto.request.StaffConversationScope;
+import com.m4n.backend.dto.request.TakeOverConversationRequest;
 import com.m4n.backend.dto.response.ChatMessageResponse;
 import com.m4n.backend.dto.response.ConversationResponse;
 import com.m4n.backend.service.ChatService;
@@ -64,7 +65,7 @@ public class ChatController {
 
     @GetMapping("/conversations/{id}/messages")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ONLINE_STAFF')")
-    @Operation(summary = "Get messages for conversation", description = "Returns chronological message thread. Enforces customer conversation ownership.")
+    @Operation(summary = "Get messages for conversation", description = "Returns messages newest first; later pages contain older messages. Marks only returned incoming messages read and enforces conversation ownership.")
     public ResponseEntity<Page<ChatMessageResponse>> getMessages(
             @PathVariable Long id,
             @PageableDefault(size = 100) Pageable pageable,
@@ -117,5 +118,12 @@ public class ChatController {
             Authentication authentication
     ) {
         return ResponseEntity.ok(chatService.closeConversation(id, authentication.getName()));
+    }
+
+    @PostMapping("/conversations/{id}/take-over")
+    @PreAuthorize("hasRole('ONLINE_STAFF')")
+    public ResponseEntity<ConversationResponse> takeOver(@PathVariable Long id,
+            @Valid @RequestBody TakeOverConversationRequest request, Authentication authentication) {
+        return ResponseEntity.ok(chatService.takeOver(id, request.expectedStaffId(), authentication.getName()));
     }
 }

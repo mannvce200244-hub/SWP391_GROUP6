@@ -52,6 +52,11 @@ class GlobalExceptionHandlerTest {
             return "Valid: " + request.name();
         }
 
+        @GetMapping("/json")
+        public TestRequest jsonResponse() {
+            return new TestRequest("Test");
+        }
+
         @GetMapping("/not-found")
         public void throwNotFound() {
             throw new ResourceNotFoundException("Resource with ID 999 not found");
@@ -73,7 +78,7 @@ class GlobalExceptionHandlerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Request validation failed"))
+                .andExpect(jsonPath("$.message").value("Dữ liệu gửi lên chưa hợp lệ. Vui lòng kiểm tra các trường được báo lỗi."))
                 .andExpect(jsonPath("$.fieldErrors.name").value("Name must not be blank"))
                 .andExpect(jsonPath("$.path").value("/api/v1/test-exceptions/validate"));
     }
@@ -87,5 +92,44 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("Resource with ID 999 not found"))
                 .andExpect(jsonPath("$.path").value("/api/v1/test-exceptions/not-found"));
+    }
+
+    @Test
+    @WithMockUser
+    void malformedJsonReturnsSafeBadRequestInsteadOfServerError() throws Exception {
+        mockMvc.perform(post("/api/v1/test-exceptions/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Dữ liệu gửi lên không đúng định dạng hoặc thiếu trường bắt buộc."));
+    }
+
+    @Test
+    @WithMockUser
+    void unsupportedHttpMethodPreserves405AndAllowedMethods() throws Exception {
+        mockMvc.perform(get("/api/v1/test-exceptions/validate"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Allow", "POST"))
+                .andExpect(jsonPath("$.error").value("METHOD_NOT_ALLOWED"));
+    }
+
+    @Test
+    @WithMockUser
+    void unsupportedRequestContentTypeReturns415InsteadOfServerError() throws Exception {
+        mockMvc.perform(post("/api/v1/test-exceptions/validate")
+                        .contentType(MediaType.TEXT_PLAIN).content("name=test"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.status").value(415))
+                .andExpect(jsonPath("$.error").value("Unsupported Media Type"));
+    }
+
+    @Test
+    @WithMockUser
+    void unsupportedResponseAcceptTypeReturns406WithSafeJsonError() throws Exception {
+        mockMvc.perform(get("/api/v1/test-exceptions/json").accept(MediaType.APPLICATION_PDF))
+                .andExpect(status().isNotAcceptable())
+                .andExpect(jsonPath("$.status").value(406))
+                .andExpect(jsonPath("$.error").value("Not Acceptable"));
     }
 }

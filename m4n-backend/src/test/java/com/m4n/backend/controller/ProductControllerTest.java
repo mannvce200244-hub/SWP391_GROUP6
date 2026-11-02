@@ -71,7 +71,11 @@ class ProductControllerTest {
                         new ProductMediaResponse(11L, "IMAGE", "/assets/images/hero-dan-tranh.jpg", "Ảnh góc nghiêng", 2)
                 ),
                 "IN_STOCK",
-                10
+                10,
+                5,
+                new BigDecimal("8500000"),
+                BigDecimal.ZERO,
+                null
         );
 
         when(productService.getProductDetail(1L)).thenReturn(response);

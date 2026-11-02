@@ -4,6 +4,12 @@ import com.m4n.backend.dto.request.CreateVoucherRequest;
 import com.m4n.backend.dto.request.UpdateVoucherRequest;
 import com.m4n.backend.dto.response.VoucherResponse;
 import com.m4n.backend.service.VoucherService;
+import com.m4n.backend.entity.PromotionType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.RequestParam;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/vouchers")
@@ -33,10 +38,12 @@ public class AdminVoucherController {
 
     private final VoucherService voucherService;
 
-    @GetMapping
-    @Operation(summary = "List all vouchers", description = "Returns all vouchers ordered by created date.")
-    public ResponseEntity<List<VoucherResponse>> getAllVouchers() {
-        return ResponseEntity.ok(voucherService.getAllVouchers());
+    @GetMapping("/search")
+    public ResponseEntity<Page<VoucherResponse>> searchVouchers(@RequestParam(required = false) String search,
+            @RequestParam(required = false) PromotionType promotionType, @RequestParam(required = false) Boolean isActive,
+            @RequestParam(required = false) String state,
+            @PageableDefault(size = 10, sort = {"createdAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(voucherService.searchVouchers(search, promotionType, isActive, state, pageable));
     }
 
     @PostMapping

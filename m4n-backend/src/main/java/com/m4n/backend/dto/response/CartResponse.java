@@ -8,5 +8,7 @@ public record CartResponse(
         Integer totalItems,
         List<CartItemResponse> items,
         BigDecimal totalAmount,
-        String totalAmountDisplay
+        String totalAmountDisplay,
+        BigDecimal originalTotalAmount,
+        BigDecimal productDiscountAmount
 ) {}

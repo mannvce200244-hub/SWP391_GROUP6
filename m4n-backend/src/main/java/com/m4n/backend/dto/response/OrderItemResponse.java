@@ -12,5 +12,7 @@ public record OrderItemResponse(
         Integer quantity,
         BigDecimal lineTotal,
         String lineTotalDisplay,
-        String imageUrl
+        String imageUrl,
+        BigDecimal originalUnitPrice,
+        BigDecimal productDiscountAmount
 ) {}

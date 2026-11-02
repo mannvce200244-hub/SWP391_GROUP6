@@ -3,7 +3,7 @@ package com.m4n.backend.service;
 import com.m4n.backend.dto.response.CategorySummaryResponse;
 import com.m4n.backend.entity.Category;
 import com.m4n.backend.repository.CategoryRepository;
-import com.m4n.backend.serviceImpl.CategoryServiceImpl;
+import com.m4n.backend.service.serviceImpl.CategoryServiceImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

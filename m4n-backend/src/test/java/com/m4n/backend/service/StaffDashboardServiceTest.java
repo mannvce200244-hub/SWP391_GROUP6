@@ -8,7 +8,7 @@ import com.m4n.backend.repository.ChatMessageRepository;
 import com.m4n.backend.repository.ConversationRepository;
 import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.StaffDashboardServiceImpl;
+import com.m4n.backend.service.serviceImpl.StaffDashboardServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,7 +63,7 @@ class StaffDashboardServiceTest {
         when(orderRepository.countByStatus(OrderStatus.DELIVERED)).thenReturn(1L);
         when(orderRepository.countByStatus(OrderStatus.COMPLETED)).thenReturn(12L);
         when(orderRepository.countByStatus(OrderStatus.CANCELLED)).thenReturn(2L);
-        when(orderRepository.countByCreatedAtBetween(any(Instant.class), any(Instant.class))).thenReturn(2L);
+        when(orderRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(any(Instant.class), any(Instant.class))).thenReturn(2L);
         when(conversationRepository.countByStatusAndAssignedStaffIsNull(ConversationStatus.OPEN)).thenReturn(5L);
         when(chatMessageRepository.countUnreadAssignedToStaff(ConversationStatus.OPEN, 42L)).thenReturn(7L);
 
@@ -95,7 +95,7 @@ class StaffDashboardServiceTest {
     void getDashboardSummary_withStatusAndRange_shouldFilterTrendOnly() {
         User staff = User.builder().id(42L).email("staff@m4n.vn").build();
         when(userRepository.findByEmailIgnoreCase("staff@m4n.vn")).thenReturn(Optional.of(staff));
-        when(orderRepository.countByStatusAndCreatedAtBetween(
+        when(orderRepository.countByStatusAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
                 org.mockito.ArgumentMatchers.eq(OrderStatus.COMPLETED),
                 any(Instant.class),
                 any(Instant.class)
@@ -109,7 +109,7 @@ class StaffDashboardServiceTest {
 
         assertThat(response.getOrderTrend()).hasSize(14);
         assertThat(response.getOrderTrend()).allSatisfy(point -> assertThat(point.getOrderCount()).isEqualTo(1L));
-        verify(orderRepository, times(14)).countByStatusAndCreatedAtBetween(
+        verify(orderRepository, times(14)).countByStatusAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
                 org.mockito.ArgumentMatchers.eq(OrderStatus.COMPLETED),
                 any(Instant.class),
                 any(Instant.class)

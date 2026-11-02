@@ -1,12 +1,19 @@
 package com.m4n.backend.specification;
 
 import com.m4n.backend.entity.Product;
+import com.m4n.backend.entity.ProductPromotion;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.Instant;
 
 public final class ProductSpecification {
 
@@ -18,7 +25,8 @@ public final class ProductSpecification {
             String artisan,
             String craftVillage,
             BigDecimal minPrice,
-            BigDecimal maxPrice
+            BigDecimal maxPrice,
+            Sort sort
     ) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -64,16 +72,45 @@ public final class ProductSpecification {
                 }
             }
 
-            // 6. Price filters
+            // The database filters/sorts the same charged price that the service exposes.
+            Expression<BigDecimal> chargedPrice = minPrice != null || maxPrice != null || sort.getOrderFor("price") != null
+                    ? effectivePrice(root, query, cb) : root.get("price");
             if (minPrice != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("price"), minPrice));
+                predicates.add(cb.greaterThanOrEqualTo(chargedPrice, minPrice));
             }
             if (maxPrice != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("price"), maxPrice));
+                predicates.add(cb.lessThanOrEqualTo(chargedPrice, maxPrice));
+            }
+
+            if (sort.getOrderFor("price") != null && query != null && query.getResultType() != Long.class && query.getResultType() != long.class) {
+                var orders = new ArrayList<jakarta.persistence.criteria.Order>();
+                for (Sort.Order order : sort) {
+                    Expression<?> value = order.getProperty().equals("price") ? chargedPrice : root.get(order.getProperty());
+                    orders.add(order.isAscending() ? cb.asc(value) : cb.desc(value));
+                }
+                if (sort.getOrderFor("id") == null) orders.add(cb.asc(root.get("id")));
+                query.orderBy(orders);
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private static Expression<BigDecimal> effectivePrice(Root<Product> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
+        var strongestRate = query.subquery(BigDecimal.class);
+        var promotion = strongestRate.from(ProductPromotion.class);
+        Instant now = Instant.now();
+        strongestRate.select(cb.max(promotion.<BigDecimal>get("discountRate"))).where(
+                cb.equal(promotion.get("product").get("id"), root.get("id")), cb.isTrue(promotion.get("isActive")),
+                cb.greaterThan(promotion.get("discountRate"), BigDecimal.ZERO),
+                cb.or(cb.isNull(promotion.get("validFrom")), cb.lessThanOrEqualTo(promotion.get("validFrom"), now)),
+                cb.or(cb.isNull(promotion.get("validUntil")), cb.greaterThan(promotion.get("validUntil"), now)));
+        Expression<BigDecimal> rate = cb.coalesce(strongestRate, BigDecimal.ZERO);
+        Expression<BigDecimal> original = root.get("price");
+        Expression<BigDecimal> discounted = cb.function("round", BigDecimal.class,
+                cb.prod(original, cb.diff(BigDecimal.ONE, rate)), cb.literal(0));
+        return cb.<BigDecimal>selectCase().when(cb.greaterThan(rate, BigDecimal.ZERO),
+                cb.function("least", BigDecimal.class, original, discounted)).otherwise(original);
     }
 
     public static Specification<Product> filterAdminProducts(

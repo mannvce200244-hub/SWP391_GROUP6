@@ -4,7 +4,9 @@ import com.m4n.backend.entity.RoleName;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.m4n.backend.validation.ValidationPatterns;
 
 public record CreateStaffRequest(
         @NotBlank(message = "Họ và tên không được để trống")
@@ -13,12 +15,14 @@ public record CreateStaffRequest(
 
         @NotBlank(message = "Email không được để trống")
         @Email(message = "Định dạng email không hợp lệ")
+        @Size(max = 255, message = "Email không được vượt quá 255 ký tự")
         String email,
 
         @NotNull(message = "Vai trò nhân viên không được để trống")
         RoleName role,
 
-        @Size(max = 20, message = "Số điện thoại tối đa 20 ký tự")
+        @Pattern(regexp = ValidationPatterns.OPTIONAL_VIETNAMESE_MOBILE,
+                message = ValidationPatterns.VIETNAMESE_MOBILE_MESSAGE)
         String phone,
 
         @Size(max = 255, message = "Địa chỉ tối đa 255 ký tự")

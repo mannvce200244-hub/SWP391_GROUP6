@@ -6,10 +6,16 @@ import com.m4n.backend.dto.response.CraftVillageDetailResponse;
 import com.m4n.backend.dto.response.CraftVillageSummaryResponse;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface CraftVillageService {
 
     List<CraftVillageSummaryResponse> listCraftVillages();
+
+    Page<CraftVillageSummaryResponse> searchCraftVillages(String keyword, String location, Pageable pageable);
+
+    List<String> listLocations();
 
     CraftVillageSummaryResponse getCraftVillage(Long id);
 

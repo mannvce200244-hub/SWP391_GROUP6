@@ -1,0 +1,290 @@
+[
+  {
+    "check": "Public health",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Provider options",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Catalog charged price sorting",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Artisan paging",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Village paging",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Published article paging",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Published guide filter",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Review paging and average",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Overflow offset rejected",
+    "status": 400,
+    "expected": 400,
+    "passed": true
+  },
+  {
+    "check": "Anonymous Admin denied",
+    "status": 401,
+    "expected": 401,
+    "passed": true
+  },
+  {
+    "check": "Unsupported method",
+    "status": 405,
+    "expected": 405,
+    "passed": true
+  },
+  {
+    "check": "Unsupported Accept rejected",
+    "status": 406,
+    "expected": 406,
+    "passed": true
+  },
+  {
+    "check": "Sample admin login",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "admin identity",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Sample staff login",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "staff identity",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Sample pos login",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "pos identity",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Sample customer login",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "customer identity",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Admin shipping settings",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Admin product programs",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Admin voucher empty search",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Admin ship voucher filter",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Admin stock drafts",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Admin stock movements",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Admin article drafts",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Staff order paging",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Staff pricing denied",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "check": "POS own invoices",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "POS pricing denied",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "check": "Customer cart",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Customer orders",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Customer pricing denied",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "check": "Customer stock denied",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "check": "Absent payment order",
+    "status": 404,
+    "expected": 404,
+    "passed": true
+  },
+  {
+    "check": "Optional empty preview body",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Wrong request Content-Type rejected",
+    "status": 415,
+    "expected": 415,
+    "passed": true
+  },
+  {
+    "check": "Oversized voucherCode rejected",
+    "status": 400,
+    "expected": 400,
+    "passed": true
+  },
+  {
+    "check": "Oversized shippingVoucherCode rejected",
+    "status": 400,
+    "expected": 400,
+    "passed": true
+  },
+  {
+    "check": "Disabled VNPay creation",
+    "status": 503,
+    "expected": 503,
+    "passed": true
+  },
+  {
+    "check": "Admin order reference for ownership",
+    "status": 200,
+    "expected": 200,
+    "passed": true
+  },
+  {
+    "check": "Customer foreign payment denied",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "check": "Customer foreign order denied",
+    "status": 403,
+    "expected": 403,
+    "passed": true
+  },
+  {
+    "check": "Sample staff logout",
+    "status": 204,
+    "expected": 204,
+    "passed": true
+  },
+  {
+    "check": "Sample pos logout",
+    "status": 204,
+    "expected": 204,
+    "passed": true
+  },
+  {
+    "check": "Sample admin logout",
+    "status": 204,
+    "expected": 204,
+    "passed": true
+  },
+  {
+    "check": "Sample customer logout",
+    "status": 204,
+    "expected": 204,
+    "passed": true
+  }
+]

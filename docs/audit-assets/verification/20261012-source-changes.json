@@ -1,0 +1,446 @@
+[
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/config/GhnProperties.java",
+    "Change": "Added",
+    "Lines": 23
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/config/MomoProperties.java",
+    "Change": "Added",
+    "Lines": 32
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/controller/AdminProductController.java",
+    "Change": "Modified",
+    "Lines": 137
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/controller/AuthController.java",
+    "Change": "Modified",
+    "Lines": 162
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/controller/MomoPaymentController.java",
+    "Change": "Added",
+    "Lines": 23
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/controller/ProductImageController.java",
+    "Change": "Added",
+    "Lines": 22
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/controller/ShippingAddressController.java",
+    "Change": "Added",
+    "Lines": 18
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/request/CheckoutPreviewRequest.java",
+    "Change": "Modified",
+    "Lines": 24
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/request/DeliveryAddressRequest.java",
+    "Change": "Added",
+    "Lines": 5
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/request/EmailOtpRequest.java",
+    "Change": "Added",
+    "Lines": 6
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/request/OtpResetPasswordRequest.java",
+    "Change": "Added",
+    "Lines": 9
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/request/PlaceOrderRequest.java",
+    "Change": "Modified",
+    "Lines": 58
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/request/VerifiedRegisterRequest.java",
+    "Change": "Added",
+    "Lines": 8
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/response/AddressOptionResponse.java",
+    "Change": "Added",
+    "Lines": 3
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/response/EmailOtpResponse.java",
+    "Change": "Added",
+    "Lines": 4
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/response/PaymentOptionsResponse.java",
+    "Change": "Modified",
+    "Lines": 4
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/dto/response/ShippingOptionsResponse.java",
+    "Change": "Added",
+    "Lines": 3
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/entity/EmailOtpChallenge.java",
+    "Change": "Added",
+    "Lines": 35
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/entity/Order.java",
+    "Change": "Modified",
+    "Lines": 144
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/entity/PaymentAttempt.java",
+    "Change": "Modified",
+    "Lines": 52
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/exception/GlobalExceptionHandler.java",
+    "Change": "Modified",
+    "Lines": 425
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/exception/InvalidEmailOtpException.java",
+    "Change": "Added",
+    "Lines": 7
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/repository/EmailOtpChallengeRepository.java",
+    "Change": "Added",
+    "Lines": 19
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/security/SecurityConfig.java",
+    "Change": "Modified",
+    "Lines": 150
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/CarrierShippingQuote.java",
+    "Change": "Added",
+    "Lines": 4
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/EmailOtpNotifier.java",
+    "Change": "Added",
+    "Lines": 6
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/EmailOtpService.java",
+    "Change": "Added",
+    "Lines": 9
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/GhnService.java",
+    "Change": "Added",
+    "Lines": 11
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/MomoGateway.java",
+    "Change": "Added",
+    "Lines": 10
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/MomoPaymentService.java",
+    "Change": "Added",
+    "Lines": 15
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/PaymentService.java",
+    "Change": "Modified",
+    "Lines": 24
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/ProductImageService.java",
+    "Change": "Added",
+    "Lines": 13
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/ShippingQuote.java",
+    "Change": "Modified",
+    "Lines": 10
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/ShippingService.java",
+    "Change": "Modified",
+    "Lines": 15
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/EmailOtpServiceImpl.java",
+    "Change": "Added",
+    "Lines": 123
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/GhnServiceImpl.java",
+    "Change": "Added",
+    "Lines": 136
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/GmailEmailOtpNotifier.java",
+    "Change": "Added",
+    "Lines": 56
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/MomoGatewayImpl.java",
+    "Change": "Added",
+    "Lines": 130
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/MomoPaymentServiceImpl.java",
+    "Change": "Added",
+    "Lines": 255
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/OrderServiceImpl.java",
+    "Change": "Modified",
+    "Lines": 849
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/PaymentServiceImpl.java",
+    "Change": "Modified",
+    "Lines": 359
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/ProductImageServiceImpl.java",
+    "Change": "Added",
+    "Lines": 122
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/ProductServiceImpl.java",
+    "Change": "Modified",
+    "Lines": 564
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/java/com/m4n/backend/service/serviceImpl/ShippingServiceImpl.java",
+    "Change": "Modified",
+    "Lines": 85
+  },
+  {
+    "Area": "Backend",
+    "Path": "main/resources/application.properties",
+    "Change": "Modified",
+    "Lines": 86
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/security/AuthSecurityIntegrationTest.java",
+    "Change": "Modified",
+    "Lines": 341
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/service/CarrierCheckoutIntegrationTest.java",
+    "Change": "Added",
+    "Lines": 150
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/service/CartCheckoutConcurrencyIntegrationTest.java",
+    "Change": "Modified",
+    "Lines": 276
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/service/EmailOtpIntegrationTest.java",
+    "Change": "Added",
+    "Lines": 112
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/service/MomoPaymentIntegrationTest.java",
+    "Change": "Added",
+    "Lines": 160
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/service/PricingCalculationTest.java",
+    "Change": "Modified",
+    "Lines": 53
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/service/ProductImageIntegrationTest.java",
+    "Change": "Added",
+    "Lines": 101
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/service/serviceImpl/GhnServiceTest.java",
+    "Change": "Added",
+    "Lines": 58
+  },
+  {
+    "Area": "Backend",
+    "Path": "test/java/com/m4n/backend/service/serviceImpl/MomoGatewayTest.java",
+    "Change": "Added",
+    "Lines": 78
+  },
+  {
+    "Area": "Frontend",
+    "Path": "api/apiClient.js",
+    "Change": "Modified",
+    "Lines": 190
+  },
+  {
+    "Area": "Frontend",
+    "Path": "components/admin/ProductFormModal.jsx",
+    "Change": "Modified",
+    "Lines": 981
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/auth/AuthContext.jsx",
+    "Change": "Modified",
+    "Lines": 149
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/auth/authService.js",
+    "Change": "Modified",
+    "Lines": 84
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/auth/ForgotPasswordPage.jsx",
+    "Change": "Modified",
+    "Lines": 124
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/auth/RegisterPage.jsx",
+    "Change": "Modified",
+    "Lines": 316
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/auth/ResetPasswordPage.jsx",
+    "Change": "Modified",
+    "Lines": 218
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/checkout/CheckoutRecipientFields.jsx",
+    "Change": "Modified",
+    "Lines": 75
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/checkout/ShippingAddressFields.jsx",
+    "Change": "Added",
+    "Lines": 71
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/orders/AdminOrderDetailDialog.jsx",
+    "Change": "Modified",
+    "Lines": 356
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/orders/adminOrderPresentation.js",
+    "Change": "Modified",
+    "Lines": 66
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/orders/AdminRefundPanel.jsx",
+    "Change": "Modified",
+    "Lines": 72
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/orders/CustomerOrderDetailDialog.jsx",
+    "Change": "Modified",
+    "Lines": 230
+  },
+  {
+    "Area": "Frontend",
+    "Path": "pages/CheckoutPage.jsx",
+    "Change": "Modified",
+    "Lines": 788
+  },
+  {
+    "Area": "Frontend",
+    "Path": "pages/PaymentReturnPage.jsx",
+    "Change": "Modified",
+    "Lines": 82
+  },
+  {
+    "Area": "Frontend",
+    "Path": "services/adminProductService.js",
+    "Change": "Modified",
+    "Lines": 66
+  },
+  {
+    "Area": "Frontend",
+    "Path": "services/orderService.js",
+    "Change": "Modified",
+    "Lines": 82
+  },
+  {
+    "Area": "Frontend",
+    "Path": "services/paymentService.js",
+    "Change": "Modified",
+    "Lines": 34
+  },
+  {
+    "Area": "Frontend",
+    "Path": "services/shippingService.js",
+    "Change": "Added",
+    "Lines": 7
+  },
+  {
+    "Area": "Frontend",
+    "Path": "features/pricing/ShippingSettingsForm.jsx",
+    "Change": "Modified",
+    "Lines": 76
+  }
+]

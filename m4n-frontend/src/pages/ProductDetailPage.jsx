@@ -4,6 +4,7 @@ import ErrorState from '../components/ui/ErrorState.jsx'
 import { ProductDetailSkeleton } from '../components/ui/Skeleton.jsx'
 import ProductDetailInfo from '../features/catalog/ProductDetailInfo.jsx'
 import ProductReviewsSection from '../features/reviews/ProductReviewsSection.jsx'
+import RelatedArticles from '../features/content/RelatedArticles.jsx'
 import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
 import productService from '../services/productService.js'
@@ -122,6 +123,7 @@ function ProductDetailPage({ productId }) {
         {detail.status === 'success' && detail.product ? (
           <>
             <ProductDetailInfo product={detail.product} />
+            <RelatedArticles key={detail.product.id} productId={detail.product.id} />
             <ProductReviewsSection
               productId={detail.product.id}
               productName={detail.product.name}

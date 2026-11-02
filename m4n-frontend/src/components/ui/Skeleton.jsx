@@ -26,7 +26,7 @@ export function Skeleton({
   return (
     <span
       aria-hidden="true"
-      className={`inline-block bg-surface-muted/60 animate-pulse ${variantClass} ${className}`}
+      className={`skeleton inline-block ${variantClass} ${className}`}
       style={inlineStyles}
     />
   )
@@ -51,15 +51,37 @@ export function ProductCardSkeleton() {
   )
 }
 
-export function ProductGridSkeleton({ count = 6 }) {
+export function ProductGridSkeleton({ count = 6, className = 'lg:grid-cols-3' }) {
   return (
     <div
       aria-busy="true"
       aria-label="Đang tải danh sách sản phẩm"
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8"
+      role="status"
+      className={`grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8 ${className}`}
     >
+      <span className="sr-only">Đang tải danh sách sản phẩm…</span>
       {Array.from({ length: count }).map((_, idx) => (
         <ProductCardSkeleton key={idx} />
+      ))}
+    </div>
+  )
+}
+
+export function ArticleListSkeleton() {
+  return (
+    <div role="status" aria-label="Đang tải bài viết…">
+      <span className="sr-only">Đang tải bài viết…</span>
+      {[0, 1, 2].map((item) => (
+        <div key={item} aria-hidden="true" className="grid gap-5 border-b border-border py-6 sm:grid-cols-[160px_1fr] sm:py-8">
+          <Skeleton className="aspect-4/3 w-full sm:w-40" />
+          <div className="flex min-w-0 flex-col items-start gap-3">
+            <Skeleton width="30%" height="0.75rem" />
+            <Skeleton width="85%" height="1.5rem" />
+            <Skeleton width="100%" height="0.875rem" />
+            <Skeleton width="65%" height="0.875rem" />
+            <Skeleton width="6rem" height="0.875rem" className="mt-2" />
+          </div>
+        </div>
       ))}
     </div>
   )

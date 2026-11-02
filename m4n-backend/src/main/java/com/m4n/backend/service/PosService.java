@@ -20,6 +20,9 @@ public interface PosService {
 
     PosSaleResponse finalizeSale(PosSaleRequest request);
 
+    /** Internal settlement: loads a persisted, provider-verified POS intent, never client payment flags. */
+    void completeMomoSale(String paymentId);
+
     PosSaleResponse getInvoiceById(Long invoiceId, String actorEmail);
 
     void assertCanAccessInvoice(Long invoiceId, String actorEmail);

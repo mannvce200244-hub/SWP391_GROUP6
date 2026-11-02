@@ -1,0 +1,13 @@
+Local PostgreSQL rollout: all 10 scripts applied in docs/migrations/README.md order.
+Backup retained outside repository.
+Order/invoice counts and subtotal/discount/final sums; inventory count/quantity sums: unchanged.
+Before:
+orders|11|70450000.00|580000.00|69870000.00
+invoices|2|19500000.00|1820000.00|17680000.00
+inventory|6|169
+
+After:
+orders|11|70450000.00|580000.00|69870000.00
+invoices|2|19500000.00|1820000.00|17680000.00
+inventory|6|169
+

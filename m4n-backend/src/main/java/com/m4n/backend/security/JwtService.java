@@ -25,17 +25,18 @@ public class JwtService {
     private final Duration expirationDuration;
 
     public JwtService(
-            @Value("${m4n.jwt.secret:m4n-vietnamese-traditional-musical-instruments-super-secure-jwt-secret-key-2026}") String secret,
+            @Value("${m4n.jwt.secret}") String secret,
             @Value("${m4n.jwt.access-expiration-minutes:${m4n.jwt.expiration-minutes:15}}") long expirationMinutes
     ) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationDuration = Duration.ofMinutes(expirationMinutes);
     }
 
-    public String generateToken(Long userId, String email, RoleName role) {
+    public String generateToken(Long userId, String email, RoleName role, long sessionVersion) {
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", userId);
         extraClaims.put("role", role != null ? role.name() : null);
+        extraClaims.put("sessionVersion", sessionVersion);
 
         Instant now = Instant.now();
         Instant expiry = now.plus(expirationDuration);
@@ -74,7 +75,15 @@ public class JwtService {
     public boolean isTokenValid(String token, UserDetails userDetails) {
         try {
             String email = extractEmail(token);
-            return email != null && email.equalsIgnoreCase(userDetails.getUsername()) && !isTokenExpired(token);
+            Claims claims = extractAllClaims(token);
+            Object sessionVersion = claims.get("sessionVersion");
+            boolean sameSession = userDetails instanceof CustomUserPrincipal principal
+                    && principal.getId().equals(extractUserId(token))
+                    && sessionVersion instanceof Number number
+                    && principal.getSessionVersion() == number.longValue()
+                    && principal.getRole() != null
+                    && principal.getRole().name().equals(claims.get("role", String.class));
+            return sameSession && email != null && email.equalsIgnoreCase(userDetails.getUsername()) && !isTokenExpired(token);
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
@@ -82,7 +91,7 @@ public class JwtService {
 
     public boolean isTokenExpired(String token) {
         Date expiration = extractClaim(token, Claims::getExpiration);
-        return expiration != null && expiration.before(new Date());
+        return expiration == null || !expiration.after(new Date());
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {

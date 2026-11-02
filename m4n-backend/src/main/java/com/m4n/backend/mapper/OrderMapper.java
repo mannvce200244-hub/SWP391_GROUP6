@@ -59,7 +59,9 @@ public class OrderMapper {
                 qty,
                 lineTotal,
                 cartMapper.formatPriceDisplay(lineTotal),
-                imageUrl
+                imageUrl,
+                item.getOriginalUnitPrice() == null ? price : item.getOriginalUnitPrice(),
+                item.getOriginalUnitPrice() == null ? BigDecimal.ZERO : item.getOriginalUnitPrice().subtract(price)
         );
     }
 
@@ -123,9 +125,21 @@ public class OrderMapper {
                 order.isPaid(),
                 order.getVoucherCode(),
                 itemCount,
-                order.getCreatedAt()
+                order.getCreatedAt(),
+                order.getAutomaticPromotionCode() == null ? order.getDiscountAmount() : order.getManualDiscountAmount(),
+                order.getAutomaticDiscountAmount() == null ? BigDecimal.ZERO : order.getAutomaticDiscountAmount(),
+                order.getAutomaticPromotionCode(),
+                order.getOriginalTotalAmount() == null ? order.getTotalAmount() : order.getOriginalTotalAmount(),
+                zeroIfNull(order.getProductDiscountAmount()),
+                zeroIfNull(order.getBaseShippingFee()),
+                zeroIfNull(order.getShippingDiscountAmount()),
+                zeroIfNull(order.getShippingFee()),
+                order.getShippingVoucherCode(),
+                Boolean.TRUE.equals(order.getFreeShippingApplied())
         );
     }
+
+    private BigDecimal zeroIfNull(BigDecimal amount) { return amount == null ? BigDecimal.ZERO : amount; }
 
     private String getProductImageUrl(Product product) {
         if (product == null || product.getMedia() == null || product.getMedia().isEmpty()) {
@@ -140,7 +154,7 @@ public class OrderMapper {
                 .orElse(product.getMedia().get(0).getUrl());
     }
 
-    public OrderDetailResponse toOrderDetailResponse(Order order, boolean isCustomer) {
+    public OrderDetailResponse toOrderDetailResponse(Order order, boolean canCustomerCancel, boolean canStaffCancel) {
         if (order == null) {
             return null;
         }
@@ -148,8 +162,6 @@ public class OrderMapper {
         List<OrderItemResponse> itemResponses = order.getItems() != null
                 ? order.getItems().stream().map(this::toOrderItemResponse).toList()
                 : Collections.emptyList();
-
-        boolean canCustomerCancel = isCustomer && order.getStatus() == OrderStatus.PENDING_CONFIRMATION;
 
         return new OrderDetailResponse(
                 order.getId(),
@@ -172,8 +184,19 @@ public class OrderMapper {
                 order.getVoucherCode(),
                 itemResponses,
                 canCustomerCancel,
+                canStaffCancel,
                 order.getCreatedAt(),
-                order.getUpdatedAt()
+                order.getUpdatedAt(),
+                order.getAutomaticPromotionCode() == null ? order.getDiscountAmount() : order.getManualDiscountAmount(),
+                order.getAutomaticDiscountAmount() == null ? BigDecimal.ZERO : order.getAutomaticDiscountAmount(),
+                order.getAutomaticPromotionCode(),
+                order.getOriginalTotalAmount() == null ? order.getTotalAmount() : order.getOriginalTotalAmount(),
+                zeroIfNull(order.getProductDiscountAmount()),
+                zeroIfNull(order.getBaseShippingFee()),
+                zeroIfNull(order.getShippingDiscountAmount()),
+                zeroIfNull(order.getShippingFee()),
+                order.getShippingVoucherCode(),
+                Boolean.TRUE.equals(order.getFreeShippingApplied())
         );
     }
 }

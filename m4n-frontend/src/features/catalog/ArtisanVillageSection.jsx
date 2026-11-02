@@ -1,4 +1,3 @@
-import artisanWorkshop from '../../assets/images/artisan-workshop.jpg'
 import EditorialEyebrow from '../../components/common/EditorialEyebrow.jsx'
 
 function ArtisanVillageSection({ artisan, craftVillage }) {
@@ -30,7 +29,7 @@ function ArtisanVillageSection({ artisan, craftVillage }) {
             decoding="async"
             height="600"
             loading="lazy"
-            src={villageObj?.imageUrl || artisanWorkshop}
+            src={villageObj?.imageUrl || '/assets/images/vietnamese-instrument-shop.jpg'}
             width="800"
           />
         </div>

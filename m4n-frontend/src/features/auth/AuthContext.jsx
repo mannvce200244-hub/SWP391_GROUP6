@@ -4,7 +4,7 @@ import {
   useMemo,
   useState,
 } from 'react'
-import { AUTH_UNAUTHORIZED_EVENT } from '../../api/apiClient.js'
+import { AUTH_REFRESHED_EVENT, AUTH_UNAUTHORIZED_EVENT } from '../../api/apiClient.js'
 import authService from './authService.js'
 import authTokenStorage from './authTokenStorage.js'
 import { AuthContext } from './authContext.js'
@@ -21,7 +21,6 @@ export function AuthProvider({ children }) {
       try {
         const response = await authService.refresh()
         if (isMounted && response && response.accessToken) {
-          authTokenStorage.setToken(response.accessToken)
           setUser(response.user)
         }
       } catch {
@@ -44,10 +43,13 @@ export function AuthProvider({ children }) {
     }
 
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized)
+    const handleRefreshed = (event) => setUser(event.detail)
+    window.addEventListener(AUTH_REFRESHED_EVENT, handleRefreshed)
 
     return () => {
       isMounted = false
       window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized)
+      window.removeEventListener(AUTH_REFRESHED_EVENT, handleRefreshed)
     }
   }, [])
 
@@ -72,12 +74,9 @@ export function AuthProvider({ children }) {
   }, [])
 
   const logoutAll = useCallback(async () => {
-    try {
-      await authService.logoutAll()
-    } finally {
-      authTokenStorage.clearToken()
-      setUser(null)
-    }
+    await authService.logoutAll()
+    authTokenStorage.clearToken()
+    setUser(null)
   }, [])
 
   const changePassword = useCallback(async ({ currentPassword, newPassword, confirmPassword }) => {
@@ -100,8 +99,15 @@ export function AuthProvider({ children }) {
 
   const updateProfile = useCallback(async (payload) => {
     const updated = await authService.updateProfile(payload)
-    setUser((prev) => (prev ? { ...prev, ...updated } : null))
+    setUser((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev))
     return updated
+  }, [])
+
+  const resetPasswordOtp = useCallback(async (payload) => {
+    const response = await authService.resetPasswordOtp(payload)
+    authTokenStorage.clearToken()
+    setUser(null)
+    return response
   }, [])
 
   const refreshUser = useCallback(async () => {
@@ -109,10 +115,12 @@ export function AuthProvider({ children }) {
       const currentUser = await authService.getCurrentUser()
       setUser(currentUser)
       return currentUser
-    } catch {
-      authTokenStorage.clearToken()
-      setUser(null)
-      return null
+    } catch (error) {
+      if (error.status === 401) {
+        authTokenStorage.clearToken()
+        setUser(null)
+      }
+      throw error
     }
   }, [])
 
@@ -128,10 +136,11 @@ export function AuthProvider({ children }) {
       changePassword,
       forgotPassword,
       resetPassword,
+      resetPasswordOtp,
       updateProfile,
       refreshUser,
     }),
-    [user, isLoading, login, register, logout, logoutAll, changePassword, forgotPassword, resetPassword, updateProfile, refreshUser],
+    [user, isLoading, login, register, logout, logoutAll, changePassword, forgotPassword, resetPassword, resetPasswordOtp, updateProfile, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

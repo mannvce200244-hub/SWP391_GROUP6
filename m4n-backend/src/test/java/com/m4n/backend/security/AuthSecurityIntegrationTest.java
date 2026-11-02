@@ -3,6 +3,13 @@ package com.m4n.backend.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.m4n.backend.dto.request.LoginRequest;
 import com.m4n.backend.dto.request.RegisterRequest;
+import com.m4n.backend.dto.request.EmailOtpRequest;
+import com.m4n.backend.dto.request.VerifiedRegisterRequest;
+import com.m4n.backend.service.EmailOtpService;
+import com.m4n.backend.service.EmailOtpNotifier;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.Mockito.*;
 import com.m4n.backend.dto.request.UpdateProfileRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,16 +36,56 @@ class AuthSecurityIntegrationTest {
     @Autowired
     private WebApplicationContext context;
 
+    @Autowired private EmailOtpService emailOtp;
+    @MockitoBean private EmailOtpNotifier otpNotifier;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
+        when(otpNotifier.isAvailable()).thenReturn(true);
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(context)
                 .apply(springSecurity())
                 .build();
+    }
+
+    @Test
+    void cookieRequestsRejectSimpleAndUntrustedBrowserRequestsWithoutConsumingRefreshSession() throws Exception {
+        MvcResult login = mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest("customer@m4n.vn", "Password123!"))))
+                .andExpect(status().isOk()).andReturn();
+        var cookie = login.getResponse().getCookie("m4n_refresh_token");
+        assertThat(cookie).isNotNull();
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(cookie))
+                .andExpect(status().isForbidden()).andExpect(header().doesNotExist("Set-Cookie"));
+        mockMvc.perform(post("/api/v1/auth/logout").cookie(cookie))
+                .andExpect(status().isForbidden()).andExpect(header().doesNotExist("Set-Cookie"));
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(cookie)
+                        .header("X-Requested-With", "M4N").header("Origin", "http://evil.localhost:5173"))
+                .andExpect(status().isForbidden()).andExpect(header().doesNotExist("Set-Cookie"));
+        mockMvc.perform(post("/api/v1/auth/refresh").cookie(cookie)
+                        .header("X-Requested-With", "M4N").header("Origin", "http://localhost:5173"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.accessToken").isNotEmpty());
+    }
+
+    @Test
+    void registrationWithoutEmailProofCannotCreateAnAccount() throws Exception {
+        String email = "unverified_" + System.nanoTime() + "@example.test";
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RegisterRequest("Unverified customer", email, "SecurePassword123!", null))))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new VerifiedRegisterRequest(
+                                new RegisterRequest("Unverified customer", email, "SecurePassword123!", null), null, null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.challengeId").exists())
+                .andExpect(jsonPath("$.fieldErrors.code").exists());
+        mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest(email, "SecurePassword123!"))))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -52,21 +99,25 @@ class AuthSecurityIntegrationTest {
         );
 
         // 1. Register new Customer
+        var challenge = emailOtp.requestCode(new EmailOtpRequest(email, "REGISTER"));
+        ArgumentCaptor<String> deliveredCode = ArgumentCaptor.forClass(String.class);
+        verify(otpNotifier).sendCode(eq(email), deliveredCode.capture(), eq("REGISTER"));
+        var verifiedRequest = new VerifiedRegisterRequest(registerRequest, challenge.challengeId(), deliveredCode.getValue());
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registerRequest)))
+                        .content(objectMapper.writeValueAsString(verifiedRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email").value(email))
                 .andExpect(jsonPath("$.fullName").value("Người Dùng Mẫu"))
                 .andExpect(jsonPath("$.role").value("CUSTOMER"))
                 .andExpect(jsonPath("$.isActive").value(true));
 
-        // 2. Duplicate registration must fail with 409
+        // 2. An already consumed registration OTP cannot be replayed.
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(registerRequest)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409));
+                        .content(objectMapper.writeValueAsString(verifiedRequest)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
 
         // 3. Login with bad password must return 401
         LoginRequest badLogin = new LoginRequest(email, "WrongPassword!");
@@ -179,9 +230,9 @@ class AuthSecurityIntegrationTest {
         );
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(shortPasswordReq)))
+                        .content(objectMapper.writeValueAsString(new VerifiedRegisterRequest(shortPasswordReq, "fixture", "123456"))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.fieldErrors.password").isNotEmpty());
+                .andExpect(jsonPath("$.fieldErrors['registration.password']").isNotEmpty());
 
         // Invalid email format
         RegisterRequest badEmailReq = new RegisterRequest(
@@ -192,9 +243,9 @@ class AuthSecurityIntegrationTest {
         );
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(badEmailReq)))
+                        .content(objectMapper.writeValueAsString(new VerifiedRegisterRequest(badEmailReq, "fixture", "123456"))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.fieldErrors.email").isNotEmpty());
+                .andExpect(jsonPath("$.fieldErrors['registration.email']").isNotEmpty());
     }
 
     @Test
@@ -246,6 +297,7 @@ class AuthSecurityIntegrationTest {
 
         // 1. Refresh with valid cookie -> rotation
         MvcResult refreshResult = mockMvc.perform(post("/api/v1/auth/refresh")
+                        .header("X-Requested-With", "M4N")
                         .cookie(refreshCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty())
@@ -258,6 +310,7 @@ class AuthSecurityIntegrationTest {
 
         // 2. Reusing old refresh token must be rejected with 401 (reuse detection)
         mockMvc.perform(post("/api/v1/auth/refresh")
+                        .header("X-Requested-With", "M4N")
                         .cookie(refreshCookie))
                 .andExpect(status().isUnauthorized());
     }
@@ -276,6 +329,7 @@ class AuthSecurityIntegrationTest {
 
         // Logout
         MvcResult logoutResult = mockMvc.perform(post("/api/v1/auth/logout")
+                        .header("X-Requested-With", "M4N")
                         .cookie(refreshCookie))
                 .andExpect(status().isNoContent())
                 .andReturn();
@@ -286,15 +340,15 @@ class AuthSecurityIntegrationTest {
     }
 
     @Test
-    void shouldHandleForgotPasswordWithGenericResponse() throws Exception {
+    void unavailableResetDeliveryReturnsTheSameServiceUnavailableResponseForEveryEmail() throws Exception {
         com.m4n.backend.dto.request.ForgotPasswordRequest request =
                 new com.m4n.backend.dto.request.ForgotPasswordRequest("customer@m4n.vn");
 
         mockMvc.perform(post("/api/v1/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi."));
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("Dịch vụ gửi hướng dẫn đặt lại mật khẩu chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ."));
 
         // Non-existent email should also return the same generic message
         com.m4n.backend.dto.request.ForgotPasswordRequest unknownRequest =
@@ -303,7 +357,7 @@ class AuthSecurityIntegrationTest {
         mockMvc.perform(post("/api/v1/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(unknownRequest)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Nếu địa chỉ email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu sẽ được gửi."));
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("Dịch vụ gửi hướng dẫn đặt lại mật khẩu chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ."));
     }
 }

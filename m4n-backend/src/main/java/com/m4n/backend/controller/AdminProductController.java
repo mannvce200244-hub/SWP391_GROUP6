@@ -9,6 +9,7 @@ import com.m4n.backend.dto.response.AdminProductDetailResponse;
 import com.m4n.backend.dto.response.AdminProductSummaryResponse;
 import com.m4n.backend.dto.response.ProductMediaResponse;
 import com.m4n.backend.service.ProductService;
+import com.m4n.backend.service.ProductImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,7 +31,10 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/products")
@@ -41,6 +45,21 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminProductController {
 
     private final ProductService productService;
+    private final ProductImageService productImages;
+
+    @PostMapping(value = "/with-images", consumes = "multipart/form-data")
+    public ResponseEntity<AdminProductDetailResponse> createWithImages(
+            @Valid @RequestPart("product") CreateProductRequest request,
+            @RequestPart("images") List<MultipartFile> images) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(productImages.create(request, images));
+    }
+
+    @PutMapping(value = "/{id}/with-images", consumes = "multipart/form-data")
+    public AdminProductDetailResponse updateWithImages(@PathVariable Long id,
+            @Valid @RequestPart("product") UpdateProductRequest request,
+            @RequestPart("images") List<MultipartFile> images) {
+        return productImages.update(id, request, images);
+    }
 
     @GetMapping
     @Operation(summary = "Browse and filter admin products", description = "Returns paginated list of all products with stock and status.")

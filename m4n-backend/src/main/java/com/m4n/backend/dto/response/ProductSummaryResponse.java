@@ -13,5 +13,8 @@ public record ProductSummaryResponse(
         String artisanName,
         String craftVillageName,
         List<ProductMediaResponse> media,
-        String availability
+        String availability,
+        BigDecimal originalPrice,
+        BigDecimal productDiscountAmount,
+        Long productPromotionId
 ) {}

@@ -15,8 +15,9 @@ import com.m4n.backend.repository.OrderRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.ReviewRepository;
 import com.m4n.backend.repository.UserRepository;
-import com.m4n.backend.serviceImpl.ReviewServiceImpl;
+import com.m4n.backend.service.serviceImpl.ReviewServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -57,6 +59,11 @@ class ReviewServiceTest {
     private User testUser;
     private Product testProduct;
 
+    @AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+    }
+
     @BeforeEach
     void setUp() {
         Role customerRole = Role.builder().id(1L).name(RoleName.CUSTOMER).build();
@@ -66,6 +73,7 @@ class ReviewServiceTest {
                 .email("customer@m4n.vn")
                 .fullName("Khách hàng A")
                 .role(customerRole)
+                .isActive(true)
                 .build();
 
         testProduct = Product.builder()
@@ -103,7 +111,7 @@ class ReviewServiceTest {
 
         when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
         when(productRepository.findById(10L)).thenReturn(Optional.of(testProduct));
-        when(orderRepository.findById(100L)).thenReturn(Optional.of(completedOrder));
+        when(orderRepository.findByIdWithLock(100L)).thenReturn(Optional.of(completedOrder));
         when(reviewRepository.existsByOrderIdAndProductId(100L, 10L)).thenReturn(false);
         when(reviewRepository.save(any(Review.class))).thenAnswer(i -> {
             Review r = i.getArgument(0);
@@ -117,6 +125,16 @@ class ReviewServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.rating()).isEqualTo(5);
         assertThat(response.comment()).isEqualTo("Đàn rất đẹp, âm sắc thanh tao.");
+    }
+
+    @Test
+    void disabledCustomerCannotSubmitOrCheckEligibilityThroughService() {
+        testUser.setActive(false);
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        assertThatThrownBy(() -> reviewService.createReview(new CreateReviewRequest(100L, 10L, 5, "Review")))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThatThrownBy(() -> reviewService.checkEligibility(10L))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
     }
 
     @Test
@@ -138,7 +156,7 @@ class ReviewServiceTest {
 
         when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
         when(productRepository.findById(10L)).thenReturn(Optional.of(testProduct));
-        when(orderRepository.findById(101L)).thenReturn(Optional.of(pendingOrder));
+        when(orderRepository.findByIdWithLock(101L)).thenReturn(Optional.of(pendingOrder));
 
         CreateReviewRequest request = new CreateReviewRequest(101L, 10L, 5, "Test review");
 
@@ -166,7 +184,7 @@ class ReviewServiceTest {
 
         when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
         when(productRepository.findById(10L)).thenReturn(Optional.of(testProduct));
-        when(orderRepository.findById(102L)).thenReturn(Optional.of(completedOrder));
+        when(orderRepository.findByIdWithLock(102L)).thenReturn(Optional.of(completedOrder));
         when(reviewRepository.existsByOrderIdAndProductId(102L, 10L)).thenReturn(true);
 
         CreateReviewRequest request = new CreateReviewRequest(102L, 10L, 4, "Second review attempt");
@@ -194,8 +212,8 @@ class ReviewServiceTest {
         completedOrder.getItems().add(item);
 
         when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
-        when(orderRepository.findByUserIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(completedOrder));
-        when(reviewRepository.existsByOrderIdAndProductId(103L, 10L)).thenReturn(false);
+        when(orderRepository.findUnreviewedPurchaseIds(1L, 10L, OrderStatus.COMPLETED, PageRequest.of(0, 1)))
+                .thenReturn(List.of(103L));
 
         ReviewEligibilityResponse response = reviewService.checkEligibility(10L);
 

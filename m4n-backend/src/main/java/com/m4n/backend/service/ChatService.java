@@ -23,5 +23,7 @@ public interface ChatService {
 
     ConversationResponse assignStaff(Long conversationId, String staffEmail);
 
+    ConversationResponse takeOver(Long conversationId, Long expectedStaffId, String staffEmail);
+
     ConversationResponse closeConversation(Long conversationId, String staffEmail);
 }

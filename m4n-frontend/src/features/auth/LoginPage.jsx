@@ -7,8 +7,15 @@ import Button from '../../components/ui/Button.jsx'
 import { CircleX } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
 import AppLoadingScreen from '../../components/ui/AppLoadingScreen.jsx'
+import { paymentReturnOrderId } from '../../services/paymentService.js'
+import { posPaymentReturnId } from '../../services/posMomoService.js'
+import GoogleLoginButton from './GoogleLoginButton.jsx'
 
-function getRoleHome(role) {
+function getRoleHome(role, paymentOrderId, posPaymentId) {
+  if (role === 'POS_STAFF' && posPaymentId) return `${CUSTOMER_ROUTES.pos}?m4nPosPaymentId=${encodeURIComponent(posPaymentId)}`
+  if (role === 'CUSTOMER' && paymentOrderId) {
+    return `${CUSTOMER_ROUTES.paymentReturn}?m4nOrderId=${encodeURIComponent(paymentOrderId)}`
+  }
   switch (role) {
     case 'ADMIN':
     case 'SUPER_ADMIN':
@@ -28,14 +35,30 @@ function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
-  const [generalError, setGeneralError] = useState('')
+  const [generalError, setGeneralError] = useState(() => {
+    const outcome = new URLSearchParams(window.location.search).get('google')
+    if (outcome === 'cancelled') return 'Bạn đã hủy đăng nhập Google. Bạn có thể thử lại hoặc dùng email và mật khẩu.'
+    if (outcome === 'not_allowed') return 'Không thể đăng nhập tài khoản này bằng Google. Vui lòng dùng email và mật khẩu hoặc liên hệ hỗ trợ.'
+    if (outcome === 'failed') return 'Đăng nhập Google chưa thành công. Vui lòng thử lại.'
+    if (outcome === 'success') return 'Chưa thể hoàn tất phiên đăng nhập Google. Vui lòng thử lại.'
+    return ''
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [paymentOrderId] = useState(() => new URLSearchParams(window.location.search).has('m4nOrderId')
+    ? paymentReturnOrderId(window.location.search)
+    : new URLSearchParams(window.location.search).has('google')
+      ? paymentReturnOrderId(`?m4nOrderId=${encodeURIComponent(sessionStorage.getItem('m4n-google-return-order') || '')}`) : null)
+  const [posPaymentId] = useState(() => posPaymentReturnId(window.location.search))
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('google')) sessionStorage.removeItem('m4n-google-return-order')
+  }, [])
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      navigateTo(getRoleHome(user.role))
+      navigateTo(getRoleHome(user.role, paymentOrderId, posPaymentId))
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user, paymentOrderId, posPaymentId])
 
   if (isLoading || (isAuthenticated && user)) {
     return <AppLoadingScreen message="Đang chuyển đến khu vực làm việc…" />
@@ -56,11 +79,14 @@ function LoginPage() {
     }
 
     setFieldErrors(errors)
+    if (errors.email) document.getElementById('login-email')?.focus()
+    else if (errors.password) document.getElementById('login-password')?.focus()
     return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     setGeneralError('')
 
     if (!validate()) {
@@ -80,8 +106,15 @@ function LoginPage() {
         type: 'success',
       })
 
-      navigateTo(getRoleHome(authenticatedUser.role))
+      navigateTo(getRoleHome(authenticatedUser.role, paymentOrderId, posPaymentId))
     } catch (err) {
+      if (err.code === 'REGISTRATION_VERIFICATION_REQUIRED' && err.data?.email && err.data?.challenge) {
+        sessionStorage.setItem('m4n-registration-otp', JSON.stringify({ ...err.data.challenge, email: err.data.email }))
+        setPassword('')
+        navigateTo(CUSTOMER_ROUTES.register)
+        return
+      }
+      if (err.fieldErrors) setFieldErrors(err.fieldErrors)
       const message =
         err?.status === 401
           ? 'Email hoặc mật khẩu không chính xác.'
@@ -179,6 +212,8 @@ function LoginPage() {
           </Button>
         </div>
       </form>
+
+      <GoogleLoginButton disabled={isSubmitting} paymentOrderId={paymentOrderId} />
 
       <footer className="pt-4 border-t border-border flex items-center justify-center text-sm text-muted">
         <p>

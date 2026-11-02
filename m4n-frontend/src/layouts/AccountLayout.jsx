@@ -3,11 +3,13 @@ import {
   navigateTo,
 } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
+import RouterLink from '../routes/RouterLink.jsx'
 import {
   UserRound,
   Shield,
   LogOut,
   Package,
+  MapPin,
   ChevronRight,
 } from 'lucide-react'
 import useToast from '../components/ui/useToast.js'
@@ -168,6 +170,11 @@ function AccountLayout({
                     />
                   </button>
                 )}
+                {user?.role === 'CUSTOMER' && <RouterLink href={CUSTOMER_ROUTES.addresses}
+                  aria-current={activeTab === 'addresses' ? 'page' : undefined}
+                  className={`flex min-h-12 items-center gap-3 rounded-[18px] px-4 py-3 text-sm font-bold ${activeTab === 'addresses' ? 'bg-brand text-white' : 'text-muted hover:text-ink hover:bg-surface-secondary'}`}>
+                  <MapPin size={18} aria-hidden="true" />Địa chỉ nhận hàng
+                </RouterLink>}
               </nav>
 
               {/* Logout Action */}
@@ -186,9 +193,9 @@ function AccountLayout({
           </aside>
 
           {/* Right Main Content Card */}
-          <main className="flex-1 w-full min-w-0 rounded-[32px] border border-border/80 bg-white p-6 sm:p-10 shadow-sm relative overflow-hidden">
+          <div className="flex-1 w-full min-w-0 rounded-[32px] border border-border/80 bg-white p-6 sm:p-10 shadow-sm relative overflow-hidden">
             {children}
-          </main>
+          </div>
 
         </div>
       </div>

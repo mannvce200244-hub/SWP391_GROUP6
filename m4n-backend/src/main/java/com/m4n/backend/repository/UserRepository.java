@@ -19,10 +19,21 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Optional<User> findByEmailIgnoreCase(String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<User> findByGoogleSubject(String googleSubject);
+
+    List<User> findByRole_NameAndPhoneOrderByIdAsc(RoleName role, String phone, org.springframework.data.domain.Pageable pageable);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email)")
     Optional<User> findByEmailIgnoreCaseWithLock(@Param("email") String email);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> findByIdWithLock(@Param("id") Long id);
+
     boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByRoleName(RoleName name);
 
     /**
      * Locks all active accounts of a role with PESSIMISTIC_WRITE. Used before demoting or
@@ -30,6 +41,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
      * and the "at least one active SUPER_ADMIN" invariant cannot race to zero (BR-AUTH-06).
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT u FROM User u WHERE u.role.name = :roleName AND u.isActive = true")
+    @Query("SELECT u FROM User u WHERE u.role.name = :roleName AND u.isActive = true ORDER BY u.id")
     List<User> findActiveByRoleNameWithLock(@Param("roleName") RoleName roleName);
 }

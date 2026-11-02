@@ -110,10 +110,10 @@ public class AdminUserController {
     @Operation(summary = "Disable user account", description = "Deactivates user account, revokes all active refresh sessions, and prevents self-disable / last SUPER_ADMIN disable.")
     public ResponseEntity<UserDetailResponse> disableUser(
             @PathVariable Long id,
-            @RequestBody(required = false) UserStatusUpdateRequest request,
+            @Valid @RequestBody UserStatusUpdateRequest request,
             Authentication authentication
     ) {
-        Long expectedVersion = request != null ? request.expectedVersion() : null;
+        Long expectedVersion = request.expectedVersion();
         UserDetailResponse response = adminUserService.disableUser(id, expectedVersion, authentication.getName());
         return ResponseEntity.ok(response);
     }
@@ -122,10 +122,10 @@ public class AdminUserController {
     @Operation(summary = "Reactivate user account", description = "Reactivates a previously disabled user account.")
     public ResponseEntity<UserDetailResponse> reactivateUser(
             @PathVariable Long id,
-            @RequestBody(required = false) UserStatusUpdateRequest request,
+            @Valid @RequestBody UserStatusUpdateRequest request,
             Authentication authentication
     ) {
-        Long expectedVersion = request != null ? request.expectedVersion() : null;
+        Long expectedVersion = request.expectedVersion();
         UserDetailResponse response = adminUserService.reactivateUser(id, expectedVersion, authentication.getName());
         return ResponseEntity.ok(response);
     }

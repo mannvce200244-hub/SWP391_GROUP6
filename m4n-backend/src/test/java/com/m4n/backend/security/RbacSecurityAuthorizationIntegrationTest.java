@@ -15,10 +15,38 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 public class RbacSecurityAuthorizationIntegrationTest {
+
+    @Test
+    @WithMockUser(username = "customer@m4n.vn", roles = "CUSTOMER")
+    void customerCannotTakeOverOrListAssignedConversations() throws Exception {
+        mockMvc.perform(get("/api/v1/chat/staff/conversations?scope=ASSIGNED")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/chat/conversations/1/take-over").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedStaffId\":3}")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "staff@m4n.vn", roles = "ONLINE_STAFF")
+    void takeoverRequiresValidExpectedAssignee() throws Exception {
+        for (String body : new String[]{"{}", "{\"expectedStaffId\":0}", "{\"expectedStaffId\":-1}"}) {
+            mockMvc.perform(post("/api/v1/chat/conversations/1/take-over").contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "admin@m4n.vn", roles = "ADMIN")
+    void receiptRequiresWholeNonnegativePurchaseCost() throws Exception {
+        for (String body : new String[]{"{\"quantity\":50}", "{\"quantity\":50,\"unitCost\":-1}",
+                "{\"quantity\":50,\"unitCost\":1.5}", "{\"quantity\":50,\"unitCost\":10000000000}"}) {
+            mockMvc.perform(post("/api/v1/inventory/1/import").contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.unitCost").exists());
+        }
+    }
 
     @Autowired
     private WebApplicationContext context;
@@ -48,7 +76,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/categories")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/artisans")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/craft-villages")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/v1/admin/vouchers")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/vouchers/search")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/orders")).andExpect(status().isForbidden());
         mockMvc.perform(post("/api/v1/admin/orders/1/ship")).andExpect(status().isForbidden());
         mockMvc.perform(post("/api/v1/admin/orders/1/mark-delivered")).andExpect(status().isForbidden());
@@ -82,6 +110,36 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/craft-villages")).andExpect(status().isOk());
     }
 
+    @Test
+    @WithMockUser(username = "customer@m4n.vn", roles = {"CUSTOMER"})
+    void checkoutPreviewRejectsOversizedPriceAndShippingVoucherCodes() throws Exception {
+        for (String field : new String[]{"voucherCode", "shippingVoucherCode"}) {
+            mockMvc.perform(post("/api/v1/checkout/preview")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"" + field + "\":\"" + "X".repeat(51) + "\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors." + field).exists());
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "customer@m4n.vn", roles = {"CUSTOMER"})
+    void directPurchaseRequiresPositiveProductAndQuantityOnPreviewAndOrder() throws Exception {
+        for (String direct : new String[]{"{}", "{\"productId\":1,\"quantity\":0}",
+                "{\"productId\":0,\"quantity\":1}", "{\"productId\":1,\"quantity\":-1}"}) {
+            mockMvc.perform(post("/api/v1/checkout/preview").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"directPurchase\":" + direct + "}"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post("/api/v1/orders").contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {"customerName":"Test customer","customerPhone":"0900000000",
+                             "customerEmail":"test@example.test","shippingAddress":"Test address",
+                             "paymentMethod":"COD","directPurchase":%s}
+                            """.formatted(direct)))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
     // ==========================================
     // 2. ONLINE_STAFF ROLE ACCESS CONTROL
     // ==========================================
@@ -105,7 +163,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/categories")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/artisans")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/craft-villages")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/v1/admin/vouchers")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/vouchers/search")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/users")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/users/1/orders")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isForbidden());
@@ -170,7 +228,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/categories")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/artisans")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/craft-villages")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/v1/admin/vouchers")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/vouchers/search")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/users")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/users/1/orders")).andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/admin/dashboard")).andExpect(status().isForbidden());
@@ -197,7 +255,7 @@ public class RbacSecurityAuthorizationIntegrationTest {
         mockMvc.perform(get("/api/v1/admin/categories")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/artisans")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/craft-villages")).andExpect(status().isOk());
-        mockMvc.perform(get("/api/v1/admin/vouchers")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/admin/vouchers/search")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/orders")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/users")).andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/admin/users/{id}/orders", customerId)).andExpect(status().isOk());

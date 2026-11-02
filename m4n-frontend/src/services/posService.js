@@ -5,6 +5,10 @@ export async function searchProducts(keyword = '') {
   return apiClient.get(`/pos/products/search${query}`)
 }
 
+export async function searchCustomers(query) {
+  return apiClient.get(`/pos/customers?q=${encodeURIComponent(query.trim())}`)
+}
+
 export async function lookupBarcode(codeOrBarcode) {
   if (!codeOrBarcode || !codeOrBarcode.trim()) {
     throw new Error('Mã barcode hoặc mã sản phẩm không được để trống')
@@ -27,6 +31,8 @@ export async function finalizeSale({
   voucherCode = '',
   paymentMethod = 'CASH',
   amountReceived = null,
+  customerId = null,
+  posCustomerId = null,
   customerName = '',
   customerPhone = '',
   notes = '',
@@ -39,6 +45,8 @@ export async function finalizeSale({
     voucherCode: voucherCode ? voucherCode.trim() : null,
     paymentMethod,
     amountReceived: amountReceived !== null ? Number(amountReceived) : null,
+    customerId,
+    posCustomerId,
     customerName: customerName ? customerName.trim() : null,
     customerPhone: customerPhone ? customerPhone.trim() : null,
     notes: notes ? notes.trim() : null,
@@ -58,7 +66,22 @@ export async function downloadInvoicePdf(id) {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  window.URL.revokeObjectURL(url)
+  setTimeout(() => window.URL.revokeObjectURL(url), 30000)
+}
+
+export async function openInvoicePdf(id) {
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) throw new Error('Trình duyệt chặn cửa sổ PDF. Vui lòng cho phép cửa sổ bật lên hoặc tải hóa đơn PDF.')
+  printWindow.opener = null
+  try {
+    const blob = await apiClient.getBlob(`/pos/invoices/${encodeURIComponent(id)}/pdf`)
+    const url = window.URL.createObjectURL(blob)
+    printWindow.location.href = url
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+  } catch (error) {
+    printWindow.close()
+    throw error
+  }
 }
 
 export async function listInvoices({ page = 0, size = 15, search = '' } = {}) {
@@ -78,5 +101,6 @@ export default {
   finalizeSale,
   getInvoice,
   downloadInvoicePdf,
+  openInvoicePdf,
   listInvoices,
 }

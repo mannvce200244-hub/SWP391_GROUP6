@@ -13,6 +13,7 @@ import com.m4n.backend.entity.Category;
 import com.m4n.backend.entity.CraftVillage;
 import com.m4n.backend.entity.Product;
 import com.m4n.backend.entity.ProductMedia;
+import com.m4n.backend.service.ProductPrice;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -97,22 +98,7 @@ public class ProductMapper {
                 .toList();
     }
 
-    public List<ProductMediaResponse> toPrimaryMediaResponses(List<ProductMedia> mediaList) {
-        if (mediaList == null || mediaList.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return mediaList.stream()
-                .sorted(Comparator.comparing(
-                        ProductMedia::getSortOrder,
-                        Comparator.nullsLast(Integer::compareTo)
-                ))
-                .findFirst()
-                .map(this::toProductMediaResponse)
-                .map(List::of)
-                .orElse(Collections.emptyList());
-    }
-
-    public ProductDetailResponse toDetailResponse(Product product, String availability, Integer stockQuantity) {
+    public ProductDetailResponse toDetailResponse(Product product, String availability, Integer stockQuantity, ProductPrice price) {
         if (product == null) {
             return null;
         }
@@ -121,8 +107,8 @@ public class ProductMapper {
                 product.getId(),
                 product.getCode(),
                 product.getName(),
-                product.getPrice(),
-                formatPriceDisplay(product.getPrice()),
+                price.chargedUnitPrice(),
+                formatPriceDisplay(price.chargedUnitPrice()),
                 product.getDescription(),
                 toCategorySummary(product.getCategory()),
                 product.getMaterial(),
@@ -133,15 +119,15 @@ public class ProductMapper {
                 toCraftVillageSummary(product.getCraftVillage()),
                 toProductMediaResponses(product.getMedia()),
                 availability,
-                stockQuantity
+                stockQuantity,
+                product.getLowStockThreshold(),
+                price.originalUnitPrice(),
+                price.productDiscountAmount(),
+                price.productPromotionId()
         );
     }
 
-    public ProductDetailResponse toDetailResponse(Product product, String availability) {
-        return toDetailResponse(product, availability, null);
-    }
-
-    public ProductSummaryResponse toSummaryResponse(Product product, String availability, ProductMedia primaryMedia) {
+    public ProductSummaryResponse toSummaryResponse(Product product, String availability, ProductMedia primaryMedia, ProductPrice price) {
         if (product == null) {
             return null;
         }
@@ -152,24 +138,23 @@ public class ProductMapper {
 
         List<ProductMediaResponse> mediaResponses = primaryMedia != null
                 ? List.of(toProductMediaResponse(primaryMedia))
-                : (product.getMedia() != null ? toPrimaryMediaResponses(product.getMedia()) : Collections.emptyList());
+                : Collections.emptyList();
 
         return new ProductSummaryResponse(
                 product.getId(),
                 product.getCode(),
                 product.getName(),
-                product.getPrice(),
-                formatPriceDisplay(product.getPrice()),
+                price.chargedUnitPrice(),
+                formatPriceDisplay(price.chargedUnitPrice()),
                 groupName,
                 artisanName,
                 craftVillageName,
                 mediaResponses,
-                availability
+                availability,
+                price.originalUnitPrice(),
+                price.productDiscountAmount(),
+                price.productPromotionId()
         );
-    }
-
-    public ProductSummaryResponse toSummaryResponse(Product product, String availability) {
-        return toSummaryResponse(product, availability, null);
     }
 
     public AdminProductSummaryResponse toAdminSummaryResponse(
@@ -228,7 +213,10 @@ public class ProductMapper {
                 stockQuantity,
                 availability,
                 product.getCreatedAt(),
-                product.getUpdatedAt()
+                product.getUpdatedAt(),
+                product.getLowStockThreshold(),
+                product.getBillableWeightKg(),
+                product.getBulkySurcharge()
         );
     }
 }

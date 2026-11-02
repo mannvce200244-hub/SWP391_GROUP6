@@ -18,6 +18,7 @@ import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    boolean existsByShippingVoucherCodeIgnoreCase(String code);
 
     /**
      * Pessimistic lock for state-transitioning operations (confirm/ship/deliver/cancel) so the
@@ -28,17 +29,23 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o FROM Order o WHERE o.id = :id")
     Optional<Order> findByIdWithLock(@Param("id") Long id);
 
-    List<Order> findByUserIdOrderByCreatedAtDesc(Long userId);
+    Page<Order> findByUserId(Long userId, Pageable pageable);
 
-    Page<Order> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    Page<Order> findByUserIdAndStatus(Long userId, OrderStatus status, Pageable pageable);
+
+    @Query("""
+            SELECT o.id FROM Order o
+            WHERE o.user.id = :userId AND o.status = :status
+              AND EXISTS (SELECT oi.id FROM OrderItem oi WHERE oi.order = o AND oi.product.id = :productId)
+              AND NOT EXISTS (SELECT r.id FROM Review r WHERE r.order = o AND r.product.id = :productId)
+            ORDER BY o.createdAt DESC, o.id DESC
+            """)
+    List<Long> findUnreviewedPurchaseIds(@Param("userId") Long userId, @Param("productId") Long productId,
+            @Param("status") OrderStatus status, Pageable pageable);
 
     Optional<Order> findByIdAndUserId(Long id, Long userId);
 
     Optional<Order> findByOrderCode(String orderCode);
-
-    Page<Order> findAllByOrderByCreatedAtDesc(Pageable pageable);
-
-    Page<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status, Pageable pageable);
 
     @Query("SELECT o FROM Order o WHERE " +
             "(:status IS NULL OR o.status = :status) AND " +
@@ -59,15 +66,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     long countByStatus(OrderStatus status);
 
-    long countByCreatedAtBetween(Instant start, Instant end);
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(Instant start, Instant end);
 
-    long countByStatusAndCreatedAtBetween(OrderStatus status, Instant start, Instant end);
+    long countByStatusAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(OrderStatus status, Instant start, Instant end);
 
     @Query("SELECT COALESCE(SUM(o.finalAmount), 0) FROM Order o WHERE o.status = :status")
     BigDecimal sumFinalAmountByStatus(@Param("status") OrderStatus status);
 
-    @Query("SELECT COALESCE(SUM(o.finalAmount), 0) FROM Order o WHERE o.status = :status AND o.createdAt >= :start AND o.createdAt <= :end")
-    BigDecimal sumFinalAmountByStatusAndCreatedAtBetween(
+    @Query("SELECT COALESCE(SUM(o.finalAmount), 0) FROM Order o WHERE o.status = :status " +
+            "AND COALESCE(o.completedAt, o.updatedAt, o.createdAt) >= :start " +
+            "AND COALESCE(o.completedAt, o.updatedAt, o.createdAt) < :end")
+    BigDecimal sumFinalAmountByStatusAndCompletedAtBetween(
             @Param("status") OrderStatus status,
             @Param("start") Instant start,
             @Param("end") Instant end
@@ -76,4 +85,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findTop5ByOrderByCreatedAtDesc();
 
     boolean existsByVoucherCodeIgnoreCase(String voucherCode);
+
+    boolean existsByAutomaticPromotionCodeIgnoreCase(String promotionCode);
 }

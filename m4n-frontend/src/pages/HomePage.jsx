@@ -3,6 +3,9 @@ import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES, HOME_ARTISAN_SECTION } from '../routes/customerRoutes.js'
 import ProductCard from '../features/catalog/ProductCard.jsx'
 import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
+import ScrollReveal from '../components/common/ScrollReveal.jsx'
+import ErrorState from '../components/ui/ErrorState.jsx'
+import { ProductGridSkeleton } from '../components/ui/Skeleton.jsx'
 import productService from '../services/productService.js'
 import {
   ARTISAN,
@@ -15,6 +18,7 @@ function HomePage() {
   const [selectedGroup, setSelectedGroup] = useState('all')
   const [featuredProducts, setFeaturedProducts] = useState([])
   const [featuredStatus, setFeaturedStatus] = useState('loading')
+  const [featuredRetry, setFeaturedRetry] = useState(0)
   const [catDay, catHoi, catGo] = CATEGORIES
 
   useEffect(() => {
@@ -28,7 +32,7 @@ function HomePage() {
     let active = true
 
     productService
-      .listProducts({ page: 1, size: 8, sort: 'createdAt,desc' })
+      .listProducts({ page: 1, size: 8, sort: 'createdAt,desc', group: selectedGroup === 'all' ? undefined : selectedGroup.toUpperCase() })
       .then((products) => {
         if (!active) return
         setFeaturedProducts(products)
@@ -43,18 +47,13 @@ function HomePage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [selectedGroup, featuredRetry])
 
-  // Filter products based on selected tab
-  const filteredProducts =
-    selectedGroup === 'all'
-      ? featuredProducts
-      : featuredProducts.filter((p) =>
-          selectedGroup === 'day'
-            ? p.groupName?.toLowerCase().includes('dây')
-            : p.groupName?.toLowerCase().includes('hơi') ||
-              p.groupName?.toLowerCase().includes('gõ'),
-        )
+  const selectFeaturedGroup = (group) => {
+    if (group === selectedGroup) return
+    setFeaturedStatus('loading')
+    setSelectedGroup(group)
+  }
 
   return (
     <div className="w-full flex flex-col bg-white text-ink">
@@ -112,7 +111,7 @@ function HomePage() {
           {/* Right Column: Authentic Editorial Craft Visual (7 cols) */}
           <div className="lg:col-span-7 flex flex-col">
             <div className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden flex flex-col">
-              <div className="aspect-[16/11] sm:aspect-[16/10] w-full bg-neutral-900 overflow-hidden">
+              <div className="aspect-[16/11] sm:aspect-[16/10] w-full bg-surface-secondary overflow-hidden">
                 <img
                   src={HERO.image}
                   alt={HERO.alt}
@@ -153,7 +152,7 @@ function HomePage() {
         aria-label="Thông tin danh mục M4N"
         className="py-10 bg-surface-muted border-b border-border"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-bold uppercase tracking-wider text-brand">01 · Thông tin vật liệu</span>
@@ -187,7 +186,7 @@ function HomePage() {
               </p>
             </div>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -198,7 +197,7 @@ function HomePage() {
         className="py-16 sm:py-20 bg-white border-b border-border"
         id="categories"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
             <div>
               <EditorialEyebrow label="DANH MỤC NHẠC CỤ" />
@@ -318,7 +317,7 @@ function HomePage() {
               </div>
             </RouterLink>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -328,7 +327,7 @@ function HomePage() {
         aria-labelledby="featured-products-heading"
         className="py-16 sm:py-20 bg-surface-muted border-b border-border"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
             <div>
               <EditorialEyebrow label="BỘ SƯU TẬP TIÊU BIỂU" />
@@ -344,55 +343,24 @@ function HomePage() {
             </div>
 
             {/* Clean category pills */}
-            <div className="flex items-center gap-1.5 p-1 bg-white rounded-lg border border-border self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setSelectedGroup('all')}
-                aria-pressed={selectedGroup === 'all'}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-[background-color,color,box-shadow] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                  selectedGroup === 'all'
-                    ? 'bg-brand text-white shadow-2xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Tất cả
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedGroup('day')}
-                aria-pressed={selectedGroup === 'day'}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-[background-color,color,box-shadow] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                  selectedGroup === 'day'
-                    ? 'bg-brand text-white shadow-2xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Đàn Dây
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedGroup('hoi-go')}
-                aria-pressed={selectedGroup === 'hoi-go'}
-                className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition-[background-color,color,box-shadow] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                  selectedGroup === 'hoi-go'
-                    ? 'bg-brand text-white shadow-2xs'
-                    : 'text-muted hover:text-ink'
-                }`}
-              >
-                Bộ Hơi / Gõ
-              </button>
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-white rounded-lg border border-border self-start sm:self-auto">
+              {[['all', 'Tất cả'], ['day', 'Dây'], ['hoi', 'Hơi'], ['go', 'Gõ']].map(([group, label]) => (
+                <button
+                  key={group}
+                  type="button"
+                  onClick={() => selectFeaturedGroup(group)}
+                  aria-pressed={selectedGroup === group}
+                  className={`min-h-11 px-3.5 rounded-md text-xs font-semibold transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 ${selectedGroup === group ? 'bg-brand text-white shadow-2xs' : 'text-muted hover:text-ink'}`}
+                >{label}</button>
+              ))}
             </div>
           </div>
 
           {featuredStatus === 'loading' ? (
-            <p className="py-12 text-center text-sm text-muted" role="status">
-              Đang tải sản phẩm…
-            </p>
+            <ProductGridSkeleton count={4} className="lg:grid-cols-4" />
           ) : featuredStatus === 'error' ? (
-            <p className="py-12 text-center text-sm text-muted" role="alert">
-              Không thể tải sản phẩm tiêu biểu. Vui lòng xem toàn bộ danh mục.
-            </p>
-          ) : filteredProducts.length === 0 ? (
+            <ErrorState message="Không thể tải sản phẩm tiêu biểu. Vui lòng thử lại." onRetry={() => { setFeaturedStatus('loading'); setFeaturedRetry((value) => value + 1) }} />
+          ) : featuredProducts.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted">
               Chưa có sản phẩm phù hợp trong nhóm này.
             </p>
@@ -401,9 +369,9 @@ function HomePage() {
               aria-label="Danh sách sản phẩm mới"
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 list-none p-0 m-0"
             >
-              {filteredProducts.map((product) => (
+              {featuredProducts.map((product) => (
                 <li key={product.id}>
-                  <ProductCard priority={true} product={product} />
+                  <ProductCard product={product} />
                 </li>
               ))}
             </ul>
@@ -418,7 +386,7 @@ function HomePage() {
               <span aria-hidden="true">→</span>
             </RouterLink>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -429,7 +397,7 @@ function HomePage() {
         className="py-16 sm:py-24 bg-white border-b border-border"
         id={HOME_ARTISAN_SECTION.id}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Left: Authentic documentary photograph (6 cols) */}
             <div className="lg:col-span-6">
@@ -445,8 +413,15 @@ function HomePage() {
                   />
                 </div>
                 <div className="p-4 bg-surface-muted border-t border-border flex items-center justify-between text-xs text-muted">
-                  <span className="font-semibold text-ink">Không gian chế tác nhạc cụ truyền thống</span>
-                  <span>Việt Nam</span>
+                  <span className="font-semibold text-ink">{ARTISAN.caption}</span>
+                  <a
+                    className="transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+                    href={ARTISAN.creditUrl}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Ảnh: {ARTISAN.credit}
+                  </a>
                 </div>
               </div>
             </div>
@@ -499,7 +474,7 @@ function HomePage() {
               </div>
             </div>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -509,7 +484,7 @@ function HomePage() {
         aria-labelledby="values-heading"
         className="py-16 sm:py-20 bg-surface-muted border-b border-border"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <ScrollReveal className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mb-12">
             <EditorialEyebrow label="THÔNG TIN M4N" />
             <h2
@@ -541,7 +516,7 @@ function HomePage() {
               </div>
             ))}
           </div>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* ============================================================
@@ -551,7 +526,7 @@ function HomePage() {
         aria-label="Tư vấn và trải nghiệm nhạc cụ"
         className="py-16 sm:py-20 bg-white"
       >
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center gap-5">
+        <ScrollReveal className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center gap-5">
           <span className="text-xs font-bold uppercase tracking-wider text-brand">
             HỖ TRỢ TRỰC TUYẾN
           </span>
@@ -580,7 +555,7 @@ function HomePage() {
               <span>Tìm hiểu các nghệ nhân</span>
             </RouterLink>
           </div>
-        </div>
+        </ScrollReveal>
       </section>
     </div>
   )

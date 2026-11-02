@@ -38,7 +38,7 @@ public class OrderItem {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(name = "product_name", nullable = false, length = 150)
+    @Column(name = "product_name", nullable = false, length = 200)
     private String productName;
 
     @Column(name = "product_code", nullable = false, length = 50)
@@ -46,6 +46,10 @@ public class OrderItem {
 
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal price;
+    @Column(name = "original_unit_price", precision = 14, scale = 2)
+    private BigDecimal originalUnitPrice;
+    @Column(name = "product_promotion_id")
+    private Long productPromotionId;
 
     @Column(nullable = false)
     private Integer quantity;

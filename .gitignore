@@ -52,3 +52,6 @@ lerna-debug.log*
 Thumbs.db
 ehthumbs.db
 [Dd]esktop.ini
+
+# Local scripts
+push.ps1

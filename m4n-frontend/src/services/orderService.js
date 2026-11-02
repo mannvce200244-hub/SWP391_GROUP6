@@ -1,9 +1,19 @@
 import apiClient from '../api/apiClient.js'
 
 const orderService = Object.freeze({
-  async previewCheckout(voucherCode) {
+  async getCheckoutVouchers() {
+    return apiClient.get('/checkout/vouchers')
+  },
+
+  async previewCheckout(voucherCode, shippingVoucherCode, cartItemIds, deliveryAddress, recipientName, recipientPhone, directPurchase) {
     return apiClient.post('/checkout/preview', {
       voucherCode: voucherCode || null,
+      shippingVoucherCode: shippingVoucherCode || null,
+      cartItemIds,
+      deliveryAddress,
+      recipientName,
+      recipientPhone,
+      directPurchase,
     })
   },
 
@@ -11,8 +21,10 @@ const orderService = Object.freeze({
     return apiClient.post('/orders', orderData)
   },
 
-  async getMyOrders() {
-    return apiClient.get('/orders/me')
+  async getMyOrders({ page = 0, size = 10, status } = {}) {
+    const params = new URLSearchParams({ page: String(page), size: String(size) })
+    if (status && status !== 'ALL') params.set('status', status)
+    return apiClient.get(`/orders/me?${params}`)
   },
 
   async getOrderDetail(orderId) {

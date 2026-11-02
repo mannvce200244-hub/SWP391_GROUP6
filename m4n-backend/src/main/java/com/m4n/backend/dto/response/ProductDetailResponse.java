@@ -19,5 +19,9 @@ public record ProductDetailResponse(
         CraftVillageSummaryResponse craftVillage,
         List<ProductMediaResponse> media,
         String availability,
-        Integer stockQuantity
+        Integer stockQuantity,
+        Integer lowStockThreshold,
+        BigDecimal originalPrice,
+        BigDecimal productDiscountAmount,
+        Long productPromotionId
 ) {}

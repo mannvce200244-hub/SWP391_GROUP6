@@ -51,6 +51,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @org.springframework.core.annotation.Order(2)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(Customizer.withDefaults())
@@ -73,6 +74,13 @@ public class SecurityConfig {
                         // Public Authentication endpoints
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/register",
+                                "/api/v1/auth/register/start",
+                                "/api/v1/auth/register/verify",
+                                "/api/v1/auth/email-otp",
+                                "/api/v1/auth/reset-password-otp",
+                                "/api/v1/auth/verify-reset-otp",
+                                "/api/v1/payments/momo/ipn",
+                                "/api/v1/payments/momo/simulate-payment",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout",
@@ -82,10 +90,16 @@ public class SecurityConfig {
                         // Public Catalog & Review endpoints (customers can browse instruments and reviews without logging in)
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
+                                "/api/v1/media/**",
                                 "/api/v1/categories/**",
                                 "/api/v1/artisans/**",
                                 "/api/v1/craft-villages/**",
-                                "/api/v1/reviews/product/**"
+                                "/api/v1/articles/**",
+                                "/api/v1/payments/options",
+                                "/api/v1/auth/google/options",
+                                "/api/v1/payments/vnpay/ipn",
+                                "/api/v1/reviews/product/**",
+                                "/api/v1/checkout/vouchers"
                         ).permitAll()
                         // Area-level authorization net (defense in depth).
                         // Online Staff only has access to orders back-office endpoints, while /admin/** is strictly ADMIN & SUPER_ADMIN.
@@ -99,6 +113,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(new AuthCookieRequestFilter(allowedOrigins, jwtAccessDeniedHandler), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

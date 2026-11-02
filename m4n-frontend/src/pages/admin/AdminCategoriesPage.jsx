@@ -1,6 +1,7 @@
 import { useState, useEffect, useTransition } from 'react'
 import categoryService from '../../services/categoryService.js'
 import useToast from '../../components/ui/useToast.js'
+import useDialogFocus from '../../hooks/useDialogFocus.js'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog.jsx'
 import {
   Layers,
@@ -115,6 +116,8 @@ export default function AdminCategoriesPage() {
     setModalServerError('')
   }
 
+  const dialogRef = useDialogFocus(modalOpen, handleCloseModal, submitting)
+
   // Client validation
   const validateForm = () => {
     const errs = {}
@@ -123,8 +126,7 @@ export default function AdminCategoriesPage() {
         errs.code = 'Mã danh mục không được để trống'
       } else if (code.trim().length > 50) {
         errs.code = 'Mã danh mục tối đa 50 ký tự'
-      } else if (!/^[A-Za-z0-9_-]+$/.test(code.trim())) {
-        errs.code = 'Mã danh mục chỉ chứa chữ cái, số, gạch nối (-) hoặc gạch dưới (_)'
+
       }
     }
 
@@ -134,17 +136,15 @@ export default function AdminCategoriesPage() {
       errs.name = 'Tên danh mục tối đa 150 ký tự'
     }
 
-    if (description && description.trim().length > 500) {
-      errs.description = 'Mô tả tối đa 500 ký tự'
-    }
-
     setFormErrors(errs)
+    if (Object.keys(errs).length) document.getElementById("category-page-" + Object.keys(errs)[0])?.focus()
     return Object.keys(errs).length === 0
   }
 
   // Submit create or edit
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (submitting) return
     if (!validateForm()) return
 
     setSubmitting(true)
@@ -172,9 +172,12 @@ export default function AdminCategoriesPage() {
         })
       }
 
-      handleCloseModal()
+      setModalOpen(false)
+      setEditingCategory(null)
+      setFormErrors({})
       setRefreshKey((prev) => prev + 1)
     } catch (err) {
+      setFormErrors(err.fieldErrors || err.data?.fieldErrors || {})
       setModalServerError(err.message || 'Đã xảy ra lỗi khi lưu danh mục')
     } finally {
       setSubmitting(false)
@@ -197,7 +200,7 @@ export default function AdminCategoriesPage() {
 
   // Confirm delete
   const handleConfirmDelete = async () => {
-    if (!categoryToDelete) return
+    if (!categoryToDelete || deleting) return
     setDeleting(true)
     try {
       await categoryService.deleteCategory(categoryToDelete.id)
@@ -251,6 +254,7 @@ export default function AdminCategoriesPage() {
           </div>
           <input
             type="text"
+            name="categorySearch" aria-label="Tìm danh mục"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Tìm kiếm danh mục theo tên, mã hoặc mô tả..."
@@ -304,7 +308,7 @@ export default function AdminCategoriesPage() {
       ) : error ? (
         /* Error State */
         <div className="bg-[#FFFFFF] p-8 rounded-2xl border border-rose-200 shadow-2xs text-center flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-surface-secondary text-rose-600 flex items-center justify-center">
             <AlertCircle size={24} />
           </div>
           <h3 className="text-base font-semibold text-[#17191B]">Không thể tải dữ liệu</h3>
@@ -417,7 +421,7 @@ export default function AdminCategoriesPage() {
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold font-mono ${
                           cat.productCount > 0
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                            ? 'bg-surface-secondary text-emerald-700 border border-emerald-200/60'
                             : 'bg-slate-100 text-slate-500'
                         }`}
                       >
@@ -434,7 +438,7 @@ export default function AdminCategoriesPage() {
                           onClick={() => handleOpenEdit(cat)}
                           className="p-1.5 rounded-lg text-secondary hover:text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors cursor-pointer"
                           aria-label={`Chỉnh sửa danh mục ${cat.name}`}
-                          title="Chỉnh sửa danh mục"
+                          title="Chỉnh sửa danh mục" aria-label="Chỉnh sửa danh mục"
                         >
                           <Pencil size={16} />
                         </button>
@@ -444,7 +448,7 @@ export default function AdminCategoriesPage() {
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             cat.productCount > 0
                               ? 'text-zinc-300 hover:text-zinc-500 hover:bg-[#F6F7F8]'
-                              : 'text-secondary hover:text-rose-600 hover:bg-rose-50'
+                              : 'text-secondary hover:text-rose-600 hover:bg-surface-secondary'
                           }`}
                           aria-label={`Xóa danh mục ${cat.name}`}
                           title={
@@ -469,6 +473,8 @@ export default function AdminCategoriesPage() {
       {modalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+          ref={dialogRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-labelledby="category-modal-title"
@@ -507,7 +513,7 @@ export default function AdminCategoriesPage() {
 
             {/* Error banner */}
             {modalServerError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-start gap-2">
+              <div role="alert" className="p-3 bg-white border border-rose-200 text-rose-700 text-xs rounded-xl flex items-start gap-2">
                 <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
                 <span className="leading-relaxed">{modalServerError}</span>
               </div>
@@ -517,7 +523,7 @@ export default function AdminCategoriesPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Mã danh mục (Chỉ hiển thị hoặc tạo mới, không cho đổi mã khi edit) */}
               <div>
-                <label className="block text-xs font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="category-page-code" className="block text-xs font-semibold text-[#17191B] mb-1.5">
                   Mã danh mục <span className="text-rose-500">*</span>
                 </label>
                 {editingCategory ? (
@@ -529,13 +535,13 @@ export default function AdminCategoriesPage() {
                   </div>
                 ) : (
                   <>
-                    <input
+                    <input id="category-page-code" name="code" aria-invalid={Boolean(formErrors.code)}
                       type="text"
                       value={code}
                       onChange={(e) => setCode(e.target.value.toUpperCase())}
                       placeholder="VD: DAY, HOI, GO, PHIM..."
                       className={`w-full px-3.5 py-2 text-sm rounded-xl border ${
-                        formErrors.code ? 'border-rose-400 bg-rose-50/30' : 'border-[#E5E8EB]'
+                        formErrors.code ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E5E8EB]'
                       } bg-[#FFFFFF] text-[#17191B] font-mono uppercase focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 shadow-2xs`}
                       maxLength={50}
                     />
@@ -553,16 +559,16 @@ export default function AdminCategoriesPage() {
 
               {/* Tên danh mục */}
               <div>
-                <label className="block text-xs font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="category-page-name" className="block text-xs font-semibold text-[#17191B] mb-1.5">
                   Tên danh mục <span className="text-rose-500">*</span>
                 </label>
-                <input
+                <input id="category-page-name" name="name" aria-invalid={Boolean(formErrors.name)}
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="VD: Nhạc cụ dây, Nhạc cụ hơi, Nhạc cụ gõ..."
                   className={`w-full px-3.5 py-2 text-sm rounded-xl border ${
-                    formErrors.name ? 'border-rose-400 bg-rose-50/30' : 'border-[#E5E8EB]'
+                    formErrors.name ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E5E8EB]'
                   } bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 shadow-2xs`}
                   maxLength={150}
                 />
@@ -575,18 +581,17 @@ export default function AdminCategoriesPage() {
 
               {/* Mô tả */}
               <div>
-                <label className="block text-xs font-semibold text-[#17191B] mb-1.5">
+                <label htmlFor="category-page-description" className="block text-xs font-semibold text-[#17191B] mb-1.5">
                   Mô tả
                 </label>
-                <textarea
+                <textarea id="category-page-description" name="description" aria-invalid={Boolean(formErrors.description)}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
                   placeholder="Mô tả đặc điểm nhạc cụ thuộc danh mục này..."
                   className={`w-full px-3.5 py-2 text-sm rounded-xl border ${
-                    formErrors.description ? 'border-rose-400 bg-rose-50/30' : 'border-[#E5E8EB]'
+                    formErrors.description ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E5E8EB]'
                   } bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 shadow-2xs resize-none`}
-                  maxLength={500}
                 />
                 {formErrors.description && (
                   <span className="text-xs text-rose-500 mt-1 block">

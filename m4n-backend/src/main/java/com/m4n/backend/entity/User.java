@@ -36,6 +36,9 @@ public class User {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
+    @Column(name = "google_subject", unique = true, length = 255)
+    private String googleSubject;
+
     @Column(nullable = false, length = 255)
     private String password;
 
@@ -52,6 +55,10 @@ public class User {
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
+    @Builder.Default
+    @Column(name = "email_verified", nullable = false, columnDefinition = "boolean default true")
+    private boolean emailVerified = true;
+
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
@@ -59,6 +66,9 @@ public class User {
     @Version
     @Column(name = "version")
     private Long version;
+
+    @Column(name = "session_version", nullable = false, columnDefinition = "bigint default 0")
+    private long sessionVersion;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

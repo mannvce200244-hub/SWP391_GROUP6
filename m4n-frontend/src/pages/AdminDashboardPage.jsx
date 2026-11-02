@@ -22,6 +22,13 @@ const PERIOD_OPTIONS = [
   { id: 'quarter', label: 'Quý' },
 ]
 
+const START_YEAR = 2020
+const CURRENT_YEAR = new Date().getFullYear()
+const YEAR_OPTIONS = Array.from(
+  { length: Math.max(1, CURRENT_YEAR - START_YEAR + 1) },
+  (_, index) => CURRENT_YEAR - index
+)
+
 const PRODUCT_IMAGE_MAP = {
   'TRN-001': prodDanTranh,
   'BAU-001': prodDanBau,
@@ -48,28 +55,28 @@ function getStatusBadge(status, label) {
   switch (status) {
     case 'COMPLETED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-emerald-700 border border-emerald-200">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           <span>{label || 'Hoàn thành'}</span>
         </span>
       )
     case 'CONFIRMED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-sky-700 border border-sky-200">
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
           <span>{label || 'Đã xác nhận'}</span>
         </span>
       )
     case 'SHIPPING':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-blue-700 border border-blue-200">
           <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
           <span>{label || 'Đang giao hàng'}</span>
         </span>
       )
     case 'DELIVERED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-violet-700 border border-violet-200">
           <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
           <span>{label || 'Đã giao hàng'}</span>
         </span>
@@ -83,7 +90,7 @@ function getStatusBadge(status, label) {
       )
     case 'CANCELLED':
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-secondary text-rose-700 border border-rose-200">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
           <span>{label || 'Đã hủy'}</span>
         </span>
@@ -101,6 +108,7 @@ function getStatusBadge(status, label) {
 
 function AdminDashboardPage() {
   const [period, setPeriod] = useState('month')
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR)
   const [retryCount, setRetryCount] = useState(0)
   const [dashboardState, setDashboardState] = useState({
     status: 'loading',
@@ -111,7 +119,7 @@ function AdminDashboardPage() {
   useEffect(() => {
     let active = true
 
-    getDashboardSummary(period)
+    getDashboardSummary(period, selectedYear)
       .then((data) => {
         if (active) {
           setDashboardState({ status: 'success', data, error: null })
@@ -130,10 +138,17 @@ function AdminDashboardPage() {
     return () => {
       active = false
     }
-  }, [period, retryCount])
+  }, [period, selectedYear, retryCount])
 
   const handlePeriodChange = (newPeriod) => {
+    if (newPeriod === period) return
     setPeriod(newPeriod)
+    setDashboardState((prev) => ({ ...prev, status: 'loading' }))
+  }
+
+  const handleYearChange = (newYear) => {
+    if (newYear === selectedYear) return
+    setSelectedYear(newYear)
     setDashboardState((prev) => ({ ...prev, status: 'loading' }))
   }
 
@@ -154,48 +169,9 @@ function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-6 pb-12">
-      {/* Dashboard Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#FFFFFF] p-5 sm:p-6 rounded-2xl border border-[#E5E8EB] shadow-xs">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-[#17191B] tracking-tight font-sans">
-            Dashboard
-          </h2>
-          <p className="text-xs sm:text-sm text-zinc-500">
-            Tổng quan hoạt động kinh doanh và vận hành của M4N.
-          </p>
-        </div>
-
-        {/* TailAdmin-style Segmented Period Selector */}
-        <div
-          className="inline-flex items-center p-1 bg-[#F5F7FA] rounded-xl border border-[#E5E8EB] self-start sm:self-auto"
-          role="tablist"
-          aria-label="Chọn kỳ báo cáo"
-        >
-          {PERIOD_OPTIONS.map((opt) => {
-            const isActive = period === opt.id
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => handlePeriodChange(opt.id)}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-[#111315] text-white shadow-xs'
-                    : 'text-zinc-600 hover:text-[#17191B] hover:bg-[#E5E8EB]/50'
-                }`}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
       {/* Global Error Notice if request fails */}
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center justify-between text-xs sm:text-sm">
+        <div className="p-4 rounded-2xl bg-surface-secondary border border-rose-200 text-rose-800 flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-2">
             <span className="font-bold">Lỗi:</span>
             <span>{error}</span>
@@ -310,18 +286,65 @@ function AdminDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
         {/* Left: Revenue Trend Chart */}
         <div className="lg:col-span-8 flex flex-col p-5 sm:p-6 rounded-2xl bg-[#FFFFFF] border border-[#E5E8EB] shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-3 border-b border-[#E5E8EB]/60">
             <div>
               <h3 className="text-base font-bold text-[#17191B] tracking-tight">
                 Biến động Doanh thu
               </h3>
               <p className="text-xs text-zinc-400">
-                Thống kê doanh thu theo {PERIOD_OPTIONS.find((p) => p.id === period)?.label.toLowerCase()}
+                Thống kê doanh thu theo {PERIOD_OPTIONS.find((p) => p.id === period)?.label.toLowerCase()} năm {selectedYear}
               </p>
             </div>
-            <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 text-[#0D9488] border border-teal-200 self-start sm:self-auto">
-              {PERIOD_OPTIONS.find((p) => p.id === period)?.label}
-            </span>
+
+            {/* Filter controls: Year Select + Period Segmented Buttons */}
+            <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+              {/* Year Select dropdown from 2020 */}
+              <div className="inline-flex items-center gap-1.5">
+                <label htmlFor="dashboard-year-select" className="text-xs text-zinc-500 font-medium">
+                  Năm:
+                </label>
+                <select
+                  id="dashboard-year-select"
+                  value={selectedYear}
+                  onChange={(e) => handleYearChange(Number(e.target.value))}
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-brand/20 shadow-2xs cursor-pointer"
+                  aria-label="Chọn năm thống kê"
+                >
+                  {YEAR_OPTIONS.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* TailAdmin-style Segmented Period Selector */}
+              <div
+                className="inline-flex items-center p-1 bg-[#F6F7F8] rounded-xl border border-[#E5E8EB]"
+                role="tablist"
+                aria-label="Chọn kỳ báo cáo"
+              >
+                {PERIOD_OPTIONS.map((opt) => {
+                  const isActive = period === opt.id
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => handlePeriodChange(opt.id)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-[#111315] text-white shadow-xs'
+                          : 'text-zinc-600 hover:text-[#17191B] hover:bg-[#E5E8EB]/50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="flex-1 min-h-[260px] flex items-center justify-center">
@@ -399,7 +422,7 @@ function AdminDashboardPage() {
                   {topProducts.map((prod) => {
                     const thumb = PRODUCT_IMAGE_MAP[prod.productCode]
                     return (
-                      <tr key={prod.productId} className="hover:bg-[#F9FAFB] transition-colors">
+                      <tr key={prod.productId} className="hover:bg-[#F6F7F8] transition-colors">
                         <td className="py-3 px-3">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-zinc-100 overflow-hidden shrink-0 border border-border flex items-center justify-center">
@@ -477,7 +500,7 @@ function AdminDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-[#F2F4F5]">
                   {recentOrders.map((ord) => (
-                    <tr key={ord.id} className="hover:bg-[#F9FAFB] transition-colors">
+                    <tr key={ord.id} className="hover:bg-[#F6F7F8] transition-colors">
                       <td className="py-3 px-2.5">
                         <div className="flex flex-col">
                           <span className="font-bold text-[#17191B] font-mono text-xs">

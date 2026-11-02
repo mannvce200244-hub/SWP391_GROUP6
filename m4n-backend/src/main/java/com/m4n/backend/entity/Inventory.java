@@ -21,6 +21,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "inventories")
+@org.hibernate.annotations.Check(name = "ck_inventory_nonnegative", constraints = "quantity >= 0")
 @Getter
 @Setter
 @NoArgsConstructor

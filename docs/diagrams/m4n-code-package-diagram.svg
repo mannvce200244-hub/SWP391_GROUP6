@@ -1,0 +1,275 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1220" viewBox="0 0 1800 1220" role="img" aria-labelledby="title desc">
+  <title id="title">M4N Code Package Diagram</title>
+  <desc id="desc">UML-style package diagram showing the React and Vite frontend packages, the Spring Boot backend packages, their main dependencies, and PostgreSQL persistence.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="9" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/>
+    </marker>
+    <marker id="arrow-slate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: Inter, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .title { font-size: 34px; font-weight: 700; letter-spacing: .3px; }
+      .subtitle { font-size: 16px; fill: #475569; }
+      .section-title { font-size: 22px; font-weight: 700; }
+      .section-subtitle { font-size: 14px; fill: #64748b; }
+      .pkg-title { font-size: 16px; font-weight: 700; }
+      .pkg-path { font-size: 12px; fill: #64748b; }
+      .pkg-body { font-size: 13px; fill: #334155; }
+      .chip-text { font-size: 12px; font-weight: 600; }
+      .edge-label { font-size: 11px; font-weight: 600; fill: #475569; }
+      .legend { font-size: 12px; fill: #475569; }
+      .frontend-edge { fill: none; stroke: #2563eb; stroke-width: 2.3; marker-end: url(#arrow-blue); }
+      .backend-edge { fill: none; stroke: #7c3aed; stroke-width: 2.3; marker-end: url(#arrow-violet); }
+      .shared-edge { fill: none; stroke: #475569; stroke-width: 2.3; marker-end: url(#arrow-slate); }
+      .dashed { stroke-dasharray: 8 7; }
+      .cross { stroke-width: 1.8; opacity: .78; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="1220" fill="#ffffff"/>
+  <rect x="34" y="28" width="1732" height="1164" rx="26" fill="#f6f7f8"/>
+
+  <text x="74" y="84" class="title">M4N — CODE PACKAGE DIAGRAM</text>
+  <text x="74" y="114" class="subtitle">Current repository structure · React/Vite frontend · Spring Boot backend · PostgreSQL persistence</text>
+  <g transform="translate(1420,66)">
+    <circle cx="0" cy="0" r="6" fill="#2563eb"/>
+    <text x="14" y="5" class="legend">Frontend dependency</text>
+    <circle cx="0" cy="28" r="6" fill="#7c3aed"/>
+    <text x="14" y="33" class="legend">Backend dependency</text>
+  </g>
+
+  <!-- Frontend boundary -->
+  <g filter="url(#shadow)">
+    <rect x="62" y="148" width="745" height="990" rx="22" fill="#ffffff" stroke="#bfdbfe" stroke-width="2"/>
+  </g>
+  <rect x="62" y="148" width="745" height="72" rx="22" fill="#eff6ff"/>
+  <path d="M62 198 H807" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="90" y="180" class="section-title" fill="#1d4ed8">m4n-frontend/src</text>
+  <text x="90" y="204" class="section-subtitle">Presentation, navigation, feature UI, and HTTP client boundary</text>
+
+  <!-- Backend boundary -->
+  <g filter="url(#shadow)">
+    <rect x="994" y="148" width="744" height="990" rx="22" fill="#ffffff" stroke="#ddd6fe" stroke-width="2"/>
+  </g>
+  <rect x="994" y="148" width="744" height="72" rx="22" fill="#f5f3ff"/>
+  <path d="M994 198 H1738" stroke="#ddd6fe" stroke-width="1.5"/>
+  <text x="1022" y="180" class="section-title" fill="#6d28d9">com.m4n.backend</text>
+  <text x="1022" y="204" class="section-subtitle">HTTP transport, business services, security, and persistence</text>
+
+  <!-- FRONTEND PACKAGES -->
+  <g id="fe-entry">
+    <path d="M94 244 h118 l15 17 h245 v76 H94 z" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+    <text x="112" y="278" class="pkg-title">Entry points</text>
+    <text x="112" y="302" class="pkg-path">main.jsx · App.jsx</text>
+    <text x="112" y="323" class="pkg-body">Bootstrap providers and application router</text>
+  </g>
+
+  <g id="fe-routes">
+    <path d="M94 377 h95 l15 17 h252 v99 H94 z" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+    <text x="112" y="413" class="pkg-title">routes</text>
+    <text x="112" y="437" class="pkg-path">6 modules</text>
+    <text x="112" y="459" class="pkg-body">Route registration, guards, role utilities, links</text>
+  </g>
+
+  <g id="fe-layouts">
+    <path d="M486 377 h98 l15 17 h176 v99 H486 z" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+    <text x="504" y="413" class="pkg-title">layouts</text>
+    <text x="504" y="437" class="pkg-path">6 layouts</text>
+    <text x="504" y="459" class="pkg-body">Customer · Account · Auth</text>
+    <text x="504" y="478" class="pkg-body">Admin · Staff · POS</text>
+  </g>
+
+  <g id="fe-pages">
+    <path d="M94 533 h92 l15 17 h574 v115 H94 z" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+    <text x="112" y="569" class="pkg-title">pages</text>
+    <text x="112" y="593" class="pkg-path">27 route-level pages</text>
+    <text x="112" y="618" class="pkg-body">Customer pages</text>
+    <text x="263" y="618" class="pkg-body">Admin pages</text>
+    <text x="402" y="618" class="pkg-body">Staff pages</text>
+    <text x="530" y="618" class="pkg-body">POS pages</text>
+    <text x="112" y="642" class="pkg-body">Compose layouts, features, shared UI, and service calls</text>
+  </g>
+
+  <g id="fe-features">
+    <path d="M94 704 h105 l15 17 h354 v160 H94 z" fill="#eef2ff" stroke="#a5b4fc" stroke-width="1.5"/>
+    <text x="112" y="741" class="pkg-title">features</text>
+    <text x="112" y="765" class="pkg-path">49 modules grouped by business capability</text>
+    <g transform="translate(112,788)">
+      <rect width="88" height="28" rx="14" fill="#dbeafe"/><text x="44" y="19" text-anchor="middle" class="chip-text">auth</text>
+      <rect x="98" width="78" height="28" rx="14" fill="#dbeafe"/><text x="137" y="19" text-anchor="middle" class="chip-text">cart</text>
+      <rect x="186" width="96" height="28" rx="14" fill="#dbeafe"/><text x="234" y="19" text-anchor="middle" class="chip-text">catalog</text>
+      <rect x="292" width="96" height="28" rx="14" fill="#dbeafe"/><text x="340" y="19" text-anchor="middle" class="chip-text">artisans</text>
+      <rect y="38" width="82" height="28" rx="14" fill="#dbeafe"/><text x="41" y="57" text-anchor="middle" class="chip-text">home</text>
+      <rect x="92" y="38" width="78" height="28" rx="14" fill="#dbeafe"/><text x="131" y="57" text-anchor="middle" class="chip-text">chat</text>
+      <rect x="180" y="38" width="90" height="28" rx="14" fill="#dbeafe"/><text x="225" y="57" text-anchor="middle" class="chip-text">orders</text>
+      <rect x="280" y="38" width="96" height="28" rx="14" fill="#dbeafe"/><text x="328" y="57" text-anchor="middle" class="chip-text">reviews</text>
+      <rect y="76" width="82" height="28" rx="14" fill="#dbeafe"/><text x="41" y="95" text-anchor="middle" class="chip-text">staff</text>
+    </g>
+  </g>
+
+  <g id="fe-components">
+    <path d="M598 704 h112 l15 17 h50 v160 H598 z" fill="#eef2ff" stroke="#a5b4fc" stroke-width="1.5"/>
+    <text x="616" y="741" class="pkg-title">components</text>
+    <text x="616" y="765" class="pkg-path">28 shared modules</text>
+    <text x="616" y="795" class="pkg-body">ui/</text>
+    <text x="616" y="820" class="pkg-body">common/</text>
+    <text x="616" y="845" class="pkg-body">admin/</text>
+  </g>
+
+  <g id="fe-services">
+    <path d="M94 921 h103 l15 17 h243 v118 H94 z" fill="#ecfeff" stroke="#67e8f9" stroke-width="1.5"/>
+    <text x="112" y="957" class="pkg-title">services</text>
+    <text x="112" y="981" class="pkg-path">16 capability-focused services</text>
+    <text x="112" y="1007" class="pkg-body">Auth · Product · Cart · Order · POS · Inventory</text>
+    <text x="112" y="1029" class="pkg-body">Voucher · Review · Chat · Dashboard · Master data</text>
+  </g>
+
+  <g id="fe-api">
+    <path d="M494 921 h72 l15 17 h194 v118 H494 z" fill="#ecfeff" stroke="#67e8f9" stroke-width="1.5"/>
+    <text x="512" y="957" class="pkg-title">api</text>
+    <text x="512" y="981" class="pkg-path">apiClient.js</text>
+    <text x="512" y="1005" class="pkg-path">productCatalogAdapter.js</text>
+    <text x="512" y="1029" class="pkg-body">HTTP request boundary</text>
+  </g>
+
+  <g id="fe-support">
+    <rect x="94" y="1080" width="681" height="36" rx="18" fill="#f1f5f9"/>
+    <text x="434" y="1103" text-anchor="middle" class="pkg-body">support: assets · constants · utils · styles</text>
+  </g>
+
+  <!-- Frontend arrows -->
+  <path class="frontend-edge" d="M283 337 V364 H275 V377"/>
+  <path class="frontend-edge" d="M456 435 H486"/>
+  <path class="frontend-edge" d="M275 493 V517 H300 V533"/>
+  <path class="frontend-edge" d="M632 493 V517 H600 V533"/>
+  <path class="frontend-edge" d="M337 665 V688 H315 V704"/>
+  <path class="frontend-edge" d="M574 665 V688 H681 V704"/>
+  <path class="frontend-edge" d="M274 881 V906 H260 V921"/>
+  <path class="frontend-edge" d="M519 881 V906 H580 V921"/>
+  <path class="frontend-edge" d="M455 978 H494"/>
+
+  <!-- BACKEND PACKAGES -->
+  <g id="be-app">
+    <path d="M1026 244 h192 l15 17 h191 v76 h-398 z" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.5"/>
+    <text x="1044" y="278" class="pkg-title">M4nBackendApplication</text>
+    <text x="1044" y="302" class="pkg-path">Spring Boot application root</text>
+    <text x="1044" y="323" class="pkg-body">Component scan and runtime bootstrap</text>
+  </g>
+
+  <g id="be-config">
+    <path d="M1450 244 h91 l15 17 h150 v76 h-256 z" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5"/>
+    <text x="1468" y="278" class="pkg-title">config</text>
+    <text x="1468" y="302" class="pkg-path">CORS · OpenAPI · seed data</text>
+    <text x="1468" y="323" class="pkg-body">3 classes</text>
+  </g>
+
+  <g id="be-controller">
+    <path d="M1026 385 h118 l15 17 h265 v108 h-398 z" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.5"/>
+    <text x="1044" y="421" class="pkg-title">controller</text>
+    <text x="1044" y="445" class="pkg-path">22 HTTP controllers</text>
+    <text x="1044" y="470" class="pkg-body">Request validation · HTTP metadata</text>
+    <text x="1044" y="491" class="pkg-body">Service delegation · response mapping</text>
+  </g>
+
+  <g id="be-dto">
+    <path d="M1450 385 h76 l15 17 h165 v108 h-256 z" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5"/>
+    <text x="1468" y="421" class="pkg-title">dto</text>
+    <text x="1468" y="445" class="pkg-path">request/ · response/</text>
+    <text x="1468" y="470" class="pkg-body">79 transport models</text>
+    <text x="1468" y="491" class="pkg-body">Validation annotations</text>
+  </g>
+
+  <g id="be-service">
+    <path d="M1026 558 h107 l15 17 h276 v135 h-398 z" fill="#f3e8ff" stroke="#c084fc" stroke-width="1.5"/>
+    <text x="1044" y="594" class="pkg-title">service</text>
+    <text x="1044" y="618" class="pkg-path">interfaces + serviceImpl/</text>
+    <text x="1044" y="643" class="pkg-body">42 classes · business rules · transactions</text>
+    <text x="1044" y="665" class="pkg-body">Auth · Order · Inventory · POS · Voucher</text>
+    <text x="1044" y="687" class="pkg-body">Product · User · Review · Chat · Dashboard</text>
+  </g>
+
+  <g id="be-security">
+    <path d="M1450 558 h104 l15 17 h137 v135 h-256 z" fill="#fdf2f8" stroke="#f0abfc" stroke-width="1.5"/>
+    <text x="1468" y="594" class="pkg-title">security</text>
+    <text x="1468" y="618" class="pkg-path">8 classes</text>
+    <text x="1468" y="643" class="pkg-body">JWT filter and service</text>
+    <text x="1468" y="665" class="pkg-body">UserDetails · cookie auth</text>
+    <text x="1468" y="687" class="pkg-body">401 / 403 handlers</text>
+  </g>
+
+  <g id="be-mapper">
+    <path d="M1026 758 h93 l15 17 h180 v103 h-288 z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="1044" y="794" class="pkg-title">mapper</text>
+    <text x="1044" y="818" class="pkg-path">4 entity ↔ DTO mappers</text>
+    <text x="1044" y="844" class="pkg-body">Cart · Order · Product · User</text>
+  </g>
+
+  <g id="be-spec">
+    <path d="M1348 758 h132 l15 17 h211 v103 h-358 z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="1366" y="794" class="pkg-title">specification</text>
+    <text x="1366" y="818" class="pkg-path">2 query specifications</text>
+    <text x="1366" y="844" class="pkg-body">Product · User filters</text>
+  </g>
+
+  <g id="be-repository">
+    <path d="M1026 925 h126 l15 17 h257 v106 h-398 z" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+    <text x="1044" y="961" class="pkg-title">repository</text>
+    <text x="1044" y="985" class="pkg-path">22 Spring Data repositories</text>
+    <text x="1044" y="1010" class="pkg-body">Persistence access and locking queries</text>
+  </g>
+
+  <g id="be-entity">
+    <path d="M1450 925 h90 l15 17 h151 v106 h-256 z" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+    <text x="1468" y="961" class="pkg-title">entity</text>
+    <text x="1468" y="985" class="pkg-path">27 JPA entities / enums</text>
+    <text x="1468" y="1010" class="pkg-body">Persistent domain model</text>
+  </g>
+
+  <g id="be-support">
+    <rect x="1026" y="1080" width="680" height="36" rx="18" fill="#f1f5f9"/>
+    <text x="1366" y="1103" text-anchor="middle" class="pkg-body">cross-cutting: exception · validation · util</text>
+  </g>
+
+  <!-- Backend arrows -->
+  <path class="backend-edge" d="M1225 337 V368 H1218 V385"/>
+  <path class="backend-edge" d="M1424 448 H1450"/>
+  <path class="backend-edge" d="M1218 510 V542 H1210 V558"/>
+  <path class="backend-edge" d="M1424 632 H1450"/>
+  <path class="backend-edge" d="M1210 693 V730 H1168 V758"/>
+  <path class="backend-edge" d="M1288 693 V730 H1510 V758"/>
+  <path class="backend-edge" d="M1026 675 H1010 V978 H1026"/>
+  <path class="backend-edge" d="M1424 978 H1450"/>
+  <path class="backend-edge cross dashed" d="M1578 558 V531 H1375 V510"/>
+  <path class="backend-edge cross dashed" d="M1578 337 V365"/>
+
+  <!-- HTTP integration -->
+  <path class="shared-edge dashed" d="M775 986 C870 986 910 448 1026 448"/>
+  <rect x="829" y="665" width="132" height="52" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="895" y="687" text-anchor="middle" class="edge-label">REST / JSON</text>
+  <text x="895" y="706" text-anchor="middle" class="pkg-path">/api/v1/*</text>
+
+  <!-- Database -->
+  <g transform="translate(1248,1146)">
+    <ellipse cx="118" cy="8" rx="112" ry="18" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+    <path d="M6 8 v34 c0 10 50 18 112 18 s112-8 112-18 V8" fill="#e2e8f0" stroke="#64748b" stroke-width="1.5"/>
+    <ellipse cx="118" cy="42" rx="112" ry="18" fill="#cbd5e1" stroke="#64748b" stroke-width="1.5"/>
+    <text x="118" y="34" text-anchor="middle" class="pkg-title">PostgreSQL</text>
+  </g>
+  <path class="shared-edge" d="M1578 1048 V1134 H1488"/>
+
+  <!-- Notes -->
+  <g transform="translate(74,1164)">
+    <line x1="0" y1="0" x2="34" y2="0" class="shared-edge" marker-end="none"/>
+    <text x="45" y="5" class="legend">solid = primary code dependency</text>
+    <line x1="245" y1="0" x2="279" y2="0" class="shared-edge dashed" marker-end="none"/>
+    <text x="290" y="5" class="legend">dashed = HTTP or cross-cutting dependency</text>
+  </g>
+</svg>

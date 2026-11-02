@@ -4,16 +4,11 @@ import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
 function ArtisanCard({ artisan }) {
   if (!artisan) return null
 
-  // Route to catalog filtered by this artisan
-  const productFilterUrl = `${CUSTOMER_ROUTES.products}?artisan=${encodeURIComponent(
-    artisan.name,
-  )}`
-
   return (
     <RouterLink
       aria-label={`Xem câu chuyện của ${artisan.name}`}
-      className="group flex flex-col h-full rounded-2xl bg-surface border border-border overflow-hidden shadow-xs hover:shadow-md hover:border-brand/40 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 transition-all duration-300 no-underline select-none cursor-pointer"
-      href={productFilterUrl}
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-xs transition-[border-color,box-shadow] duration-300 hover:border-brand/40 hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 no-underline select-none cursor-pointer"
+      href={CUSTOMER_ROUTES.artisanDetail(artisan.id)}
     >
       {/* 1. Portrait Visual Frame (4:5 Aspect Ratio) */}
       <div className="aspect-4/5 w-full overflow-hidden bg-surface-secondary relative">
@@ -23,15 +18,10 @@ function ArtisanCard({ artisan }) {
           decoding="async"
           height="450"
           loading="lazy"
-          src={artisan.avatar || '/assets/images/artisan-workshop.jpg'}
+          src={artisan.avatar || '/assets/images/vietnamese-instrument-shop.jpg'}
           width="360"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-80 group-hover:opacity-70 transition-opacity pointer-events-none" />
-
-        {/* Top Badge: Subtle NGHỆ NHÂN pill */}
-        <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md text-xs font-bold bg-white/95 backdrop-blur-xs text-ink border border-border/80 tracking-wider uppercase shadow-2xs">
-          Nghệ nhân
-        </span>
 
         {/* Bottom Metadata on Image */}
         <div className="absolute bottom-3 left-3 right-3 text-white">
@@ -47,9 +37,8 @@ function ArtisanCard({ artisan }) {
       {/* 2. Content Details */}
       <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3 justify-between">
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-bold text-brand uppercase tracking-wider">Nghệ nhân</p>
           <p className="text-xs sm:text-sm text-muted leading-relaxed line-clamp-3">
-            {artisan.description}
+            {artisan.description || 'Thông tin câu chuyện của nghệ nhân đang được cập nhật.'}
           </p>
         </div>
 

@@ -36,8 +36,8 @@ function PosLayout({ children, pathname }) {
         type: 'info',
       })
       navigateTo(CUSTOMER_ROUTES.login)
-    } catch {
-      navigateTo(CUSTOMER_ROUTES.login)
+    } catch (error) {
+      addToast({ message: error.message || 'Không thể đăng xuất. Vui lòng thử lại.', type: 'error' })
     }
   }
 
@@ -89,7 +89,7 @@ function PosLayout({ children, pathname }) {
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-surface rounded-xl border border-border shadow-lg py-1.5 z-50 animate-in fade-in zoom-in-95" role="menu">
+            <div className="absolute right-0 top-full mt-2 w-56 bg-surface rounded-xl border border-border shadow-lg py-1.5 z-50 animate-in fade-in zoom-in-95" >
               <div className="px-3.5 py-2 border-b border-border/60 bg-surface-secondary/40 flex flex-col mb-1 text-xs">
                 <strong className="text-ink truncate">{user?.fullName || 'Thu ngân'}</strong>
                 <span className="text-muted truncate">{user?.email}</span>
@@ -97,7 +97,7 @@ function PosLayout({ children, pathname }) {
               <button
                 type="button"
                 className="flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-medium text-ink hover:bg-surface-secondary hover:text-brand transition-colors w-full text-left cursor-pointer"
-                role="menuitem"
+                
                 onClick={() => {
                   setDropdownOpen(false)
                   navigateTo(CUSTOMER_ROUTES.profile)
@@ -109,7 +109,7 @@ function PosLayout({ children, pathname }) {
               <button
                 type="button"
                 className="flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-medium text-ink hover:bg-surface-secondary hover:text-brand transition-colors w-full text-left cursor-pointer"
-                role="menuitem"
+                
                 onClick={() => {
                   setDropdownOpen(false)
                   navigateTo(CUSTOMER_ROUTES.security)
@@ -122,7 +122,7 @@ function PosLayout({ children, pathname }) {
               <button
                 type="button"
                 className="flex items-center gap-2.5 px-3.5 py-2 text-[13.5px] font-medium text-brand hover:bg-brand-soft transition-colors w-full text-left cursor-pointer"
-                role="menuitem"
+                
                 onClick={handleLogout}
               >
                 <LogOut size={16} aria-hidden="true" />

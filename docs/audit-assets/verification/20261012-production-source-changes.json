@@ -1,0 +1,72 @@
+[
+  {
+    "status": "added",
+    "lines": 94,
+    "path": "m4n-backend/src/main/java/com/m4n/backend/config/ProductionConfiguration.java"
+  },
+  {
+    "status": "modified",
+    "lines": 52,
+    "path": "m4n-backend/src/main/java/com/m4n/backend/entity/Inventory.java"
+  },
+  {
+    "status": "added",
+    "lines": 46,
+    "path": "m4n-backend/src/main/java/com/m4n/backend/security/AuthCookieRequestFilter.java"
+  },
+  {
+    "status": "modified",
+    "lines": 151,
+    "path": "m4n-backend/src/main/java/com/m4n/backend/security/SecurityConfig.java"
+  },
+  {
+    "status": "modified",
+    "lines": 314,
+    "path": "m4n-backend/src/main/java/com/m4n/backend/service/serviceImpl/AdminUserServiceImpl.java"
+  },
+  {
+    "status": "modified",
+    "lines": 286,
+    "path": "m4n-backend/src/main/java/com/m4n/backend/service/serviceImpl/AuthServiceImpl.java"
+  },
+  {
+    "status": "modified",
+    "lines": 126,
+    "path": "m4n-backend/src/main/java/com/m4n/backend/service/serviceImpl/NotificationServiceImpl.java"
+  },
+  {
+    "status": "added",
+    "lines": 17,
+    "path": "m4n-backend/src/main/resources/application-prod.properties"
+  },
+  {
+    "status": "added",
+    "lines": 98,
+    "path": "m4n-backend/src/test/java/com/m4n/backend/config/ProductionConfigurationTest.java"
+  },
+  {
+    "status": "added",
+    "lines": 74,
+    "path": "m4n-backend/src/test/java/com/m4n/backend/security/AuthCookieRequestFilterTest.java"
+  },
+  {
+    "status": "modified",
+    "lines": 363,
+    "path": "m4n-backend/src/test/java/com/m4n/backend/security/AuthSecurityIntegrationTest.java"
+  },
+  {
+    "status": "modified",
+    "lines": 339,
+    "path": "m4n-backend/src/test/java/com/m4n/backend/service/AuthServiceTest.java"
+  },
+  {
+    "status": "modified",
+    "lines": 191,
+    "path": "m4n-frontend/src/api/apiClient.js"
+  },
+  {
+    "status": "modified",
+    "lines": 180,
+    "path": "m4n-frontend/tests/apiClient.test.mjs"
+  }
+]

@@ -1,0 +1,37 @@
+[
+  {
+    "lines": 154,
+    "sha256": "CFE88DEB04EBBF6B27A663B7159A69B069B7D61AFBDDE155E3890F09D00DC62F",
+    "path": "m4n-backend/pom.xml"
+  },
+  {
+    "lines": 3054,
+    "sha256": "1DC83609A25360033AD2820629676E49BC792E18D8E576AC5CA9F3FEB0B8E434",
+    "path": "m4n-frontend/package-lock.json"
+  },
+  {
+    "lines": 56,
+    "sha256": "8EF193FA89B81F53A2B55E303390DC11315300208DD398374AD096AD9D207EC6",
+    "path": "m4n-backend/src/test/java/com/m4n/backend/config/OpenApiIntegrationTest.java"
+  },
+  {
+    "lines": 80,
+    "sha256": "E2185F0561E30E5247DA29CC4F264536A3195E24BDCF4739573A1AB97B15BC64",
+    "path": "docs/audit-assets/verification/20261012-dependency-swagger-smoke.ps1"
+  },
+  {
+    "lines": 117,
+    "sha256": "AF690F63D4EEEE3A2B5C97678F130913C173AFC63DB28FCFC7048411F9C1D1D0",
+    "path": "docs/DEVELOPMENT_GUIDE.md"
+  },
+  {
+    "lines": 129,
+    "sha256": "60A54DA07195B69A61A4B9593C64E7631A19C4BE83583646591DBE7C31F18DEC",
+    "path": "docs/PRODUCTION_READINESS.md"
+  },
+  {
+    "lines": 140,
+    "sha256": "6AC8F35EB7ED7662F0F764A0A392C53329E1C2A01D8A743063325C0519E9FE06",
+    "path": "docs/audit-production-20261012.md"
+  }
+]

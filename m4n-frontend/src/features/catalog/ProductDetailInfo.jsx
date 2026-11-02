@@ -15,7 +15,7 @@ function ProductDetailInfo({ product }) {
   const [quantity, setQuantity] = useState(1)
   const [isAdding, setIsAdding] = useState(false)
   const [isBuying, setIsBuying] = useState(false)
-  const { addToCart } = useCart()
+  const { addToCart, buyNow } = useCart()
   const { isAuthenticated, user } = useAuth()
   const { addToast } = useToast()
 
@@ -51,7 +51,6 @@ function ProductDetailInfo({ product }) {
           message: `Đã thêm ${quantity} nhạc cụ "${product.name}" vào giỏ hàng.`,
           type: 'success',
         })
-        navigateTo(CUSTOMER_ROUTES.checkout)
       } else {
         addToast({
           message: result.message || 'Không thể thêm sản phẩm vào giỏ hàng.',
@@ -73,7 +72,7 @@ function ProductDetailInfo({ product }) {
 
     try {
       setIsBuying(true)
-      const result = await addToCart(product.id, quantity)
+      const result = await buyNow(product.id, quantity)
 
       if (result.requireAuth) {
         addToast({
@@ -89,6 +88,7 @@ function ProductDetailInfo({ product }) {
           message: `Đã chọn mua ${quantity} nhạc cụ "${product.name}".`,
           type: 'success',
         })
+        navigateTo(result.checkoutUrl)
       } else {
         addToast({
           message: result.message || 'Không thể tiến hành mua hàng.',
@@ -117,6 +117,7 @@ function ProductDetailInfo({ product }) {
         {/* Right Column (5 cols): Details & Purchase */}
         <div className="lg:col-span-5 flex flex-col gap-5 bg-surface p-6 sm:p-8 rounded-2xl border border-border/80 shadow-xs">
           {/* Category Tag & Code */}
+          {Number(product.productDiscountAmount) > 0 && <p className="text-sm text-jade">Giảm theo sản phẩm {formatCurrencyVND(product.productDiscountAmount)} · Giá niêm yết <del>{formatCurrencyVND(product.originalPrice)}</del></p>}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <EditorialEyebrow label={categoryName || 'Nhạc cụ truyền thống'} />
             {product.code && (
@@ -125,13 +126,13 @@ function ProductDetailInfo({ product }) {
           </div>
 
           {/* Instrument Title */}
-          <h1 className="text-2xl sm:text-3xl font-bold font-serif text-ink tracking-tight leading-snug">
+          <h1 className="text-2xl sm:text-3xl font-bold font-sans text-ink tracking-tight leading-snug">
             {product.name}
           </h1>
 
           {/* Price & Availability */}
           <div className="flex items-baseline justify-between gap-4 flex-wrap pt-1">
-            <div className="text-2xl sm:text-3xl font-bold text-ink font-serif tracking-tight">
+            <div className="text-2xl sm:text-3xl font-bold text-brand font-sans tracking-tight">
               {formattedPrice}
             </div>
             {isOutOfStock ? (
@@ -139,8 +140,8 @@ function ProductDetailInfo({ product }) {
                 <span className="w-2 h-2 rounded-full bg-subtle" /> Tạm hết hàng
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-jade-soft/60 text-jade border border-jade-border/70">
-                <span className="w-2 h-2 rounded-full bg-jade" /> Có hàng tại thời điểm kiểm tra
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-surface-secondary text-jade border border-jade-border/70">
+                <span className="w-2 h-2 rounded-full bg-jade" /> {product.availability === 'LOW_STOCK' ? 'Sắp hết hàng' : 'Có hàng tại thời điểm kiểm tra'}
               </span>
             )}
           </div>

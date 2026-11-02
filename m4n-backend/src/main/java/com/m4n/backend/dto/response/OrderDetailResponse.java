@@ -27,6 +27,17 @@ public record OrderDetailResponse(
         String voucherCode,
         List<OrderItemResponse> items,
         boolean canCustomerCancel,
+        boolean canStaffCancel,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        BigDecimal manualDiscountAmount,
+        BigDecimal automaticDiscountAmount,
+        String automaticPromotionCode,
+        BigDecimal originalTotalAmount,
+        BigDecimal productDiscountAmount,
+        BigDecimal baseShippingFee,
+        BigDecimal shippingDiscountAmount,
+        BigDecimal shippingFee,
+        String shippingVoucherCode,
+        boolean freeShippingApplied
 ) {}

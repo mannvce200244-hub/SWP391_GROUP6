@@ -29,14 +29,12 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     @Query("SELECT COALESCE(SUM(inv.finalAmount), 0) FROM Invoice inv")
     BigDecimal sumFinalAmount();
 
-    @Query("SELECT COALESCE(SUM(inv.finalAmount), 0) FROM Invoice inv WHERE inv.createdAt BETWEEN :start AND :end")
+    @Query("SELECT COALESCE(SUM(inv.finalAmount), 0) FROM Invoice inv WHERE inv.createdAt >= :start AND inv.createdAt < :end")
     BigDecimal sumFinalAmountByCreatedAtBetween(@Param("start") Instant start, @Param("end") Instant end);
 
-    long countByCreatedAtBetween(Instant start, Instant end);
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(Instant start, Instant end);
 
-    Page<Invoice> findAllByOrderByCreatedAtDesc(Pageable pageable);
-
-    Page<Invoice> findByStaffIdOrderByCreatedAtDesc(Long staffId, Pageable pageable);
+    Page<Invoice> findByStaffId(Long staffId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"staff"})
     @Query("""
@@ -45,7 +43,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
                OR LOWER(inv.invoiceCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
                OR LOWER(inv.customerName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
                OR LOWER(inv.staff.fullName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
-        ORDER BY inv.createdAt DESC
         """)
     Page<Invoice> searchInvoices(@Param("search") String search, Pageable pageable);
 
@@ -56,7 +53,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
           AND (:search IS NULL OR :search = ''
                OR LOWER(inv.invoiceCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
                OR LOWER(inv.customerName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
-        ORDER BY inv.createdAt DESC
         """)
     Page<Invoice> searchInvoicesByStaff(
             @Param("staffId") Long staffId,
@@ -65,4 +61,6 @@ public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     );
 
     boolean existsByVoucherCodeIgnoreCase(String voucherCode);
+
+    boolean existsByAutomaticPromotionCodeIgnoreCase(String promotionCode);
 }

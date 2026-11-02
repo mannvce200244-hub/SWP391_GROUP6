@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import craftVillageService from '../../services/craftVillageService.js'
 import useToast from '../../components/ui/useToast.js'
-import { MapPin, Search, Trash2, UserRound, Plus, Pencil } from 'lucide-react'
+import { MapPin, Search, Trash2, UserRound, Plus, Pencil, Eye } from 'lucide-react'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import CraftVillageManagementModal from '../../components/admin/CraftVillageManagementModal.jsx'
+import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 
 export default function AdminCraftVillagesPage() {
   const { addToast } = useToast()
@@ -46,7 +47,7 @@ export default function AdminCraftVillagesPage() {
   }
 
   const handleDelete = async () => {
-    if (!deleteTarget) return
+    if (!deleteTarget || deleting) return
     setDeleting(true)
     try {
       await craftVillageService.deleteCraftVillage(deleteTarget.id)
@@ -98,7 +99,7 @@ export default function AdminCraftVillagesPage() {
   if (error) {
     return (
       <div className="text-center py-16">
-        <p className="text-sm text-rose-600 mb-3">{error}</p>
+        <p role="alert" className="text-sm text-rose-600 mb-3">{error}</p>
         <button
           type="button"
           onClick={reloadVillages}
@@ -136,6 +137,7 @@ export default function AdminCraftVillagesPage() {
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
         <input
           type="text"
+          name="masterSearch" aria-label="Tìm theo tên hoặc thông tin liên quan"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Tìm kiếm làng nghề…"
@@ -167,20 +169,33 @@ export default function AdminCraftVillagesPage() {
                 {filtered.map((village) => (
                   <tr key={village.id} className="border-b border-[#F2F4F5] hover:bg-[#F6F7F8]/50 transition-colors">
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => navigateTo(CUSTOMER_ROUTES.adminCraftVillageDetail(village.id))}
+                        className="flex items-center gap-3 text-left group cursor-pointer"
+                      >
                         {village.imageUrl ? (
                           <img
                             src={village.imageUrl}
                             alt={village.name}
-                            className="w-9 h-9 rounded-lg object-cover border border-[#E3E6E8]"
+                            className="w-9 h-9 rounded-lg object-cover border border-[#E3E6E8] shrink-0"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-lg bg-[#F6F7F8] flex items-center justify-center border border-[#E3E6E8]">
+                          <div className="w-9 h-9 rounded-lg bg-[#F6F7F8] flex items-center justify-center border border-[#E3E6E8] shrink-0">
                             <MapPin size={16} className="text-zinc-400" />
                           </div>
                         )}
-                        <span className="font-medium text-[#17191B]">{village.name}</span>
-                      </div>
+                        <div className="min-w-0">
+                          <span className="font-medium text-[#17191B] group-hover:text-[#0D9488] transition-colors block">
+                            {village.name}
+                          </span>
+                          {village.description && (
+                            <p className="text-xs text-secondary line-clamp-1 max-w-md mt-0.5">
+                              {village.description}
+                            </p>
+                          )}
+                        </div>
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-secondary">{village.location || '—'}</td>
                     <td className="px-4 py-3 text-center">
@@ -194,14 +209,26 @@ export default function AdminCraftVillagesPage() {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
+                          title="Xem chi tiết & giao diện hiển thị"
+                          aria-label={`Chi tiết ${village.name}`}
+                          onClick={() => navigateTo(CUSTOMER_ROUTES.adminCraftVillageDetail(village.id))}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#E3E6E8] bg-white hover:bg-[#F6F7F8] text-xs font-medium text-[#17191B] transition-colors cursor-pointer"
+                        >
+                          <Eye size={14} className="text-secondary" />
+                          <span>Chi tiết</span>
+                        </button>
+                        <button
+                          type="button"
                           title="Chỉnh sửa"
+                          aria-label={`Chỉnh sửa ${village.name}`}
                           onClick={() => {
                             setSelectedVillage(village)
                             setIsModalOpen(true)
                           }}
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[#0D9488]/30 bg-[#0D9488]/10 hover:bg-[#0D9488]/15 text-xs font-medium text-[#0D9488] transition-colors cursor-pointer"
                         >
-                          <Pencil size={15} />
+                          <Pencil size={13} />
+                          <span>Sửa</span>
                         </button>
                         <button
                           type="button"
@@ -215,7 +242,7 @@ export default function AdminCraftVillagesPage() {
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             (village.artisanCount ?? 0) > 0 || (village.productCount ?? 0) > 0
                               ? 'text-zinc-300 hover:text-zinc-500 hover:bg-[#F6F7F8]'
-                              : 'text-zinc-400 hover:text-rose-600 hover:bg-rose-50'
+                              : 'text-zinc-400 hover:text-rose-600 hover:bg-surface-secondary'
                           }`}
                         >
                           <Trash2 size={15} aria-hidden="true" />
@@ -239,7 +266,7 @@ export default function AdminCraftVillagesPage() {
           variant="danger"
           isLoading={deleting}
           onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
+          onCancel={() => { if (!deleting) setDeleteTarget(null) }}
         />
       )}
 

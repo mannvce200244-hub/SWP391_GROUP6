@@ -69,7 +69,7 @@ class DashboardControllerTest {
                 .recentOrders(Collections.emptyList())
                 .build();
 
-        when(dashboardService.getDashboardSummary("month")).thenReturn(response);
+        when(dashboardService.getDashboardSummary("month", null)).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/admin/dashboard")
                         .param("period", "month")
@@ -81,6 +81,39 @@ class DashboardControllerTest {
                 .andExpect(jsonPath("$.kpi.completedOrders").value(3))
                 .andExpect(jsonPath("$.kpi.cancelledOrders").value(1))
                 .andExpect(jsonPath("$.inventory.totalItems").value(75));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void getDashboard_whenAdminWithYear_shouldPassYearToService() throws Exception {
+        DashboardSummaryResponse response = DashboardSummaryResponse.builder()
+                .period("quarter")
+                .kpi(DashboardSummaryResponse.KpiSummary.builder()
+                        .totalRevenue(new BigDecimal("10000000"))
+                        .totalOrders(5L)
+                        .completedOrders(2L)
+                        .cancelledOrders(0L)
+                        .build())
+                .inventory(InventorySummaryResponse.builder()
+                        .totalItems(50L)
+                        .availableCount(3L)
+                        .lowStockCount(0L)
+                        .outOfStockCount(0L)
+                        .build())
+                .revenueTrend(Collections.emptyList())
+                .topProducts(Collections.emptyList())
+                .recentOrders(Collections.emptyList())
+                .build();
+
+        when(dashboardService.getDashboardSummary("quarter", 2024)).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/admin/dashboard")
+                        .param("period", "quarter")
+                        .param("year", "2024")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.period").value("quarter"))
+                .andExpect(jsonPath("$.kpi.totalRevenue").value(10000000));
     }
 
     @Test
