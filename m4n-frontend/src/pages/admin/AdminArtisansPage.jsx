@@ -138,7 +138,7 @@ export default function AdminArtisansPage() {
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
         <input
           type="text"
-          name="masterSearch" aria-label="Tìm kiếm nghệ nhân"
+          aria-label="Tìm kiếm nghệ nhân"
           placeholder="Tìm kiếm nghệ nhân…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -234,7 +234,7 @@ export default function AdminArtisansPage() {
                         </button>
                         <button
                           type="button"
-                          title="Chỉnh sửa" aria-label="Chỉnh sửa"
+                          title="Chỉnh sửa"
                           aria-label={`Chỉnh sửa nghệ nhân ${artisan.name}`}
                           onClick={() => {
                             setSelectedArtisan(artisan)
