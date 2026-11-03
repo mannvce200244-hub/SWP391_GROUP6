@@ -1,92 +1,85 @@
-# Google login integration plan
+# Đăng nhập Google
 
-Status: inspected and proposed; Google login is not implemented or enabled yet.
+Status: implemented with user approval on 2026-10-26. User completed real Google
+login locally; browser verification confirmed authenticated navigation and
+session persistence after reload. Hosted consent/callback acceptance remains
+required after configuring the production frontend domain.
 
-## Requested integration
+## Quy tắc tài khoản
 
-The user supplied a Google OAuth web-client configuration on 2026-10-12 for
-project `m4n-swp`. The registered backend callback is
-`http://localhost:8080/login/oauth2/code/google`; frontend JavaScript origins
-include `http://localhost:5173` and `http://localhost:3000`.
+- Dùng official `spring-boot-starter-oauth2-client`; chỉ yêu cầu `openid`,
+  `email`, `profile`. Không xin quyền Gmail hoặc offline access.
+- Backend kiểm tra chữ ký, issuer, audience, hạn dùng, nonce, state và PKCE S256.
+- Chỉ CUSTOMER đang hoạt động được đăng nhập Google; nhân viên/Admin dùng mật khẩu.
+- Email phải được Google xác minh. Email mới tạo CUSTOMER; email trùng chỉ tự
+  liên kết khi Google có thẩm quyền (Gmail hoặc domain Workspace khớp `hd`).
+  Email bên thứ ba trùng tài khoản cũ phải dùng mật khẩu.
+- Lưu `google_subject` duy nhất; lần đăng nhập tiếp theo dùng `sub`, không tự đổi
+  email/hồ sơ đã lưu khi Google trả email khác.
+- Khi nhận quyền sở hữu đăng ký chưa xác minh, vô hiệu mật khẩu cũ bằng hash
+  BCrypt ngẫu nhiên và tăng session generation. Không giữ mật khẩu có thể do
+  người khác đặt trước khi chủ email xác minh.
+- Tài khoản Google mới dùng hash mật khẩu ngẫu nhiên không được công bố. Khách
+  có thể dùng luồng quên mật khẩu/OTP hiện có để đặt mật khẩu đăng nhập sau này.
 
-The client secret disclosed in chat must be rotated in Google Cloud. Do not
-copy it into repository files, frontend variables, tests, documentation or logs.
-The replacement secret belongs exclusively in backend process configuration.
-Google login is independent of Gmail SMTP email OTP delivery.
+## Cấu hình backend
 
-## Decisions awaiting user response
+Chỉ lưu secret trong backend `.env` được ignore hoặc Railway Variables. Secret
+đã gửi qua chat phải được thay trước deploy. Google login độc lập Gmail SMTP.
 
-1. Dependency approval: `spring-boot-starter-oauth2-client`. The existing
-   Security starter and M4N JWT implementation do not implement Google's
-   authorization-code/OIDC login. Use the official Spring Security integration
-   for state, nonce and ID-token verification rather than custom protocol code.
-   Root AGENTS.md and CODE_QUALITY_RULES.md require approval before adding it.
-2. Existing-email linking: the proposed default requires authentication to the
-   existing M4N account before linking Google. Automatic linking of a Customer
-   with a verified Google email is the alternative presented to the user; its
-   precise identity guarantees must be recorded before implementation.
+```dotenv
+GOOGLE_LOGIN_ENABLED=true
+GOOGLE_CLIENT_ID=<Google web client ID>
+GOOGLE_CLIENT_SECRET=<secret mới, backend only>
+GOOGLE_FRONTEND_URL=http://localhost:5173
+GOOGLE_REDIRECT_URI=http://localhost:8080/login/oauth2/code/google
+```
 
-Neither pending decision is an approved business rule. Do not silently merge
-accounts, enable privileged Google login or add the dependency.
+Callback localhost8080 ở trên tương thích cấu hình Google Cloud người dùng đã
+có. Trình duyệt phải bắt đầu ở `localhost:5173` (không đổi sang `127.0.0.1` hoặc
+tunnel); cookie phiên OAuth dùng cùng hostname, path `/`, HttpOnly/Lax, 10 phút.
 
-## Minimum implementation after approval
+Callback ưu tiên nếu cập nhật Google Cloud, và bắt buộc khi deploy:
+`https://<frontend>/api/v1/auth/google/callback/google`. Đặt
+`GOOGLE_FRONTEND_URL=https://<frontend>` và đăng ký URI chính xác đó trong
+Google Cloud. Callback HTTPS phải cùng origin với frontend; không dùng URL
+Railway làm callback vì cookie sẽ khác site. Vercel rewrite `/api/v1/:path*`
+đã chuyển request đến backend. `prod` bật Secure cho cả cookie refresh và OAuth.
 
-1. Record the chosen account creation/linking behavior in PROJECT_SCOPE.md and
-   BUSINESS_RULES.md, and the HTTP contract in API_CONTRACT_RULES.md.
-2. Add the approved OAuth2 Client starter, backend-only configuration and an
-   OAuth filter chain for `/oauth2/**` and `/login/oauth2/**`. Keep the JWT API
-   filter chain stateless. Bind OAuth state/nonce to a short-lived browser
-   session; discard that session on completion/failure. Enable PKCE S256.
-3. Validate the Google OIDC identity through Spring Security: signature,
-   issuer, client audience, expiry and nonce; require a verified email. Use the
-   stable Google subject (`sub`) for persisted identity, with a unique database
-   constraint and an explicit PostgreSQL upgrade script.
-4. Put account lookup, creation/linking, inactive-account enforcement and
-   session issuance in a Service implementation. Controllers and OAuth handlers
-   remain HTTP adapters. New accounts receive CUSTOMER only. Recheck database
-   role/status and session generation when issuing the existing refresh session.
-5. On success, set the existing HttpOnly refresh cookie and redirect only to the
-   configured frontend. AuthContext then obtains the existing M4N access token
-   through `/auth/refresh`. Never send provider or M4N tokens in redirect URLs.
-6. Add the login action using existing frontend UI/auth boundaries, with
-   loading, cancellation, unavailable-provider and recoverable-error states.
-   Expose availability only when required backend configuration is complete.
-7. Add authenticated account-linking UI only if that workflow is selected.
-   Preserve existing password login and email OTP flows.
+`GOOGLE_FRONTEND_URL` mặc định theo `FRONTEND_URL`; có thể tách riêng khi thử
+Google localhost và MoMo tunnel. Restart backend sau khi đổi `.env`.
+Thiếu ID/secret hoặc callback không hợp lệ khi bật Google sẽ chặn khởi động.
+Khi tắt, giao diện hiển thị trạng thái chưa khả dụng.
 
-## Proposed configuration contract
+## Database và API
 
-These keys are a proposal, not currently supported environment variables:
+Áp dụng [20261026_google_login.sql](migrations/20261026_google_login.sql) trước
+schema validation/deploy; giữ unique email chuẩn hóa hiện có. Migration chỉ
+thêm nullable subject và unique index, không tự liên kết dữ liệu lịch sử.
 
-| Backend variable | Purpose |
-| --- | --- |
-| `GOOGLE_LOGIN_ENABLED` | Explicit opt-in; default false |
-| `GOOGLE_CLIENT_ID` | Public web-client identifier |
-| `GOOGLE_CLIENT_SECRET` | Rotated secret, backend only |
-| `GOOGLE_REDIRECT_URI` | Exact registered backend callback |
-| `GOOGLE_FRONTEND_URL` | Trusted frontend redirect destination |
+- `GET /api/v1/auth/google/options`: `{available: boolean}`, không cache.
+- `GET /api/v1/auth/google/authorization/google`: bắt đầu OAuth từ frontend.
+- Callback: đường đã cấu hình, chỉ xử lý response đã xác minh.
+- Thành công: cookie refresh HttpOnly hiện có, redirect cố định về
+  `/login?google=success`; AuthContext gọi `/auth/refresh` để lấy phiên M4N.
+- Không có provider/M4N token trong URL hoặc browser storage. OAuth session
+  không xác thực JWT API, và bị hủy sau thành công/thất bại. Provider token
+  không lưu ngoài phiên OAuth tạm thời.
+- Lỗi/hủy: thông báo an toàn, có thể thử lại hoặc đăng nhập mật khẩu.
 
-Request only `openid`, `email` and `profile`. Do not request Gmail access or
-offline access, or persist Google access/refresh tokens for this login feature.
+## Kiểm tra
 
-## Verification required
+Backend tests cover customer creation/linking, disabled/privileged accounts,
+signup pre-hijacking, concurrent unique identity, real refresh/JWT lifecycle,
+signed OIDC tokens, state/nonce/replay/issuer/audience/expiry/signature rejection,
+PKCE and stateless API isolation. Both same-origin and legacy local callbacks
+are exercised. Run Maven verify against a disposable PostgreSQL database.
 
-- Reject missing/mismatched state, replay, invalid nonce, audience, issuer,
-  expiry and signature; cancellation must not create an M4N session.
-- Test new Customer creation, existing-email conflicts, duplicate subject,
-  inactive accounts, account-role guards and concurrent creation/linking.
-- Confirm OAuth browser sessions cannot authenticate protected JWT APIs.
-- Confirm the success response uses the existing secure cookie contract and
-  trusted redirects; error messages must not expose secrets/provider tokens.
-- Run applicable backend tests and Maven verify against a dedicated test DB;
-  frontend tests, lint and build; SQL upgrade and schema-validation checks.
-- Actual Google consent/callback testing needs a rotated secret configured
-  outside chat and a provider consent screen available to the test account.
-  A configured callback is not evidence of successful live login.
+Frontend: existing native Node tests, lint, build; browser check the visible
+button, keyboard, responsive layout, cancellation and redirect to Google.
+User completes Google account/consent when live acceptance requires it.
 
-## Official references
+## Nguồn chính thức
 
 - [Google OpenID Connect](https://developers.google.com/identity/openid-connect/openid-connect)
-- [Spring Security OAuth2 Login](https://docs.spring.io/spring-security/reference/servlet/oauth2/login/core.html)
-
-Project rules and the user's approved decisions remain authoritative.
+- [Spring OAuth2 Login](https://docs.spring.io/spring-security/reference/servlet/oauth2/login/core.html)
