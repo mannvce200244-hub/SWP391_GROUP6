@@ -1,134 +1,138 @@
-import { useEffect, useRef, useState } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { Camera, CameraOff, ScanLine, X } from 'lucide-react'
 import useDialogFocus from '../../hooks/useDialogFocus.js'
-import useToast from '../../components/ui/useToast.js'
+import Button from '../../components/ui/Button.jsx'
+import Input from '../../components/ui/Input.jsx'
 import { lookupBarcode } from '../../services/posService.js'
+import { cameraErrorMessage, startBarcodeCamera } from './barcodeCamera.js'
 
 export default function PosScannerDialog({ onClose, onProduct }) {
-  const dialogRef = useDialogFocus(true, onClose)
+  const dialogRef = useDialogFocus(true, closeScanner)
   const videoRef = useRef(null)
-  const manualPending = useRef(false)
-  const activeRef = useRef(true)
+  const sessionRef = useRef(null)
+  const pendingRef = useRef(false)
+  const activeRef = useRef(false)
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
-  const [cameraError, setCameraError] = useState('')
-  const [supported, setSupported] = useState(true)
-  const { addToast } = useToast()
+  const [result, setResult] = useState(null)
+  const [scanPaused, setScanPaused] = useState(false)
+  const [cameraEnabled, setCameraEnabled] = useState(true)
+  const [cameraState, setCameraState] = useState({ status: 'starting', message: '' })
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     activeRef.current = true
-    let active = true
-    let stream
-    let interval
-    let cooldown
-    let detecting = false
-    const video = videoRef.current
-    const start = async () => {
-      let detector
-      try {
-        if (!window.BarcodeDetector) throw new Error('unsupported')
-        const requested = ['code_128', 'ean_13', 'ean_8', 'qr_code', 'upc_a']
-        const available = window.BarcodeDetector.getSupportedFormats
-          ? await window.BarcodeDetector.getSupportedFormats()
-          : requested
-        const formats = window.BarcodeDetector.getSupportedFormats
-          ? requested.filter((format) => available.includes(format))
-          : requested
-        if (!formats.length) throw new Error('unsupported')
-        detector = new window.BarcodeDetector({ formats })
-      } catch {
-        if (active) setSupported(false)
-      }
-      if (!active) return
-      if (!navigator.mediaDevices?.getUserMedia) {
-        if (active) setCameraError('Trình duyệt không thể mở camera. Hãy nhập mã bên dưới hoặc dùng máy quét cầm tay.')
-        return
-      }
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        if (!active) {
-          stream.getTracks().forEach((track) => track.stop())
-          return
-        }
-        video.srcObject = stream
-      } catch (error) {
-        if (active) setCameraError(error.name === 'NotAllowedError'
-          ? 'Quyền camera bị từ chối. Bạn có thể cho phép camera trong cài đặt trình duyệt hoặc nhập mã bên dưới.'
-          : 'Không thể mở camera. Hãy kiểm tra thiết bị hoặc nhập mã bên dưới.')
-        return
-      }
-      if (!detector || !active) return
-      interval = setInterval(async () => {
-        if (!active || detecting || manualPending.current || video.readyState < 2) return
-        detecting = true
-        let scanned = false
-        try {
-          const codes = await detector.detect(video)
-          const value = codes[0]?.rawValue
-          if (!active || !value) return
-          scanned = true
-          const product = await lookupBarcode(value)
-          if (active) onProduct(product?.data || product)
-        } catch (error) {
-          if (active && scanned) addToast({ message: error.message || 'Không tìm thấy sản phẩm với mã vừa quét.', type: 'error' })
-        } finally {
-          if (scanned && active) cooldown = setTimeout(() => { detecting = false }, 1800)
-          else detecting = false
-        }
-      }, 250)
-    }
-    start()
-    return () => {
-      active = false
-      activeRef.current = false
-      clearInterval(interval)
-      clearTimeout(cooldown)
-      stream?.getTracks().forEach((track) => track.stop())
-      if (video) video.srcObject = null
-    }
-  }, [onProduct, addToast])
+    return () => { activeRef.current = false }
+  }, [])
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    if (!code.trim() || manualPending.current) return
-    manualPending.current = true
+  async function findProduct(rawCode) {
+    if (pendingRef.current) return
+    sessionRef.current?.pause()
+    setScanPaused(true)
+    const value = rawCode.trim()
+    if (!value || value.length > 100) {
+      setResult({ type: 'error', message: 'Vui lòng dùng mã vạch hoặc SKU từ 1 đến 100 ký tự.' })
+      return
+    }
+    pendingRef.current = true
     setLoading(true)
+    setResult(null)
+    setCode(value)
     try {
-      const product = await lookupBarcode(code.trim())
-      if (activeRef.current) {
-        onProduct(product?.data || product)
-        setCode('')
-      }
+      const response = await lookupBarcode(value)
+      const product = response?.data || response
+      if (!activeRef.current) return
+      if (!product?.id) throw new Error('Chưa đọc được thông tin sản phẩm. Vui lòng thử lại.')
+      onProduct(product)
+      setResult({ type: 'success', message: `Đã thêm 1 × ${product.name} vào hóa đơn.`, code: value })
+      setCode('')
     } catch (error) {
-      if (activeRef.current) addToast({ message: error.message || 'Không tìm thấy sản phẩm với mã vừa nhập.', type: 'error' })
+      if (activeRef.current) setResult({ type: 'error', message: error.message || 'Không tìm thấy sản phẩm. Kiểm tra mã rồi thử lại.' })
     } finally {
-      manualPending.current = false
+      pendingRef.current = false
       if (activeRef.current) setLoading(false)
     }
   }
 
+  const onDetected = useEffectEvent((value) => { void findProduct(value) })
+  useEffect(() => {
+    if (!cameraEnabled) return undefined
+    const session = startBarcodeCamera(videoRef.current, {
+      onReady: () => setCameraState({ status: 'ready', message: '' }),
+      onCode: onDetected,
+      onError: (error) => setCameraState({ status: 'error', message: cameraErrorMessage(error) }),
+    })
+    sessionRef.current = session
+    return () => {
+      session.stop()
+      if (sessionRef.current === session) sessionRef.current = null
+    }
+  }, [cameraEnabled, retryKey])
+
+  function retryCamera() {
+    setCameraState({ status: 'starting', message: '' })
+    setResult(null)
+    setScanPaused(false)
+    setCameraEnabled(true)
+    setRetryKey((value) => value + 1)
+  }
+
+  function resumeScan() {
+    setResult(null)
+    setScanPaused(false)
+    setCode('')
+    sessionRef.current?.resume()
+  }
+
+  function closeScanner() {
+    activeRef.current = false
+    sessionRef.current?.stop()
+    onClose()
+  }
+
+  const cameraReady = cameraEnabled && cameraState.status === 'ready'
+  const cameraError = cameraEnabled && cameraState.status === 'error'
+  const statusText = loading ? 'Đang tìm sản phẩm…'
+    : !cameraEnabled ? 'Camera đã tắt'
+      : cameraState.status === 'starting' ? 'Đang mở camera…'
+        : cameraError ? 'Camera chưa sẵn sàng'
+          : scanPaused ? 'Đã tạm dừng quét' : 'Đưa mã vạch vào khung để quét'
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="pos-scanner-title" tabIndex={-1} className="bg-white rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-4 border-b border-border flex items-center justify-between bg-[#F6F7F8]">
-          <h2 id="pos-scanner-title" className="text-sm font-bold text-ink">Quét mã vạch camera</h2>
-          <button type="button" aria-label="Đóng máy quét" onClick={onClose} className="p-2 text-muted hover:text-ink"><X size={18} /></button>
-        </div>
-        <div className="p-5 space-y-4 text-xs">
-          <div className="relative h-64 rounded-xl overflow-hidden bg-[#F6F7F8]">
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-            <div className="absolute inset-x-8 inset-y-12 border-2 border-dashed border-brand rounded-lg pointer-events-none" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="pos-scanner-title" aria-describedby="pos-scanner-description" tabIndex={-1}
+        className="w-full max-w-lg max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-white shadow-2xl">
+        <header className="flex items-center justify-between gap-3 border-b border-border p-4">
+          <h2 id="pos-scanner-title" className="text-base font-bold text-ink">Quét mã vạch bằng camera</h2>
+          <Button variant="secondary" size="lg" className="w-12 shrink-0 p-0!" aria-label="Đóng máy quét" onClick={closeScanner}><X size={28} className="shrink-0" aria-hidden="true" /></Button>
+        </header>
+        <div className="space-y-4 p-5">
+          <p id="pos-scanner-description" className="text-sm text-muted">Đưa mã vạch trên sản phẩm vào khung, giữ rõ nét và đủ sáng. Mỗi lượt quét thêm 1 sản phẩm vào hóa đơn.</p>
+          <div className="relative aspect-video overflow-hidden rounded-xl border border-border bg-surface-secondary">
+            <video ref={videoRef} autoPlay playsInline muted aria-label="Hình ảnh camera quét mã sản phẩm" className="h-full w-full object-contain" />
+            {cameraReady ? <div aria-hidden="true" className="pointer-events-none absolute inset-x-8 inset-y-10 rounded-lg border-2 border-dashed border-brand" />
+              : <div className="absolute inset-0 flex items-center justify-center text-muted" aria-hidden="true">{cameraEnabled && !cameraError ? <Camera size={36} /> : <CameraOff size={36} />}</div>}
           </div>
-          {cameraError && <p role="alert" className="text-red-700">{cameraError}</p>}
-          {!supported && <p className="text-secondary">Trình duyệt chưa hỗ trợ quét tự động. Hãy nhập mã bên dưới hoặc dùng máy quét USB / Bluetooth.</p>}
-          <form onSubmit={handleSubmit} className="space-y-2">
-            <label htmlFor="pos-scanner-code" className="block font-semibold">Mã vạch hoặc SKU</label>
-            <div className="flex gap-2">
-              <input id="pos-scanner-code" name="barcode" autoComplete="off" maxLength={100} value={code} onChange={(event) => setCode(event.target.value)} className="min-w-0 flex-1 px-3 py-2 rounded-xl border border-border bg-white font-mono" />
-              <button type="submit" disabled={loading || !code.trim()} className="px-4 py-2 rounded-xl bg-brand text-white font-bold disabled:opacity-50">{loading ? 'Đang tìm…' : 'Thêm'}</button>
-            </div>
+          <p role="status" className="text-sm font-medium text-ink">{statusText}</p>
+          {cameraError && <p role="alert" className="text-sm text-danger">{cameraState.message}</p>}
+          <div className="flex flex-wrap gap-2">
+            {cameraReady && scanPaused && <Button variant="secondary" disabled={loading} onClick={resumeScan}><ScanLine size={17} aria-hidden="true" />Quét tiếp</Button>}
+            {(!cameraEnabled || cameraError) ? <Button variant="secondary" disabled={loading} onClick={retryCamera}>{cameraError ? 'Thử lại camera' : 'Bật camera'}</Button>
+              : <Button variant="secondary" onClick={() => { sessionRef.current?.stop(); setCameraEnabled(false) }}>Tắt camera</Button>}
+          </div>
+          <form noValidate onSubmit={(event) => { event.preventDefault(); void findProduct(code) }} className="space-y-3 border-t border-border pt-4">
+            <Input id="pos-scanner-code" name="barcode" label="Nhập mã hoặc dùng máy quét USB / Bluetooth" autoComplete="off" spellCheck={false} maxLength={100}
+              value={code} onChange={(event) => { setCode(event.target.value); if (result?.type === 'error') setResult(null) }} disabled={loading}
+              error={result?.type === 'error' ? result.message : undefined}
+              aria-describedby={result?.type === 'success' ? 'pos-scanner-feedback' : undefined} />
+            <Button type="submit" disabled={!code.trim()} loading={loading} loadingLabel="Đang tìm sản phẩm…" className="w-full">Thêm vào hóa đơn</Button>
           </form>
-          <button type="button" onClick={onClose} className="w-full py-2 rounded-xl border border-border bg-[#F6F7F8] font-semibold">Đóng máy quét</button>
+          {result?.type === 'success' && <div id="pos-scanner-feedback" role="status" className="rounded-lg border border-border bg-surface-secondary p-3 text-sm break-words text-jade">
+            <p className="font-medium">{result.message}</p>
+            {result.code && <p className="mt-1 text-xs text-muted">Mã: <span translate="no" className="font-mono">{result.code}</span></p>}
+            {cameraReady && <p className="mt-1 text-xs text-muted">Bấm “Quét tiếp” để đọc mã khác hoặc thêm một sản phẩm nữa.</p>}
+          </div>}
+          <p className="text-xs text-muted">Hình ảnh được xử lý trên thiết bị, không tải lên máy chủ.</p>
         </div>
       </div>
     </div>
