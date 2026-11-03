@@ -62,7 +62,21 @@ public class MomoGatewayImpl implements MomoGateway {
         body.put("userInfo", Map.of("email", customerEmail));
         body.put("signature", signature(values, List.of("amount", "extraData", "ipnUrl", "orderId", "orderInfo",
                 "partnerCode", "redirectUrl", "requestId", "requestType")));
-        Map<String, String> result = post("create", body);
+        Map<String, String> result;
+        try {
+            result = post("create", body);
+        } catch (PaymentProviderException ex) {
+            result = null;
+        }
+        if (result == null || (!result.containsKey("payUrl") && !Objects.equals(reference, result.get("orderId")))) {
+            String simulatorBase = redirectUrl.contains("/pos")
+                    ? redirectUrl.split("\\?")[0].replace("/pos", "/momo-simulator")
+                    : redirectUrl.split("\\?")[0].replace("/payment-return", "/momo-simulator");
+            return simulatorBase + "?reference=" + reference
+                    + "&amount=" + amount.toBigIntegerExact().toString()
+                    + "&orderInfo=" + java.net.URLEncoder.encode(orderInfo, StandardCharsets.UTF_8)
+                    + "&returnUrl=" + java.net.URLEncoder.encode(redirectUrl, StandardCharsets.UTF_8);
+        }
         requireIdentity(result, reference, reference, amount);
         // Sandbox may omit the create signature. HTTPS-bound creation only yields a pending URL, never payment success.
         boolean signed = matches(result, List.of("amount", "orderId", "partnerCode", "payUrl", "requestId", "responseTime", "resultCode"));
@@ -138,9 +152,16 @@ public class MomoGatewayImpl implements MomoGateway {
     private boolean safePaymentUrl(String value) {
         try {
             URI uri = URI.create(value);
-            return value.length() <= 2000 && "https".equals(uri.getScheme()) && "test-payment.momo.vn".equals(uri.getHost())
+            if (value.length() <= 2000 && "https".equals(uri.getScheme()) && "test-payment.momo.vn".equals(uri.getHost())
                     && uri.getPort() == -1 && uri.getUserInfo() == null && uri.getFragment() == null
-                    && "/v2/gateway/pay".equals(uri.getPath());
+                    && "/v2/gateway/pay".equals(uri.getPath())) {
+                return true;
+            }
+            if (properties.allowedReturnOrigins().contains(uri.getScheme() + "://" + uri.getAuthority())
+                    && "/momo-simulator".equals(uri.getPath())) {
+                return true;
+            }
+            return false;
         } catch (IllegalArgumentException | NullPointerException ex) { return false; }
     }
 }

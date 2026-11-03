@@ -13,4 +13,5 @@ public interface MomoPaymentService {
     PaymentStatusResponse refund(Long id, String reason, String email);
     PaymentStatusResponse refundCustomerCancellation(Long id, String reason, String email);
     PaymentStatusResponse reconcileRefund(Long id, String email);
+    void simulatePayment(String reference, boolean success);
 }

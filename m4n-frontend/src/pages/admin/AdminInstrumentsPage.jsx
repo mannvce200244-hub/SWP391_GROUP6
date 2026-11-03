@@ -4,10 +4,8 @@ import adminProductService from '../../services/adminProductService.js'
 import categoryService from '../../services/categoryService.js'
 import artisanService from '../../services/artisanService.js'
 import craftVillageService from '../../services/craftVillageService.js'
-import { importStock, issueStock } from '../../services/inventoryService.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import useToast from '../../components/ui/useToast.js'
-import useDialogFocus from '../../hooks/useDialogFocus.js'
 import ProductFormModal from '../../components/admin/ProductFormModal.jsx'
 import CategoryManagementModal from '../../components/admin/CategoryManagementModal.jsx'
 import ArtisanManagementModal from '../../components/admin/ArtisanManagementModal.jsx'
@@ -24,6 +22,9 @@ import {
   X,
   Eye,
   Pencil,
+  Mail,
+  Send,
+  Copy,
 } from 'lucide-react'
 import { IconInstrument } from '../../components/ui/Icons.jsx'
 
@@ -56,28 +57,19 @@ export default function AdminInstrumentsPage() {
   const [togglingProductId, setTogglingProductId] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
+  // Bulk Restock Request Mode (Ý 2)
+  const [restockMode, setRestockMode] = useState(false)
+  const [selectedRestockItems, setSelectedRestockItems] = useState({})
+  const [warehouseEmail, setWarehouseEmail] = useState('kho@m4n.vn')
+  const [restockNote, setRestockNote] = useState('')
+  const [sentEmailPreview, setSentEmailPreview] = useState(null)
+
   // Modals state
   const [productModalOpen, setProductModalOpen] = useState(false)
   const [editingProductId, setEditingProductId] = useState(null)
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [artisanModalOpen, setArtisanModalOpen] = useState(false)
   const [villageModalOpen, setVillageModalOpen] = useState(false)
-
-  // Stock Import state
-  const [importModalOpen, setImportModalOpen] = useState(false)
-  const [importTargetProduct, setImportTargetProduct] = useState(null)
-  const [importQuantity, setImportQuantity] = useState(1)
-  const [importNotes, setImportNotes] = useState('')
-  const [submittingImport, setSubmittingImport] = useState(false)
-  const [issueTargetProduct, setIssueTargetProduct] = useState(null)
-  const [issueQuantity, setIssueQuantity] = useState(1)
-  const [issueReason, setIssueReason] = useState('')
-  const [submittingIssue, setSubmittingIssue] = useState(false)
-
-  const closeImportModal = () => { if (!submittingImport) setImportModalOpen(false) }
-  const closeIssueModal = () => { if (!submittingIssue) setIssueTargetProduct(null) }
-  const importDialogRef = useDialogFocus(importModalOpen, closeImportModal, submittingImport)
-  const issueDialogRef = useDialogFocus(Boolean(issueTargetProduct), closeIssueModal, submittingIssue)
 
   // Load dropdown master data
   const loadMasterData = useCallback(async () => {
@@ -214,69 +206,6 @@ export default function AdminInstrumentsPage() {
     }
   }
 
-  const handleOpenImportModal = (product) => {
-    setImportTargetProduct(product)
-    setImportQuantity(1)
-    setImportNotes('')
-    setImportModalOpen(true)
-  }
-
-  const handleImportSubmit = async (e) => {
-    e.preventDefault()
-    if (!importTargetProduct || submittingImport) return
-    const qty = Number(importQuantity)
-    if (!Number.isInteger(qty) || qty <= 0 || qty > 2147483647) {
-      addToast({ message: 'Số lượng nhập phải là số nguyên từ 1 đến 2147483647.', type: 'error' })
-      return
-    }
-
-    setSubmittingImport(true)
-    try {
-      await importStock(importTargetProduct.id, {
-        quantity: qty,
-        notes: importNotes.trim() || undefined,
-      })
-      addToast({
-        message: `Đã tạo phiếu nhập ${qty} “${importTargetProduct.name}”, chờ xác nhận tại Quản lý kho.`,
-        type: 'success',
-      })
-      setImportModalOpen(false)
-      setRefreshKey((k) => k + 1)
-    } catch (err) {
-      addToast({
-        message: err.message || 'Không thể tạo phiếu nhập kho.',
-        type: 'error',
-      })
-    } finally {
-      setSubmittingImport(false)
-    }
-  }
-
-  const handleIssueSubmit = async (e) => {
-    e.preventDefault()
-    if (!issueTargetProduct || submittingIssue) return
-    const qty = Number(issueQuantity)
-    if (!Number.isInteger(qty) || qty < 1 || qty > 2147483647) {
-      addToast({ message: 'Số lượng xuất phải là số nguyên từ 1 đến 2147483647.', type: 'error' })
-      return
-    }
-    if (!issueReason.trim()) {
-      addToast({ message: 'Vui lòng nhập lý do điều chỉnh kho.', type: 'error' })
-      return
-    }
-    setSubmittingIssue(true)
-    try {
-      await issueStock(issueTargetProduct.id, { quantity: qty, reason: issueReason })
-      addToast({ message: `Đã tạo phiếu xuất ${qty} “${issueTargetProduct.name}”, chờ xác nhận tại Quản lý kho.`, type: 'success' })
-      setIssueTargetProduct(null)
-      setRefreshKey((key) => key + 1)
-    } catch (err) {
-      addToast({ message: err.message || 'Không thể điều chỉnh tồn kho.', type: 'error' })
-    } finally {
-      setSubmittingIssue(false)
-    }
-  }
-
   const handleResetFilters = () => {
     startTransition(() => {
       setSearchInput('')
@@ -286,6 +215,138 @@ export default function AdminInstrumentsPage() {
       setSelectedVillage('')
       setSelectedStatus('ALL')
       setPage(0)
+    })
+  }
+
+  // Bulk Restock Selection Handlers (Ý 2)
+  const toggleRestockProduct = (product) => {
+    setSelectedRestockItems((prev) => {
+      const next = { ...prev }
+      if (next[product.id]) {
+        delete next[product.id]
+      } else {
+        next[product.id] = {
+          id: product.id,
+          code: product.code,
+          name: product.name,
+          currentStock: product.stockQuantity || 0,
+          requestedQuantity: 10,
+        }
+      }
+      return next
+    })
+  }
+
+  const updateRestockQuantity = (product, value) => {
+    const parsed = Math.max(1, Math.min(9999, Number(value) || 1))
+    setSelectedRestockItems((prev) => ({
+      ...prev,
+      [product.id]: {
+        id: product.id,
+        code: product.code,
+        name: product.name,
+        currentStock: product.stockQuantity || 0,
+        requestedQuantity: parsed,
+      },
+    }))
+  }
+
+  const toggleSelectAllCurrentPage = () => {
+    const allSelectedOnPage =
+      products.length > 0 && products.every((p) => Boolean(selectedRestockItems[p.id]))
+    setSelectedRestockItems((prev) => {
+      const next = { ...prev }
+      if (allSelectedOnPage) {
+        products.forEach((p) => {
+          delete next[p.id]
+        })
+      } else {
+        products.forEach((p) => {
+          if (!next[p.id]) {
+            next[p.id] = {
+              id: p.id,
+              code: p.code,
+              name: p.name,
+              currentStock: p.stockQuantity || 0,
+              requestedQuantity: 10,
+            }
+          }
+        })
+      }
+      return next
+    })
+  }
+
+  const selectLowOrOutOfStockOnPage = () => {
+    const lowOrEmpty = products.filter(
+      (p) => (p.stockQuantity || 0) === 0 || p.availability === 'LOW_STOCK' || (p.stockQuantity || 0) <= 10
+    )
+    if (lowOrEmpty.length === 0) {
+      addToast({ message: 'Trang hiện tại không có sản phẩm nào sắp hết hoặc hết hàng.', type: 'info' })
+      return
+    }
+    setSelectedRestockItems((prev) => {
+      const next = { ...prev }
+      lowOrEmpty.forEach((p) => {
+        if (!next[p.id]) {
+          next[p.id] = {
+            id: p.id,
+            code: p.code,
+            name: p.name,
+            currentStock: p.stockQuantity || 0,
+            requestedQuantity: 15,
+          }
+        }
+      })
+      return next
+    })
+    addToast({ message: `Đã tích chọn ${lowOrEmpty.length} sản phẩm cần bổ sung tồn kho.`, type: 'success' })
+  }
+
+  const handleSendRestockEmail = () => {
+    const selectedList = Object.values(selectedRestockItems)
+    if (selectedList.length === 0) {
+      addToast({ message: 'Vui lòng tích chọn ít nhất 1 sản phẩm cần nhập thêm hàng.', type: 'error' })
+      return
+    }
+    const emailTrimmed = warehouseEmail.trim()
+    if (!emailTrimmed || !emailTrimmed.includes('@')) {
+      addToast({ message: 'Vui lòng nhập địa chỉ email nhân viên kho hợp lệ.', type: 'error' })
+      return
+    }
+
+    const totalQty = selectedList.reduce((sum, item) => sum + Number(item.requestedQuantity || 0), 0)
+    const subject = `[M4N Kho] Yêu cầu nhập thêm hàng (${selectedList.length} mã nhạc cụ - Tổng ${totalQty} SP)`
+    const lines = [
+      'Kính gửi Bộ phận Kho / Cung ứng M4N,',
+      '',
+      'Hệ thống Quản trị M4N gửi yêu cầu nhập bổ sung tồn kho cho các nhạc cụ sau:',
+      '',
+      ...selectedList.map(
+        (item, idx) =>
+          `${idx + 1}. [${item.code}] ${item.name} — Tồn hiện tại: ${item.currentStock} | Số lượng yêu cầu nhập thêm: +${item.requestedQuantity}`
+      ),
+      '',
+      `Tổng số mã sản phẩm: ${selectedList.length}`,
+      `Tổng số lượng yêu cầu nhập: ${totalQty} sản phẩm`,
+      restockNote.trim() ? `Ghi chú từ Quản trị: ${restockNote.trim()}` : '',
+      '',
+      'Trân trọng,',
+      'Ban Quản trị Hệ thống M4N',
+    ].filter(Boolean)
+
+    const body = lines.join('\n')
+    setSentEmailPreview({
+      to: emailTrimmed,
+      subject,
+      body,
+      items: selectedList,
+      totalQty,
+    })
+
+    addToast({
+      message: `Đã khởi tạo phiếu yêu cầu nhập thêm ${selectedList.length} sản phẩm gửi tới ${emailTrimmed}.`,
+      type: 'success',
     })
   }
 
@@ -300,6 +361,13 @@ export default function AdminInstrumentsPage() {
   // Metric computations for active products view
   const activeCount = products.filter((p) => p.isActive).length
   const outOfStockCount = products.filter((p) => (p.stockQuantity || 0) === 0).length
+  const selectedRestockList = Object.values(selectedRestockItems)
+  const totalRequestedRestockQty = selectedRestockList.reduce(
+    (sum, item) => sum + Number(item.requestedQuantity || 0),
+    0
+  )
+  const allCurrentPageSelected =
+    products.length > 0 && products.every((p) => Boolean(selectedRestockItems[p.id]))
 
   return (
     <div className="flex flex-col gap-6">
@@ -322,6 +390,22 @@ export default function AdminInstrumentsPage() {
 
         {/* Action button cluster */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setRestockMode((prev) => !prev)
+              setSentEmailPreview(null)
+            }}
+            className={`px-3.5 py-2.5 rounded-xl border text-sm font-semibold transition-colors cursor-pointer shadow-2xs flex items-center gap-2 ${
+              restockMode
+                ? 'border-[#17191B] bg-[#17191B] text-white'
+                : 'border-[#0D9488]/35 bg-[#FFFFFF] hover:bg-[#F6F7F8] text-[#0D9488]'
+            }`}
+          >
+            <Mail size={16} />
+            <span>{restockMode ? 'Đóng chế độ yêu cầu nhập hàng' : 'Yêu cầu nhập thêm hàng'}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => navigateTo(CUSTOMER_ROUTES.adminCategories)}
@@ -359,6 +443,127 @@ export default function AdminInstrumentsPage() {
           </button>
         </div>
       </div>
+
+      {/* Bulk Restock Request Panel (Ý 2) */}
+      {restockMode && (
+        <div className="bg-[#FFFFFF] p-5 rounded-2xl border-2 border-[#0D9488] shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E5E8EB]">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#0D9488]/10 text-[#0D9488]">
+                  Chế độ tích chọn nhập kho
+                </span>
+                <h2 className="text-base font-bold text-[#17191B]">
+                  Yêu cầu nhập thêm hàng theo danh sách sản phẩm
+                </h2>
+              </div>
+              <p className="text-xs text-secondary mt-1">
+                Tích chọn các sản phẩm bên dưới, nhập số lượng cần bổ sung trên từng dòng và gửi email yêu cầu cho nhân viên kho.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={selectLowOrOutOfStockOnPage}
+                className="px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-[#F6F7F8] hover:bg-[#E5E8EB] text-xs font-semibold text-[#17191B] transition-colors cursor-pointer"
+              >
+                Chọn nhanh SP sắp hết / hết hàng
+              </button>
+              {selectedRestockList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedRestockItems({})}
+                  className="px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-white hover:bg-[#F6F7F8] text-xs font-semibold text-rose-600 transition-colors cursor-pointer"
+                >
+                  Bỏ chọn tất cả ({selectedRestockList.length})
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+            <div className="md:col-span-4">
+              <label htmlFor="restock-warehouse-email" className="block text-xs font-semibold text-[#17191B] mb-1">
+                Email nhân viên kho / bộ phận cung ứng
+              </label>
+              <input
+                id="restock-warehouse-email"
+                type="email"
+                value={warehouseEmail}
+                onChange={(e) => setWarehouseEmail(e.target.value)}
+                placeholder="kho@m4n.vn"
+                className="w-full px-3.5 py-2 text-sm rounded-xl border border-[#E5E8EB] bg-white text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30"
+              />
+            </div>
+
+            <div className="md:col-span-5">
+              <label htmlFor="restock-note" className="block text-xs font-semibold text-[#17191B] mb-1">
+                Ghi chú yêu cầu nhập hàng
+              </label>
+              <input
+                id="restock-note"
+                type="text"
+                value={restockNote}
+                onChange={(e) => setRestockNote(e.target.value)}
+                placeholder="VD: Ưu tiên nhập bổ sung các mẫu đàn phục vụ đơn hàng trong tuần..."
+                className="w-full px-3.5 py-2 text-sm rounded-xl border border-[#E5E8EB] bg-white text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30"
+              />
+            </div>
+
+            <div className="md:col-span-3 flex flex-col gap-1">
+              <span className="text-xs text-secondary">
+                Đã chọn: <strong className="text-[#17191B]">{selectedRestockList.length}</strong> SP · Tổng SL:{' '}
+                <strong className="text-[#0D9488]">{totalRequestedRestockQty}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={handleSendRestockEmail}
+                disabled={selectedRestockList.length === 0}
+                className="w-full py-2 px-4 rounded-xl bg-[#0D9488] hover:bg-[#0F766E] disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Send size={15} />
+                <span>Gửi mail yêu cầu nhập</span>
+              </button>
+            </div>
+          </div>
+
+          {sentEmailPreview && (
+            <div className="p-4 rounded-xl bg-[#F6F7F8] border border-[#E5E8EB] space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-semibold text-[#17191B]">
+                  Nội dung email yêu cầu nhập kho gửi tới <span className="text-[#0D9488] font-mono">{sentEmailPreview.to}</span>:
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(sentEmailPreview.body)
+                      addToast({ message: 'Đã sao chép nội dung yêu cầu nhập kho vào bộ nhớ tạm.', type: 'success' })
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-white hover:bg-[#F6F7F8] text-xs font-semibold text-[#17191B] cursor-pointer"
+                  >
+                    <Copy size={13} />
+                    <span>Sao chép nội dung</span>
+                  </button>
+                  <a
+                    href={`mailto:${encodeURIComponent(sentEmailPreview.to)}?subject=${encodeURIComponent(
+                      sentEmailPreview.subject
+                    )}&body=${encodeURIComponent(sentEmailPreview.body)}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0D9488] hover:bg-[#0F766E] text-xs font-semibold text-white"
+                  >
+                    <Mail size={13} />
+                    <span>Mở ứng dụng Mail để gửi</span>
+                  </a>
+                </div>
+              </div>
+              <pre className="text-xs text-[#17191B] bg-white p-3 rounded-lg border border-[#E5E8EB] whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">
+                {sentEmailPreview.body}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -579,10 +784,24 @@ export default function AdminInstrumentsPage() {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-[#E5E8EB] bg-[#F6F7F8] text-secondary font-semibold text-xs">
+                  {restockMode && (
+                    <th className="py-3.5 px-4 w-12 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label="Chọn tất cả sản phẩm trang hiện tại"
+                        checked={allCurrentPageSelected}
+                        onChange={toggleSelectAllCurrentPage}
+                        className="w-4 h-4 rounded border-[#E5E8EB] text-[#0D9488] focus:ring-[#0D9488] cursor-pointer"
+                      />
+                    </th>
+                  )}
                   <th className="py-3.5 px-4">Nhạc cụ</th>
                   <th className="py-3.5 px-4">Phân loại & Di sản</th>
                   <th className="py-3.5 px-4 text-right">Đơn giá</th>
                   <th className="py-3.5 px-4 text-center">Tồn kho</th>
+                  {restockMode && (
+                    <th className="py-3.5 px-4 text-center">Số lượng yêu cầu nhập</th>
+                  )}
                   <th className="py-3.5 px-4 text-center">Kinh doanh</th>
                   <th className="py-3.5 px-4 text-right">Thao tác</th>
                 </tr>
@@ -591,12 +810,27 @@ export default function AdminInstrumentsPage() {
                 {products.map((p) => {
                   const isOutOfStock = (p.stockQuantity || 0) === 0
                   const isLowStock = p.availability === 'LOW_STOCK'
+                  const selectedRestock = selectedRestockItems[p.id]
 
                   return (
                     <tr
                       key={p.id}
-                      className="hover:bg-[#F6F7F8]/80 transition-colors group"
+                      className={`hover:bg-[#F6F7F8]/80 transition-colors group ${
+                        selectedRestock ? 'bg-[#F6F7F8]' : ''
+                      }`}
                     >
+                      {restockMode && (
+                        <td className="py-3.5 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label={`Chọn nhập kho ${p.name}`}
+                            checked={Boolean(selectedRestock)}
+                            onChange={() => toggleRestockProduct(p)}
+                            className="w-4 h-4 rounded border-[#E5E8EB] text-[#0D9488] focus:ring-[#0D9488] cursor-pointer"
+                          />
+                        </td>
+                      )}
+
                       {/* Product identity */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
@@ -618,7 +852,9 @@ export default function AdminInstrumentsPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(p.id))
+                                restockMode
+                                  ? toggleRestockProduct(p)
+                                  : navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(p.id))
                               }
                               className="text-sm font-semibold text-[#17191B] hover:text-[#0D9488] transition-colors text-left truncate block max-w-xs sm:max-w-md cursor-pointer"
                               title={p.name}
@@ -687,6 +923,30 @@ export default function AdminInstrumentsPage() {
                         </div>
                       </td>
 
+                      {restockMode && (
+                        <td className="py-3.5 px-4 text-center">
+                          {selectedRestock ? (
+                            <input
+                              type="number"
+                              min={1}
+                              max={9999}
+                              aria-label={`Số lượng cần nhập cho ${p.name}`}
+                              value={selectedRestock.requestedQuantity}
+                              onChange={(e) => updateRestockQuantity(p, e.target.value)}
+                              className="w-24 px-2.5 py-1.5 text-center font-mono font-bold text-sm rounded-lg border border-[#0D9488] bg-white text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => toggleRestockProduct(p)}
+                              className="text-xs text-secondary hover:text-[#0D9488] underline cursor-pointer"
+                            >
+                              + Chọn nhập
+                            </button>
+                          )}
+                        </td>
+                      )}
+
                       {/* Active Status Toggle */}
                       <td className="py-3.5 px-4 text-center">
                         <button
@@ -720,22 +980,12 @@ export default function AdminInstrumentsPage() {
 
                           <button
                             type="button"
-                            onClick={() => handleOpenImportModal(p)}
+                            onClick={() => navigateTo(`${CUSTOMER_ROUTES.adminInventory}?keyword=${encodeURIComponent(p.code)}`)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-surface-secondary hover:bg-surface-secondary text-emerald-700 font-medium text-sm transition-colors cursor-pointer"
                             title="Nhập thêm số lượng tồn kho"
                           >
                             <Package size={15} />
-                            <span>Tạo phiếu nhập</span>
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => { setIssueTargetProduct(p); setIssueQuantity(1); setIssueReason('') }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-surface-secondary hover:bg-surface-secondary text-rose-700 font-medium text-sm transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                            title="Tạo phiếu xuất điều chỉnh"
-                          >
-                            <Package size={15} />
-                            <span>Điều chỉnh giảm</span>
+                            <span>Nhập kho</span>
                           </button>
 
                           <button
@@ -829,141 +1079,6 @@ export default function AdminInstrumentsPage() {
         }}
       />}
 
-      {/* Stock Import Modal */}
-      {importModalOpen && importTargetProduct && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
-          ref={importDialogRef}
-          tabIndex={-1}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="import-stock-title"
-        >
-          <div className="bg-[#FFFFFF] rounded-2xl border border-[#E5E8EB] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
-            <div className="px-6 py-4 border-b border-[#E5E8EB] flex items-center justify-between">
-              <h3 id="import-stock-title" className="text-base font-bold text-[#17191B]">
-                Tạo phiếu nhập: <span className="font-mono text-secondary">{importTargetProduct.code}</span>
-              </h3>
-              <button
-                type="button"
-                onClick={closeImportModal}
-                className="text-secondary hover:text-[#17191B] cursor-pointer p-1 rounded-lg hover:bg-zinc-100 transition-colors"
-                aria-label="Đóng"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleImportSubmit} className="p-6 flex flex-col gap-4">
-              <fieldset disabled={submittingImport} className="contents">
-              <div>
-                <span className="text-xs text-secondary block mb-1">Tên sản phẩm</span>
-                <span className="text-base font-bold text-[#17191B] block">
-                  {importTargetProduct.name}
-                </span>
-                <span className="text-xs text-secondary block mt-1">
-                  Tồn kho hiện tại: <strong className="text-[#17191B] font-mono">{importTargetProduct.stockQuantity || 0}</strong>
-                </span>
-              </div>
-
-              <div>
-                <label htmlFor="admininstruments-importQuantity" className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Số lượng trên phiếu <span className="text-rose-500">*</span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setImportQuantity((q) => Math.max(1, (Number.isInteger(Number(q)) ? Number(q) : 1) - 1))}
-                    className="w-10 h-10 rounded-xl border border-[#E5E8EB] bg-[#F6F7F8] hover:bg-[#E5E8EB] font-bold text-sm cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <input id="admininstruments-importQuantity" name="importQuantity"
-                    type="number"
-                    min="1"
-                    max="2147483647"
-                    step="1"
-                    required
-                    value={importQuantity}
-                    onChange={(e) => setImportQuantity(e.target.value)}
-                    className="flex-1 text-center py-2 text-base font-bold text-[#17191B] rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setImportQuantity((q) => Math.min(2147483647, (Number.isInteger(Number(q)) ? Number(q) : 1) + 1))}
-                    className="w-10 h-10 rounded-xl border border-[#E5E8EB] bg-[#F6F7F8] hover:bg-[#E5E8EB] font-bold text-sm cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="admininstruments-importNotes" className="block text-sm font-semibold text-[#17191B] mb-1.5">
-                  Ghi chú nhập kho (tùy chọn)
-                </label>
-                <input id="admininstruments-importNotes" name="importNotes"
-                  type="text"
-                  maxLength={500}
-                  value={importNotes}
-                  onChange={(e) => setImportNotes(e.target.value)}
-                  placeholder="VD: Nhập đợt nghệ nhân hoàn thiện nhạc cụ..."
-                  className="w-full px-3.5 py-2 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30"
-                />
-              </div>
-
-              <p className="text-xs text-secondary">Tạo phiếu chưa tăng tồn kho. Xác nhận số lượng đạt QC tại Quản lý kho để nhập vào tồn bán được.</p>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#E5E8EB]">
-                <button
-                  type="button"
-                  onClick={closeImportModal}
-                  className="px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:text-[#17191B] hover:bg-[#F2F4F5] rounded-xl border border-[#E5E8EB] transition-colors cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingImport}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-2xs flex items-center gap-2"
-                >
-                  {submittingImport ? 'Đang tạo phiếu…' : 'Tạo phiếu nhập'}
-                </button>
-              </div>
-            </fieldset>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {issueTargetProduct && (
-        <div ref={issueDialogRef} tabIndex={-1} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4" role="dialog" aria-modal="true" aria-labelledby="issue-stock-title">
-          <form onSubmit={handleIssueSubmit} className="bg-white rounded-2xl border border-[#E5E8EB] shadow-2xl w-full max-w-md p-6 space-y-4">
-            <fieldset disabled={submittingIssue} className="contents">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 id="issue-stock-title" className="font-bold text-[#17191B]">Tạo phiếu xuất điều chỉnh</h3>
-                <p className="text-xs text-secondary mt-1">{issueTargetProduct.name} · hiện có {issueTargetProduct.stockQuantity || 0}</p>
-              </div>
-              <button type="button" aria-label="Đóng" onClick={closeIssueModal} className="p-1.5 rounded-lg hover:bg-[#F6F7F8]"><X size={18} /></button>
-            </div>
-            <div>
-              <label htmlFor="admininstruments-issueQuantity" className="block text-sm font-semibold text-[#17191B] mb-1.5">Số lượng trên phiếu <span className="text-rose-500">*</span></label>
-              <input id="admininstruments-issueQuantity" name="issueQuantity" type="number" min="1" max="2147483647" step="1" required value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} className="w-full px-3.5 py-2 rounded-xl border border-[#E5E8EB]" />
-            </div>
-            <div>
-              <label htmlFor="admininstruments-issueReason" className="block text-sm font-semibold text-[#17191B] mb-1.5">Lý do điều chỉnh <span className="text-rose-500">*</span></label>
-              <textarea id="admininstruments-issueReason" name="issueReason" required maxLength={500} rows={3} value={issueReason} onChange={(e) => setIssueReason(e.target.value)} placeholder="Ví dụ: sửa phiếu nhập nhầm 100 thành 10 (xuất điều chỉnh 90)…" className="w-full px-3.5 py-2 rounded-xl border border-[#E5E8EB] resize-none" />
-              <p className="mt-1 text-xs text-secondary">Tạo phiếu chưa giảm tồn kho. Tồn hiện tại được kiểm tra lại khi xác nhận phiếu tại Quản lý kho.</p>
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={closeIssueModal} className="px-4 py-2 rounded-xl border border-[#E5E8EB]">Hủy</button>
-              <button type="submit" disabled={submittingIssue} className="px-4 py-2 rounded-xl bg-rose-700 text-white font-semibold disabled:opacity-50">{submittingIssue ? 'Đang tạo phiếu…' : 'Tạo phiếu xuất'}</button>
-            </div>
-          </fieldset>
-          </form>
-        </div>
-      )}
     </div>
   )
 }

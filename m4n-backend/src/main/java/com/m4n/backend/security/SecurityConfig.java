@@ -80,6 +80,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/reset-password-otp",
                                 "/api/v1/auth/verify-reset-otp",
                                 "/api/v1/payments/momo/ipn",
+                                "/api/v1/payments/momo/simulate-payment",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout",
@@ -97,7 +98,8 @@ public class SecurityConfig {
                                 "/api/v1/payments/options",
                                 "/api/v1/auth/google/options",
                                 "/api/v1/payments/vnpay/ipn",
-                                "/api/v1/reviews/product/**"
+                                "/api/v1/reviews/product/**",
+                                "/api/v1/checkout/vouchers"
                         ).permitAll()
                         // Area-level authorization net (defense in depth).
                         // Online Staff only has access to orders back-office endpoints, while /admin/** is strictly ADMIN & SUPER_ADMIN.

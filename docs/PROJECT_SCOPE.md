@@ -13,6 +13,8 @@ This file is the source of truth for approved M4N scope. Implementation must not
 
 ### Authentication and accounts
 
+- User-approved Google login (2026-10-26): official Spring OAuth2 Client/OIDC with CUSTOMER-only creation and automatic linking by verified Google email when Google is authoritative (Gmail or matching Workspace hosted domain). Existing staff/Admin accounts require password login. Persist Google's unique subject and reuse existing M4N refresh/JWT sessions; provider identity must be verified by the backend. Google email proof is an alternative to email OTP for this customer login path only. An unverified prior signup must have its unknown local password invalidated when claimed through Google.
+
 - User-approved extension (2026-10-12): email OTP verification before customer login and email OTP password reset through Gmail SMTP with an app password. SMS is pending selection of an SMS provider.
 - User clarification (2026-10-16): create the CUSTOMER in `users` with a BCrypt password hash and `email_verified=false` when registration and OTP delivery are accepted, then show only OTP entry. Unverified accounts cannot obtain login, refresh or protected access; a later login with matching credentials returns to email verification. OTP success verifies the same account without creating another User.
 
@@ -56,6 +58,8 @@ This file is the source of truth for approved M4N scope. Implementation must not
 
 ### POS
 
+- User-approved customer identification (2026-10-22): cashiers search existing CUSTOMER accounts/showroom profiles by name or phone and select the intended customer. A new phone creates a unique showroom customer profile when the invoice commits; this profile has no login credentials. Persist each new invoice's customer reference for both cash and verified MoMo sales. Guest sales remain available when no customer details are supplied; name alone never identifies or creates an account.
+
 - User-approved receipt email (2026-10-16): after verified MoMo card payment produces a committed POS invoice, email that invoice as a PDF to the customer email captured for the payment. Persist pending delivery and retry temporary email failures without changing the successful sale. Failed, cancelled and refunded payments without invoices do not send receipts.
 - User-approved extension (2026-10-16): official MoMo sandbox card payment for showroom bills. Persist an owned payment intent before the provider request; create the invoice and deduct inventory atomically only after backend verification. If a charged bill cannot be completed (including insufficient stock or changed pricing), automatically request a full refund without an invoice/deduction. Persist unknown/failed refund outcomes for cashier reconciliation/retry. Cash, bank transfer, receipt/history/PDF and authenticated same-origin return remain supported.
 - User-approved POS UI update (2026-10-16): the payment selector offers cash and MoMo only; remove the separate bank-transfer option. Existing bank-transfer invoice history and backend compatibility remain supported.
@@ -72,6 +76,7 @@ This file is the source of truth for approved M4N scope. Implementation must not
 - Manage cultural Article/Guide content associated with instruments, artisans, craft villages, origins, care, and usage.
 - Create and confirm stock receipts/issues, view movement history, and maintain one shared inventory balance for online and POS sales.
 - A stock receipt increases sellable inventory only after authorized confirmation. Items rejected during inbound quality inspection are recorded as rejected/returned to the supplier or artisan and do not increase sellable inventory.
+- User-approved update (2026-10-29): receive batches separately from Product creation, record purchase unit cost, and calculate batch cost using QC-accepted quantity. Remove manual decrease controls from Admin UI; retain stock history. Each existing receipt represents one Product batch; no supplier/payment settlement module is added.
 - Inventory is reduced only by an approved online-order confirmation, a completed POS sale, or another explicitly approved stock issue. Every stock-reducing operation must prevent negative inventory.
 - Configure a low-stock threshold per Product and show low-stock and out-of-stock alerts.
 
@@ -87,6 +92,7 @@ This file is the source of truth for approved M4N scope. Implementation must not
 
 - Product rating, review, and comment for eligible completed purchases, including the displayed average rating; no arbitrary hard-delete lifecycle.
 - Customer ↔ Online Staff chat.
+- User-approved update (2026-10-29): an active Online Staff may explicitly take over another staff member's open conversation after confirmation. Recheck the expected assignee atomically; the former assignee immediately loses transcript/write/close authorization. Preserve all messages.
 - Event-driven notification from approved business events; no manual broadcast composer.
 - The legacy notification use case is a system delivery function triggered by those events, not an Admin notification CRUD screen.
 

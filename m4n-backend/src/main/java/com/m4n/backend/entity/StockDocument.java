@@ -18,6 +18,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import java.time.Instant;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "stock_documents")
@@ -38,6 +39,8 @@ public class StockDocument {
     private StockDocumentStatus status;
     @Column(nullable = false)
     private Integer quantity;
+    @Column(name = "unit_cost", precision = 19, scale = 2)
+    private BigDecimal unitCost;
     @Column(nullable = false, length = 500)
     private String reason;
     @Column(name = "created_by", nullable = false, length = 255)

@@ -4,6 +4,8 @@ import {
   CUSTOMER_ROUTES,
   navigateTo,
   matchAdminInstrumentDetailPath,
+  matchAdminArtisanDetailPath,
+  matchAdminCraftVillageDetailPath,
 } from '../routes/customerRoutes.js'
 import useAuth from '../features/auth/useAuth.js'
 import NotificationBell from '../components/common/NotificationBell.jsx'
@@ -94,10 +96,16 @@ function AdminLayout({ children, pathname }) {
   ]
 
   const isInstrumentDetail = Boolean(matchAdminInstrumentDetailPath(pathname))
+  const isArtisanDetail = Boolean(matchAdminArtisanDetailPath(pathname))
+  const isCraftVillageDetail = Boolean(matchAdminCraftVillageDetailPath(pathname))
 
   let pageTitle = 'Dashboard Quản trị'
   if (isInstrumentDetail) {
     pageTitle = 'Chi tiết sản phẩm'
+  } else if (isArtisanDetail) {
+    pageTitle = 'Chi tiết Nghệ nhân'
+  } else if (isCraftVillageDetail) {
+    pageTitle = 'Chi tiết Làng nghề'
   } else if (pathname === CUSTOMER_ROUTES.adminInstruments) {
     pageTitle = 'Quản lý Sản phẩm'
   } else if (pathname === CUSTOMER_ROUTES.adminCategories) {
@@ -214,7 +222,9 @@ function AdminLayout({ children, pathname }) {
               {section.items.map((item) => {
                 const isActive =
                   pathname === item.path ||
-                  (item.path === CUSTOMER_ROUTES.adminInstruments && isInstrumentDetail)
+                  (item.path === CUSTOMER_ROUTES.adminInstruments && isInstrumentDetail) ||
+                  (item.path === CUSTOMER_ROUTES.adminArtisans && isArtisanDetail) ||
+                  (item.path === CUSTOMER_ROUTES.adminCraftVillages && isCraftVillageDetail)
 
                 const ItemIcon = item.Icon
                 return (
@@ -328,7 +338,7 @@ function AdminLayout({ children, pathname }) {
             </div>
           </div>
 
-          {/* Right: Storefront shortcut, System Status, Notifications */}
+          {/* Right: Storefront shortcut and notifications */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Storefront Link Shortcut */}
             <button

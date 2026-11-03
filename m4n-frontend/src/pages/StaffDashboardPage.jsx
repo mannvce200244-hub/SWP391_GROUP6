@@ -145,15 +145,7 @@ function StaffDashboardPage() {
             </span>
             <span className="mt-0.5 break-all font-mono font-bold text-ink">{user?.email}</span>
           </div>
-          <div className="flex flex-col rounded-xl border border-border bg-white px-4 py-2 text-xs">
-            <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Trạng thái
-            </span>
-            <span className="mt-0.5 flex items-center gap-1.5 font-bold text-jade">
-              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-jade" />
-              Đang trong ca trực
-            </span>
-          </div>
+
         </div>
       </section>
 

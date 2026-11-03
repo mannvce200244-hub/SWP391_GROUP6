@@ -7,6 +7,7 @@ import { formatActivity } from './chatMessages.js'
 const QUEUE_TABS = [
   { id: 'WAITING', label: 'Chờ tiếp nhận', icon: Inbox },
   { id: 'MINE', label: 'Của tôi', icon: UserRoundCheck },
+  { id: 'ASSIGNED', label: 'Nhận thay', icon: Headphones },
   { id: 'CLOSED', label: 'Đã đóng', icon: CheckCircle2 },
 ]
 
@@ -31,7 +32,7 @@ export default function StaffConversationQueue({
                 <div>
                   <h2 className="text-sm font-bold text-ink leading-tight">Hàng đợi hỗ trợ</h2>
                   <p className="text-xs text-muted font-medium mt-0.5">
-                    {conversationCount} yêu cầu ({scope === 'WAITING' ? 'đang chờ' : scope === 'MINE' ? 'của bạn' : 'lịch sử'})
+                    {conversationCount} yêu cầu ({scope === 'WAITING' ? 'đang chờ' : scope === 'MINE' ? 'của bạn' : scope === 'ASSIGNED' ? 'đang có người phụ trách' : 'lịch sử'})
                   </p>
                 </div>
               </div>
@@ -49,7 +50,7 @@ export default function StaffConversationQueue({
             </div>
 
             {/* Scope Filter Tabs */}
-            <div className="mt-3.5 grid grid-cols-3 gap-1 rounded-xl bg-surface-secondary p-1 border border-border/50" aria-label="Bộ lọc hàng đợi hỗ trợ">
+            <div className="mt-3.5 grid grid-cols-2 gap-1 rounded-xl bg-surface-secondary p-1 border border-border/50" aria-label="Bộ lọc hàng đợi hỗ trợ">
               {QUEUE_TABS.map((tab) => {
                 const Icon = tab.icon
                 const selected = scope === tab.id
@@ -91,14 +92,14 @@ export default function StaffConversationQueue({
                     ? 'Không có yêu cầu đang chờ'
                     : scope === 'MINE'
                     ? 'Bạn chưa tiếp nhận hội thoại nào'
-                    : 'Chưa có hội thoại nào đã đóng'}
+                    : scope === 'ASSIGNED' ? 'Không có hội thoại cần nhận thay' : 'Chưa có hội thoại nào đã đóng'}
                 </p>
                 <span className="text-xs text-muted mt-1 max-w-[240px] leading-relaxed">
                   {scope === 'WAITING'
                     ? 'Hiện không có yêu cầu hỗ trợ đang chờ.'
                     : scope === 'MINE'
                     ? 'Bạn chưa có cuộc trò chuyện đang phụ trách.'
-                    : 'Chưa có cuộc trò chuyện đã kết thúc.'}
+                    : scope === 'ASSIGNED' ? 'Các hội thoại do nhân viên khác phụ trách sẽ hiển thị ở đây.' : 'Chưa có cuộc trò chuyện đã kết thúc.'}
                 </span>
               </div>
             ) : (
@@ -165,7 +166,7 @@ export default function StaffConversationQueue({
                             Đã đóng
                           </span>
                         )}
-                        {conversation.assignedStaffName && isClosed && (
+                        {conversation.assignedStaffName && (isClosed || scope === 'ASSIGNED') && (
                           <span className="truncate text-[11px] text-muted">
                             bởi {conversation.assignedStaffName}
                           </span>

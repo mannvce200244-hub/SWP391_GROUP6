@@ -311,7 +311,7 @@ function CustomerOrdersPage() {
                           Địa chỉ: {order.shippingAddress}
                         </p>
                         <p>
-                          Hình thức: <span className="font-medium text-ink">{order.paymentMethod}</span>
+                          Hình thức: <span className="font-semibold text-ink">{order.paymentMethod === 'VNPAY' ? 'VNPay' : order.paymentMethod === 'MOMO' ? 'MoMo' : order.paymentMethod === 'COD' ? 'COD' : order.paymentMethod}</span> · <span className={`inline-flex items-center px-2 py-0.2 rounded-full text-[11px] font-semibold border ${order.isPaid ? 'text-emerald-700 bg-surface-secondary border-emerald-200' : 'text-amber-800 bg-[#F6F7F8] border-amber-200'}`}>{order.isPaid ? 'Đã thanh toán' : 'Chưa thanh toán'}</span>
                         </p>
                       </div>
 

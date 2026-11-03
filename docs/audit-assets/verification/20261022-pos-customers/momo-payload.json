@@ -1,0 +1,91 @@
+[
+  {
+    "path": "/api/v1/payments/options",
+    "body": null
+  },
+  {
+    "path": "/api/v1/pos/products/search",
+    "body": null
+  },
+  {
+    "path": "/api/v1/pos/customers",
+    "body": null
+  },
+  {
+    "path": "/api/v1/pos/checkout/preview",
+    "body": {
+      "items": [
+        {
+          "productId": 1,
+          "quantity": 1
+        }
+      ],
+      "voucherCode": null
+    }
+  },
+  {
+    "path": "/api/v1/pos/sales",
+    "body": {
+      "items": [
+        {
+          "productId": 1,
+          "quantity": 1
+        }
+      ],
+      "voucherCode": null,
+      "paymentMethod": "CASH",
+      "amountReceived": 100000,
+      "customerId": 12,
+      "posCustomerId": null,
+      "customerName": "Nguyễn Văn An",
+      "customerPhone": "0912345678",
+      "notes": null
+    }
+  },
+  {
+    "path": "/api/v1/pos/products/search",
+    "body": null
+  },
+  {
+    "path": "/api/v1/pos/products/search",
+    "body": null
+  },
+  {
+    "path": "/api/v1/pos/customers",
+    "body": null
+  },
+  {
+    "path": "/api/v1/pos/checkout/preview",
+    "body": {
+      "items": [
+        {
+          "productId": 1,
+          "quantity": 1
+        }
+      ],
+      "voucherCode": null
+    }
+  },
+  {
+    "path": "/api/v1/pos/payments/momo",
+    "body": {
+      "id": "pos-14c5630d011640b7b25e43d9c40848aa",
+      "expectedAmount": 100000,
+      "customerEmail": "buyer@example.test",
+      "sale": {
+        "items": [
+          {
+            "productId": 1,
+            "quantity": 1
+          }
+        ],
+        "voucherCode": null,
+        "paymentMethod": "MOMO",
+        "customerName": "Nguyễn Văn An",
+        "customerPhone": "0912345678",
+        "customerId": 12,
+        "posCustomerId": null
+      }
+    }
+  }
+]

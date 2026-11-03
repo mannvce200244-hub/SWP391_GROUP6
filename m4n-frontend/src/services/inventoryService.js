@@ -14,17 +14,11 @@ export async function getInventory({ page = 0, size = 10, keyword = '', status =
   return apiClient.get(`/inventory?${params.toString()}`)
 }
 
-export async function importStock(productId, { quantity, notes = '' }) {
+export async function importStock(productId, { quantity, unitCost, notes = '' }) {
   return apiClient.post(`/inventory/${encodeURIComponent(productId)}/import`, {
     quantity: Number(quantity),
+    unitCost: Number(unitCost),
     notes,
-  })
-}
-
-export async function issueStock(productId, { quantity, reason }) {
-  return apiClient.post(`/inventory/${encodeURIComponent(productId)}/issue`, {
-    quantity: Number(quantity),
-    reason: reason.trim(),
   })
 }
 
@@ -53,7 +47,6 @@ export async function getInventoryMovements({ page = 0, size = 10, productId, ty
 export default {
   getInventory,
   importStock,
-  issueStock,
   getStockDocuments,
   confirmStockDocument,
   getInventoryMovements,

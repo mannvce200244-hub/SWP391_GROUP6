@@ -171,7 +171,7 @@ export default function CustomerOrderDetailDialog({ isOpen, order, loading, onCl
 
                     <div className="flex justify-between text-muted">
                       <span>Phương thức thanh toán:</span>
-                      <span className="font-medium text-ink">{order.paymentMethod}</span>
+                      <span className="font-semibold text-ink">{order.paymentMethod === 'VNPAY' ? 'VNPay (Thẻ ATM/QR/Quốc tế Sandbox)' : order.paymentMethod === 'MOMO' ? 'Ví điện tử MoMo' : order.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng (COD)' : order.paymentMethod}</span>
                     </div>
 
                     <div className="flex justify-between text-muted">
@@ -186,7 +186,15 @@ export default function CustomerOrderDetailDialog({ isOpen, order, loading, onCl
                       <span className="text-sm font-bold text-ink">Tổng thanh toán:</span>
                       <span className="text-lg font-bold text-brand font-sans">{order.finalAmountDisplay}</span>
                     </div>
-                    {['VNPAY', 'MOMO'].includes(order.paymentMethod) && <button type="button" onClick={() => { onClose(); navigateTo(`${CUSTOMER_ROUTES.paymentReturn}?orderId=${encodeURIComponent(order.id)}`) }} className="h-11 px-4 rounded-lg border border-border font-semibold text-brand">Kiểm tra / thanh toán {order.paymentMethod === 'MOMO' ? 'MoMo' : 'VNPay'}</button>}
+                    {['VNPAY', 'MOMO'].includes(order.paymentMethod) && (
+                      <button
+                        type="button"
+                        onClick={() => { onClose(); navigateTo(`${CUSTOMER_ROUTES.paymentReturn}?orderId=${encodeURIComponent(order.id)}`) }}
+                        className="h-11 px-4 rounded-lg border border-border font-semibold text-brand hover:bg-surface-secondary transition-colors cursor-pointer"
+                      >
+                        {order.isPaid ? 'Chi tiết giao dịch thanh toán' : `Thanh toán ngay qua ${order.paymentMethod === 'MOMO' ? 'MoMo' : 'VNPay'}`}
+                      </button>
+                    )}
                   </div>
                 </>
               ) : null}

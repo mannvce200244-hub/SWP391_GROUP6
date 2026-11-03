@@ -175,6 +175,7 @@ public class ChatServiceImpl implements ChatService {
         Page<Conversation> conversations = switch (scope) {
             case WAITING -> conversationRepository.findWaitingQueue(pageable);
             case MINE -> conversationRepository.findMyOpenQueue(staff.getId(), pageable);
+            case ASSIGNED -> conversationRepository.findOtherAssignedQueue(staff.getId(), pageable);
             case CLOSED -> conversationRepository.findMyClosedQueue(staff.getId(), pageable);
         };
         return conversations.map(c -> toConversationResponse(c, staff.getId(), false));
@@ -202,6 +203,34 @@ public class ChatServiceImpl implements ChatService {
         conversation.setAssignedStaff(staff);
         Conversation updated = conversationRepository.save(conversation);
         return toConversationResponse(updated, staff.getId(), true);
+    }
+
+    @Override
+    @Transactional
+    public ConversationResponse takeOver(Long conversationId, Long expectedStaffId, String staffEmail) {
+        User staff = getLockedUser(staffEmail);
+        assertOnlineStaff(staff);
+        if (expectedStaffId == null || expectedStaffId <= 0) {
+            throw new IllegalArgumentException("Vui lòng chọn nhân viên đang phụ trách.");
+        }
+        Conversation conversation = conversationRepository.findByIdWithLock(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cuộc trò chuyện không tồn tại."));
+        if (conversation.getStatus() != ConversationStatus.OPEN || conversation.getAssignedStaff() == null
+                || !conversation.getAssignedStaff().getId().equals(expectedStaffId)) {
+            throw new IllegalStateException("Người phụ trách hoặc trạng thái đã thay đổi. Vui lòng làm mới hàng đợi.");
+        }
+        if (expectedStaffId.equals(staff.getId())) {
+            throw new IllegalStateException("Bạn đang phụ trách cuộc trò chuyện này.");
+        }
+        User previousStaff = conversation.getAssignedStaff();
+        conversation.setAssignedStaff(staff);
+        conversation.setUpdatedAt(Instant.now());
+        Conversation saved = conversationRepository.save(conversation);
+        notificationService.createNotification(previousStaff, "Hội thoại đã được tiếp nhận thay",
+                "Nhân viên " + staff.getFullName() + " đã nhận thay hội thoại #" + conversationId + ".",
+                NotificationType.CHAT, "/staff/chat");
+        log.info("Chat {} reassigned from staff {} to staff {}", conversationId, expectedStaffId, staff.getId());
+        return toConversationResponse(saved, staff.getId(), true);
     }
 
     @Override

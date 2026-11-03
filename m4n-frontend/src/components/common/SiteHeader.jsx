@@ -12,15 +12,15 @@ import {
 import {
   UserRound,
   Lock,
-  LayoutDashboard,
   Package,
-  CreditCard,
   LogOut,
   Search,
   ShoppingBag,
   Menu,
   X,
+  Wrench,
 } from 'lucide-react'
+import { getWorkbenchInfo } from '../../routes/roleUtils.js'
 import NotificationBell from './NotificationBell.jsx'
 import useToast from '../ui/useToast.js'
 
@@ -32,13 +32,12 @@ const ROLE_LABELS = Object.freeze({
   SUPER_ADMIN: 'Super Admin',
 })
 
-function SiteHeader({ pathname }) {
+function SiteHeader({ pathname, cartDrawerOpen, onCartOpenChange }) {
   const { user, isAuthenticated, logout } = useAuth()
   const { addToast } = useToast()
   const { cartItemCount } = useCart()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
-  const [cartDrawerOpen, setCartDrawerOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const accountMenuRef = useRef(null)
 
@@ -103,6 +102,7 @@ function SiteHeader({ pathname }) {
   }
 
   const roleName = user?.role ? (ROLE_LABELS[user.role] || user.role) : ''
+  const workbenchInfo = isAuthenticated && user ? getWorkbenchInfo(user.role) : null
   const canUseCustomerCommerce = !isAuthenticated || user?.role === 'CUSTOMER'
 
   return (
@@ -183,7 +183,7 @@ function SiteHeader({ pathname }) {
               type="button"
               aria-label={`Giỏ hàng (${cartItemCount} sản phẩm)`}
               className="inline-flex items-center gap-2 p-2 sm:px-3 sm:py-1.5 rounded-lg text-ink hover:text-brand hover:bg-surface-secondary text-sm font-medium transition-colors cursor-pointer relative"
-              onClick={() => setCartDrawerOpen(true)}
+              onClick={() => onCartOpenChange(true)}
               title="Giỏ hàng"
             >
               <span className="relative flex items-center">
@@ -200,6 +200,22 @@ function SiteHeader({ pathname }) {
 
           {/* In-app Notifications */}
           <NotificationBell />
+
+          {/* Quick Workbench Shortcut for Staff & Admin */}
+          {workbenchInfo && (
+            <RouterLink
+              aria-label={workbenchInfo.label}
+              className="inline-flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-lg text-brand bg-brand-soft/60 hover:bg-brand-soft hover:text-brand-hover text-sm font-medium transition-colors cursor-pointer border border-brand/20 shadow-2xs group"
+              href={workbenchInfo.path}
+              onClick={closeMobileMenu}
+              title={workbenchInfo.label}
+            >
+              <Wrench size={18} className="w-4.5 h-4.5 shrink-0 text-brand transition-transform duration-200 group-hover:rotate-45" aria-hidden="true" />
+              <span className="hidden sm:inline text-xs font-semibold text-brand">
+                {workbenchInfo.shortLabel}
+              </span>
+            </RouterLink>
+          )}
 
           {/* Account action / Dropdown */}
           <div className="relative" ref={accountMenuRef}>
@@ -286,7 +302,7 @@ function SiteHeader({ pathname }) {
                         onClick={closeAccountMenu}
                         role="menuitem"
                       >
-                        <LayoutDashboard size={16} />
+                        <Wrench size={16} />
                         <span>Bảng điều khiển Quản trị</span>
                       </RouterLink>
                     </li>
@@ -300,7 +316,7 @@ function SiteHeader({ pathname }) {
                         onClick={closeAccountMenu}
                         role="menuitem"
                       >
-                        <Package size={16} />
+                        <Wrench size={16} />
                         <span>Bàn làm việc Nhân viên</span>
                       </RouterLink>
                     </li>
@@ -314,7 +330,7 @@ function SiteHeader({ pathname }) {
                         onClick={closeAccountMenu}
                         role="menuitem"
                       >
-                        <CreditCard size={16} />
+                        <Wrench size={16} />
                         <span>Bàn làm việc POS</span>
                       </RouterLink>
                     </li>
@@ -412,7 +428,7 @@ function SiteHeader({ pathname }) {
                     className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-lg text-sm text-ink hover:text-brand hover:bg-surface-secondary font-medium transition-colors text-left cursor-pointer"
                     onClick={() => {
                       closeMobileMenu()
-                      setCartDrawerOpen(true)
+                      onCartOpenChange(true)
                     }}
                   >
                     <span className="flex items-center gap-2.5">
@@ -472,6 +488,7 @@ function SiteHeader({ pathname }) {
                         href={CUSTOMER_ROUTES.admin}
                         onClick={closeMobileMenu}
                       >
+                        <Wrench size={16} className="shrink-0" />
                         Bảng điều khiển Quản trị
                       </RouterLink>
                     </li>
@@ -483,6 +500,7 @@ function SiteHeader({ pathname }) {
                         href={CUSTOMER_ROUTES.staff}
                         onClick={closeMobileMenu}
                       >
+                        <Wrench size={16} className="shrink-0" />
                         Bàn làm việc Nhân viên
                       </RouterLink>
                     </li>
@@ -494,6 +512,7 @@ function SiteHeader({ pathname }) {
                         href={CUSTOMER_ROUTES.pos}
                         onClick={closeMobileMenu}
                       >
+                        <Wrench size={16} className="shrink-0" />
                         Bàn làm việc POS
                       </RouterLink>
                     </li>
@@ -540,7 +559,7 @@ function SiteHeader({ pathname }) {
       {canUseCustomerCommerce && (
         <CartDrawer
           isOpen={cartDrawerOpen}
-          onClose={() => setCartDrawerOpen(false)}
+          onClose={() => onCartOpenChange(false)}
         />
       )}
     </header>

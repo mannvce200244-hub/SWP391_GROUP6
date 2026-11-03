@@ -22,8 +22,8 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, ini
   const [craftVillageId, setCraftVillageId] = useState(() =>
     initialArtisan?.craftVillageId ? String(initialArtisan.craftVillageId) : ''
   )
-  const [biography, setBiography] = useState(() => initialArtisan?.biography || '')
-  const [avatarUrl, setAvatarUrl] = useState(() => initialArtisan?.avatarUrl || '')
+  const [biography, setBiography] = useState(() => initialArtisan?.biography || initialArtisan?.description || '')
+  const [avatarUrl, setAvatarUrl] = useState(() => initialArtisan?.avatarUrl || initialArtisan?.avatar || '')
   const [formErrors, setFormErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [loadFailed, setLoadFailed] = useState(false)
@@ -68,8 +68,15 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, ini
     ])
       .then(([artisanData, villageData]) => {
         if (active) {
-          setArtisans(artisanData || [])
+          const list = artisanData || []
+          setArtisans(list)
           setCraftVillages(villageData || [])
+          if (initialArtisan?.id && !initialArtisan.craftVillageId) {
+            const matched = list.find((item) => Number(item.id) === Number(initialArtisan.id))
+            if (matched?.craftVillageId) {
+              setCraftVillageId(String(matched.craftVillageId))
+            }
+          }
           setLoading(false)
         }
       })
@@ -84,7 +91,7 @@ export default function ArtisanManagementModal({ isOpen, onClose, onSuccess, ini
     return () => {
       active = false
     }
-  }, [isOpen])
+  }, [isOpen, initialArtisan])
 
   const handleClose = () => {
     if (submitting || modalDeleting) return

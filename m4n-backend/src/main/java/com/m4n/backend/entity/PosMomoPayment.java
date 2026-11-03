@@ -19,6 +19,12 @@ public class PosMomoPayment {
     private String bill;
     @Column(name = "customer_email", nullable = false, length = 255)
     private String customerEmail;
+    @Builder.Default @Column(nullable = false, length = 16)
+    private String provider = "MOMO";
+    @Column(name = "provider_create_date", length = 14)
+    private String providerCreateDate;
+    @Column(name = "refund_create_date", length = 14)
+    private String refundCreateDate;
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal amount;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)

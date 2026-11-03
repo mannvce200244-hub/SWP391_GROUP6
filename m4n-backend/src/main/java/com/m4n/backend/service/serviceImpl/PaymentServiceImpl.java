@@ -53,10 +53,13 @@ public class PaymentServiceImpl implements PaymentService {
     private final VnpayGateway gateway;
     private final TransactionTemplate transaction;
     private final com.m4n.backend.service.MomoPaymentService momo;
+    private final com.m4n.backend.service.PosVnpayPaymentService posVnpay;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public PaymentServiceImpl(OrderRepository orderRepository, PaymentAttemptRepository paymentRepository,
             UserRepository userRepository, VnpayProperties properties, VnpayGateway gateway,
-            PlatformTransactionManager transactionManager, com.m4n.backend.service.MomoPaymentService momo) {
+            PlatformTransactionManager transactionManager, com.m4n.backend.service.MomoPaymentService momo,
+            com.m4n.backend.service.PosVnpayPaymentService posVnpay) {
         this.orderRepository = orderRepository;
         this.paymentRepository = paymentRepository;
         this.userRepository = userRepository;
@@ -64,6 +67,13 @@ public class PaymentServiceImpl implements PaymentService {
         this.gateway = gateway;
         this.transaction = new TransactionTemplate(transactionManager);
         this.momo = momo;
+        this.posVnpay = posVnpay;
+    }
+
+    public PaymentServiceImpl(OrderRepository orderRepository, PaymentAttemptRepository paymentRepository,
+            UserRepository userRepository, VnpayProperties properties, VnpayGateway gateway,
+            PlatformTransactionManager transactionManager, com.m4n.backend.service.MomoPaymentService momo) {
+        this(orderRepository, paymentRepository, userRepository, properties, gateway, transactionManager, momo, null);
     }
 
     @Override public boolean isAvailable() { return properties.isAvailable(); }
@@ -122,6 +132,7 @@ public class PaymentServiceImpl implements PaymentService {
         params.put("vnp_OrderInfo", "Thanh toan don hang " + order.getId());
         params.put("vnp_OrderType", "other");
         params.put("vnp_Locale", "vn");
+        params.put("vnp_BankCode", "NCB");
         params.put("vnp_IpAddr", literalIp(ipAddress));
         params.put("vnp_CreateDate", attempt.getProviderCreateDate());
         params.put("vnp_ExpireDate", PROVIDER_DATE.format(attempt.getExpiresAt()));
@@ -140,21 +151,25 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    @Transactional
     public VnpayIpnResponse processIpn(MultiValueMap<String, String> values) {
         if (!isAvailable()) return new VnpayIpnResponse("99", "Provider unavailable");
         Map<String, String> params = uniqueParameters(values);
         if (params == null || !gateway.verifyIpn(params)) return new VnpayIpnResponse("97", "Invalid signature");
         if (!properties.merchantCode().equals(params.get("vnp_TmnCode"))) return new VnpayIpnResponse("97", "Invalid merchant");
-        Long id = paymentRepository.findOrderIdByTransactionReference(params.get("vnp_TxnRef")).orElse(null);
-        if (id == null) return new VnpayIpnResponse("01", "Order not found");
-        Order order = lockOrder(id);
-        PaymentAttempt attempt = paymentRepository.findByTransactionReference(params.get("vnp_TxnRef")).orElseThrow();
-        if (!validAmount(order, attempt, params)) return new VnpayIpnResponse("04", "Invalid amount");
-        if (attempt.getState() != PaymentState.PENDING) return new VnpayIpnResponse("02", "Order already confirmed");
-        if (!validPaymentResult(params)) return new VnpayIpnResponse("99", "Invalid result");
-        applyPayment(order, attempt, params);
-        return new VnpayIpnResponse("00", "Confirm success");
+        if (Objects.toString(params.get("vnp_TxnRef"), "").startsWith("pos-")) {
+            return posVnpay == null ? new VnpayIpnResponse("99", "POS provider unavailable") : posVnpay.processIpn(params);
+        }
+        return transaction.execute(status -> {
+            Long id = paymentRepository.findOrderIdByTransactionReference(params.get("vnp_TxnRef")).orElse(null);
+            if (id == null) return new VnpayIpnResponse("01", "Order not found");
+            Order order = lockOrder(id);
+            PaymentAttempt attempt = paymentRepository.findByTransactionReference(params.get("vnp_TxnRef")).orElseThrow();
+            if (!validAmount(order, attempt, params)) return new VnpayIpnResponse("04", "Invalid amount");
+            if (attempt.getState() != PaymentState.PENDING) return new VnpayIpnResponse("02", "Order already confirmed");
+            if (!validPaymentResult(params)) return new VnpayIpnResponse("99", "Invalid result");
+            applyPayment(order, attempt, params);
+            return new VnpayIpnResponse("00", "Confirm success");
+        });
     }
 
     @Override
@@ -280,18 +295,22 @@ public class PaymentServiceImpl implements PaymentService {
     }
     private void applyPayment(Order order, PaymentAttempt attempt, Map<String, String> params) {
         String status = params.get("vnp_TransactionStatus");
-        if ("00".equals(params.get("vnp_ResponseCode")) && "00".equals(status)) {
+        String responseCode = params.get("vnp_ResponseCode");
+        if ("00".equals(responseCode) && "00".equals(status)) {
             attempt.setState(PaymentState.SUCCEEDED); order.setPaid(true);
             attempt.setTransactionNo(params.get("vnp_TransactionNo"));
             attempt.setBankCode(params.get("vnp_BankCode")); attempt.setPayDate(params.get("vnp_PayDate"));
-        } else if (Set.of("02", "09").contains(status)) { attempt.setState(PaymentState.FAILED); }
-        attempt.setResponseCode(params.get("vnp_ResponseCode"));
+        } else if (Set.of("02", "09").contains(status) || !"00".equals(responseCode)) {
+            attempt.setState(PaymentState.FAILED);
+        }
+        attempt.setResponseCode(responseCode);
     }
     private boolean validPaymentResult(Map<String, String> params) {
-        return params.getOrDefault("vnp_ResponseCode", "").matches("[0-9]{2}")
-                && Set.of("00", "01", "02", "04", "05", "06", "07", "09").contains(params.getOrDefault("vnp_TransactionStatus", ""))
-                && (!"00".equals(params.get("vnp_TransactionStatus"))
-                || params.getOrDefault("vnp_TransactionNo", "").matches("[0-9]{1,15}"));
+        String code = params.getOrDefault("vnp_ResponseCode", "");
+        String status = params.getOrDefault("vnp_TransactionStatus", "");
+        if (!code.matches("[0-9]{2}")) return false;
+        if (!status.isEmpty() && !Set.of("00", "01", "02", "04", "05", "06", "07", "09").contains(status)) return false;
+        return !"00".equals(code) || ("00".equals(status) && params.getOrDefault("vnp_TransactionNo", "").matches("[0-9]{1,15}"));
     }
     private boolean matchesResult(Order order, PaymentAttempt attempt, Map<String, String> result, String command) {
         return command.equals(result.get("vnp_Command")) && properties.merchantCode().equals(result.get("vnp_TmnCode"))
@@ -347,7 +366,7 @@ public class PaymentServiceImpl implements PaymentService {
     private void requireCanRead(Order order, User user) { if (!isAdmin(user) && user.getRole().getName() != RoleName.ONLINE_STAFF) requireOwner(order, user); }
     private void requireAvailable() { if (!isAvailable()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "VNPay chưa được cấu hình. Vui lòng chọn COD."); }
     private String providerAmount(BigDecimal amount) { return amount.movePointRight(2).toBigIntegerExact().toString(); }
-    private String literalIp(String value) { return VnpayProperties.isLiteralIp(value) ? value : properties.serverIp(); }
+    private String literalIp(String value) { return VnpayProperties.isLiteralIp(value) && !value.contains(":") ? value : properties.serverIp(); }
     private String asciiReason(String reason) { String ascii = Normalizer.normalize(reason, Normalizer.Form.NFD).replaceAll("\\p{M}", "")
             .replace('đ', 'd').replace('Đ', 'D').replaceAll("[^A-Za-z0-9 ]", " ").trim();
         return "Hoan tien " + (ascii.isEmpty() ? "don hang" : ascii.substring(0, Math.min(ascii.length(), 220))); }

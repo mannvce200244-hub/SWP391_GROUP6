@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react'
+import { Pencil, Eye } from 'lucide-react'
 import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import ProductCard from '../features/catalog/ProductCard.jsx'
 import RelatedArticles from '../features/content/RelatedArticles.jsx'
+import useAuth from '../features/auth/useAuth.js'
+import CraftVillageManagementModal from '../components/admin/CraftVillageManagementModal.jsx'
 import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
+import { isBackOfficeAdmin } from '../routes/roleUtils.js'
 import artisanService from '../services/artisanService.js'
 import productService from '../services/productService.js'
 
 function CraftVillageDetailPage({ slugOrId }) {
+  const { user } = useAuth()
+  const isAdmin = isBackOfficeAdmin(user?.role)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [pageState, setPageState] = useState({
     village: null,
     products: [],
@@ -157,8 +164,8 @@ function CraftVillageDetailPage({ slugOrId }) {
   return (
     <div className="w-full flex flex-col bg-white">
       {/* 1. TOP BREADCRUMB & BACK ACTION */}
-      <div className="border-b border-border/70 bg-surface/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+      <div className="border-b border-border/70 bg-surface-secondary">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <nav
             aria-label="Đường dẫn trang"
             className="flex items-center gap-2 text-xs sm:text-sm text-muted overflow-x-auto whitespace-nowrap scrollbar-none"
@@ -195,12 +202,33 @@ function CraftVillageDetailPage({ slugOrId }) {
             </span>
           </nav>
 
-          <RouterLink
-            className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-brand hover:text-brand-hover shrink-0 transition-colors"
-            href={villagesTabUrl}
-          >
-            <span aria-hidden="true">←</span> Quay lại Làng nghề
-          </RouterLink>
+          <div className="flex items-center gap-2 shrink-0">
+            {isAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-brand/30 bg-white px-3 py-1.5 text-xs font-semibold text-brand shadow-2xs transition-colors hover:bg-surface-secondary cursor-pointer"
+                >
+                  <Pencil size={13} />
+                  <span>Chỉnh sửa trên trang này</span>
+                </button>
+                <RouterLink
+                  href={CUSTOMER_ROUTES.adminCraftVillageDetail(village.id)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-2xs transition-colors hover:bg-surface-secondary"
+                >
+                  <Eye size={13} className="text-secondary" />
+                  <span>Chi tiết trong Quản trị</span>
+                </RouterLink>
+              </>
+            )}
+            <RouterLink
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-brand hover:text-brand-hover shrink-0 transition-colors"
+              href={villagesTabUrl}
+            >
+              <span aria-hidden="true">←</span> Quay lại Làng nghề
+            </RouterLink>
+          </div>
         </div>
       </div>
 
@@ -377,6 +405,25 @@ function CraftVillageDetailPage({ slugOrId }) {
         </section>
         <RelatedArticles key={village.id} craftVillageId={village.id} />
       </div>
+
+      {isAdmin && isEditModalOpen && (
+        <CraftVillageManagementModal
+          key={`public-village-edit-${village.id}`}
+          isOpen={isEditModalOpen}
+          initialVillage={{
+            id: village.id,
+            name: village.name,
+            location: village.location || village.province,
+            description: village.description,
+            imageUrl: village.coverImage,
+          }}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={() => {
+            setIsEditModalOpen(false)
+            handleRetry()
+          }}
+        />
+      )}
     </div>
   )
 }

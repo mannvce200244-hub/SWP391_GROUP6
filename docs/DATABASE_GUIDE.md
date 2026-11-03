@@ -39,6 +39,17 @@ See [`BUSINESS_RULES.md`](BUSINESS_RULES.md) for authoritative behavior.
 
 ## Migrations
 
+- `20261026_google_login.sql` adds nullable `users.google_subject` and a unique
+  index. Apply before enabling Google/schema validation; existing users are not
+  linked by migration. The service links only approved verified customer identities.
+
+- `20261022_pos_customers.sql` adds `pos_customers` (unique canonical Vietnamese
+  phone, optional name, creation instant) and mutually exclusive nullable
+  `invoices.customer_id` / `invoices.pos_customer_id` references. Historical
+  invoice snapshots remain untouched. PostgreSQL `INSERT ... ON CONFLICT DO
+  NOTHING` is narrowly used for atomic phone deduplication within an invoice
+  transaction; a failed insert/unique-violation retry must not abort a paid sale.
+
 - Every schema change must use a controlled, reviewable migration. The current rollout uses explicit PostgreSQL scripts in [`migrations/README.md`](migrations/README.md); no migration engine is selected or added.
 - Migrations must be deterministic, ordered, and safe for existing data.
 - Do not modify an already-applied shared migration without an explicit team-approved recovery plan.

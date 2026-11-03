@@ -25,6 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
+import java.math.BigDecimal;
 import java.util.Set;
 
 @Service
@@ -39,7 +40,12 @@ public class StockDocumentServiceImpl implements StockDocumentService {
 
     @Override @Transactional
     public StockDocumentResponse createReceipt(Long productId, StockImportRequest request) {
-        return create(productId, request.getQuantity(), request.getNotes(), StockDocumentType.RECEIPT);
+        BigDecimal cost = request.getUnitCost();
+        if (cost == null || cost.signum() < 0 || cost.compareTo(new BigDecimal("9999999999")) > 0
+                || cost.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException("Đơn giá nhập phải là số đồng nguyên từ 0 đến 9.999.999.999.");
+        }
+        return create(productId, request.getQuantity(), request.getNotes(), StockDocumentType.RECEIPT, cost);
     }
 
     @Override @Transactional
@@ -47,10 +53,10 @@ public class StockDocumentServiceImpl implements StockDocumentService {
         if (request.reason() == null || request.reason().isBlank()) {
             throw new IllegalArgumentException("Lý do xuất kho không được để trống.");
         }
-        return create(productId, request.quantity(), request.reason(), StockDocumentType.ISSUE);
+        return create(productId, request.quantity(), request.reason(), StockDocumentType.ISSUE, null);
     }
 
-    private StockDocumentResponse create(Long productId, Integer quantity, String reason, StockDocumentType type) {
+    private StockDocumentResponse create(Long productId, Integer quantity, String reason, StockDocumentType type, BigDecimal unitCost) {
         if (quantity == null || quantity <= 0) throw new IllegalArgumentException("Số lượng phải là số nguyên lớn hơn 0.");
         String normalizedReason = reason == null || reason.isBlank() ? "Nhập kho" : reason.trim();
         if (normalizedReason.length() > 500) throw new IllegalArgumentException("Lý do không quá 500 ký tự.");
@@ -58,7 +64,7 @@ public class StockDocumentServiceImpl implements StockDocumentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm không tồn tại: " + productId));
         StockDocument document = StockDocument.builder().product(product).productCode(product.getCode())
                 .productName(product.getName()).type(type).status(StockDocumentStatus.DRAFT)
-                .quantity(quantity).reason(normalizedReason).createdBy(actor()).build();
+                .quantity(quantity).unitCost(unitCost).reason(normalizedReason).createdBy(actor()).build();
         return response(documentRepository.save(document));
     }
 
@@ -131,6 +137,9 @@ public class StockDocumentServiceImpl implements StockDocumentService {
                 document.getProductName(), document.getType(), document.getStatus(), document.getQuantity(), document.getReason(),
                 document.getCreatedBy(), document.getCreatedAt(), document.getConfirmedBy(), document.getConfirmedAt(),
                 document.getAcceptedQuantity(), document.getRejectedQuantity(), document.getRejectionReason(),
-                document.getQuantityBefore(), document.getQuantityAfter());
+                document.getQuantityBefore(), document.getQuantityAfter(), document.getUnitCost(),
+                document.getUnitCost() == null ? null : document.getUnitCost().multiply(BigDecimal.valueOf(document.getQuantity())),
+                document.getUnitCost() == null || document.getAcceptedQuantity() == null ? null
+                        : document.getUnitCost().multiply(BigDecimal.valueOf(document.getAcceptedQuantity())));
     }
 }

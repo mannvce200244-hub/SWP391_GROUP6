@@ -42,6 +42,45 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 public class ChatConcurrencyIntegrationTest {
 
+    @Test void concurrentTakeOverHasOneWinnerAndPreservesTranscript() throws Exception {
+        String staffCEmail = createFixtureUser("staff-c", UUID.randomUUID().toString(), RoleName.ONLINE_STAFF,
+                passwordEncoder.encode("Password123!"));
+        var open = chatService.startMyCustomerConversation(customerEmail);
+        var assigned = chatService.assignStaff(open.id(), staffAEmail);
+        chatService.sendMessage(open.id(), new ChatMessageRequest("Keep this transcript"), staffAEmail);
+        assertThat(chatService.getStaffConversations(com.m4n.backend.dto.request.StaffConversationScope.ASSIGNED,
+                PageRequest.of(0, 200), staffBEmail).getContent()).extracting(ConversationResponse::id).contains(open.id());
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicInteger success = new AtomicInteger();
+        AtomicInteger conflicts = new AtomicInteger();
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            List<Future<?>> tasks = new ArrayList<>();
+            for (String email : List.of(staffBEmail, staffCEmail)) {
+                tasks.add(executor.submit(() -> {
+                    ready.countDown();
+                    if (!start.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("Timed out");
+                    try {
+                        chatService.takeOver(open.id(), assigned.assignedStaffId(), email);
+                        success.incrementAndGet();
+                    } catch (IllegalStateException conflict) { conflicts.incrementAndGet(); }
+                    return null;
+                }));
+            }
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            for (var task : tasks) task.get(15, TimeUnit.SECONDS);
+        }
+        assertThat(success.get()).isEqualTo(1);
+        assertThat(conflicts.get()).isEqualTo(1);
+        assertThatThrownBy(() -> chatService.getMessages(open.id(), PageRequest.of(0, 20), staffAEmail))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> chatService.sendMessage(open.id(), new ChatMessageRequest("Forbidden"), staffAEmail))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThat(chatService.getMessages(open.id(), PageRequest.of(0, 20), customerEmail).getContent())
+                .extracting(ChatMessageResponse::content).containsExactly("Keep this transcript");
+    }
+
     @Autowired
     private ChatService chatService;
 

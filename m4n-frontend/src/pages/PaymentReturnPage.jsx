@@ -68,7 +68,13 @@ export default function PaymentReturnPage() {
   const onlinePending = status?.status === 'PENDING' && ['MOMO', 'VNPAY'].includes(status.paymentMethod)
   const canPay = status?.canPay && !actionError && !error && !status.isPaid
   const needsRefresh = status && (presentation?.tone !== 'success' || error || actionError)
-  const paymentMethod = status?.paymentMethod === 'MOMO' ? 'Thẻ quốc tế qua MoMo' : status?.paymentMethod === 'COD' ? 'Thanh toán khi nhận hàng' : 'VNPay'
+  const paymentMethod = status?.paymentMethod === 'VNPAY'
+    ? 'VNPay (Cổng thanh toán Sandbox)'
+    : status?.paymentMethod === 'MOMO'
+      ? 'Ví điện tử MoMo'
+      : status?.paymentMethod === 'COD'
+        ? 'Thanh toán khi nhận hàng (COD)'
+        : (status?.paymentMethod || 'VNPay')
 
   return (
     <section aria-label="Kết quả thanh toán" className="mx-auto max-w-[680px] px-4 py-10 sm:px-6 sm:py-16">
@@ -86,11 +92,11 @@ export default function PaymentReturnPage() {
                 </div>
                 <div className="mx-6 border-y border-border py-6 sm:mx-10">
                   <p className="text-center text-xs text-muted">{status.refundStatus === 'SUCCEEDED' ? 'Số tiền đã hoàn' : 'Tổng thanh toán'}</p>
-                  <p className="mt-2 text-center text-3xl font-semibold tracking-tight text-ink tabular-nums sm:text-4xl">{formatCurrencyVND(order.finalAmount)}</p>
+                  <p className="mt-2 text-center text-3xl font-semibold tracking-tight text-ink tabular-nums sm:text-4xl">{formatCurrencyVND(order?.finalAmount || 0)}</p>
                   <dl className="mt-6 space-y-3 text-sm">
                     <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-6">
                       <dt className="shrink-0 text-muted">Mã đơn hàng</dt>
-                      <dd className="max-w-[28ch] font-mono text-xs leading-relaxed text-ink break-all sm:max-w-none sm:text-right">{order.orderCode}</dd>
+                      <dd className="max-w-[28ch] font-mono text-xs leading-relaxed text-ink break-all sm:max-w-none sm:text-right">{order?.orderCode || ''}</dd>
                     </div>
                     <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-6">
                       <dt className="shrink-0 text-muted">Phương thức</dt>
@@ -101,8 +107,14 @@ export default function PaymentReturnPage() {
                 <div className="space-y-4 px-6 py-6 sm:px-10">
                   {error && <p role="alert" className="text-sm text-danger">{error}</p>}
                   {actionError && <p role="alert" className="text-sm text-danger">{actionError}</p>}
+                  {canPay && status.paymentMethod === 'VNPAY' && (
+                    <div className="rounded-xl bg-[#F6F7F8] p-3 border border-border/80 text-xs text-muted text-center space-y-1">
+                      <p className="font-semibold text-ink">Thông tin thẻ test VNPay (NCB):</p>
+                      <p>Số thẻ: <code className="font-mono text-ink">9704198526191432198</code> &bull; Tên: <code className="font-mono text-ink">NGUYEN VAN A</code> &bull; Ngày: <code className="font-mono text-ink">07/15</code> &bull; OTP: <code className="font-mono text-ink">123456</code></p>
+                    </div>
+                  )}
                   {(canPay || onlinePending || needsRefresh) && <div className="flex flex-wrap justify-center gap-3">
-                    {canPay && <Button loading={busy === 'pay'} disabled={Boolean(busy)} onClick={() => handleAction('pay')}>Thanh toán qua {status.paymentMethod === 'MOMO' ? 'MoMo' : 'VNPay'}</Button>}
+                    {canPay && <Button loading={busy === 'pay'} disabled={Boolean(busy)} onClick={() => handleAction('pay')}>Thanh toán lại qua {status.paymentMethod === 'MOMO' ? 'MoMo' : 'VNPay'}</Button>}
                     {onlinePending && <Button variant="secondary" loading={busy === 'reconcile'} disabled={Boolean(busy)} onClick={() => handleAction('reconcile')}>Kiểm tra giao dịch</Button>}
                     {needsRefresh && !onlinePending && <Button variant="secondary" loading={busy === 'refresh'} disabled={Boolean(busy)} onClick={handleRefresh}><RotateCw size={16} aria-hidden="true" />Kiểm tra lại</Button>}
                   </div>}

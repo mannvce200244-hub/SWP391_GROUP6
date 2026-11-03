@@ -188,7 +188,7 @@ public class PosServiceImpl implements PosService {
     public PosSaleResponse finalizeSale(PosSaleRequest request) {
         User staff = getAuthenticatedStaff();
         if (!Set.of("CASH", "BANK_TRANSFER").contains(request.getPaymentMethod().trim().toUpperCase(Locale.ROOT))) {
-            throw new IllegalArgumentException("MoMo phải được xác minh qua cổng thanh toán trước khi xuất hóa đơn.");
+            throw new IllegalArgumentException("Thanh toán trực tuyến (VNPay/MoMo) phải được xác minh qua cổng thanh toán trước khi xuất hóa đơn.");
         }
         return finalizeSale(request, staff, null);
     }
@@ -200,10 +200,10 @@ public class PosServiceImpl implements PosService {
         if (payment.isCancelRequested() || payment.getState() != PaymentState.SUCCEEDED || payment.getRefundState() != RefundState.NONE
                 || payment.getInvoice() != null) return;
         PosSaleRequest request = json.readValue(payment.getBill(), PosSaleRequest.class);
-        request.setPaymentMethod("MOMO");
+        request.setPaymentMethod("VNPAY".equals(payment.getProvider()) ? "VNPAY" : "MOMO");
         var sale = finalizeSale(request, payment.getStaff(), payment.getAmount());
         payment.setInvoice(invoiceRepository.getReferenceById(sale.getInvoiceId()));
-        payment.setReceiptEmailQueuedAt(Instant.now());
+        if (payment.getCustomerEmail() != null && !payment.getCustomerEmail().isBlank()) payment.setReceiptEmailQueuedAt(Instant.now());
     }
 
     private PosSaleResponse finalizeSale(PosSaleRequest request, User staff, BigDecimal verifiedAmount) {
@@ -288,7 +288,7 @@ public class PosServiceImpl implements PosService {
                 throw new IllegalArgumentException("Số tiền khách đưa (" + formatVnd(amountReceived) + ") chưa đủ để thanh toán đơn (" + formatVnd(finalAmount) + ").");
             }
             amountChange = amountReceived.subtract(finalAmount);
-        } else if ("BANK_TRANSFER".equals(paymentMethod) || "MOMO".equals(paymentMethod) && verifiedAmount != null) {
+        } else if ("BANK_TRANSFER".equals(paymentMethod) || Set.of("MOMO", "VNPAY").contains(paymentMethod) && verifiedAmount != null) {
             amountReceived = finalAmount;
             amountChange = BigDecimal.ZERO;
         } else {

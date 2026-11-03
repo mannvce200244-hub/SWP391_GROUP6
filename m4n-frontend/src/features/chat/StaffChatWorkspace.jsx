@@ -34,6 +34,7 @@ export function StaffChatWorkspace() {
   const [isClaiming, setIsClaiming] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [showCloseDialog, setShowCloseDialog] = useState(false)
+  const [takeOverTarget, setTakeOverTarget] = useState(null)
   const [refreshListKey, setRefreshListKey] = useState(0)
   const [isRefreshingManual, setIsRefreshingManual] = useState(false)
   const [listError, setListError] = useState('')
@@ -43,11 +44,22 @@ export function StaffChatWorkspace() {
   const listSequence = useRef(0)
   const selectedId = useRef(null)
   const mutationPending = useRef(false)
+  const handleAccessLost = (conversationId) => {
+    if (selectedId.current !== conversationId) return
+    selectedId.current = null
+    setActiveConversation(null)
+    setReplyText('')
+    setShowCloseDialog(false)
+    setTakeOverTarget(null)
+    setRefreshListKey((value) => value + 1)
+    addToast({ message: 'Hội thoại đã chuyển người phụ trách hoặc bạn không còn quyền truy cập.', type: 'info' })
+  }
   const canReadThread = activeConversation?.assignedStaffId === user?.id
   const thread = useChatMessages({
     conversationId: activeConversation?.id, ownerId: user?.id, enabled: canReadThread,
     isLive: activeConversation?.status === 'OPEN',
     onConversationChange: (updated) => setActiveConversation((current) => current?.id === updated.id ? updated : current),
+    onAccessLost: handleAccessLost,
   })
   const { messages, isLoading: isLoadingMessages } = thread
   const latestMessageId = messages.at(-1)?.id
@@ -127,7 +139,8 @@ export function StaffChatWorkspace() {
       setReplyText('')
       setRefreshListKey((value) => value + 1)
     } catch (error) {
-      addToast({ message: error.message || 'Không thể gửi tin nhắn phản hồi.', type: 'error' })
+      if (error.status === 403) handleAccessLost(conversationId)
+      else addToast({ message: error.message || 'Không thể gửi tin nhắn phản hồi.', type: 'error' })
     } finally {
       setIsSending(false)
       mutationPending.current = false
@@ -148,6 +161,8 @@ export function StaffChatWorkspace() {
     selectedId.current = null
     setActiveConversation(null)
     setReplyText('')
+    setShowCloseDialog(false)
+    setTakeOverTarget(null)
     setListPage(1)
     setConversations([])
     setConversationCount(0)
@@ -160,15 +175,20 @@ export function StaffChatWorkspace() {
     setActiveConversation(nextConversation)
     setReplyText('')
     setShowCloseDialog(false)
+    setTakeOverTarget(null)
   }
 
   const handleAssignToMe = async () => {
-    if (!activeConversation?.id || mutationPending.current) return
+    const target = takeOverTarget || activeConversation
+    if (!target?.id || mutationPending.current) return
     mutationPending.current = true
-    const conversationId = activeConversation.id
+    const conversationId = target.id
     setIsClaiming(true)
     try {
-      const updated = await chatService.assignStaff(conversationId)
+      const updated = target.assignedStaffId
+        ? await chatService.takeOver(conversationId, target.assignedStaffId)
+        : await chatService.assignStaff(conversationId)
+      setTakeOverTarget(null)
       if (selectedId.current === conversationId) {
         setScope('MINE')
         setListPage(1)
@@ -177,9 +197,17 @@ export function StaffChatWorkspace() {
       }
       addToast({ message: 'Đã nhận yêu cầu hỗ trợ.', type: 'success' })
     } catch (error) {
+      if (error.status === 409) {
+        setTakeOverTarget(null)
+        if (selectedId.current === conversationId) {
+          selectedId.current = null
+          setActiveConversation(null)
+          setReplyText('')
+        }
+      }
       addToast({
         message: error.status === 409
-          ? 'Cuộc trò chuyện vừa được nhân viên khác tiếp nhận.'
+          ? 'Người phụ trách đã thay đổi. Hãy làm mới và chọn lại hội thoại.'
           : error.message || 'Không thể tiếp nhận cuộc trò chuyện.',
         type: 'error',
       })
@@ -206,7 +234,8 @@ export function StaffChatWorkspace() {
       setActiveConversation(null)
       addToast({ message: 'Đã kết thúc hỗ trợ.', type: 'success' })
     } catch (error) {
-      addToast({ message: error.message || 'Không thể đóng cuộc trò chuyện.', type: 'error' })
+      if (error.status === 403) handleAccessLost(conversationId)
+      else addToast({ message: error.message || 'Không thể đóng cuộc trò chuyện.', type: 'error' })
     } finally {
       setIsClosing(false)
       mutationPending.current = false
@@ -316,18 +345,18 @@ export function StaffChatWorkspace() {
                   <div className="w-14 h-14 rounded-2xl bg-surface-secondary text-amber-700 border border-amber-200 flex items-center justify-center mb-4">
                     <Inbox size={28} aria-hidden="true" />
                   </div>
-                  <h3 className="text-base font-bold text-ink">Yêu cầu chưa có người phụ trách</h3>
+                  <h3 className="text-base font-bold text-ink">{activeConversation.assignedStaffId ? `Đang phụ trách: ${activeConversation.assignedStaffName || 'Nhân viên khác'}` : 'Yêu cầu chưa có người phụ trách'}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted">
-                    Khách hàng <strong className="text-ink">{activeConversation.customerName}</strong> đang đợi nhân viên tư vấn. Hãy bấm nút dưới đây để tiếp nhận và xem toàn bộ nội dung trao đổi.
+                    {activeConversation.assignedStaffId ? 'Nếu nhân viên hiện tại vắng mặt, bạn có thể nhận thay để tiếp tục hỗ trợ. Nội dung chỉ hiển thị sau khi nhận thay thành công.' : 'Tiếp nhận yêu cầu để xem nội dung và hỗ trợ khách hàng.'}
                   </p>
                   <button
                     type="button"
-                    onClick={handleAssignToMe}
+                    onClick={() => activeConversation.assignedStaffId ? setTakeOverTarget(activeConversation) : handleAssignToMe()}
                     disabled={isClaiming}
                     className="mt-6 min-h-11 rounded-xl bg-jade px-6 text-sm font-bold text-white hover:bg-jade-hover disabled:opacity-50 transition-colors cursor-pointer shadow-sm flex items-center gap-2"
                   >
                     <UserRoundCheck size={16} />
-                    <span>{isClaiming ? 'Đang tiếp nhận…' : 'Tiếp nhận cuộc trò chuyện này'}</span>
+                    <span>{isClaiming ? 'Đang tiếp nhận…' : activeConversation.assignedStaffId ? 'Nhận thay hội thoại' : 'Tiếp nhận cuộc trò chuyện này'}</span>
                   </button>
                 </div>
               ) : (
@@ -429,6 +458,16 @@ export function StaffChatWorkspace() {
         </section>
       </div>
 
+      <ConfirmDialog
+        isOpen={Boolean(takeOverTarget)}
+        title="Nhận thay hội thoại?"
+        description={`Bạn sẽ tiếp tục hỗ trợ thay ${takeOverTarget?.assignedStaffName || 'nhân viên hiện tại'}. Nhân viên cũ sẽ không còn quyền trả lời hội thoại này.`}
+        confirmLabel="Xác nhận nhận thay"
+        cancelLabel="Quay lại"
+        onConfirm={handleAssignToMe}
+        onCancel={() => setTakeOverTarget(null)}
+        isLoading={isClaiming}
+      />
       <ConfirmDialog
         isOpen={showCloseDialog}
         title="Kết thúc hỗ trợ?"

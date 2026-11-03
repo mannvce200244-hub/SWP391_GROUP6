@@ -26,6 +26,13 @@ class VnpayPropertiesTest {
     }
 
     @Test
+    void acceptsLoopbackReturnAndIpnUrlsForLocalDevelopment() {
+        VnpayProperties properties = new VnpayProperties(true, "DEMOV210", "test-secret",
+                "http://localhost:5173/payment-return", "http://localhost:8080/api/v1/payments/vnpay/ipn", "127.0.0.1");
+        assertThat(properties.isAvailable()).isTrue();
+    }
+
+    @Test
     void rejectsReturnUrlsThatLeaveNoRoomForOwnedOrderId() {
         assertThatThrownBy(() -> new VnpayProperties(true, "TEST1234", "test-secret",
                 "https://m4n.test/" + "a".repeat(230), "https://m4n.test/ipn", "127.0.0.1"))

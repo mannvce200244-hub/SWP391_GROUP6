@@ -1,6 +1,10 @@
 import apiClient from '../api/apiClient.js'
 
 const orderService = Object.freeze({
+  async getCheckoutVouchers() {
+    return apiClient.get('/checkout/vouchers')
+  },
+
   async previewCheckout(voucherCode, shippingVoucherCode, cartItemIds, deliveryAddress, recipientName, recipientPhone, directPurchase) {
     return apiClient.post('/checkout/preview', {
       voucherCode: voucherCode || null,

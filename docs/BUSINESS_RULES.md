@@ -104,7 +104,28 @@ automatically. Assignment/message authorization must recheck current account/rol
 concurrent assignment and account changes must not leave a disabled/demoted staff
 member owning an open conversation.
 
+User-approved extension (2026-10-29): another active ONLINE_STAFF can manually
+select an OPEN assigned conversation from the paged `ASSIGNED` queue and confirm
+“Nhận thay”. No presence timer or automatic inference of network loss is used.
+The service locks the acting account and conversation, verifies the expected
+previous assignee, then transfers ownership transactionally. Concurrent/stale
+takeovers return 409. Only metadata is visible before takeover; full transcript
+is accessible only to the current assignee/customer. The former staff loses
+read/send/close rights and receives an in-app notice. No messages are deleted.
+
+## BR-INVENTORY-04 — Inbound batch cost and QC (approved 2026-10-29)
+
+Each receipt is an inbound batch of one Product and records an integer VND purchase
+unit cost. Draft creation leaves stock unchanged. Confirmation adds requested minus
+QC-rejected quantity; actual batch cost uses that accepted quantity × unit cost.
+All rejected means zero stock increase and zero actual batch cost. Historical costs
+remain unknown when not recorded. Product creation remains a zero-stock operation.
+Admin UI exposes receipt creation and QC confirmation, with no manual decrease
+control. Detailed bounds and historical compatibility are in STOCK_CONTRACT.md.
+
 ## BR-POS-01 — POS completes and deducts immediately
+
+- **User-approved customer identification (2026-10-22):** POS Staff may search CUSTOMER accounts and showroom profiles by name/phone and explicitly choose a customer. Persist the chosen reference with the invoice; invoice name/phone remain historical snapshots. An unselected exact phone matching one CUSTOMER account links that account; multiple matches require explicit selection. Otherwise reuse the existing phone-unique showroom profile or create it atomically with successful invoice issuance. Concurrent sales for the same new phone must not create duplicates. Showroom profiles never create Users, credentials, OTP verification or login rights. Only a selected existing customer can be identified by name alone; new profiles require a valid Vietnamese mobile. Empty customer details remain a guest sale. Do not infer ownership for historical invoices, merge same-name people, overwrite existing profile details, or link accounts merely from MoMo receipt email. Failed/cancelled/refunded bills without invoices create no showroom profile.
 
 - **User-approved receipt email (2026-10-16):** queue a PDF receipt for the persisted MoMo customer email in the same transaction that issues the invoice. Deliver only after commit, independently of the browser return or cashier session. Failed/cancelled/refunded payments without an invoice never queue receipts. SMTP failure leaves the sale intact and the delivery pending for retry. Provider callbacks and reconciliation must not enqueue additional receipts for an existing invoice.
 - **User-approved pending-bill cancellation (2026-10-16):** The owning active POS Staff may explicitly cancel a MoMo bill before invoice issuance. Persist `cancel_requested` while locking the same intent used for settlement; cancelled intents cannot create an invoice or consume stock/vouchers. If money was already recorded or a later verified IPN/query reports a charge, allocate and request a full refund using the existing durable refund lifecycle. Provider timeouts do not undo cancellation or falsely establish refund success. The cashier may open a fresh bill after the server accepts cancellation; unresolved payment/refund state remains available for reconciliation. If settlement already issued an invoice, reject this pending-bill cancellation instead of silently undoing the sale.
@@ -149,6 +170,7 @@ The user delegated the Stage 1 calculation decision during the project audit.
 - Apply at most one manually entered price voucher. If multiple automatic promotions qualify, select the one with the highest calculated discount; ties select the lowest persisted identifier. The subsequent approved product/shipping extension is defined in `PRICING_CONTRACT.md` and applies before/after these order discounts as specified there.
 - Each configured threshold must be met: `OrderAmount >= MinimumOrderValue`, and total item quantity must meet `MinimumQuantity` when supplied. A value-only rule omits the quantity threshold; a quantity-only rule sets minimum value to zero.
 - Admin configures percentage, thresholds, active period and usage limit. Eligibility and usage consumption are rechecked by the backend in the actual order/POS transaction; preview does not consume usage. Cancelled online orders release the usage consumed by both mechanisms exactly once.
+- User-delegated validity decision (2026-10-22): if an expiration is configured, it must be at least one hour after both the persisted creation time and the configured start (when present). Creation uses the server clock; edits retain the original creation time. Exact one-hour boundaries are accepted. No expiration remains allowed. Create/update validate this rule; historical data is not rewritten automatically.
 - Persist the separate applied manual and automatic discount amounts and automatic promotion code with the transaction. The applied amounts must sum to the persisted total discount, including when the combined ceiling is reached.
 
 ## BR-REVENUE-01 — Completed revenue only
@@ -192,6 +214,8 @@ The user delegated the Stage 1 calculation decision during the project audit.
 - **Related entities:** User, PasswordResetToken, RefreshToken.
 
 ## BR-AUTH-09 — Email OTP registration and password reset
+
+- Google login exception approved 2026-10-26: a valid Google OIDC identity with verified email may create a verified CUSTOMER. Automatically link an existing CUSTOMER by normalized email only when Google is authoritative for the email (gmail.com, or a matching verified Workspace `hd` claim). Third-party email without that guarantee uses password login for existing accounts. Persist unique `sub`; future Google logins resolve by that identity and do not silently change email/profile. Reject disabled accounts, non-CUSTOMER roles, conflicting subjects and unverified provider email. If claiming a prior unverified signup, replace its local password with an undisclosed random BCrypt hash and increment session generation before verifying it, so an earlier sign-up initiator cannot gain access. Existing verified customers retain their password/profile/orders. A Google-created customer can set a local password using the existing email-OTP reset flow. Google login never grants staff/Admin access; ordinary registration/password recovery retain their OTP rules.
 
 - Account email uniqueness (user clarification 2026-10-16): one account per email across all roles, including unverified and inactive users. Trim surrounding whitespace and compare case-insensitively; persist new emails in lowercase. Backend pre-checks and a PostgreSQL unique expression index enforce this invariant, including concurrent requests. Duplicate registration returns HTTP 409 `EMAIL_ALREADY_EXISTS`.
 

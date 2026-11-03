@@ -27,6 +27,8 @@ const PAYMENT_STATUS_OPTIONS = [
 
 const PAYMENT_METHOD_OPTIONS = [
   { value: 'ALL', label: 'Tất cả phương thức' },
+  { value: 'VNPAY', label: 'VNPay' },
+  { value: 'MOMO', label: 'MoMo' },
   { value: 'COD', label: 'COD' },
   { value: 'ONLINE', label: 'Trực tuyến' },
   { value: 'BANK_TRANSFER', label: 'Chuyển khoản' },

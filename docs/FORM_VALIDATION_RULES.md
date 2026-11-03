@@ -148,6 +148,7 @@ row does not authorize implementation of its form.
 | Voucher create/update | Code | TBD | String | Trim/format only after the contract is approved | Validate uniqueness and approved constraints | TBD | Voucher management is in scope; code rules are not defined | TBD |
 | Voucher create/update | DiscountRate | Required for approved percentage formula | Percent input | Numeric, finite, `0 <= value <= 100`; wire representation TBD | Recalculate authoritative discount; enforce approved representation/rounding | “Tỷ lệ giảm giá phải từ 0 đến 100.” | BR-VOUCHER-01 | APPROVED range; representation TBD |
 | Voucher create/update | MinimumOrderValue | Required for approved voucher condition | Money input | Numeric, finite, and `>= 0` | Enforce `OrderAmount >= MinimumOrderValue` | “Giá trị đơn hàng tối thiểu không được âm.” | BR-VOUCHER-01 | APPROVED constraint; representation TBD |
+| Voucher create/update | validUntil | Optional | Local date/time input; ISO instant on wire | When supplied, at least 1 hour after creation and configured start; preserve exact original timestamps when editing unchanged fields | Enforce against server creation time (persisted original on update); allow exact 1 hour and omitted expiration | “Thời gian kết thúc phải cách lúc tạo và lúc bắt đầu ít nhất 1 giờ.” | BR-VOUCHER-01 | User-delegated decision 2026-10-22 |
 | Voucher create/update | Start/end dates | Not approved / TBD | Date/time TBD | Do not validate or add until expiry is approved | Enforce only future approved date rules | TBD | Voucher expiry is explicitly undefined | TBD |
 | Checkout | Customer/contact/delivery fields | TBD | TBD | Validate only approved required fields/contracts | Authoritative validation | TBD | Checkout is in scope; field list is not defined | TBD |
 | Checkout | Payment option | Yes | Backend-supported enum/reference | Require one approved backend-supported option | Validate availability and result | “Vui lòng chọn phương thức thanh toán.” | Online payment and COD are in scope; gateway/encoding TBD | APPROVED concept; contract TBD |
@@ -207,6 +208,7 @@ If any applicable check fails, the form is not complete.
 | Field | Rules |
 | --- | --- |
 | Email OTP request | Existing valid email ≤255 characters, trimmed/lowercased on backend; purpose exactly REGISTER or RESET_PASSWORD |
+| Google login (2026-10-26) | No local Google credential fields. Backend validates signed OIDC identity, verified email, unique subject and CUSTOMER role/status per BR-AUTH-09. Show loading/unavailable/error/retry and redirect pending states; never display provider internals. Only backend verified login creates the existing M4N session. |
 | Registration steps (2026-10-16) | Accepted details persist an unverified CUSTOMER; hide all profile/password inputs, clear plaintext passwords from memory and show only OTP. Login resumes verification when credentials match. Store only email/challenge metadata in the tab; verification uses no resubmitted profile/password. |
 | OTP proof | Required challenge ID ≤36 characters and code exactly six ASCII digits; email/purpose binding, expiry and attempts validated by backend |
 | OTP reset | Existing password rules (8–72 characters, ≤72 UTF-8 bytes), matching confirmation; no password/code persisted in browser storage |
@@ -221,3 +223,50 @@ Native OTP inputs permit paste/password-manager one-time-code autofill. Provider
 unavailability returns safe actionable copy; errors preserve other form fields.
 No bank/MoMo credentials are accepted by checkout. Missing API configuration
 does not generate simulated OTP, shipping rates or successful payments.
+
+
+### POS customer selection (approved 2026-10-22)
+
+Name: optional, trimmed, maximum 150 characters; searches existing customers after
+2 characters. Name alone cannot identify a customer without explicit selection.
+Phone: optional for a selected account or guest; required for a new showroom
+profile, exactly 10 digits starting 03/05/07/08/09. Editing a field clears the
+previous selected ID. Both fields empty means guest sale. Existing stored names
+and phones are never overwritten by cashier input. Backend validates all fields
+and selection consistency before charging or finalizing an invoice (BR-POS-01).
+
+
+#### Checkout selection limit feedback (2026-10-22 recheck)
+
+The existing API accepts 1–100 cart rows per checkout. Cart page and drawer disable
+checkout and show a specific recovery hint when the selection is empty/invalid
+or exceeds 100 rows; they never truncate the selection or silently buy a subset.
+
+#### Voucher datetime minimum feedback (2026-10-22 recheck)
+
+Voucher usage limits remain optional: an empty field sends null (no configured
+cap), while a supplied value must be a positive integer. Show this explanation
+below the input rather than only as its placeholder. The Admin list displays
+the used count and either the explicit maximum or “Không giới hạn lượt”; avoid
+using infinity alone. This setting is distinct from the minimum item quantity.
+
+User update: voucher periods use one native `datetime-local` picker for each
+start/end, allowing date and time to be selected together. Browser/system locale
+can determine the picker's clock display; a localized day/month/year and explicit
+12-hour confirmation with explicit SA/CH below the input makes the selected instant clear.
+The clear action removes the whole value. Native invalid input blocks submission.
+Creating a voucher rounds the suggested minimum upward to the next minute
+when needed. Show the concrete earliest local end time directly inside the end
+field group, using SA/CH and the full date for both create and edit. Recalculate
+immediately when the start changes; for new vouchers also refresh the creation
+baseline on that change and when validation fails. Explain that the one-hour
+window also starts at the actual create action,
+even if the configured start is in the past. Period errors have inline recovery associated with
+the end fields. Server creation time and the full
+one-hour rule remain authoritative. Combined date/time range validation runs
+before submission, and an invalid end focuses its datetime field.
+Present start/end as separate labeled groups under “Thời gian áp dụng”, with
+one visible label per combined input. Show a Vietnamese
+day/month/year summary of a complete selection. “Xóa” clears only that group's
+date/time value and returns focus to its input; avoid technical “Bỏ mốc” copy.
+Editing an unchanged stored timestamp preserves its original seconds/precision.

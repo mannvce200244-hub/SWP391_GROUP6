@@ -247,7 +247,7 @@ class CrossChannelInventoryIntegrationTest {
             document.setId(5L);
             return document;
         });
-        var draft = stockDocumentService.createReceipt(1L, new StockImportRequest(5, "Nhập thêm hàng"));
+        var draft = stockDocumentService.createReceipt(1L, new StockImportRequest(5, "Nhập thêm hàng", new java.math.BigDecimal("100000")));
         assertThat(sharedInventoryA.getQuantity()).isEqualTo(2);
         org.mockito.ArgumentCaptor<StockDocument> captor = org.mockito.ArgumentCaptor.forClass(StockDocument.class);
         verify(stockDocumentRepository).save(captor.capture());

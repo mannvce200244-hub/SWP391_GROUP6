@@ -12,6 +12,8 @@ public interface PosMomoPaymentRepository extends JpaRepository<PosMomoPayment, 
     Optional<PosMomoPayment> findByIdWithLock(String id);
     org.springframework.data.domain.Page<PosMomoPayment> findByStaffIdAndInvoiceIsNullOrderByCreatedAtDesc(
             Long staffId, org.springframework.data.domain.Pageable pageable);
+    org.springframework.data.domain.Page<PosMomoPayment> findByStaffIdAndProviderAndInvoiceIsNullOrderByCreatedAtDesc(
+            Long staffId, String provider, org.springframework.data.domain.Pageable pageable);
 
     // A bounded durable delivery queue; the attempt timestamp also leases concurrent workers.
     @Query("""

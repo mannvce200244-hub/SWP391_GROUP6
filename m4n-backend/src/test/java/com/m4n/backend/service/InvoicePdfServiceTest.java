@@ -125,5 +125,12 @@ class InvoicePdfServiceTest {
                     "0987654321", "BAU-001", "SAO-001", "Đàn Bầu Gỗ Mun Thân Liền", "Tiền thừa trả khách");
             assertThat(content.toString().split("BAU-001", -1)).hasSize(2);
         }
+
+        sampleInvoice.setPaymentMethod("VNPAY");
+        byte[] vnpayPdf = invoicePdfService.generateInvoicePdf(100L);
+        try (PdfReader reader = new PdfReader(vnpayPdf)) {
+            PdfTextExtractor extractor = new PdfTextExtractor(reader);
+            assertThat(extractor.getTextFromPage(1)).contains("VNPay (Thẻ ATM / QR)");
+        }
     }
 }

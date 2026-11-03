@@ -54,6 +54,14 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     )
     Page<Conversation> findMyOpenQueue(@Param("staffId") Long staffId, Pageable pageable);
 
+    // Explicit ordering matches the existing queues; exclude the requesting staff in SQL.
+    @EntityGraph(attributePaths = {"customer", "assignedStaff"})
+    @Query(value = "SELECT c FROM Conversation c WHERE c.status = com.m4n.backend.entity.ConversationStatus.OPEN " +
+            "AND c.assignedStaff.id <> :staffId ORDER BY COALESCE(c.lastMessageAt, c.createdAt) DESC, c.id DESC",
+            countQuery = "SELECT COUNT(c) FROM Conversation c WHERE c.status = com.m4n.backend.entity.ConversationStatus.OPEN " +
+                    "AND c.assignedStaff.id <> :staffId")
+    Page<Conversation> findOtherAssignedQueue(@Param("staffId") Long staffId, Pageable pageable);
+
     @EntityGraph(attributePaths = {"customer", "assignedStaff"})
     @Query(
             value = "SELECT c FROM Conversation c WHERE c.status = com.m4n.backend.entity.ConversationStatus.CLOSED " +

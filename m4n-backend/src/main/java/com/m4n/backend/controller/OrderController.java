@@ -7,14 +7,18 @@ import com.m4n.backend.dto.response.CheckoutPreviewResponse;
 import com.m4n.backend.dto.response.OrderConfirmResultResponse;
 import com.m4n.backend.dto.response.OrderDetailResponse;
 import com.m4n.backend.dto.response.OrderResponse;
+import com.m4n.backend.dto.response.VoucherResponse;
 import com.m4n.backend.entity.OrderStatus;
+import com.m4n.backend.entity.PromotionType;
 import com.m4n.backend.service.OrderService;
+import com.m4n.backend.service.VoucherService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -29,6 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -39,10 +44,26 @@ import java.util.Map;
 public class OrderController {
 
     private final OrderService orderService;
+    private final VoucherService voucherService;
 
     // ==========================================
     // CUSTOMER COMMERCE ENDPOINTS
     // ==========================================
+
+    @GetMapping("/checkout/vouchers")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @Operation(summary = "Get active manual vouchers for checkout suggestions", description = "Returns active manual vouchers so checkout can suggest eligible codes by order value.")
+    public ResponseEntity<List<VoucherResponse>> getCheckoutVouchers() {
+        return ResponseEntity.ok(
+                voucherService.searchVouchers(
+                        "",
+                        PromotionType.MANUAL,
+                        true,
+                        "ACTIVE",
+                        PageRequest.of(0, 20, Sort.by(Sort.Direction.ASC, "id"))
+                ).getContent()
+        );
+    }
 
     @PostMapping("/checkout/preview")
     @PreAuthorize("hasRole('CUSTOMER')")

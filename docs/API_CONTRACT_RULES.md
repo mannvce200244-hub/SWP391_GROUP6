@@ -403,6 +403,29 @@ Saved response: `id`, all five recipient text fields, nullable structured `deliv
 
 ## Contract approval checklist
 
+### Google customer login — approved 2026-10-26
+
+- Public `GET /api/v1/auth/google/options`: `{available: boolean}`, no-store;
+  false when disabled. No credentials/provider tokens exposed.
+- Browser navigation `GET /api/v1/auth/google/authorization/google` starts
+  OIDC with state, nonce and PKCE S256 in a short-lived HttpOnly/SameSite=Lax
+  OAuth session. Start and callback go through the frontend's same-origin API
+  proxy on hosting; no arbitrary return destination is accepted. Local HTTP
+  also supports the registered `http://localhost:8080/login/oauth2/code/google`
+  callback with a localhost frontend. OAuth cookies use path `/` on that hostname.
+- Provider `GET /api/v1/auth/google/callback/google`: official Spring OIDC
+  verification and CUSTOMER-only account policy. Success sets the existing
+  HttpOnly refresh cookie and redirects to the configured frontend
+  `/login?google=success`; AuthContext refreshes the existing M4N session.
+  No JWT, Google token, email or authorization code is put into that redirect.
+  Errors redirect with only `google=cancelled|failed|not_allowed` and generic
+  UI messages. OAuth session and provider tokens are discarded at completion.
+  `GOOGLE_FRONTEND_URL` defaults to `FRONTEND_URL`; HTTPS callbacks must match
+  that frontend origin exactly. See `GOOGLE_LOGIN_PLAN.md` for local/host setup.
+- Google OAuth authentication does not authenticate stateless protected APIs.
+  Password login, OTP reset, inactive-account checks and role generation remain
+  authoritative. New accounts get CUSTOMER only. See BR-AUTH-09.
+
 For frontend integration, the feature owner and Frontend Lead complete this
 contract before wiring a real request. The owner supplies the approved feature
 semantics and DTO behavior; the Frontend Lead connects it through the shared
@@ -434,3 +457,22 @@ Checklist:
 - [ ] Frontend and backend changes agree and are tested together.
 - [ ] No Entity, secret, raw exception, or client-authoritative business value crosses the boundary.
 - [ ] Documentation status changes from TBD only after an explicit team decision.
+
+
+### POS customer attribution (approved 2026-10-22)
+
+- `GET /api/v1/pos/customers?q=...`: POS_STAFF only. Query 2–150 characters;
+  shorter queries return empty lists. Returns `{accounts, profiles}`, each at most
+  10 matches ordered by ID. Entries expose only `customerId`, `posCustomerId`,
+  `fullName`, `phone`; no email, credentials or login status.
+- CASH `POST /pos/sales` and nested `sale` in `POST /pos/payments/momo` accept
+  nullable positive `customerId` (CUSTOMER User) or `posCustomerId` (showroom
+  profile), never both. If supplied, phone must match the selection.
+- With no selection, exact phone resolves one CUSTOMER account first, otherwise
+  reuses/creates a showroom profile. Multiple matching accounts require explicit
+  selection (400). Name alone requires selection or phone (400). Empty fields
+  preserve guest checkout. Missing/wrong-role selections return 404.
+- Invoice responses include nullable `customerId` / `posCustomerId` plus name and
+  phone snapshots. New profiles persist in the invoice transaction only after
+  successful payment; MoMo intent creation never creates a profile. Legacy
+  persisted name-only MoMo intents remain guest snapshots when completed.
