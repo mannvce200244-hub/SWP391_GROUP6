@@ -191,10 +191,12 @@ public class VoucherServiceImpl implements VoucherService {
             throw new IllegalArgumentException("Mã voucher đã tồn tại: " + code);
         }
 
-        validateVoucherPeriod(request.validFrom(), request.validUntil());
+        Instant createdAt = Instant.now();
+        validateVoucherPeriod(createdAt, request.validFrom(), request.validUntil());
         PromotionType type = request.promotionType() == null ? PromotionType.MANUAL : request.promotionType();
         validateDiscountConfiguration(type, request.discountRate(), request.fixedDiscountAmount());
         Voucher voucher = Voucher.builder()
+                .createdAt(createdAt)
                 .code(code)
                 .discountRate(type == PromotionType.SHIPPING ? BigDecimal.ZERO : request.discountRate())
                 .fixedDiscountAmount(request.fixedDiscountAmount())
@@ -218,7 +220,7 @@ public class VoucherServiceImpl implements VoucherService {
         Voucher voucher = voucherRepository.findByIdWithLock(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Voucher không tồn tại: " + id));
 
-        validateVoucherPeriod(request.validFrom(), request.validUntil());
+        validateVoucherPeriod(voucher.getCreatedAt(), request.validFrom(), request.validUntil());
         PromotionType type = request.promotionType() == null ? voucher.getPromotionType() : request.promotionType();
         validateDiscountConfiguration(type, request.discountRate(), request.fixedDiscountAmount());
         if (type != voucher.getPromotionType() && hasHistoricalUsage(voucher)) {
@@ -326,9 +328,12 @@ public class VoucherServiceImpl implements VoucherService {
         return null;
     }
 
-    private void validateVoucherPeriod(Instant validFrom, Instant validUntil) {
-        if (validFrom != null && validUntil != null && !validUntil.isAfter(validFrom)) {
-            throw new IllegalArgumentException("Thời gian kết thúc phải sau thời gian bắt đầu.");
+    private void validateVoucherPeriod(Instant createdAt, Instant validFrom, Instant validUntil) {
+        if (validUntil == null) return;
+        Instant baseline = createdAt == null ? Instant.now() : createdAt;
+        if (validFrom != null && validFrom.isAfter(baseline)) baseline = validFrom;
+        if (validUntil.isBefore(baseline.plusSeconds(3600))) {
+            throw new IllegalArgumentException("Thời gian kết thúc phải cách lúc tạo và lúc bắt đầu ít nhất 1 giờ.");
         }
     }
 

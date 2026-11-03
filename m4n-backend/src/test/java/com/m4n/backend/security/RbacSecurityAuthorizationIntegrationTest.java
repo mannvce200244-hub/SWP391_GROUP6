@@ -21,6 +21,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 public class RbacSecurityAuthorizationIntegrationTest {
 
+    @Test
+    @WithMockUser(username = "customer@m4n.vn", roles = "CUSTOMER")
+    void customerCannotTakeOverOrListAssignedConversations() throws Exception {
+        mockMvc.perform(get("/api/v1/chat/staff/conversations?scope=ASSIGNED")).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/chat/conversations/1/take-over").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedStaffId\":3}")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "staff@m4n.vn", roles = "ONLINE_STAFF")
+    void takeoverRequiresValidExpectedAssignee() throws Exception {
+        for (String body : new String[]{"{}", "{\"expectedStaffId\":0}", "{\"expectedStaffId\":-1}"}) {
+            mockMvc.perform(post("/api/v1/chat/conversations/1/take-over").contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "admin@m4n.vn", roles = "ADMIN")
+    void receiptRequiresWholeNonnegativePurchaseCost() throws Exception {
+        for (String body : new String[]{"{\"quantity\":50}", "{\"quantity\":50,\"unitCost\":-1}",
+                "{\"quantity\":50,\"unitCost\":1.5}", "{\"quantity\":50,\"unitCost\":10000000000}"}) {
+            mockMvc.perform(post("/api/v1/inventory/1/import").contentType(MediaType.APPLICATION_JSON)
+                    .content(body)).andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.unitCost").exists());
+        }
+    }
+
     @Autowired
     private WebApplicationContext context;
 

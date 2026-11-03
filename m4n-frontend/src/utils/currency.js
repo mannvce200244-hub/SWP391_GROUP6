@@ -5,6 +5,9 @@ export function formatCurrencyVND(value) {
     return '0 ₫'
   }
 
+  if (typeof value === 'bigint' || (typeof value === 'string' && /^-?\d+(?:\.0+)?$/.test(value))) {
+    return new Intl.NumberFormat(VIETNAMESE_LOCALE).format(BigInt(String(value).replace(/\.0+$/, ''))) + ' ₫'
+  }
   const numericValue = Number(value)
   if (!Number.isFinite(numericValue)) {
     return String(value)

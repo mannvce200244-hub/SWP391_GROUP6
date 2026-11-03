@@ -5,12 +5,13 @@ import { extractContent, hasMessageGap, mergeMessages } from './chatMessages.js'
 const PAGE_SIZE = 100
 
 // One thread owns its history, polling lifetime, and older-message pagination.
-export default function useChatMessages({ conversationId, ownerId, enabled, isLive, onConversationChange }) {
+export default function useChatMessages({ conversationId, ownerId, enabled, isLive, onConversationChange, onAccessLost }) {
   const [state, setState] = useState(null)
   const [retryKey, setRetryKey] = useState(0)
   const generation = useRef(0)
   const olderPending = useRef(false)
   const updateConversation = useEffectEvent(onConversationChange)
+  const accessLost = useEffectEvent(() => onAccessLost?.(conversationId))
   const threadKey = enabled && conversationId ? `${ownerId}:${conversationId}` : null
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function useChatMessages({ conversationId, ownerId, enabled, isLi
         error: '', olderError: '', loadingOlder: false, nextPage: 1, hasOlder: page.last === false,
       })
     }).catch((error) => {
+      if (active && error.status === 403) { setState(null); accessLost(); return }
       if (active) setState((current) => ({
         ...(current?.key === threadKey ? current : { key: threadKey, messages: [], nextPage: 1 }),
         loading: false, error: error.message || 'Không thể tải tin nhắn.',
@@ -65,6 +67,7 @@ export default function useChatMessages({ conversationId, ownerId, enabled, isLi
           }
         })
       } catch (error) {
+        if (active && error.status === 403) { setState(null); accessLost(); return }
         if (active) setState((current) => current?.key !== threadKey ? current : {
           ...current, error: error.message || 'Mất kết nối hỗ trợ. Vui lòng thử lại.',
         })
@@ -90,6 +93,11 @@ export default function useChatMessages({ conversationId, ownerId, enabled, isLi
         hasOlder: current.gapPending || page.last === false, gapPending: false,
       }))
     } catch (error) {
+      if (generation.current === requestGeneration && error.status === 403) {
+        setState(null)
+        onAccessLost?.(conversationId)
+        return
+      }
       if (generation.current === requestGeneration) setState((current) => ({
         ...current, loadingOlder: false, olderError: error.message || 'Không thể tải tin nhắn cũ.',
       }))

@@ -18,6 +18,9 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class MomoPaymentServiceImpl implements MomoPaymentService {
@@ -32,15 +35,25 @@ public class MomoPaymentServiceImpl implements MomoPaymentService {
     private final MomoGateway gateway;
     private final PendingOrderCancellationService cancellation;
     private final PosMomoPaymentService posPayments;
+    private final PosMomoPaymentRepository posPaymentRepo;
     private final TransactionTemplate transaction;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public MomoPaymentServiceImpl(OrderRepository orders, PaymentAttemptRepository attempts, UserRepository users,
             MomoProperties properties, MomoGateway gateway, PlatformTransactionManager manager,
-            PendingOrderCancellationService cancellation, PosMomoPaymentService posPayments) {
+            PendingOrderCancellationService cancellation, PosMomoPaymentService posPayments,
+            PosMomoPaymentRepository posPaymentRepo) {
         this.orders = orders; this.attempts = attempts; this.users = users; this.properties = properties;
         this.gateway = gateway; this.transaction = new TransactionTemplate(manager);
         this.cancellation = cancellation;
         this.posPayments = posPayments;
+        this.posPaymentRepo = posPaymentRepo;
+    }
+
+    public MomoPaymentServiceImpl(OrderRepository orders, PaymentAttemptRepository attempts, UserRepository users,
+            MomoProperties properties, MomoGateway gateway, PlatformTransactionManager manager,
+            PendingOrderCancellationService cancellation, PosMomoPaymentService posPayments) {
+        this(orders, attempts, users, properties, gateway, manager, cancellation, posPayments, null);
     }
 
     @Override public boolean isAvailable() { return properties.available(); }
@@ -130,6 +143,71 @@ public class MomoPaymentServiceImpl implements MomoPaymentService {
             applyPayment(order, attempt, result);
             return response(order, latest(id), actor, "Kết quả được lấy từ API đối soát MoMo.");
         });
+    }
+
+    @Override
+    public void simulatePayment(String reference, boolean success) {
+        available();
+        if (reference == null || reference.isBlank()) {
+            throw new IllegalArgumentException("Mã giao dịch không hợp lệ.");
+        }
+
+        String amountStr;
+        String orderInfo;
+
+        if (reference.startsWith("pos-")) {
+            if (posPaymentRepo == null) throw new IllegalStateException("Chưa cấu hình PosMomoPaymentRepository.");
+            PosMomoPayment posPayment = posPaymentRepo.findById(reference)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch POS."));
+            amountStr = posPayment.getAmount().toBigIntegerExact().toString();
+            orderInfo = "Thanh toan POS " + reference;
+        } else {
+            PaymentAttempt attempt = attempts.findByTransactionReference(reference)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giao dịch."));
+            Long orderId = attempts.findOrderIdByTransactionReference(reference)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn hàng."));
+            amountStr = attempt.getAmount().toBigIntegerExact().toString();
+            orderInfo = "Thanh toan don hang " + orderId;
+        }
+
+        Map<String, String> ipn = new LinkedHashMap<>();
+        ipn.put("amount", amountStr);
+        ipn.put("extraData", "");
+        ipn.put("message", success ? "Thanh toán thành công qua MoMo Simulator" : "Giao dịch bị hủy bởi người dùng");
+        ipn.put("orderId", reference);
+        ipn.put("orderInfo", orderInfo);
+        ipn.put("orderType", "momo_wallet");
+        ipn.put("partnerCode", properties.partnerCode());
+        ipn.put("payType", "qr");
+        ipn.put("requestId", reference);
+        ipn.put("responseTime", String.valueOf(System.currentTimeMillis()));
+        ipn.put("resultCode", success ? "0" : "1006");
+        ipn.put("transId", success ? String.valueOf(System.currentTimeMillis()) : "0");
+
+        String content = "accessKey=" + properties.accessKey() + "&"
+                + "amount=" + ipn.get("amount") + "&"
+                + "extraData=" + ipn.get("extraData") + "&"
+                + "message=" + ipn.get("message") + "&"
+                + "orderId=" + ipn.get("orderId") + "&"
+                + "orderInfo=" + ipn.get("orderInfo") + "&"
+                + "orderType=" + ipn.get("orderType") + "&"
+                + "partnerCode=" + ipn.get("partnerCode") + "&"
+                + "payType=" + ipn.get("payType") + "&"
+                + "requestId=" + ipn.get("requestId") + "&"
+                + "responseTime=" + ipn.get("responseTime") + "&"
+                + "resultCode=" + ipn.get("resultCode") + "&"
+                + "transId=" + ipn.get("transId");
+
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(properties.secretKey().getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            String signature = HexFormat.of().formatHex(mac.doFinal(content.getBytes(StandardCharsets.UTF_8)));
+            ipn.put("signature", signature);
+        } catch (java.security.GeneralSecurityException ex) {
+            throw new IllegalStateException("Không thể tạo chữ ký giả lập", ex);
+        }
+
+        processIpn(ipn);
     }
 
     @Override

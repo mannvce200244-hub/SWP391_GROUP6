@@ -24,6 +24,7 @@ test('invalid direct links never fall back to cart checkout', () => {
 })
 
 test('direct purchase input contains no client pricing or cart IDs', () => {
-  const result = parseDirectPurchase('?productId=1&quantity=2&price=1&cartItemIds=99')
+  const result = parseDirectPurchase('?productId=1&quantity=2&price=1')
   assert.deepEqual(result.directPurchase, { productId: 1, quantity: 2 })
+  assert.ok(parseDirectPurchase('?productId=1&quantity=2&cartItemIds=99').error)
 })

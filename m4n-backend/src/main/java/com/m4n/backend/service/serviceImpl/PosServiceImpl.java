@@ -28,6 +28,7 @@ import com.m4n.backend.entity.PaymentState;
 import com.m4n.backend.entity.RefundState;
 import tools.jackson.databind.ObjectMapper;
 import com.m4n.backend.service.PosService;
+import com.m4n.backend.service.PosCustomerService;
 import com.m4n.backend.service.InventoryService;
 import com.m4n.backend.service.ProductPricingService;
 import com.m4n.backend.service.ProductPrice;
@@ -73,6 +74,7 @@ public class PosServiceImpl implements PosService {
     private final ProductPricingService productPricingService;
     private final PosMomoPaymentRepository momoPayments;
     private final ObjectMapper json;
+    private final PosCustomerService posCustomerService;
 
     @Override
     @Transactional(readOnly = true)
@@ -186,7 +188,7 @@ public class PosServiceImpl implements PosService {
     public PosSaleResponse finalizeSale(PosSaleRequest request) {
         User staff = getAuthenticatedStaff();
         if (!Set.of("CASH", "BANK_TRANSFER").contains(request.getPaymentMethod().trim().toUpperCase(Locale.ROOT))) {
-            throw new IllegalArgumentException("MoMo phải được xác minh qua cổng thanh toán trước khi xuất hóa đơn.");
+            throw new IllegalArgumentException("Thanh toán trực tuyến (VNPay/MoMo) phải được xác minh qua cổng thanh toán trước khi xuất hóa đơn.");
         }
         return finalizeSale(request, staff, null);
     }
@@ -198,13 +200,19 @@ public class PosServiceImpl implements PosService {
         if (payment.isCancelRequested() || payment.getState() != PaymentState.SUCCEEDED || payment.getRefundState() != RefundState.NONE
                 || payment.getInvoice() != null) return;
         PosSaleRequest request = json.readValue(payment.getBill(), PosSaleRequest.class);
-        request.setPaymentMethod("MOMO");
+        request.setPaymentMethod("VNPAY".equals(payment.getProvider()) ? "VNPAY" : "MOMO");
         var sale = finalizeSale(request, payment.getStaff(), payment.getAmount());
         payment.setInvoice(invoiceRepository.getReferenceById(sale.getInvoiceId()));
-        payment.setReceiptEmailQueuedAt(Instant.now());
+        if (payment.getCustomerEmail() != null && !payment.getCustomerEmail().isBlank()) payment.setReceiptEmailQueuedAt(Instant.now());
     }
 
     private PosSaleResponse finalizeSale(PosSaleRequest request, User staff, BigDecimal verifiedAmount) {
+
+        // Older persisted MoMo intents can contain a name-only guest snapshot.
+        // New intents are validated before allocation and cannot enter this legacy path.
+        boolean legacyGuest = verifiedAmount != null && request.getCustomerId() == null && request.getPosCustomerId() == null
+                && (request.getCustomerPhone() == null || request.getCustomerPhone().isBlank());
+        if (!legacyGuest) posCustomerService.validateCustomer(request);
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Hóa đơn POS phải có ít nhất một sản phẩm.");
@@ -280,7 +288,7 @@ public class PosServiceImpl implements PosService {
                 throw new IllegalArgumentException("Số tiền khách đưa (" + formatVnd(amountReceived) + ") chưa đủ để thanh toán đơn (" + formatVnd(finalAmount) + ").");
             }
             amountChange = amountReceived.subtract(finalAmount);
-        } else if ("BANK_TRANSFER".equals(paymentMethod) || "MOMO".equals(paymentMethod) && verifiedAmount != null) {
+        } else if ("BANK_TRANSFER".equals(paymentMethod) || Set.of("MOMO", "VNPAY").contains(paymentMethod) && verifiedAmount != null) {
             amountReceived = finalAmount;
             amountChange = BigDecimal.ZERO;
         } else {
@@ -325,6 +333,8 @@ public class PosServiceImpl implements PosService {
                 .createdAt(Instant.now())
                 .items(new ArrayList<>())
                 .build();
+
+        if (!legacyGuest) posCustomerService.attachCustomer(invoice, request);
 
         for (Map.Entry<Long, Integer> entry : consolidatedItems.entrySet()) {
             Long productId = entry.getKey();
@@ -507,6 +517,8 @@ public class PosServiceImpl implements PosService {
                 .staffName(invoice.getStaff() != null ? invoice.getStaff().getFullName() : "Nhân viên POS")
                 .customerName(invoice.getCustomerName())
                 .customerPhone(invoice.getCustomerPhone())
+                .customerId(invoice.getCustomer() == null ? null : invoice.getCustomer().getId())
+                .posCustomerId(invoice.getPosCustomer() == null ? null : invoice.getPosCustomer().getId())
                 .subtotal(invoice.getSubtotal())
                 .originalTotalAmount(invoice.getOriginalTotalAmount() == null ? invoice.getSubtotal() : invoice.getOriginalTotalAmount())
                 .productDiscountAmount(invoice.getProductDiscountAmount() == null ? BigDecimal.ZERO : invoice.getProductDiscountAmount())

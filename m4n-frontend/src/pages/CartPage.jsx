@@ -13,6 +13,7 @@ import { IconInstrument } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import { formatCurrencyVND } from '../utils/currency.js'
+import { cartCheckoutUrl, cartSelectionError } from '../features/cart/cartSelection.js'
 
 function CartPage() {
   const {
@@ -33,6 +34,7 @@ function CartPage() {
   const { addToast } = useToast()
 
   const items = cart?.items || []
+  const checkoutError = cartSelectionError(selectedCartItemIds)
   const selectedIdSet = new Set(selectedCartItemIds)
   const selectedQuantity = selectedCartItems.reduce((total, item) => total + item.quantity, 0)
   const selectedTotal = selectedCartItems.reduce((total, item) => total + Number(item.subtotal || 0), 0)
@@ -277,17 +279,17 @@ function CartPage() {
 
               <button
                 type="button"
-                disabled={loading || selectedCartItems.length === 0}
-                onClick={() => navigateTo(CUSTOMER_ROUTES.checkout)}
+                disabled={loading || Boolean(checkoutError)}
+                onClick={() => navigateTo(cartCheckoutUrl(selectedCartItemIds))}
                 className="w-full h-12 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-sm shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span>Tiến hành thanh toán</span>
                 <ChevronRight size={16} />
               </button>
 
-              {selectedCartItems.length === 0 && (
+              {checkoutError && (
                 <p role="status" className="text-sm text-danger text-center">
-                  Vui lòng chọn ít nhất một sản phẩm để thanh toán.
+                  {checkoutError}
                 </p>
               )}
 

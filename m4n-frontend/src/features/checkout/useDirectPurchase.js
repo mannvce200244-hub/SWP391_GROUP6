@@ -1,23 +1,13 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import productService from '../../services/productService.js'
-import { CUSTOMER_ROUTES, ROUTE_CHANGE_EVENT, normalizePathname } from '../../routes/customerRoutes.js'
+import { ROUTE_CHANGE_EVENT } from '../../routes/customerRoutes.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import { directCheckoutUrl, parseDirectPurchase } from './directPurchase.js'
 import { getFirstProductImage } from '../catalog/productMedia.js'
-
-function subscribe(listener) {
-  window.addEventListener(ROUTE_CHANGE_EVENT, listener)
-  window.addEventListener('popstate', listener)
-  return () => {
-    window.removeEventListener(ROUTE_CHANGE_EVENT, listener)
-    window.removeEventListener('popstate', listener)
-  }
-}
-
-const getSearch = () => normalizePathname(window.location.pathname) === CUSTOMER_ROUTES.checkout ? window.location.search : ''
+import useCheckoutSearch from './useCheckoutSearch.js'
 
 export default function useDirectPurchase() {
-  const search = useSyncExternalStore(subscribe, getSearch)
+  const search = useCheckoutSearch()
   const { directPurchase, error: inputError } = useMemo(() => parseDirectPurchase(search), [search])
   const [retry, setRetry] = useState(0)
   const [result, setResult] = useState(null)

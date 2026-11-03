@@ -95,7 +95,7 @@ class PosServiceTest {
                 invoiceRepository,
                 userRepository,
                 voucherService, inventoryService, productPricingService,
-                mock(com.m4n.backend.repository.PosMomoPaymentRepository.class), mock(tools.jackson.databind.ObjectMapper.class)
+                mock(com.m4n.backend.repository.PosMomoPaymentRepository.class), mock(tools.jackson.databind.ObjectMapper.class), mock(PosCustomerService.class)
         );
         lenient().when(voucherService.consumeDiscounts(any(), any(), anyInt())).thenAnswer(invocation ->
                 new DiscountCalculationResponse(null, null, BigDecimal.ZERO, BigDecimal.ZERO,

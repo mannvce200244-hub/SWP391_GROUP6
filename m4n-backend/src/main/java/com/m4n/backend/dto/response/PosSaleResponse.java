@@ -22,6 +22,8 @@ public class PosSaleResponse {
     private String staffName;
     private String customerName;
     private String customerPhone;
+    private Long customerId;
+    private Long posCustomerId;
     private BigDecimal subtotal;
     private String formattedSubtotal;
     private BigDecimal discount;

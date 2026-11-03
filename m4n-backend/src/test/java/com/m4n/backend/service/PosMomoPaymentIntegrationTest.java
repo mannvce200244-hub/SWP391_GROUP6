@@ -33,6 +33,7 @@ class PosMomoPaymentIntegrationTest {
     @Autowired PosMomoPaymentService service;
     @Autowired MomoPaymentService onlineMomo;
     @Autowired PosService pos;
+    @Autowired PosCustomerRepository profiles;
     @Autowired PosMomoPaymentRepository payments;
     @Autowired ProductRepository products;
     @Autowired CategoryRepository categories;
@@ -67,11 +68,13 @@ class PosMomoPaymentIntegrationTest {
 
     @Test void creationDoesNotDeductStockOrCreateInvoiceAndRetryKeepsImmutableIntent() {
         long count = invoices.count();
+        long customerCount = profiles.count();
         var first = service.create(request(null), staff.getEmail(), "http://localhost:5173");
         var changed = request(null); changed.sale().getItems().getFirst().setQuantity(3);
         assertThat(service.create(changed, staff.getEmail(), "https://m4n.test")).isEqualTo(first);
         assertThat(stock()).isEqualTo(5); assertThat(invoices.count()).isEqualTo(count);
         verify(gateway, times(1)).createPos(eq(id), eq(new BigDecimal("200000.00")), eq("buyer@example.test"), eq("http://localhost:5173/pos"));
+        assertThat(profiles.count()).isEqualTo(customerCount);
         assertThat(first.status()).isEqualTo("PENDING"); assertThat(first.invoiceId()).isNull();
         assertThat(payments.findById(id).orElseThrow().getReceiptEmailQueuedAt()).isNull();
     }
@@ -88,6 +91,8 @@ class PosMomoPaymentIntegrationTest {
         assertThat(status.invoiceId()).isNotNull(); assertThat(stock()).isEqualTo(3);
         assertThat(invoices.count()).isEqualTo(count + 1);
         var invoice = pos.getInvoiceById(status.invoiceId(), staff.getEmail());
+        assertThat(invoice.getPosCustomerId()).isNotNull();
+        assertThat(invoice.getPosCustomerId()).isEqualTo(profiles.findByPhone(request(null).sale().getCustomerPhone()).orElseThrow().getId());
         assertThat(invoice.getPaymentMethod()).isEqualTo("MOMO");
         assertThat(invoice.getAmountReceived()).isEqualByComparingTo("200000");
         assertThat(payments.findById(id).orElseThrow().getReceiptEmailQueuedAt()).isNotNull();
@@ -116,6 +121,7 @@ class PosMomoPaymentIntegrationTest {
         service.processIpn(result("1006"));
         assertThat(service.status(id, staff.getEmail()).status()).isEqualTo("FAILED");
         assertThat(service.status(id, staff.getEmail()).invoiceId()).isNull(); assertThat(stock()).isEqualTo(5);
+        assertThat(profiles.findByPhone(request(null).sale().getCustomerPhone())).isEmpty();
         assertThat(payments.findById(id).orElseThrow().getReceiptEmailQueuedAt()).isNull();
     }
 
@@ -344,13 +350,63 @@ class PosMomoPaymentIntegrationTest {
         verify(gateway, never()).refund(anyString(), anyString(), any(), anyString());
     }
 
+    @Test void verifiedMomoLinksSelectedOnlineCustomerWithoutCreatingShowroomProfile() {
+        var request = request(null);
+        String phone = request.sale().getCustomerPhone();
+        var customer = users.saveAndFlush(User.builder().email(id + "@example.test").password("fixture-only")
+                .fullName("Selected online buyer").phone(phone).role(roles.findByName(RoleName.CUSTOMER).orElseThrow()).build());
+        request.sale().setCustomerId(customer.getId());
+        service.create(request, staff.getEmail(), "http://localhost:5173");
+        service.processIpn(result("0")); service.processIpn(result("0"));
+        var invoice = pos.getInvoiceById(service.status(id, staff.getEmail()).invoiceId(), staff.getEmail());
+        assertThat(invoice.getCustomerId()).isEqualTo(customer.getId());
+        assertThat(invoice.getPosCustomerId()).isNull();
+        assertThat(invoice.getCustomerName()).isEqualTo("Selected online buyer");
+        assertThat(profiles.findByPhone(phone)).isEmpty();
+        assertThat(stock()).isEqualTo(3);
+    }
+
+    @Test void verifiedMomoReusesExplicitlySelectedShowroomProfile() {
+        var request = request(null);
+        var profile = profiles.saveAndFlush(PosCustomer.builder().fullName("Showroom buyer")
+                .phone(request.sale().getCustomerPhone()).createdAt(java.time.Instant.now()).build());
+        request.sale().setPosCustomerId(profile.getId());
+        service.create(request, staff.getEmail(), "http://localhost:5173");
+        service.processIpn(result("0"));
+        var invoice = pos.getInvoiceById(service.status(id, staff.getEmail()).invoiceId(), staff.getEmail());
+        assertThat(invoice.getPosCustomerId()).isEqualTo(profile.getId());
+        assertThat(invoice.getCustomerId()).isNull();
+        assertThat(invoice.getCustomerName()).isEqualTo("Showroom buyer");
+    }
+
+    @Test void invalidCustomerFailsBeforeAllocatingOrCallingGateway() {
+        var request = request(null); request.sale().setCustomerPhone(null);
+        assertThatThrownBy(() -> service.create(request, staff.getEmail(), "http://localhost:5173"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(payments.findById(id)).isEmpty();
+        verify(gateway, never()).createPos(anyString(), any(), anyString(), anyString());
+    }
+
+    @Test void legacyNameOnlyPersistedIntentCompletesAsGuest() {
+        create();
+        var payment = payments.findById(id).orElseThrow();
+        var legacy = request(null).sale(); legacy.setCustomerPhone(null);
+        payment.setBill(json.writeValueAsString(legacy)); payments.saveAndFlush(payment);
+        service.processIpn(result("0"));
+        var invoice = pos.getInvoiceById(service.status(id, staff.getEmail()).invoiceId(), staff.getEmail());
+        assertThat(invoice.getCustomerName()).isEqualTo("Test buyer");
+        assertThat(invoice.getCustomerId()).isNull(); assertThat(invoice.getPosCustomerId()).isNull();
+        assertThat(stock()).isEqualTo(3);
+        verify(gateway, never()).refund(anyString(), anyString(), any(), anyString());
+    }
+
     private User cashier(String suffix) {
         return users.saveAndFlush(User.builder().email("pos-momo-" + suffix + "@example.test").password("fixture-only")
                 .fullName("POS fixture").role(roles.findByName(RoleName.POS_STAFF).orElseThrow()).isActive(true).build());
     }
     private PosMomoPaymentRequest request(String voucher) {
         var sale = PosSaleRequest.builder().items(List.of(PosSaleItemRequest.builder().productId(product.getId()).quantity(2).build()))
-                .paymentMethod("MOMO").customerName("Test buyer").voucherCode(voucher).build();
+                .paymentMethod("MOMO").customerName("Test buyer").customerPhone("09" + String.format("%08d", Integer.toUnsignedLong(id.hashCode()) % 100000000)).voucherCode(voucher).build();
         return new PosMomoPaymentRequest(id, sale, "buyer@example.test", BigDecimal.valueOf(voucher == null ? 200000 : 180000));
     }
     private void create() { service.create(request(null), staff.getEmail(), "http://localhost:5173"); }

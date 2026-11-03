@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react'
+import { Pencil, Eye } from 'lucide-react'
 import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import ProductCard from '../features/catalog/ProductCard.jsx'
 import RelatedArticles from '../features/content/RelatedArticles.jsx'
+import useAuth from '../features/auth/useAuth.js'
+import ArtisanManagementModal from '../components/admin/ArtisanManagementModal.jsx'
 import RouterLink from '../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
+import { isBackOfficeAdmin } from '../routes/roleUtils.js'
 import artisanService from '../services/artisanService.js'
 import productService from '../services/productService.js'
 
 function ArtisanDetailPage({ artisanId }) {
+  const { user } = useAuth()
+  const isAdmin = isBackOfficeAdmin(user?.role)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
   const [pageState, setPageState] = useState({
     artisan: null,
@@ -161,7 +168,7 @@ function ArtisanDetailPage({ artisanId }) {
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-border bg-surface-secondary">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
+        <div className="mx-auto flex flex-wrap max-w-7xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6 lg:px-8">
           <nav
             aria-label="Đường dẫn trang"
             className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-xs text-muted sm:text-sm"
@@ -178,12 +185,34 @@ function ArtisanDetailPage({ artisanId }) {
               {artisan.name}
             </span>
           </nav>
-          <RouterLink
-            className="hidden shrink-0 text-sm font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 sm:inline-flex"
-            href={CUSTOMER_ROUTES.artisans}
-          >
-            <span aria-hidden="true">←</span>&nbsp;Quay lại
-          </RouterLink>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {isAdmin && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-brand/30 bg-white px-3 py-1.5 text-xs font-semibold text-brand shadow-2xs transition-colors hover:bg-surface-secondary cursor-pointer"
+                >
+                  <Pencil size={13} />
+                  <span>Chỉnh sửa trên trang này</span>
+                </button>
+                <RouterLink
+                  href={CUSTOMER_ROUTES.adminArtisanDetail(artisan.id)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-ink shadow-2xs transition-colors hover:bg-surface-secondary"
+                >
+                  <Eye size={13} className="text-secondary" />
+                  <span>Chi tiết trong Quản trị</span>
+                </RouterLink>
+              </>
+            )}
+            <RouterLink
+              className="hidden shrink-0 text-sm font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2 sm:inline-flex"
+              href={CUSTOMER_ROUTES.artisans}
+            >
+              <span aria-hidden="true">←</span>&nbsp;Quay lại
+            </RouterLink>
+          </div>
         </div>
       </div>
 
@@ -289,6 +318,24 @@ function ArtisanDetailPage({ artisanId }) {
         </div>
       </section>
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8"><RelatedArticles key={artisan.id} artisanId={artisan.id} /></div>
+
+      {isAdmin && isEditModalOpen && (
+        <ArtisanManagementModal
+          key={`public-artisan-edit-${artisan.id}`}
+          isOpen={isEditModalOpen}
+          initialArtisan={{
+            id: artisan.id,
+            name: artisan.name,
+            biography: artisan.description,
+            avatarUrl: artisan.avatar,
+          }}
+          onClose={() => setIsEditModalOpen(false)}
+          onSuccess={() => {
+            setIsEditModalOpen(false)
+            handleRetry()
+          }}
+        />
+      )}
     </div>
   )
 }

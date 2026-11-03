@@ -41,7 +41,7 @@ let refreshPromise = null
 
 function isAuthExemptEndpoint(endpoint) {
   const normalized = endpoint.toLowerCase().split('?')[0]
-  return ['/auth/login', '/auth/register', '/auth/register/start', '/auth/register/verify', '/auth/email-otp', '/auth/verify-reset-otp', '/auth/reset-password-otp', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password', '/auth/logout'].includes(normalized)
+  return ['/auth/login', '/auth/google/options', '/auth/register', '/auth/register/start', '/auth/register/verify', '/auth/email-otp', '/auth/verify-reset-otp', '/auth/reset-password-otp', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password', '/auth/logout'].includes(normalized)
 }
 
 function clearSession() {

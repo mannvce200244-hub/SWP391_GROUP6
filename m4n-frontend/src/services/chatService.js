@@ -29,6 +29,10 @@ export const chatService = Object.freeze({
     return apiClient.post(`/chat/conversations/${conversationId}/assign`, {})
   },
 
+  async takeOver(conversationId, expectedStaffId) {
+    return apiClient.post(`/chat/conversations/${conversationId}/take-over`, { expectedStaffId })
+  },
+
   async closeConversation(conversationId) {
     return apiClient.post(`/chat/conversations/${conversationId}/close`, {})
   },

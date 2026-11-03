@@ -114,6 +114,7 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
                 case "CASH" -> "Tiền mặt tại quầy";
                 case "BANK_TRANSFER" -> "Chuyển khoản";
                 case "MOMO" -> "Thẻ quốc tế qua MoMo";
+                case "VNPAY" -> "VNPay (Thẻ ATM / QR)";
                 default -> "Chưa xác định";
             };
             addMetaCell(metaTable, "Phương thức: " + paymentLabel, bodyFont, Element.ALIGN_LEFT);

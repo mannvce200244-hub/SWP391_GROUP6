@@ -4,6 +4,7 @@ import com.m4n.backend.dto.response.VoucherValidationResponse;
 import com.m4n.backend.entity.Voucher;
 import com.m4n.backend.entity.PromotionType;
 import com.m4n.backend.dto.request.UpdateVoucherRequest;
+import com.m4n.backend.dto.request.CreateVoucherRequest;
 import com.m4n.backend.mapper.CartMapper;
 import com.m4n.backend.repository.VoucherRepository;
 import com.m4n.backend.service.serviceImpl.VoucherServiceImpl;
@@ -334,5 +335,56 @@ class VoucherServiceTest {
         assertThatThrownBy(() -> voucherService.deleteVoucher(1L))
                 .isInstanceOf(com.m4n.backend.exception.ResourceInUseException.class);
         verify(voucherRepository, never()).delete(any());
+    }
+
+    @Test
+    void createRejectsExpirationBeforeCreationOrWithinTheFirstHour() {
+        for (Instant end : List.of(Instant.now().minusSeconds(1), Instant.now().plusSeconds(3599))) {
+            var request = new CreateVoucherRequest("PERIOD", new BigDecimal("0.1"), BigDecimal.ZERO,
+                    true, null, null, end, null);
+            assertThatThrownBy(() -> voucherService.createVoucher(request))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ít nhất 1 giờ");
+        }
+        verify(voucherRepository, never()).save(any());
+    }
+
+    @Test
+    void createRequiresOneFullHourAfterFutureStartAndAcceptsTheExactBoundary() {
+        Instant start = Instant.now().plusSeconds(86400);
+        var invalid = new CreateVoucherRequest("PERIOD", new BigDecimal("0.1"), BigDecimal.ZERO,
+                true, null, start, start.plusSeconds(3599), null);
+        assertThatThrownBy(() -> voucherService.createVoucher(invalid))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ít nhất 1 giờ");
+        when(voucherRepository.save(any(Voucher.class))).thenAnswer(i -> i.getArgument(0));
+        var valid = new CreateVoucherRequest("PERIOD", new BigDecimal("0.1"), BigDecimal.ZERO,
+                true, null, start, start.plusSeconds(3600), null);
+        var response = voucherService.createVoucher(valid);
+        assertThat(response.validUntil()).isEqualTo(start.plusSeconds(3600));
+        assertThat(response.createdAt()).isNotNull().isBefore(start);
+    }
+
+    @Test
+    void updateUsesOriginalCreationTimeAndPreservesExactBoundary() {
+        Instant createdAt = Instant.parse("2026-01-01T00:00:30Z");
+        Voucher voucher = Voucher.builder().id(1L).code("PERIOD").createdAt(createdAt).build();
+        when(voucherRepository.findByIdWithLock(1L)).thenReturn(Optional.of(voucher));
+        when(voucherRepository.save(voucher)).thenReturn(voucher);
+        var request = new UpdateVoucherRequest(new BigDecimal("0.1"), BigDecimal.ZERO,
+                true, null, null, createdAt.plusSeconds(3600), null);
+        var response = voucherService.updateVoucher(1L, request);
+        assertThat(response.createdAt()).isEqualTo(createdAt);
+        assertThat(response.validUntil()).isEqualTo(createdAt.plusSeconds(3600));
+    }
+
+    @Test
+    void updateRejectsAnEndBeforeCreationEvenWhenStartIsEarlier() {
+        Instant createdAt = Instant.parse("2026-01-01T00:00:30Z");
+        Voucher voucher = Voucher.builder().id(1L).code("PERIOD").createdAt(createdAt).build();
+        when(voucherRepository.findByIdWithLock(1L)).thenReturn(Optional.of(voucher));
+        var request = new UpdateVoucherRequest(new BigDecimal("0.1"), BigDecimal.ZERO,
+                true, null, createdAt.minusSeconds(86400), createdAt.plusSeconds(3599), null);
+        assertThatThrownBy(() -> voucherService.updateVoucher(1L, request))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("ít nhất 1 giờ");
+        verify(voucherRepository, never()).save(any());
     }
 }

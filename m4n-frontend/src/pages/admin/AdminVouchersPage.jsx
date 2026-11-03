@@ -5,6 +5,8 @@ import { TicketPercent, Plus, Search, Pencil, Trash2, X, CircleCheck } from 'luc
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import useDialogFocus from '../../hooks/useDialogFocus.js'
 import Pagination from '../../features/catalog/Pagination.jsx'
+import { minimumVoucherEnd, validateVoucherPeriod } from '../../features/admin/voucherPeriod.js'
+import VoucherDateTimeField from '../../features/admin/VoucherDateTimeField.jsx'
 
 function formatRate(rate) {
   if (!rate && rate !== 0) return '—'
@@ -19,6 +21,7 @@ function formatCurrency(amount) {
 function toLocalDateTimeInput(value) {
   if (!value) return ''
   const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return ''
   const offset = date.getTimezoneOffset() * 60_000
   return new Date(date.getTime() - offset).toISOString().slice(0, 16)
 }
@@ -77,8 +80,12 @@ export default function AdminVouchersPage() {
   const [submitting, setSubmitting] = useState(false)
   const submittingRef = useRef(false)
   const editingDates = useRef(null)
+  const [periodBaseline, setPeriodBaseline] = useState(0)
+  const [periodError, setPeriodError] = useState('')
   const [formError, setFormError] = useState('')
   const formRef = useDialogFocus(formOpen, () => setFormOpen(false), submitting)
+  const minimumEnd = minimumVoucherEnd(periodBaseline, form.validFrom)
+  const minimumEndInput = toLocalDateTimeInput(Math.ceil(minimumEnd / 60_000) * 60_000)
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -119,6 +126,8 @@ export default function AdminVouchersPage() {
 
   const openCreate = () => {
     editingDates.current = null
+    setPeriodBaseline(Date.now())
+    setPeriodError('')
     setFormError('')
     setEditingId(null)
     setForm(EMPTY_FORM)
@@ -127,6 +136,8 @@ export default function AdminVouchersPage() {
 
   const openEdit = (voucher) => {
     editingDates.current = { validFrom: voucher.validFrom, validUntil: voucher.validUntil }
+    setPeriodBaseline(voucher.createdAt)
+    setPeriodError('')
     setFormError('')
     setEditingId(voucher.id)
     setForm({
@@ -148,10 +159,17 @@ export default function AdminVouchersPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (submittingRef.current) return
+    const submittedAt = new Date().getTime()
     const rate = Number(form.discountRate)
     const minimum = Number(form.minimumOrderValue)
     const quantity = Number(form.minimumQuantity)
     const limit = Number(form.usageLimit)
+    const payload = { ...form }
+    if (editingId) {
+      for (const field of ['validFrom', 'validUntil']) {
+        if (form[field] === toLocalDateTimeInput(editingDates.current?.[field])) payload[field] = editingDates.current?.[field] || ''
+      }
+    }
     let message = ''
     if (!form.code.trim() || form.code.trim().length > 50) message = 'Mã chương trình cần từ 1 đến 50 ký tự.'
     else if (form.promotionType !== 'SHIPPING' && (!/^\d+(\.\d{1,2})?$/.test(String(form.discountRate)) || !Number.isFinite(rate) || rate < 0 || rate > 100)) message = 'Tỷ lệ giảm giá phải từ 0 đến 100%, tối đa 2 chữ số thập phân.'
@@ -160,21 +178,23 @@ export default function AdminVouchersPage() {
     else if (form.description.trim().length > 255) message = 'Mô tả tối đa 255 ký tự.'
     else if (form.minimumQuantity !== '' && (!Number.isInteger(quantity) || quantity < 1 || quantity > 2147483647)) message = 'Số lượng tối thiểu phải là số nguyên dương trong giới hạn hệ thống.'
     else if (form.usageLimit !== '' && (!Number.isInteger(limit) || limit < 1 || limit > 2147483647)) message = 'Số lượt sử dụng phải là số nguyên dương trong giới hạn hệ thống.'
-    else if (form.validFrom && form.validUntil && new Date(form.validUntil) <= new Date(form.validFrom)) message = 'Thời gian kết thúc phải sau thời gian bắt đầu.'
     if (message) { setFormError(message); return }
     setFormError('')
+    const dateError = validateVoucherPeriod(editingId ? periodBaseline : submittedAt, payload.validFrom, payload.validUntil)
+    setPeriodError(dateError)
+    if (dateError) {
+      if (!editingId) setPeriodBaseline(submittedAt)
+      formRef.current?.querySelector('#promotion-validUntil')?.focus()
+      return
+    }
     submittingRef.current = true
     setSubmitting(true)
     try {
       if (editingId) {
-        const payload = { ...form }
-        for (const field of ['validFrom', 'validUntil']) {
-          if (form[field] === toLocalDateTimeInput(editingDates.current?.[field])) payload[field] = editingDates.current?.[field] || ''
-        }
         await voucherService.updateVoucher(editingId, payload)
         addToast({ message: 'Đã cập nhật voucher.', type: 'success' })
       } else {
-        await voucherService.createVoucher(form)
+        await voucherService.createVoucher(payload)
         addToast({ message: 'Đã tạo voucher mới.', type: 'success' })
       }
       setFormOpen(false)
@@ -284,7 +304,7 @@ export default function AdminVouchersPage() {
                     <td className="px-4 py-3 text-center font-semibold text-[#A62F25]">{voucher.promotionType === 'SHIPPING' ? formatCurrency(voucher.fixedDiscountAmount) : formatRate(voucher.discountRate)}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-secondary">{formatCurrency(voucher.minimumOrderValue)}</td>
                     <td className="px-4 py-3 text-xs text-secondary whitespace-nowrap">{formatDateTime(voucher.validFrom)}<br />đến {formatDateTime(voucher.validUntil)}</td>
-                    <td className="px-4 py-3 text-center tabular-nums text-secondary">{voucher.usedCount || 0}/{voucher.usageLimit ?? '∞'}</td>
+                    <td className="px-4 py-3 text-center tabular-nums text-secondary"><span className="block whitespace-nowrap">Đã dùng {voucher.usedCount || 0} lượt</span><span className="block mt-1 text-xs whitespace-nowrap">{voucher.usageLimit == null ? 'Không giới hạn lượt' : `Tối đa ${voucher.usageLimit} lượt`}</span></td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${VOUCHER_STATE_META[getVoucherState(voucher)].className}`}>
                         {getVoucherState(voucher) === 'ACTIVE' && <CircleCheck size={11} />}
@@ -330,21 +350,25 @@ export default function AdminVouchersPage() {
             <div>
               <label htmlFor="promotion-minimum-quantity" className="block text-sm font-medium mb-1">Số lượng tối thiểu (tùy chọn)</label>
               <input id="promotion-minimum-quantity" name="minimumQuantity" type="number" min="1" max="2147483647" step="1" value={form.minimumQuantity} onChange={(event) => setForm((current) => ({ ...current, minimumQuantity: event.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-border bg-white text-sm" />
-              <p className="mt-1 text-xs text-muted">Nếu có cả giá trị và số lượng tối thiểu, đơn cần đạt cả hai điều kiện.</p>
+              <p className="mt-1 text-xs text-muted">Nếu đặt cả số tiền và số lượng tối thiểu, đơn hàng phải đáp ứng cả hai.</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <section className="space-y-3" aria-labelledby="promotion-period-title">
               <div>
-                <label htmlFor="promotion-validFrom" className="block text-sm font-medium text-[#17191B] mb-1">Bắt đầu</label>
-                <input type="datetime-local" id="promotion-validFrom" name="validFrom" value={form.validFrom} onChange={(e) => setForm((f) => ({ ...f, validFrom: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm" />
+                <h4 id="promotion-period-title" className="text-sm font-semibold text-ink">Thời gian áp dụng</h4>
+                <p id="promotion-clock-help" className="mt-1 text-xs text-secondary">Chọn ngày và giờ trong cùng một ô.</p>
               </div>
-              <div>
-                <label htmlFor="promotion-validUntil" className="block text-sm font-medium text-[#17191B] mb-1">Kết thúc</label>
-                <input type="datetime-local" id="promotion-validUntil" name="validUntil" value={form.validUntil} min={form.validFrom || undefined} onChange={(e) => setForm((f) => ({ ...f, validUntil: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm" />
-              </div>
-            </div>
+              <VoucherDateTimeField name="validFrom" label="Bắt đầu" hint="Không bắt buộc chọn thời gian bắt đầu." value={form.validFrom}
+                describedBy="promotion-clock-help promotion-period-help" onChange={(value) => { setForm((f) => ({ ...f, validFrom: value })); if (!editingId) setPeriodBaseline(Date.now()); setPeriodError('') }} />
+              <VoucherDateTimeField name="validUntil" label="Kết thúc" hint="Để trống nếu không giới hạn thời gian." value={form.validUntil} invalid={Boolean(periodError)}
+                minimum={minimumEndInput} describedBy={`promotion-clock-help promotion-period-help${periodError ? ' promotion-period-error' : ''}`}
+                onChange={(value) => { setForm((f) => ({ ...f, validUntil: value })); setPeriodError('') }} />
+              <p id="promotion-period-help" className="text-xs leading-relaxed text-secondary">Thời gian kết thúc phải cách lúc tạo{editingId ? ' ban đầu' : ''} và lúc bắt đầu ít nhất 1 giờ.</p>
+            {periodError && <p id="promotion-period-error" role="alert" className="text-sm text-danger">{periodError}</p>}
+            </section>
             <div>
-              <label htmlFor="promotion-usageLimit" className="block text-sm font-medium text-[#17191B] mb-1">Số lượt sử dụng tối đa</label>
-              <input type="number" min="1" step="1" id="promotion-usageLimit" name="usageLimit" max="2147483647" value={form.usageLimit} onChange={(e) => setForm((f) => ({ ...f, usageLimit: e.target.value }))} placeholder="Để trống nếu không giới hạn" className="w-full px-3 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm" />
+              <label htmlFor="promotion-usageLimit" className="block text-sm font-medium text-[#17191B] mb-1">Số lượt sử dụng tối đa (tùy chọn)</label>
+              <input type="number" min="1" step="1" id="promotion-usageLimit" name="usageLimit" max="2147483647" aria-describedby="promotion-usageLimit-help" autoComplete="off" value={form.usageLimit} onChange={(e) => setForm((f) => ({ ...f, usageLimit: e.target.value }))} placeholder="Ví dụ: 100…" className="w-full px-3 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm" />
+              <p id="promotion-usageLimit-help" className="mt-1 text-xs leading-relaxed text-secondary">Để trống: không giới hạn lượt. Ví dụ nhập 100 để giới hạn tổng cộng 100 lượt dùng trên toàn hệ thống.</p>
             </div>
             <div>
               <label htmlFor="promotion-code" className="block text-sm font-medium text-[#17191B] mb-1">Mã voucher</label>

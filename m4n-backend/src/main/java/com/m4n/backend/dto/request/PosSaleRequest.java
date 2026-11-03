@@ -8,6 +8,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import com.m4n.backend.validation.ValidationPatterns;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -44,6 +45,12 @@ public class PosSaleRequest {
     @Pattern(regexp = ValidationPatterns.OPTIONAL_VIETNAMESE_MOBILE,
             message = ValidationPatterns.VIETNAMESE_MOBILE_MESSAGE)
     private String customerPhone;
+
+    @Positive
+    private Long customerId;
+
+    @Positive
+    private Long posCustomerId;
 
     @Size(max = 500, message = "Ghi chú không quá 500 ký tự")
     private String notes;

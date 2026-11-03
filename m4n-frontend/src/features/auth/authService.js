@@ -1,6 +1,17 @@
 import apiClient from '../../api/apiClient.js'
 
 export const authService = Object.freeze({
+  async getGoogleLoginOptions(options = {}) {
+    return apiClient.get('/auth/google/options', options)
+  },
+
+  startGoogleLogin(paymentOrderId) {
+    if (paymentOrderId) sessionStorage.setItem('m4n-google-return-order', String(paymentOrderId))
+    else sessionStorage.removeItem('m4n-google-return-order')
+    // Keep OAuth state and refresh cookies on the frontend origin, including hosted deployments.
+    window.location.assign('/api/v1/auth/google/authorization/google')
+  },
+
   async login({ email, password }) {
     return apiClient.post('/auth/login', {
       email: email?.trim(),

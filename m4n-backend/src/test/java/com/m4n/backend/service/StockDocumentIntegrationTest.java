@@ -57,8 +57,21 @@ class StockDocumentIntegrationTest {
         }
     }
 
+    @Test void receiptOfFiftyAcceptsFortyEightAndPersistsPurchaseCost() {
+        var draft = stock.createReceipt(product.getId(), new StockImportRequest(50, "QC batch", new BigDecimal("120000")));
+        assertThat(inventories.findByProductId(product.getId()).orElseThrow().getQuantity()).isEqualTo(5);
+        assertThat(draft.estimatedAmount()).isEqualByComparingTo("6000000");
+        var confirmed = stock.confirm(draft.id(), new ConfirmStockDocumentRequest(2, "Damaged"));
+        assertThat(confirmed.quantityAfter()).isEqualTo(53);
+        assertThat(confirmed.receivedAmount()).isEqualByComparingTo("5760000");
+        assertThat(documents.findById(draft.id()).orElseThrow().getUnitCost()).isEqualByComparingTo("120000");
+        assertThatThrownBy(() -> stock.confirm(draft.id(), new ConfirmStockDocumentRequest(0, null)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(inventories.findByProductId(product.getId()).orElseThrow().getQuantity()).isEqualTo(53);
+    }
+
     @Test void receiptDraftAndPartialQcProduceOneAuditedStockIncrease() {
-        var draft = stock.createReceipt(product.getId(), new StockImportRequest(7, "Lô mới"));
+        var draft = stock.createReceipt(product.getId(), new StockImportRequest(7, "Lô mới", new java.math.BigDecimal("100000")));
         assertThat(quantity()).isEqualTo(5);
         assertThat(movements().getTotalElements()).isZero();
         var confirmed = stock.confirm(draft.id(), new ConfirmStockDocumentRequest(2, "Dây hỏng"));
@@ -74,7 +87,7 @@ class StockDocumentIntegrationTest {
     }
 
     @Test void allRejectedGoodsNeverEnterSellableInventory() {
-        var draft = stock.createReceipt(product.getId(), new StockImportRequest(7, null));
+        var draft = stock.createReceipt(product.getId(), new StockImportRequest(7, null, new java.math.BigDecimal("100000")));
         stock.confirm(draft.id(), new ConfirmStockDocumentRequest(7, "Không đạt chất lượng"));
         assertThat(quantity()).isEqualTo(5);
         assertThat(movements().getContent().getFirst().quantity()).isZero();
@@ -82,7 +95,7 @@ class StockDocumentIntegrationTest {
     }
 
     @Test void failedQcInsufficientIssueAndOverflowRollbackAllSideEffects() {
-        var receipt = stock.createReceipt(product.getId(), new StockImportRequest(1, null));
+        var receipt = stock.createReceipt(product.getId(), new StockImportRequest(1, null, new java.math.BigDecimal("100000")));
         assertThatThrownBy(() -> stock.confirm(receipt.id(), new ConfirmStockDocumentRequest(1, " ")))
                 .isInstanceOf(IllegalArgumentException.class);
         var issue = stock.createIssue(product.getId(), new StockIssueRequest(6, "Hàng lỗi"));
@@ -101,7 +114,7 @@ class StockDocumentIntegrationTest {
     }
 
     @Test void simultaneousConfirmationAppliesExactlyOnce() throws Exception {
-        var draft = stock.createReceipt(product.getId(), new StockImportRequest(3, null));
+        var draft = stock.createReceipt(product.getId(), new StockImportRequest(3, null, new java.math.BigDecimal("100000")));
         var failures = race(() -> stock.confirm(draft.id(), new ConfirmStockDocumentRequest(null, null)),
                 () -> stock.confirm(draft.id(), new ConfirmStockDocumentRequest(null, null)));
         assertThat(failures).hasSize(1);
@@ -132,11 +145,11 @@ class StockDocumentIntegrationTest {
     }
 
     @Test void documentsAndHistoryFilterBeforePagingAndPreserveSnapshots() {
-        var first = stock.createReceipt(product.getId(), new StockImportRequest(2, null));
+        var first = stock.createReceipt(product.getId(), new StockImportRequest(2, null, new java.math.BigDecimal("100000")));
         stock.confirm(first.id(), new ConfirmStockDocumentRequest(null, null));
         var second = stock.createIssue(product.getId(), new StockIssueRequest(1, "Kiểm thử"));
         stock.confirm(second.id(), new ConfirmStockDocumentRequest(null, null));
-        stock.createReceipt(product.getId(), new StockImportRequest(1, null));
+        stock.createReceipt(product.getId(), new StockImportRequest(1, null, new java.math.BigDecimal("100000")));
         var confirmedReceipts = stock.list(product.getId(), StockDocumentType.RECEIPT, StockDocumentStatus.CONFIRMED,
                 PageRequest.of(0, 1, Sort.by("id")));
         assertThat(confirmedReceipts.getTotalElements()).isEqualTo(1);
@@ -154,7 +167,7 @@ class StockDocumentIntegrationTest {
     }
 
     @Test void posRoleCannotCreateOrConfirmStockDocuments() {
-        var draft = stock.createReceipt(product.getId(), new StockImportRequest(2, null));
+        var draft = stock.createReceipt(product.getId(), new StockImportRequest(2, null, new java.math.BigDecimal("100000")));
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("pos@m4n.vn", null,
                 List.of(new SimpleGrantedAuthority("ROLE_POS_STAFF"))));
         assertThatThrownBy(() -> stock.createIssue(product.getId(), new StockIssueRequest(1, "Sai quyền"))).isInstanceOf(AccessDeniedException.class);

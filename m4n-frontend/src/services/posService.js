@@ -5,6 +5,10 @@ export async function searchProducts(keyword = '') {
   return apiClient.get(`/pos/products/search${query}`)
 }
 
+export async function searchCustomers(query) {
+  return apiClient.get(`/pos/customers?q=${encodeURIComponent(query.trim())}`)
+}
+
 export async function lookupBarcode(codeOrBarcode) {
   if (!codeOrBarcode || !codeOrBarcode.trim()) {
     throw new Error('Mã barcode hoặc mã sản phẩm không được để trống')
@@ -27,6 +31,8 @@ export async function finalizeSale({
   voucherCode = '',
   paymentMethod = 'CASH',
   amountReceived = null,
+  customerId = null,
+  posCustomerId = null,
   customerName = '',
   customerPhone = '',
   notes = '',
@@ -39,6 +45,8 @@ export async function finalizeSale({
     voucherCode: voucherCode ? voucherCode.trim() : null,
     paymentMethod,
     amountReceived: amountReceived !== null ? Number(amountReceived) : null,
+    customerId,
+    posCustomerId,
     customerName: customerName ? customerName.trim() : null,
     customerPhone: customerPhone ? customerPhone.trim() : null,
     notes: notes ? notes.trim() : null,

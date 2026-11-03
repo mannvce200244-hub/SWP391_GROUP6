@@ -35,11 +35,13 @@ public class PosMomoPaymentServiceImpl implements PosMomoPaymentService {
     private final MomoGateway gateway;
     private final ObjectMapper json;
     private final TransactionTemplate transaction;
+    private final PosCustomerService customers;
 
     public PosMomoPaymentServiceImpl(PosMomoPaymentRepository payments, UserRepository users, PosService pos,
-            MomoProperties properties, MomoGateway gateway, ObjectMapper json, PlatformTransactionManager manager) {
+            MomoProperties properties, MomoGateway gateway, ObjectMapper json, PlatformTransactionManager manager, PosCustomerService customers) {
         this.payments = payments; this.users = users; this.pos = pos; this.properties = properties;
         this.gateway = gateway; this.json = json; this.transaction = new TransactionTemplate(manager);
+        this.customers = customers;
     }
 
     @Override public PosMomoPaymentResponse create(PosMomoPaymentRequest request, String email, String origin) {
@@ -52,8 +54,13 @@ public class PosMomoPaymentServiceImpl implements PosMomoPaymentService {
             User staff = users.findByEmailIgnoreCaseWithLock(email).orElseThrow(() -> new AccessDeniedException("Tài khoản không khả dụng."));
             requireStaff(staff);
             var existing = payments.findByIdWithLock(request.id()).orElse(null);
-            if (existing != null) { owner(existing, staff); return response(existing); }
+            if (existing != null) {
+                owner(existing, staff);
+                if (!"MOMO".equals(existing.getProvider())) throw new IllegalArgumentException("Mã giao dịch đã được sử dụng cho phương thức khác.");
+                return response(existing);
+            }
             var sale = request.sale();
+            customers.validateCustomer(sale);
             if (!"MOMO".equals(sale.getPaymentMethod())) throw new IllegalArgumentException("Hóa đơn phải chọn MoMo.");
             var preview = pos.previewSale(PosSalePreviewRequest.builder().items(sale.getItems()).voucherCode(sale.getVoucherCode()).build());
             if (!preview.getStockWarnings().isEmpty()) throw new InsufficientStockException(String.join(" ", preview.getStockWarnings()));
@@ -97,8 +104,8 @@ public class PosMomoPaymentServiceImpl implements PosMomoPaymentService {
 
     @Override public Page<PosMomoPaymentResponse> recent(String email, int page) {
         if (page < 0 || (long) page * 10 > Integer.MAX_VALUE) throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
-        return transaction.execute(tx -> payments.findByStaffIdAndInvoiceIsNullOrderByCreatedAtDesc(
-                actor(email).getId(), PageRequest.of(page, 10)).map(this::response));
+        return transaction.execute(tx -> payments.findByStaffIdAndProviderAndInvoiceIsNullOrderByCreatedAtDesc(
+                actor(email).getId(), "MOMO", PageRequest.of(page, 10)).map(this::response));
     }
 
     @Override public PosMomoPaymentResponse reconcile(String id, String email) {
@@ -199,7 +206,9 @@ public class PosMomoPaymentServiceImpl implements PosMomoPaymentService {
         p.setRefundReference("pr-" + UUID.randomUUID().toString().replace("-", ""));
     }
     private PosMomoPayment lock(String id) {
-        return payments.findByIdWithLock(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiên MoMo POS."));
+        PosMomoPayment p = payments.findByIdWithLock(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiên MoMo POS."));
+        if (!"MOMO".equals(p.getProvider())) throw new ResourceNotFoundException("Không tìm thấy phiên MoMo POS.");
+        return p;
     }
     private User actor(String email) {
         User user = users.findByEmailIgnoreCase(email).orElseThrow(() -> new AccessDeniedException("Tài khoản không khả dụng."));

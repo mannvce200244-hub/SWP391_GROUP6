@@ -43,6 +43,14 @@ public class Invoice {
     @JoinColumn(name = "staff_id")
     private User staff;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private User customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pos_customer_id")
+    private PosCustomer posCustomer;
+
     @Column(name = "customer_name", length = 150)
     private String customerName;
 

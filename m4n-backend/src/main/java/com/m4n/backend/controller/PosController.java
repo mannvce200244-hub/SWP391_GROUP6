@@ -35,6 +35,13 @@ public class PosController {
 
     private final PosService posService;
     private final com.m4n.backend.service.InvoicePdfService invoicePdfService;
+    private final com.m4n.backend.service.PosCustomerService posCustomerService;
+
+    @GetMapping("/customers")
+    @PreAuthorize("hasRole('POS_STAFF')")
+    public ResponseEntity<com.m4n.backend.dto.response.PosCustomerSearchResponse> searchCustomers(@RequestParam String q) {
+        return ResponseEntity.ok(posCustomerService.searchCustomers(q));
+    }
 
     @GetMapping("/products/search")
     @PreAuthorize("hasRole('POS_STAFF')")

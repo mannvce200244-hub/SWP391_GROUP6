@@ -41,6 +41,36 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ChatServiceTest {
 
+    @Test void takeOverTransfersOwnershipAndRejectsFormerStaff() {
+        conversation.setAssignedStaff(onlineStaff);
+        when(userRepository.findByEmailIgnoreCaseWithLock(onlineStaff2.getEmail())).thenReturn(Optional.of(onlineStaff2));
+        when(userRepository.findByEmailIgnoreCaseWithLock(onlineStaff.getEmail())).thenReturn(Optional.of(onlineStaff));
+        when(conversationRepository.findByIdWithLock(100L)).thenReturn(Optional.of(conversation));
+        when(conversationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        var result = chatService.takeOver(100L, onlineStaff.getId(), onlineStaff2.getEmail());
+        assertThat(result.assignedStaffId()).isEqualTo(onlineStaff2.getId());
+        assertThatThrownBy(() -> chatService.sendMessage(100L, new ChatMessageRequest("stale"), onlineStaff.getEmail()))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> chatService.getMessages(100L, PageRequest.of(0, 20), onlineStaff.getEmail()))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> chatService.closeConversation(100L, onlineStaff.getEmail()))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test void staleTakeOverDoesNotOverwriteNewOwner() {
+        conversation.setAssignedStaff(onlineStaff2);
+        when(userRepository.findByEmailIgnoreCaseWithLock(onlineStaff.getEmail())).thenReturn(Optional.of(onlineStaff));
+        when(conversationRepository.findByIdWithLock(100L)).thenReturn(Optional.of(conversation));
+        assertThatThrownBy(() -> chatService.takeOver(100L, 99L, onlineStaff.getEmail())).isInstanceOf(IllegalStateException.class);
+        verify(conversationRepository, never()).save(any());
+    }
+
+    @Test void customerCannotTakeOverChat() {
+        when(userRepository.findByEmailIgnoreCaseWithLock(customer1.getEmail())).thenReturn(Optional.of(customer1));
+        assertThatThrownBy(() -> chatService.takeOver(100L, 3L, customer1.getEmail())).isInstanceOf(AccessDeniedException.class);
+        verify(conversationRepository, never()).findByIdWithLock(any());
+    }
+
     @Mock
     private ConversationRepository conversationRepository;
     @Mock

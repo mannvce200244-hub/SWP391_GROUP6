@@ -44,6 +44,11 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardSummaryResponse getDashboardSummary(String period) {
+        return getDashboardSummary(period, null);
+    }
+
+    @Override
+    public DashboardSummaryResponse getDashboardSummary(String period, Integer year) {
         String normalizedPeriod = (period == null || period.trim().isEmpty())
                 ? "month"
                 : period.trim().toLowerCase();
@@ -51,6 +56,9 @@ public class DashboardServiceImpl implements DashboardService {
         if (!ALLOWED_PERIODS.contains(normalizedPeriod)) {
             normalizedPeriod = "month";
         }
+
+        LocalDate today = LocalDate.now(VN_ZONE);
+        int targetYear = (year != null && year >= 2020 && year <= 2100) ? year : today.getYear();
 
         // 1. KPI Cards (authoritative database aggregation per BR-REVENUE-01: Online Completed + Finalized POS Invoices)
         BigDecimal onlineRevenue = orderRepository.sumFinalAmountByStatus(OrderStatus.COMPLETED);
@@ -83,8 +91,8 @@ public class DashboardServiceImpl implements DashboardService {
                 .outOfStockCount(outOfStockCount)
                 .build();
 
-        // 3. Revenue Trend by period (combines completed online orders + finalized POS invoices)
-        List<RevenuePointResponse> revenueTrend = calculateRevenueTrend(normalizedPeriod);
+        // 3. Revenue Trend by period and targetYear (combines completed online orders + finalized POS invoices)
+        List<RevenuePointResponse> revenueTrend = calculateRevenueTrend(normalizedPeriod, targetYear);
 
         // 4. Best-selling Products (top 5 unified across online and showroom)
         List<TopProductResponse> topProducts = getUnifiedTopProducts();
@@ -105,15 +113,15 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
-    private List<RevenuePointResponse> calculateRevenueTrend(String period) {
+    private List<RevenuePointResponse> calculateRevenueTrend(String period, int year) {
         LocalDate today = LocalDate.now(VN_ZONE);
         List<RevenuePointResponse> points = new ArrayList<>();
 
         switch (period) {
             case "day" -> {
-                // Last 7 days
+                LocalDate baseDate = (year == today.getYear()) ? today : LocalDate.of(year, 12, 31);
                 for (int i = 6; i >= 0; i--) {
-                    LocalDate date = today.minusDays(i);
+                    LocalDate date = baseDate.minusDays(i);
                     Instant start = date.atStartOfDay(VN_ZONE).toInstant();
                     Instant end = date.plusDays(1).atStartOfDay(VN_ZONE).toInstant();
 
@@ -130,8 +138,8 @@ public class DashboardServiceImpl implements DashboardService {
                 }
             }
             case "week" -> {
-                // Last 4 weeks
-                LocalDate startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                LocalDate baseDate = (year == today.getYear()) ? today : LocalDate.of(year, 12, 31);
+                LocalDate startOfWeek = baseDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
                 for (int i = 3; i >= 0; i--) {
                     LocalDate weekStart = startOfWeek.minusWeeks(i);
                     LocalDate weekEnd = weekStart.plusDays(6);
@@ -151,8 +159,6 @@ public class DashboardServiceImpl implements DashboardService {
                 }
             }
             case "quarter" -> {
-                // 4 Quarters of current year
-                int year = today.getYear();
                 for (int q = 1; q <= 4; q++) {
                     int startMonth = (q - 1) * 3 + 1;
                     int endMonth = startMonth + 2;
@@ -175,9 +181,9 @@ public class DashboardServiceImpl implements DashboardService {
                 }
             }
             default -> {
-                // "month": 6 recent months
-                for (int i = 5; i >= 0; i--) {
-                    YearMonth ym = YearMonth.from(today).minusMonths(i);
+                // "month": 12 months of selected year
+                for (int m = 1; m <= 12; m++) {
+                    YearMonth ym = YearMonth.of(year, m);
                     Instant start = ym.atDay(1).atStartOfDay(VN_ZONE).toInstant();
                     Instant end = ym.plusMonths(1).atDay(1).atStartOfDay(VN_ZONE).toInstant();
 
@@ -189,7 +195,7 @@ public class DashboardServiceImpl implements DashboardService {
                     long count = orderRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end)
                             + invoiceRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end);
 
-                    String label = "Tháng " + ym.getMonthValue();
+                    String label = "Tháng " + m;
                     points.add(new RevenuePointResponse(label, rev, count));
                 }
             }

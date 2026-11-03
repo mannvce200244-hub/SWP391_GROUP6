@@ -19,6 +19,11 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Optional<User> findByEmailIgnoreCase(String email);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<User> findByGoogleSubject(String googleSubject);
+
+    List<User> findByRole_NameAndPhoneOrderByIdAsc(RoleName role, String phone, org.springframework.data.domain.Pageable pageable);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE LOWER(u.email) = LOWER(:email)")
     Optional<User> findByEmailIgnoreCaseWithLock(@Param("email") String email);
 

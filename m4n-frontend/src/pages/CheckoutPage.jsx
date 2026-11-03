@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import Button from '../components/ui/Button.jsx'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import LoadingState from '../components/ui/LoadingState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import { formatCurrencyVND } from '../utils/currency.js'
@@ -10,7 +11,7 @@ import useCart from '../features/cart/useCart.js'
 import useToast from '../components/ui/useToast.js'
 import orderService from '../services/orderService.js'
 import paymentService from '../services/paymentService.js'
-import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
+import { CUSTOMER_ROUTES, ROUTE_CHANGE_EVENT, navigateTo } from '../routes/customerRoutes.js'
 import {
   ArrowRight,
   Check,
@@ -19,6 +20,7 @@ import {
   Plus,
   Shield,
   ShoppingBag,
+  TicketPercent,
   Trash2,
 } from 'lucide-react'
 import { IconInstrument } from '../components/ui/Icons.jsx'
@@ -26,6 +28,8 @@ import SavedAddressPicker from '../features/checkout/SavedAddressPicker.jsx'
 import { validateRecipient, recipientFromAddress, deliveryFromAddress } from '../features/checkout/recipientValidation.js'
 import { isValidVietnameseMobile } from '../utils/phone.js'
 import useDirectPurchase from '../features/checkout/useDirectPurchase.js'
+import useCheckoutSearch from '../features/checkout/useCheckoutSearch.js'
+import { cartCheckoutUrl, parseCartCheckout } from '../features/cart/cartSelection.js'
 
 function CheckoutPage() {
   const { user, isAuthenticated } = useAuth()
@@ -34,15 +38,20 @@ function CheckoutPage() {
     refreshCart,
     updateCartItem,
     removeCartItem,
-    selectedCartItemIds,
-    selectedCartItems,
     loading: savedCartLoading,
     error: savedCartError,
   } = useCart()
   const direct = useDirectPurchase()
   const { directPurchase } = direct
+  const search = useCheckoutSearch()
+  const cartSelection = useMemo(() => parseCartCheckout(search), [search])
+  const selectedCartItemIds = cartSelection.cartItemIds
+  const selectedCartItems = (cart?.items || []).filter((item) => selectedCartItemIds.includes(item.id))
+  const selectionError = cartSelection.error || (!savedCartLoading && cart
+    && selectedCartItems.length !== selectedCartItemIds.length
+    ? 'Sản phẩm đã chọn không còn trong giỏ hàng. Vui lòng chọn lại.' : '')
   const cartLoading = directPurchase ? direct.loading : savedCartLoading
-  const cartError = direct.error || (directPurchase ? null : savedCartError)
+  const cartError = direct.error || (directPurchase ? null : savedCartError || selectionError)
   const checkoutSnapshot = directPurchase || cart
   const cartItemIds = directPurchase ? undefined : selectedCartItemIds
   const { addToast } = useToast()
@@ -68,7 +77,7 @@ function CheckoutPage() {
   const recipientName = carrierEnabled ? formData.customerName.trim() : undefined
   const recipientPhone = carrierEnabled ? formData.customerPhone.trim() : undefined
   const shippingKey = carrierEnabled ? JSON.stringify([deliveryAddress, recipientName, recipientPhone]) : 'local'
-  const [paymentMethod, setPaymentMethod] = useState('COD')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('COD')
   const [paymentOptions, setPaymentOptions] = useState(null)
   const [paymentOptionsError, setPaymentOptionsError] = useState('')
   const [optionsRetry, setOptionsRetry] = useState(0)
@@ -78,6 +87,7 @@ function CheckoutPage() {
   const [appliedVoucher, setAppliedVoucher] = useState(null)
   const [voucherLoading, setVoucherLoading] = useState(false)
   const [voucherFeedback, setVoucherFeedback] = useState(null)
+  const [suggestedVouchers, setSuggestedVouchers] = useState([])
   const [shippingCodeInput, setShippingCodeInput] = useState('')
   const [shippingVoucher, setShippingVoucher] = useState(null)
   const [shippingFeedback, setShippingFeedback] = useState('')
@@ -106,6 +116,25 @@ function CheckoutPage() {
       .catch(() => { if (active) setPaymentOptionsError('Không thể kiểm tra cổng thanh toán. Bạn có thể tiếp tục bằng COD.') })
     return () => { active = false }
   }, [optionsRetry])
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined
+    let active = true
+    orderService
+      .getCheckoutVouchers()
+      .then((list) => {
+        if (active && Array.isArray(list)) {
+          const sorted = [...list].sort(
+            (a, b) => Number(a.minimumOrderValue || 0) - Number(b.minimumOrderValue || 0)
+          )
+          setSuggestedVouchers(sorted)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [isAuthenticated])
 
   // Prefill customer profile data if user loads asynchronously
   useEffect(() => {
@@ -192,6 +221,14 @@ function CheckoutPage() {
       return
     }
     const result = await removeCartItem(item.id)
+    if (result.success) {
+      const remainingIds = selectedCartItemIds.filter((id) => id !== item.id)
+      if (!remainingIds.length) navigateTo(CUSTOMER_ROUTES.cart)
+      else {
+        window.history.replaceState(null, '', cartCheckoutUrl(remainingIds))
+        window.dispatchEvent(new Event(ROUTE_CHANGE_EVENT))
+      }
+    }
     addToast({
       message: result.success
         ? `Đã xóa “${item.productName}” khỏi đơn hàng.`
@@ -208,21 +245,21 @@ function CheckoutPage() {
     }
   }
 
-  // Voucher apply handler
-  const handleApplyVoucher = async (e) => {
-    e.preventDefault()
+  const applyVoucherCode = async (rawCode) => {
     if (voucherLoading || cartLoading || submitting || previewLoading) return
-    if (!voucherCodeInput.trim()) {
+    const trimmed = (rawCode || '').trim().toUpperCase()
+    if (!trimmed) {
       setVoucherFeedback({ type: 'error', message: 'Vui lòng nhập mã voucher' })
       return
     }
+    setVoucherCodeInput(trimmed)
 
     const requestId = ++previewSequence.current
     try {
       setVoucherLoading(true)
       setVoucherFeedback(null)
 
-      const res = await orderService.previewCheckout(voucherCodeInput.trim(), shippingVoucher, cartItemIds, carrierAddress, recipientName, recipientPhone, directPurchase)
+      const res = await orderService.previewCheckout(trimmed, shippingVoucher, cartItemIds, carrierAddress, recipientName, recipientPhone, directPurchase)
       if (requestId !== previewSequence.current) return
 
       if (res.voucherApplied) {
@@ -254,6 +291,12 @@ function CheckoutPage() {
     }
   }
 
+  // Voucher apply handler
+  const handleApplyVoucher = async (e) => {
+    e.preventDefault()
+    await applyVoucherCode(voucherCodeInput)
+  }
+
   // Remove voucher handler
   const handleRemoveVoucher = () => {
     setAppliedVoucher(null)
@@ -264,6 +307,12 @@ function CheckoutPage() {
       type: 'info',
     })
   }
+
+  const currentFinalAmount = preview?.finalAmount !== undefined && preview?.finalAmount !== null ? Number(preview.finalAmount) : null
+  const isVnpayAmountOutOfRange = currentFinalAmount !== null && (currentFinalAmount < 5000 || currentFinalAmount > 9_999_999_999)
+  const isVnpayAvailable = Boolean(paymentOptions?.vnpayAvailable) && !isVnpayAmountOutOfRange
+  const paymentMethod = (selectedPaymentMethod === 'VNPAY' && !isVnpayAvailable) ? 'COD' : selectedPaymentMethod
+  const setPaymentMethod = setSelectedPaymentMethod
 
   // Client-side validation before submission
   const handleApplyShippingVoucher = async () => {
@@ -306,6 +355,14 @@ function CheckoutPage() {
       return
     }
 
+    if (paymentMethod === 'VNPAY' && isVnpayAmountOutOfRange) {
+      addToast({
+        message: 'Thanh toán qua VNPay yêu cầu số tiền nguyên từ 5.000 đến 9.999.999.999 đồng. Vui lòng chọn COD.',
+        type: 'error',
+      })
+      return
+    }
+
     let placedOrder = null
     try {
       submissionPending.current = true
@@ -332,7 +389,7 @@ function CheckoutPage() {
       // Cart checkout removes purchased rows; direct purchase leaves the saved cart intact.
       await refreshCart()
 
-      if (paymentMethod === 'MOMO') {
+      if (paymentMethod === 'VNPAY' || paymentMethod === 'MOMO') {
         const paymentUrl = await paymentService.start(orderResponse.id, paymentMethod)
         window.location.assign(paymentUrl)
         return
@@ -371,6 +428,10 @@ function CheckoutPage() {
   const items = (previewCurrent ? preview.items : directPurchase ? direct.items : selectedCartItems) || []
   const hasItems = items.length > 0
   const checkoutBusy = submitting || cartLoading || previewLoading || voucherLoading
+  const currentOrderSubtotal = previewCurrent
+    ? Number(preview?.subtotal || 0)
+    : items.reduce((sum, it) => sum + Number(it.subtotal || (Number(it.unitPrice || 0) * Number(it.quantity || 0))), 0)
+  const currentTotalQuantity = items.reduce((count, item) => count + Number(item.quantity || 0), 0)
 
   if (!isAuthenticated) {
     return (
@@ -439,8 +500,9 @@ function CheckoutPage() {
           <LoadingState message="Đang tải sản phẩm đặt mua…" />
         ) : cartError ? (
           <div className="space-y-4">
-            <ErrorState message={cartError} onRetry={directPurchase ? direct.retry : direct.error ? undefined : refreshCart} />
+            <ErrorState message={cartError} onRetry={directPurchase ? direct.retry : !direct.error && savedCartError ? refreshCart : undefined} />
             {direct.error && <button type="button" className="font-semibold text-brand underline" onClick={() => navigateTo(CUSTOMER_ROUTES.products)}>Chọn lại sản phẩm</button>}
+            {!directPurchase && !direct.error && selectionError && <button type="button" className="font-semibold text-brand underline" onClick={() => navigateTo(CUSTOMER_ROUTES.cart)}>Quay lại giỏ hàng</button>}
           </div>
         ) : !hasItems ? (
           <div className="rounded-[32px] bg-white border border-border/80 p-12 text-center shadow-sm max-w-lg mx-auto space-y-4">
@@ -534,28 +596,128 @@ function CheckoutPage() {
                         disabled={checkoutBusy}
                         type="text"
                         value={voucherCodeInput}
-                        onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                        onChange={(e) => { setVoucherCodeInput(e.target.value.toUpperCase()); setVoucherFeedback(null) }}
+                        aria-describedby={voucherFeedback ? 'checkout-voucher-feedback' : undefined}
                         placeholder="Nhập mã voucher (ví dụ: M4N10)"
-                        className="flex-1 h-11 px-4 rounded-xl text-sm font-mono uppercase bg-surface-secondary/40 border border-border/80 focus:border-brand focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand/10 transition-all"
+                        className="min-w-0 flex-1 h-11 px-4 rounded-xl text-sm font-mono uppercase bg-surface-secondary/40 border border-border/80 focus:border-brand focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-brand/10 transition-all"
                       />
-                      <button
+                      <Button
                         type="button"
                         onClick={handleApplyVoucher}
                         disabled={checkoutBusy || !voucherCodeInput.trim()}
-                        className="h-11 px-5 rounded-xl bg-[#17191B] hover:bg-black text-white text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        className="shrink-0" loading={voucherLoading} loadingLabel="Đang kiểm tra…"
                       >
-                        {voucherLoading ? 'Đang kiểm tra...' : 'Áp dụng'}
-                      </button>
+                        Áp dụng
+                      </Button>
                     </div>
 
                     {voucherFeedback && (
-                      <p className={`text-xs font-medium ${
+                      <p id="checkout-voucher-feedback" role={voucherFeedback.type === 'success' ? 'status' : 'alert'} className={`text-xs font-medium ${
                         voucherFeedback.type === 'success' ? 'text-emerald-600' : 'text-rose-500'
                       }`}>
                         {voucherFeedback.message}
                       </p>
                     )}
+                  </div>
+                )}
 
+                {/* Voucher Suggestions based on current order value */}
+                {suggestedVouchers.length > 0 && (
+                  <div className="pt-3 border-t border-border/60 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                        <TicketPercent size={14} className="text-brand" />
+                        <span>Gợi ý mã giảm giá theo giá trị đơn hàng</span>
+                      </span>
+                      <span className="text-[11px] text-muted">
+                        Đơn hiện tại: <strong>{formatCurrencyVND(currentOrderSubtotal)}</strong>
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {suggestedVouchers.map((v) => {
+                        const minOrder = Number(v.minimumOrderValue || 0)
+                        const minQty = Number(v.minimumQuantity || 0)
+                        const ratePercent = Math.round(Number(v.discountRate || 0) * 100)
+                        const isEligible =
+                          currentOrderSubtotal >= minOrder &&
+                          currentTotalQuantity >= minQty
+                        const isCurrentlyApplied =
+                          appliedVoucher?.code?.toUpperCase() === v.code?.toUpperCase()
+                        const estimatedSaving = isEligible
+                          ? Math.round(currentOrderSubtotal * Number(v.discountRate || 0))
+                          : 0
+                        const missingAmount = Math.max(0, minOrder - currentOrderSubtotal)
+
+                        return (
+                          <div
+                            key={v.id || v.code}
+                            className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 ${
+                              isCurrentlyApplied
+                                ? 'border-emerald-300 bg-surface-secondary'
+                                : isEligible
+                                  ? 'border-brand/35 bg-white hover:border-brand'
+                                  : 'border-border bg-surface-secondary/60 opacity-80'
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-mono text-xs font-bold text-ink px-2 py-0.5 rounded bg-surface-secondary border border-border">
+                                  {v.code}
+                                </span>
+                                <span
+                                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                                    isCurrentlyApplied
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : isEligible
+                                        ? 'bg-brand-soft text-brand'
+                                        : 'bg-surface-secondary text-muted'
+                                  }`}
+                                >
+                                  Giảm {ratePercent}%
+                                </span>
+                              </div>
+                              <p className="text-xs text-ink font-medium mt-1.5 line-clamp-2">
+                                {v.description || `Giảm ${ratePercent}% cho đơn từ ${formatCurrencyVND(minOrder)}`}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/50">
+                              {isEligible ? (
+                                <span className="text-[11px] text-emerald-700 font-semibold">
+                                  Tiết kiệm ~{formatCurrencyVND(estimatedSaving)}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-muted">
+                                  {missingAmount > 0
+                                    ? `Mua thêm ${formatCurrencyVND(missingAmount)}`
+                                    : `Cần tối thiểu ${minQty} SP`}
+                                </span>
+                              )}
+
+                              {isCurrentlyApplied ? (
+                                <span className="text-[11px] font-bold text-emerald-700">
+                                  Đang áp dụng
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={checkoutBusy || !isEligible}
+                                  onClick={() => applyVoucherCode(v.code)}
+                                  className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+                                    isEligible
+                                      ? 'bg-brand text-white hover:bg-brand-hover cursor-pointer'
+                                      : 'bg-surface-secondary text-muted cursor-not-allowed'
+                                  }`}
+                                >
+                                  {isEligible ? 'Áp dụng' : 'Chưa đủ ĐK'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -565,7 +727,7 @@ function CheckoutPage() {
                 <p className="text-xs text-muted">Dùng riêng với voucher giảm tiền hàng. Khi đủ ngưỡng freeship, mã ship không cần dùng và không bị trừ lượt.</p>
                 {shippingVoucher ? <div className="flex flex-wrap gap-3 items-center"><strong className="font-mono">{shippingVoucher}</strong><button type="button" disabled={checkoutBusy} onClick={() => { setShippingVoucher(null); setShippingCodeInput(''); setShippingFeedback('') }} className="min-h-11 px-3 text-brand underline">Bỏ voucher ship</button></div> : <>
                   <label htmlFor="checkout-shipping-voucher" className="block text-xs font-semibold">Mã giảm ship</label>
-                  <div className="flex gap-2"><input id="checkout-shipping-voucher" autoComplete="off" maxLength={50} value={shippingCodeInput} disabled={checkoutBusy} onChange={(event) => setShippingCodeInput(event.target.value.toUpperCase())} className="min-h-11 min-w-0 flex-1 px-3 border border-border rounded-xl font-mono text-sm" /><button type="button" disabled={checkoutBusy || !shippingCodeInput.trim()} onClick={handleApplyShippingVoucher} className="min-h-11 px-4 border border-border rounded-xl font-semibold text-sm disabled:opacity-50">Áp dụng</button></div>
+                  <div className="flex gap-2"><input id="checkout-shipping-voucher" name="shippingVoucherCode" autoComplete="off" maxLength={50} value={shippingCodeInput} disabled={checkoutBusy} onChange={(event) => { setShippingCodeInput(event.target.value.toUpperCase()); setShippingFeedback('') }} className="min-h-11 min-w-0 flex-1 px-3 border border-border rounded-xl font-mono text-sm" /><Button variant="secondary" disabled={checkoutBusy || !shippingCodeInput.trim()} onClick={handleApplyShippingVoucher} className="shrink-0">Áp dụng</Button></div>
                 </>}
                 {shippingFeedback && <p role="status" className="text-xs text-muted">{shippingFeedback}</p>}
               </div>
@@ -608,14 +770,39 @@ function CheckoutPage() {
                   </label>
 
                   {paymentOptionsError && <p role="alert" className="text-xs text-danger">{paymentOptionsError} <button type="button" className="underline" disabled={checkoutBusy} onClick={() => setOptionsRetry((value) => value + 1)}>Thử lại</button></p>}
-                  <label className={`flex items-start gap-3.5 p-4 rounded-2xl border bg-white ${paymentMethod === 'MOMO' ? 'border-brand' : 'border-border'} ${paymentOptions?.momoAvailable ? 'cursor-pointer' : 'opacity-70'}`}>
-                    <input type="radio" name="paymentMethod" value="MOMO" checked={paymentMethod === 'MOMO'}
-                      disabled={!paymentOptions?.momoAvailable || checkoutBusy} onChange={() => setPaymentMethod('MOMO')} className="mt-1" />
+                  <label className={`flex items-start gap-3.5 p-4 rounded-2xl border transition-all ${
+                    paymentMethod === 'VNPAY'
+                      ? 'bg-brand-soft/20 border-brand ring-1 ring-brand'
+                      : 'bg-white border-border/80'
+                  } ${isVnpayAvailable ? 'cursor-pointer hover:bg-surface-secondary/40' : 'opacity-60 cursor-not-allowed bg-surface-secondary/20'}`}>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="VNPAY"
+                      checked={paymentMethod === 'VNPAY'}
+                      disabled={!isVnpayAvailable || checkoutBusy}
+                      onChange={() => setPaymentMethod('VNPAY')}
+                      className="mt-1 text-brand focus:ring-brand"
+                    />
                     <div className="flex-1">
-                      <span className="text-sm font-bold text-ink">Thẻ quốc tế qua MoMo (Sandbox)</span>
-                      <p className="text-xs text-muted mt-1">{paymentOptions?.momoAvailable
-                        ? 'Nhập thông tin thẻ thử nghiệm trên trang MoMo. Hỗ trợ đơn từ 1.000 đến 10.000.000 đồng.'
-                        : 'MoMo chưa được cấu hình. Vui lòng chọn COD.'}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-bold text-ink">Thanh toán qua VNPay (Sandbox)</span>
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-secondary text-blue-700 border border-blue-200">
+                          Thẻ ATM / QR / Quốc tế
+                        </span>
+                        {isVnpayAmountOutOfRange && (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            Chỉ áp dụng đơn từ 5.000 đến 9.999.999.999 ₫
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted mt-1">
+                        {paymentOptions?.vnpayAvailable
+                          ? (isVnpayAmountOutOfRange
+                              ? `Đơn hàng này (${formatCurrencyVND(currentFinalAmount)}) ngoài hạn mức VNPay (5.000 - 9.999.999.999 ₫). Vui lòng chọn COD.`
+                              : 'Cổng thanh toán VNPay Sandbox. Chuyển thẳng đến màn hình nhập thẻ test NCB (9704198526191432198, OTP 123456) nhanh chóng.')
+                          : 'Cổng thanh toán VNPay đang tạm bảo trì. Vui lòng chọn COD.'}
+                      </p>
                     </div>
                   </label>
                 </div>
@@ -723,14 +910,25 @@ function CheckoutPage() {
                   </p>
                 </div>
 
+                {paymentMethod === 'VNPAY' && isVnpayAmountOutOfRange && (
+                  <p role="alert" className="text-xs text-danger text-center font-medium">
+                    Tổng thanh toán ngoài hạn mức thanh toán VNPay (5.000 - 9.999.999.999 ₫). Vui lòng chọn COD.
+                  </p>
+                )}
+
                 {/* Place Order Button */}
                 <button
                   type="submit"
-                  disabled={checkoutBusy || !hasItems || !previewCurrent}
+                  disabled={checkoutBusy || !hasItems || !previewCurrent || (paymentMethod === 'VNPAY' && isVnpayAmountOutOfRange)}
                   className="w-full h-14 rounded-2xl bg-brand hover:bg-brand-hover text-white font-bold text-base shadow-lg shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                 >
                   {submitting ? (
                     <span>Đang tạo đơn hàng...</span>
+                  ) : paymentMethod === 'VNPAY' ? (
+                    <>
+                      <span>Tiếp tục thanh toán qua VNPay</span>
+                      <ChevronRight size={18} />
+                    </>
                   ) : (
                     <>
                       <span>Đặt hàng ngay</span>
@@ -764,5 +962,3 @@ function CheckoutPage() {
 }
 
 export default CheckoutPage
-
-

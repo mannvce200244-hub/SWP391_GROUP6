@@ -1,3 +1,4 @@
+import { formatCurrencyVND } from '../../utils/currency.js'
 import Button from '../ui/Button.jsx'
 
 const heading = 'px-4 py-3 text-left font-semibold text-ink whitespace-nowrap'
@@ -10,27 +11,90 @@ const movementLabels = {
 }
 const sourceLabels = { STOCK_DOCUMENT: 'Phiếu kho', ORDER: 'Đơn online', INVOICE: 'Hóa đơn POS' }
 
-export function InventoryBalanceTable({ items, onDraft, onHistory }) {
+export function InventoryBalanceTable({
+  items,
+  onDraft,
+  onHistory,
+  restockMode = false,
+  selectedRestockItems = {},
+  onToggleRestockItem,
+  onUpdateRestockQuantity,
+  onToggleSelectAllPage,
+}) {
+  const allSelectedOnPage =
+    items.length > 0 && items.every((item) => Boolean(selectedRestockItems[item.productId]))
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <caption className="sr-only">Tồn kho bán được theo sản phẩm</caption>
         <thead className="bg-[#F6F7F8]"><tr>
+          {restockMode && (
+            <th scope="col" className={`${heading} w-12 text-center`}>
+              <input
+                type="checkbox"
+                aria-label="Chọn tất cả sản phẩm trang này"
+                checked={allSelectedOnPage}
+                onChange={onToggleSelectAllPage}
+                className="w-4 h-4 rounded border-border text-brand focus:ring-brand cursor-pointer"
+              />
+            </th>
+          )}
           <th scope="col" className={heading}>Sản phẩm</th><th scope="col" className={`${heading} text-right`}>Tồn kho</th>
-          <th scope="col" className={heading}>Trạng thái</th><th scope="col" className={heading}>Thao tác</th>
+          <th scope="col" className={heading}>Trạng thái</th>
+          {restockMode && <th scope="col" className={`${heading} text-center`}>Số lượng cần nhập</th>}
+          <th scope="col" className={heading}>Thao tác</th>
         </tr></thead>
-        <tbody>{items.map((item) => <tr key={item.productId} className="border-t border-border">
-          <th scope="row" className={`${cell} text-left min-w-52 max-w-sm font-medium break-words`}>
-            {item.productName}<span className="block text-xs text-muted font-normal mt-1" translate="no">{item.productCode}</span>
-          </th>
-          <td className={`${cell} text-right tabular-nums font-semibold`}>{number.format(item.quantity)}</td>
-          <td className={`${cell} whitespace-nowrap`}><span className={item.status === 'OUT_OF_STOCK' ? 'text-danger' : item.status === 'LOW_STOCK' ? 'font-semibold text-ink' : 'text-muted'}>{item.statusLabel}</span></td>
-          <td className={cell}><div className="flex flex-wrap gap-2 min-w-64">
-            <Button size="sm" variant="secondary" onClick={() => onDraft(item, 'RECEIPT')}>Tạo phiếu nhập</Button>
-            <Button size="sm" variant="secondary" onClick={() => onDraft(item, 'ISSUE')}>Tạo phiếu xuất</Button>
-            <Button size="sm" variant="ghost" onClick={() => onHistory(item)}>Lịch sử</Button>
-          </div></td>
-        </tr>)}</tbody>
+        <tbody>{items.map((item) => {
+          const selected = selectedRestockItems[item.productId]
+          return (
+            <tr key={item.productId} className={`border-t border-border ${selected ? 'bg-[#F6F7F8]' : ''}`}>
+              {restockMode && (
+                <td className={`${cell} text-center`}>
+                  <input
+                    type="checkbox"
+                    aria-label={`Chọn ${item.productName}`}
+                    checked={Boolean(selected)}
+                    onChange={() => onToggleRestockItem?.(item)}
+                    className="w-4 h-4 rounded border-border text-brand focus:ring-brand cursor-pointer"
+                  />
+                </td>
+              )}
+              <th scope="row" className={`${cell} text-left min-w-52 max-w-sm font-medium break-words`}>
+                {item.productName}<span className="block text-xs text-muted font-normal mt-1" translate="no">{item.productCode}</span>
+              </th>
+              <td className={`${cell} text-right tabular-nums font-semibold`}>{number.format(item.quantity)}</td>
+              <td className={`${cell} whitespace-nowrap`}><span className={item.status === 'OUT_OF_STOCK' ? 'text-danger' : item.status === 'LOW_STOCK' ? 'font-semibold text-ink' : 'text-muted'}>{item.statusLabel}</span></td>
+              {restockMode && (
+                <td className={`${cell} text-center`}>
+                  {selected ? (
+                    <input
+                      type="number"
+                      min={1}
+                      max={9999}
+                      aria-label={`Số lượng cần nhập cho ${item.productName}`}
+                      value={selected.requestedQuantity}
+                      onChange={(e) => onUpdateRestockQuantity?.(item, e.target.value)}
+                      className="w-24 px-2.5 py-1.5 text-center font-mono font-bold text-sm rounded-lg border border-brand bg-white text-ink"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onToggleRestockItem?.(item)}
+                      className="text-xs text-muted hover:text-brand underline cursor-pointer"
+                    >
+                      + Chọn nhập
+                    </button>
+                  )}
+                </td>
+              )}
+              <td className={cell}><div className="flex flex-wrap gap-2 min-w-64">
+                <Button size="sm" variant="secondary" onClick={() => onDraft(item)}>Nhập thêm hàng</Button>
+                <Button size="sm" variant="ghost" onClick={() => onHistory(item)}>Lịch sử</Button>
+              </div></td>
+            </tr>
+          )
+        })}</tbody>
       </table>
     </div>
   )
@@ -43,7 +107,7 @@ export function StockDocumentsTable({ items, onConfirm, onHistory }) {
         <caption className="sr-only">Phiếu nhập và xuất kho</caption>
         <thead className="bg-[#F6F7F8]"><tr>
           <th scope="col" className={heading}>Phiếu / sản phẩm</th><th scope="col" className={heading}>Số lượng</th>
-          <th scope="col" className={heading}>Trạng thái</th><th scope="col" className={heading}>Thao tác</th>
+          <th scope="col" className={heading}>Chi phí lô hàng</th><th scope="col" className={heading}>Trạng thái</th><th scope="col" className={heading}>Thao tác</th>
         </tr></thead>
         <tbody>{items.map((item) => <tr key={item.id} className="border-t border-border">
           <th scope="row" className={`${cell} text-left min-w-60 max-w-sm font-medium break-words`}>
@@ -63,9 +127,13 @@ export function StockDocumentsTable({ items, onConfirm, onHistory }) {
               <span className="block text-xs text-muted mt-1">Tồn kho: {number.format(item.quantityBefore)} → {number.format(item.quantityAfter)}</span>
             </>}
           </td>
+          <td className={`${cell} tabular-nums whitespace-nowrap`}>{item.unitCost == null ? 'Chưa ghi nhận giá nhập' : <>
+            <span className="block text-xs text-muted">Đơn giá: {formatCurrencyVND(item.unitCost)}</span>
+            <span className="block mt-1">{item.status === 'DRAFT' ? 'Dự kiến' : 'Thực nhận'}: <strong>{formatCurrencyVND(item.status === 'DRAFT' ? item.estimatedAmount : item.receivedAmount)}</strong></span>
+          </>}</td>
           <td className={`${cell} whitespace-nowrap`}>{item.status === 'DRAFT' ? 'Chờ xác nhận' : 'Đã xác nhận'}</td>
           <td className={cell}><div className="flex flex-wrap gap-2 min-w-40">
-            {item.status === 'DRAFT' && <Button size="sm" onClick={() => onConfirm(item)} aria-label={`Xác nhận phiếu ${item.id}`}>Xác nhận</Button>}
+            {item.status === 'DRAFT' && item.type === 'RECEIPT' && <Button size="sm" onClick={() => onConfirm(item)} aria-label={`Xác nhận phiếu ${item.id}`}>Xác nhận</Button>}
             <Button size="sm" variant="secondary" onClick={() => onHistory(item)}>Lịch sử</Button>
           </div></td>
         </tr>)}</tbody>

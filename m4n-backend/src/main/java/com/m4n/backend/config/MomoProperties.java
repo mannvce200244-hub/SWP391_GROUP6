@@ -52,4 +52,5 @@ public class MomoProperties {
         throw new IllegalArgumentException("Nguồn thanh toán không được cho phép.");
     }
     public String ipnUrl() { return ipnUrl; }
+    public Set<String> allowedReturnOrigins() { return allowedReturnOrigins; }
 }

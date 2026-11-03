@@ -120,7 +120,7 @@ class CrossChannelInventoryIntegrationTest {
                 inventoryMovementRepository, productMediaRepository);
         stockDocumentService = new StockDocumentServiceImpl(stockDocumentRepository, productRepository, inventoryRepository, inventoryService);
         posService = new PosServiceImpl(productRepository, inventoryRepository, invoiceRepository, userRepository, voucherService, inventoryService, productPricingService,
-                mock(com.m4n.backend.repository.PosMomoPaymentRepository.class), mock(tools.jackson.databind.ObjectMapper.class));
+                mock(com.m4n.backend.repository.PosMomoPaymentRepository.class), mock(tools.jackson.databind.ObjectMapper.class), mock(PosCustomerService.class));
         CartMapper cartMapper = new CartMapper();
         OrderMapper orderMapper = new OrderMapper(cartMapper);
         orderService = new OrderServiceImpl(
@@ -247,7 +247,7 @@ class CrossChannelInventoryIntegrationTest {
             document.setId(5L);
             return document;
         });
-        var draft = stockDocumentService.createReceipt(1L, new StockImportRequest(5, "Nhập thêm hàng"));
+        var draft = stockDocumentService.createReceipt(1L, new StockImportRequest(5, "Nhập thêm hàng", new java.math.BigDecimal("100000")));
         assertThat(sharedInventoryA.getQuantity()).isEqualTo(2);
         org.mockito.ArgumentCaptor<StockDocument> captor = org.mockito.ArgumentCaptor.forClass(StockDocument.class);
         verify(stockDocumentRepository).save(captor.capture());

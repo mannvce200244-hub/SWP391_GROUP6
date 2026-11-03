@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import artisanService from '../../services/artisanService.js'
 import useToast from '../../components/ui/useToast.js'
-import { UserRound, Search, Trash2, Landmark, Plus, Pencil } from 'lucide-react'
+import { UserRound, Search, Trash2, Landmark, Plus, Pencil, Eye } from 'lucide-react'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import ArtisanManagementModal from '../../components/admin/ArtisanManagementModal.jsx'
 
@@ -101,7 +102,7 @@ export default function AdminArtisansPage() {
         <button
           type="button"
           onClick={reloadArtisans}
-          className="px-4 py-2 text-sm font-medium rounded-lg bg-[#F6F7F8] hover:bg-[#E3E6E8] text-[#17191B] border border-[#E3E6E8] transition-colors cursor-pointer"
+          className="px-4 py-2 rounded-lg bg-[#0D9488] text-white text-sm font-medium hover:bg-[#0D9488]/90 transition-colors cursor-pointer"
         >
           Thử lại
         </button>
@@ -111,10 +112,10 @@ export default function AdminArtisansPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-[#17191B]">Quản lý Nghệ nhân</h2>
+          <h1 className="text-xl font-bold text-[#17191B]">Quản lý Nghệ nhân</h1>
           <p className="text-sm text-secondary mt-0.5">
             {artisans.length} nghệ nhân trong hệ thống
           </p>
@@ -125,23 +126,23 @@ export default function AdminArtisansPage() {
             setSelectedArtisan(null)
             setIsModalOpen(true)
           }}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#0D9488] hover:bg-[#0B7A6F] text-white text-sm font-medium transition-colors shadow-2xs cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#0D9488] text-white text-sm font-semibold hover:bg-[#0F766E] transition-colors shadow-2xs cursor-pointer"
         >
           <Plus size={16} />
-          Thêm nghệ nhân
+          <span>Thêm nghệ nhân</span>
         </button>
       </div>
 
       {/* Search */}
-      <div className="relative max-w-md">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+      <div className="relative max-w-sm">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
         <input
           type="text"
-          name="masterSearch" aria-label="Tìm theo tên hoặc thông tin liên quan"
+          aria-label="Tìm kiếm nghệ nhân"
+          placeholder="Tìm kiếm nghệ nhân…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Tìm kiếm nghệ nhân…"
-          className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-[#E3E6E8] bg-white text-sm text-[#17191B] placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-[#A62F25]/15 focus:border-[#A62F25]/40 transition-colors"
+          className="w-full pl-9 pr-4 py-2 rounded-xl border border-[#E3E6E8] bg-white text-sm text-[#17191B] placeholder:text-zinc-400 focus:outline-none focus:border-[#0D9488] transition-colors"
         />
       </div>
 
@@ -182,7 +183,14 @@ export default function AdminArtisansPage() {
                           </div>
                         )}
                         <div>
-                          <p className="font-medium text-[#17191B]">{artisan.name}</p>
+                          <button
+                            type="button"
+                            onClick={() => navigateTo(CUSTOMER_ROUTES.adminArtisanDetail(artisan.id))}
+                            className="font-semibold text-[#17191B] hover:text-[#0D9488] transition-colors cursor-pointer text-left"
+                            title="Xem trang chi tiết nghệ nhân"
+                          >
+                            {artisan.name}
+                          </button>
                           {artisan.biography && (
                             <p className="max-w-xs truncate text-xs text-secondary">{artisan.biography}</p>
                           )}
@@ -191,10 +199,21 @@ export default function AdminArtisansPage() {
                     </td>
                     <td className="px-4 py-3">
                       {artisan.craftVillageName ? (
-                        <span className="inline-flex items-center gap-1 text-secondary">
-                          <Landmark size={13} className="text-zinc-400" aria-hidden="true" />
-                          {artisan.craftVillageName}
-                        </span>
+                        artisan.craftVillageId ? (
+                          <button
+                            type="button"
+                            onClick={() => navigateTo(CUSTOMER_ROUTES.adminCraftVillageDetail(artisan.craftVillageId))}
+                            className="inline-flex items-center gap-1 text-secondary hover:text-[#0D9488] transition-colors cursor-pointer"
+                          >
+                            <Landmark size={13} className="text-zinc-400" aria-hidden="true" />
+                            <span>{artisan.craftVillageName}</span>
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-secondary">
+                            <Landmark size={13} className="text-zinc-400" aria-hidden="true" />
+                            {artisan.craftVillageName}
+                          </span>
+                        )
                       ) : (
                         <span className="text-zinc-400">—</span>
                       )}
@@ -202,19 +221,29 @@ export default function AdminArtisansPage() {
                     <td className="px-4 py-3 text-center">
                       <span className="text-secondary">{artisan.productCount ?? 0}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
-                          title="Chỉnh sửa" aria-label="Chỉnh sửa"
+                          onClick={() => navigateTo(CUSTOMER_ROUTES.adminArtisanDetail(artisan.id))}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E5E8EB] bg-white hover:bg-[#F2F4F5] text-[#17191B] font-medium text-xs transition-colors cursor-pointer"
+                          title="Xem chi tiết thông tin nghệ nhân"
+                        >
+                          <Eye size={14} aria-hidden="true" />
+                          <span>Chi tiết</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Chỉnh sửa"
                           aria-label={`Chỉnh sửa nghệ nhân ${artisan.name}`}
                           onClick={() => {
                             setSelectedArtisan(artisan)
                             setIsModalOpen(true)
                           }}
-                          className="p-1.5 rounded-lg text-zinc-400 hover:text-[#0D9488] hover:bg-[#0D9488]/10 transition-colors cursor-pointer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0D9488]/10 hover:bg-[#0D9488]/20 text-[#0D9488] font-medium text-xs transition-colors cursor-pointer"
                         >
-                          <Pencil size={15} aria-hidden="true" />
+                          <Pencil size={14} aria-hidden="true" />
+                          <span>Sửa</span>
                         </button>
                         <button
                           type="button"
@@ -265,7 +294,11 @@ export default function AdminArtisansPage() {
             setIsModalOpen(false)
             setSelectedArtisan(null)
           }}
-          onSuccess={reloadArtisans}
+          onSuccess={() => {
+            setIsModalOpen(false)
+            setSelectedArtisan(null)
+            reloadArtisans()
+          }}
         />
       )}
     </div>

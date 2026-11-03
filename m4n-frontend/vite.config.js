@@ -11,12 +11,18 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
       allowedHosts: env.DEV_TUNNEL_HOST ? [env.DEV_TUNNEL_HOST] : [],
-      proxy: env.DEV_API_PROXY_TARGET ? {
+      proxy: {
+        '/api/v1/auth/google': {
+          target: env.DEV_API_PROXY_TARGET || 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        ...(env.DEV_API_PROXY_TARGET ? {
         '/api/v1': {
           target: env.DEV_API_PROXY_TARGET,
           changeOrigin: true,
         },
-      } : undefined,
+        } : {}),
+      },
     },
     plugins: [
       react(),

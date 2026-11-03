@@ -18,6 +18,7 @@ const ArticleDetailPage = lazy(() => import('../pages/ArticleDetailPage.jsx'))
 const CartPage = lazy(() => import('../pages/CartPage.jsx'))
 const CheckoutPage = lazy(() => import('../pages/CheckoutPage.jsx'))
 const PaymentReturnPage = lazy(() => import('../pages/PaymentReturnPage.jsx'))
+const MomoSimulatorPage = lazy(() => import('../pages/MomoSimulatorPage.jsx'))
 
 const LoginPage = lazy(() => import('../features/auth/LoginPage.jsx'))
 const RegisterPage = lazy(() => import('../features/auth/RegisterPage.jsx'))
@@ -36,7 +37,9 @@ const AdminDashboardPage = lazy(() => import('../pages/AdminDashboardPage.jsx'))
 const AdminInstrumentsPage = lazy(() => import('../pages/admin/AdminInstrumentsPage.jsx'))
 const AdminCategoriesPage = lazy(() => import('../pages/admin/AdminCategoriesPage.jsx'))
 const AdminArtisansPage = lazy(() => import('../pages/admin/AdminArtisansPage.jsx'))
+const AdminArtisanDetailPage = lazy(() => import('../pages/admin/AdminArtisanDetailPage.jsx'))
 const AdminCraftVillagesPage = lazy(() => import('../pages/admin/AdminCraftVillagesPage.jsx'))
+const AdminCraftVillageDetailPage = lazy(() => import('../pages/admin/AdminCraftVillageDetailPage.jsx'))
 const AdminArticlesPage = lazy(() => import('../pages/admin/AdminArticlesPage.jsx'))
 const AdminInventoryPage = lazy(() => import('../pages/admin/AdminInventoryPage.jsx'))
 const AdminOrdersPage = lazy(() => import('../pages/admin/AdminOrdersPage.jsx'))
@@ -58,6 +61,8 @@ import {
   matchCraftVillageDetailPath,
   matchProductDetailPath,
   matchAdminInstrumentDetailPath,
+  matchAdminArtisanDetailPath,
+  matchAdminCraftVillageDetailPath,
   normalizePathname,
   ROUTE_CHANGE_EVENT,
 } from './customerRoutes.js'
@@ -107,8 +112,14 @@ function CurrentRoute() {
     return <AuthLayout><RouteContent pathname={pathname}><ResetPasswordPage /></RouteContent></AuthLayout>
   }
 
+  if (pathname === CUSTOMER_ROUTES.momoSimulator) {
+    return <RouteContent pathname={pathname}><MomoSimulatorPage /></RouteContent>
+  }
+
   // 2. Admin shell using AdminLayout
   const adminInstrumentDetailId = matchAdminInstrumentDetailPath(pathname)
+  const adminArtisanDetailId = matchAdminArtisanDetailPath(pathname)
+  const adminCraftVillageDetailId = matchAdminCraftVillageDetailPath(pathname)
 
   if (
     pathname === CUSTOMER_ROUTES.admin ||
@@ -116,7 +127,9 @@ function CurrentRoute() {
     Boolean(adminInstrumentDetailId) ||
     pathname === CUSTOMER_ROUTES.adminCategories ||
     pathname === CUSTOMER_ROUTES.adminArtisans ||
+    Boolean(adminArtisanDetailId) ||
     pathname === CUSTOMER_ROUTES.adminCraftVillages ||
+    Boolean(adminCraftVillageDetailId) ||
     pathname === CUSTOMER_ROUTES.adminArticles ||
     pathname === CUSTOMER_ROUTES.adminInventory ||
     pathname === CUSTOMER_ROUTES.adminOrders ||
@@ -130,6 +143,10 @@ function CurrentRoute() {
     let adminContent = <AdminDashboardPage />
     if (adminInstrumentDetailId) {
       adminContent = <AdminProductDetailPage productId={adminInstrumentDetailId} />
+    } else if (adminArtisanDetailId) {
+      adminContent = <AdminArtisanDetailPage artisanId={adminArtisanDetailId} />
+    } else if (adminCraftVillageDetailId) {
+      adminContent = <AdminCraftVillageDetailPage villageId={adminCraftVillageDetailId} />
     } else if (pathname === CUSTOMER_ROUTES.adminInstruments) {
       adminContent = <AdminInstrumentsPage />
     } else if (pathname === CUSTOMER_ROUTES.adminCategories) {

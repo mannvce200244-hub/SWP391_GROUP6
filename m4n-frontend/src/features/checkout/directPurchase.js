@@ -17,6 +17,7 @@ export function parseDirectPurchase(search) {
   const productId = params.get('productId')
   const quantity = params.get('quantity')
   if (params.getAll('productId').length !== 1 || params.getAll('quantity').length !== 1
+      || params.has('cartItemIds')
       || !positiveInteger(productId) || !positiveInteger(quantity, 2147483647)) {
     return { directPurchase: null, error: 'Thông tin mua trực tiếp không hợp lệ. Vui lòng chọn lại sản phẩm.' }
   }

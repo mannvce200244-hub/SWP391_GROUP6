@@ -40,7 +40,9 @@ function getPaymentBadge(method) {
     case 'CARD':
       return { label: 'Thẻ POS', className: 'text-purple-700 bg-purple-50 border-purple-200' }
     case 'VNPAY':
-      return { label: 'VNPay', className: 'text-sky-700 bg-surface-secondary border-sky-200' }
+      return { label: 'VNPay', className: 'text-sky-700 bg-[#F6F7F8] border-sky-200' }
+    case 'MOMO':
+      return { label: 'MoMo', className: 'text-pink-700 bg-[#F6F7F8] border-pink-200' }
     default:
       return { label: method || 'Khác', className: 'text-zinc-700 bg-[#F6F7F8] border-zinc-200' }
   }

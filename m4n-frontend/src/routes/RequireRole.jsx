@@ -5,6 +5,7 @@ import AppLoadingScreen from '../components/ui/AppLoadingScreen.jsx'
 import { hasRolePermission } from './roleUtils.js'
 import { paymentReturnOrderId } from '../services/paymentService.js'
 import { posPaymentReturnId } from '../services/posMomoService.js'
+import apiClient from '../api/apiClient.js'
 
 export function RequireRole({ allowedRoles = [], children }) {
   const { user, isAuthenticated, isLoading } = useAuth()
@@ -15,6 +16,9 @@ export function RequireRole({ allowedRoles = [], children }) {
     if (isLoading) return
 
     if (!isAuthenticated) {
+      if (window.location.search.includes('vnp_SecureHash')) {
+        apiClient.get(`/payments/vnpay/ipn${window.location.search}`).catch(() => {})
+      }
       const orderId = normalizePathname(window.location.pathname) === CUSTOMER_ROUTES.paymentReturn
         ? paymentReturnOrderId(window.location.search) : null
       const posPaymentId = normalizePathname(window.location.pathname) === CUSTOMER_ROUTES.pos

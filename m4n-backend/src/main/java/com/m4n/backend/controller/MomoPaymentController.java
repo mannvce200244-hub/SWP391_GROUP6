@@ -1,6 +1,7 @@
 package com.m4n.backend.controller;
 import com.m4n.backend.dto.response.PaymentUrlResponse;
 import com.m4n.backend.dto.request.MomoIpnRequest;
+import com.m4n.backend.dto.request.MomoSimulateRequest;
 import jakarta.validation.Valid;
 import com.m4n.backend.service.MomoPaymentService;
 import lombok.RequiredArgsConstructor;
@@ -22,4 +23,10 @@ public class MomoPaymentController {
     @PostMapping("/momo/ipn")
     @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
     public void ipn(@Valid @RequestBody MomoIpnRequest result) { service.processIpn(result.signedFields()); }
+
+    @PostMapping("/momo/simulate-payment")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void simulatePayment(@Valid @RequestBody MomoSimulateRequest request) {
+        service.simulatePayment(request.reference(), Boolean.TRUE.equals(request.success()));
+    }
 }

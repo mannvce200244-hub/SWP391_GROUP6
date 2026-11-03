@@ -47,17 +47,20 @@ class StockDocumentServiceTest {
     @Test void receiptCreationRecordsDraftWithoutReadingOrChangingInventory() {
         when(products.findById(10L)).thenReturn(Optional.of(product));
         when(documents.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        var response = service.createReceipt(10L, new StockImportRequest(5, "  Bổ sung  "));
+        var response = service.createReceipt(10L, new StockImportRequest(5, "  Bổ sung  ", new java.math.BigDecimal("100000")));
         assertThat(response.status()).isEqualTo(StockDocumentStatus.DRAFT);
         assertThat(response.reason()).isEqualTo("Bổ sung");
         assertThat(response.acceptedQuantity()).isNull();
         assertThat(response.createdBy()).isEqualTo("admin@test.vn");
+        assertThat(response.unitCost()).isEqualByComparingTo("100000");
+        assertThat(response.estimatedAmount()).isEqualByComparingTo("500000");
+        assertThat(response.receivedAmount()).isNull();
         verifyNoInteractions(inventories, inventoryService);
     }
 
     @Test void invalidDraftQuantityAndBlankIssueReasonNeverPersist() {
         for (int quantity : new int[]{0, -1}) {
-            assertThatThrownBy(() -> service.createReceipt(10L, new StockImportRequest(quantity, null)))
+            assertThatThrownBy(() -> service.createReceipt(10L, new StockImportRequest(quantity, null, new java.math.BigDecimal("100000"))))
                     .isInstanceOf(IllegalArgumentException.class);
             assertThatThrownBy(() -> service.createIssue(10L, new StockIssueRequest(quantity, "Sai số")))
                     .isInstanceOf(IllegalArgumentException.class);
@@ -67,6 +70,7 @@ class StockDocumentServiceTest {
     }
 
     @Test void partialRejectionAddsOnlyAcceptedGoodsAndAuditsQuality() {
+        document.setUnitCost(new java.math.BigDecimal("125000"));
         stubConfirmation();
         var result = service.confirm(7L, new ConfirmStockDocumentRequest(2, "  Hỏng dây  "));
         assertThat(result.acceptedQuantity()).isEqualTo(3);
@@ -74,6 +78,7 @@ class StockDocumentServiceTest {
         assertThat(result.rejectionReason()).isEqualTo("Hỏng dây");
         assertThat(result.quantityBefore()).isEqualTo(15);
         assertThat(result.quantityAfter()).isEqualTo(18);
+        assertThat(result.receivedAmount()).isEqualByComparingTo("375000");
         var captured = org.mockito.ArgumentCaptor.forClass(InventoryMovement.class);
         verify(inventoryService).recordMovement(captured.capture());
         assertThat(captured.getValue().getSourceId()).isEqualTo(7L);
@@ -83,10 +88,12 @@ class StockDocumentServiceTest {
     }
 
     @Test void allRejectedReceiptRecordsQualityWithoutIncreasingStock() {
+        document.setUnitCost(new java.math.BigDecimal("125000"));
         stubConfirmation();
         var result = service.confirm(7L, new ConfirmStockDocumentRequest(5, "Hỏng toàn bộ"));
         assertThat(result.status()).isEqualTo(StockDocumentStatus.CONFIRMED);
         assertThat(result.acceptedQuantity()).isZero();
+        assertThat(result.receivedAmount()).isEqualByComparingTo("0");
         assertThat(inventory.getQuantity()).isEqualTo(15);
         verify(inventoryService).recordMovement(any());
     }
@@ -99,6 +106,15 @@ class StockDocumentServiceTest {
         }
         verifyNoInteractions(inventories, products, inventoryService);
         assertThat(document.getStatus()).isEqualTo(StockDocumentStatus.DRAFT);
+    }
+
+    @Test void invalidOrMissingCostNeverCreatesReceipt() {
+        for (var cost : java.util.Arrays.asList(null, new java.math.BigDecimal("-1"),
+                new java.math.BigDecimal("1.5"), new java.math.BigDecimal("10000000000"))) {
+            assertThatThrownBy(() -> service.createReceipt(10L, new StockImportRequest(50, null, cost)))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+        verifyNoInteractions(documents, inventories, products, inventoryService);
     }
 
     @Test void insufficientIssueLeavesDocumentDraftAndBalanceUnchanged() {

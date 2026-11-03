@@ -9,6 +9,7 @@ import useToast from '../../components/ui/useToast.js'
 import AppLoadingScreen from '../../components/ui/AppLoadingScreen.jsx'
 import { paymentReturnOrderId } from '../../services/paymentService.js'
 import { posPaymentReturnId } from '../../services/posMomoService.js'
+import GoogleLoginButton from './GoogleLoginButton.jsx'
 
 function getRoleHome(role, paymentOrderId, posPaymentId) {
   if (role === 'POS_STAFF' && posPaymentId) return `${CUSTOMER_ROUTES.pos}?m4nPosPaymentId=${encodeURIComponent(posPaymentId)}`
@@ -34,11 +35,24 @@ function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
-  const [generalError, setGeneralError] = useState('')
+  const [generalError, setGeneralError] = useState(() => {
+    const outcome = new URLSearchParams(window.location.search).get('google')
+    if (outcome === 'cancelled') return 'Bạn đã hủy đăng nhập Google. Bạn có thể thử lại hoặc dùng email và mật khẩu.'
+    if (outcome === 'not_allowed') return 'Không thể đăng nhập tài khoản này bằng Google. Vui lòng dùng email và mật khẩu hoặc liên hệ hỗ trợ.'
+    if (outcome === 'failed') return 'Đăng nhập Google chưa thành công. Vui lòng thử lại.'
+    if (outcome === 'success') return 'Chưa thể hoàn tất phiên đăng nhập Google. Vui lòng thử lại.'
+    return ''
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [paymentOrderId] = useState(() => new URLSearchParams(window.location.search).has('m4nOrderId')
-    ? paymentReturnOrderId(window.location.search) : null)
+    ? paymentReturnOrderId(window.location.search)
+    : new URLSearchParams(window.location.search).has('google')
+      ? paymentReturnOrderId(`?m4nOrderId=${encodeURIComponent(sessionStorage.getItem('m4n-google-return-order') || '')}`) : null)
   const [posPaymentId] = useState(() => posPaymentReturnId(window.location.search))
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('google')) sessionStorage.removeItem('m4n-google-return-order')
+  }, [])
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -198,6 +212,8 @@ function LoginPage() {
           </Button>
         </div>
       </form>
+
+      <GoogleLoginButton disabled={isSubmitting} paymentOrderId={paymentOrderId} />
 
       <footer className="pt-4 border-t border-border flex items-center justify-center text-sm text-muted">
         <p>

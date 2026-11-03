@@ -22,6 +22,7 @@ export const CUSTOMER_ROUTES = Object.freeze({
   cart: '/cart',
   checkout: '/checkout',
   paymentReturn: '/payment-return',
+  momoSimulator: '/momo-simulator',
   forbidden: '/403',
   staff: '/staff',
   pos: '/pos',
@@ -32,7 +33,11 @@ export const CUSTOMER_ROUTES = Object.freeze({
     `/admin/instruments/${encodeURIComponent(String(id))}`,
   adminCategories: '/admin/categories',
   adminArtisans: '/admin/artisans',
+  adminArtisanDetail: (id) =>
+    `/admin/artisans/${encodeURIComponent(String(id))}`,
   adminCraftVillages: '/admin/craft-villages',
+  adminCraftVillageDetail: (id) =>
+    `/admin/craft-villages/${encodeURIComponent(String(id))}`,
   adminArticles: '/admin/articles',
   adminInventory: '/admin/inventory',
   legacyAdminStockImport: '/admin/stock-import',
@@ -145,6 +150,46 @@ export function matchCraftVillageDetailPath(pathname) {
 
 export function matchAdminInstrumentDetailPath(pathname) {
   const detailPrefix = `${CUSTOMER_ROUTES.adminInstruments}/`
+
+  if (!pathname.startsWith(detailPrefix)) {
+    return null
+  }
+
+  const encodedId = pathname.slice(detailPrefix.length)
+
+  if (!encodedId || encodedId.includes('/')) {
+    return null
+  }
+
+  try {
+    return decodeURIComponent(encodedId)
+  } catch {
+    return null
+  }
+}
+
+export function matchAdminArtisanDetailPath(pathname) {
+  const detailPrefix = `${CUSTOMER_ROUTES.adminArtisans}/`
+
+  if (!pathname.startsWith(detailPrefix)) {
+    return null
+  }
+
+  const encodedId = pathname.slice(detailPrefix.length)
+
+  if (!encodedId || encodedId.includes('/')) {
+    return null
+  }
+
+  try {
+    return decodeURIComponent(encodedId)
+  } catch {
+    return null
+  }
+}
+
+export function matchAdminCraftVillageDetailPath(pathname) {
+  const detailPrefix = `${CUSTOMER_ROUTES.adminCraftVillages}/`
 
   if (!pathname.startsWith(detailPrefix)) {
     return null

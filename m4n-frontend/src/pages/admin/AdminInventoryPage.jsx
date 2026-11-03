@@ -38,6 +38,7 @@ export default function AdminInventoryPage() {
   const [filters, setFilters] = useState(readFilters)
   const [search, setSearch] = useState(() => readFilters().keyword)
   const [items, setItems] = useState([])
+  const [completedRequestKey, setCompletedRequestKey] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [totalPages, setTotalPages] = useState(1)
@@ -45,7 +46,17 @@ export default function AdminInventoryPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [draftTarget, setDraftTarget] = useState(null)
   const [confirmTarget, setConfirmTarget] = useState(null)
+
+  // Bulk Restock Request Mode (Ý 2)
+  const [restockMode, setRestockMode] = useState(false)
+  const [selectedRestockItems, setSelectedRestockItems] = useState({})
+  const [warehouseEmail, setWarehouseEmail] = useState('kho@m4n.vn')
+  const [restockNote, setRestockNote] = useState('')
+  const [sentEmailPreview, setSentEmailPreview] = useState(null)
+
   const { view, page, type, status, keyword, product } = filters
+  const requestKey = JSON.stringify([view, page, type, status, keyword, product?.id, refreshKey])
+  const pending = loading || completedRequestKey !== requestKey
 
   useEffect(() => {
     const restoreFilters = () => { const next = readFilters(); setFilters(next); setSearch(next.keyword) }
@@ -83,11 +94,11 @@ export default function AdminInventoryPage() {
         setTotalElements(response.totalElements)
       } catch (failure) {
         if (active) setError(failure.message || 'Không thể tải dữ liệu kho. Vui lòng thử lại.')
-      } finally { if (active) setLoading(false) }
+      } finally { if (active) { setCompletedRequestKey(requestKey); setLoading(false) } }
     }
     load()
     return () => { active = false }
-  }, [view, page, type, status, keyword, product, refreshKey])
+  }, [view, page, type, status, keyword, product, requestKey])
 
   const reload = () => setRefreshKey((current) => current + 1)
   const changeView = (next) => setFilters((current) => ({ ...current, view: next, page: 0, status: '', type: '' }))
@@ -106,15 +117,180 @@ export default function AdminInventoryPage() {
     addToast({ type: 'success', message: `Đã xác nhận phiếu #${document.id}. Tồn kho: ${document.quantityBefore.toLocaleString('vi-VN')} → ${document.quantityAfter.toLocaleString('vi-VN')}.` })
   }
 
+  const toggleRestockItem = (item) => {
+    setSelectedRestockItems((prev) => {
+      const next = { ...prev }
+      if (next[item.productId]) {
+        delete next[item.productId]
+      } else {
+        next[item.productId] = {
+          productId: item.productId,
+          code: item.productCode,
+          name: item.productName,
+          currentStock: item.quantity || 0,
+          requestedQuantity: 10,
+        }
+      }
+      return next
+    })
+  }
+
+  const updateRestockQuantity = (item, value) => {
+    const parsed = Math.max(1, Math.min(9999, Number(value) || 1))
+    setSelectedRestockItems((prev) => ({
+      ...prev,
+      [item.productId]: {
+        productId: item.productId,
+        code: item.productCode,
+        name: item.productName,
+        currentStock: item.quantity || 0,
+        requestedQuantity: parsed,
+      },
+    }))
+  }
+
+  const toggleSelectAllPage = () => {
+    const allSelected = items.length > 0 && items.every((item) => Boolean(selectedRestockItems[item.productId]))
+    setSelectedRestockItems((prev) => {
+      const next = { ...prev }
+      if (allSelected) {
+        items.forEach((item) => { delete next[item.productId] })
+      } else {
+        items.forEach((item) => {
+          if (!next[item.productId]) {
+            next[item.productId] = {
+              productId: item.productId,
+              code: item.productCode,
+              name: item.productName,
+              currentStock: item.quantity || 0,
+              requestedQuantity: 10,
+            }
+          }
+        })
+      }
+      return next
+    })
+  }
+
+  const handleSendRestockEmail = () => {
+    const selectedList = Object.values(selectedRestockItems)
+    if (selectedList.length === 0) {
+      addToast({ type: 'error', message: 'Vui lòng tích chọn ít nhất 1 sản phẩm cần nhập thêm hàng.' })
+      return
+    }
+    const emailTrimmed = warehouseEmail.trim()
+    if (!emailTrimmed || !emailTrimmed.includes('@')) {
+      addToast({ type: 'error', message: 'Vui lòng nhập địa chỉ email nhân viên kho hợp lệ.' })
+      return
+    }
+
+    const totalQty = selectedList.reduce((sum, it) => sum + Number(it.requestedQuantity || 0), 0)
+    const subject = `[M4N Kho] Yêu cầu nhập thêm hàng (${selectedList.length} mã nhạc cụ - Tổng ${totalQty} SP)`
+    const body = [
+      'Kính gửi Bộ phận Kho / Cung ứng M4N,',
+      '',
+      'Hệ thống Quản trị M4N gửi yêu cầu nhập bổ sung tồn kho cho các nhạc cụ sau:',
+      '',
+      ...selectedList.map(
+        (it, idx) =>
+          `${idx + 1}. [${it.code}] ${it.name} — Tồn hiện tại: ${it.currentStock} | Số lượng yêu cầu nhập thêm: +${it.requestedQuantity}`
+      ),
+      '',
+      `Tổng số mã sản phẩm: ${selectedList.length}`,
+      `Tổng số lượng yêu cầu nhập: ${totalQty} sản phẩm`,
+      restockNote.trim() ? `Ghi chú từ Quản trị: ${restockNote.trim()}` : '',
+      '',
+      'Trân trọng,',
+      'Ban Quản trị Hệ thống M4N',
+    ].filter(Boolean).join('\n')
+
+    setSentEmailPreview({ to: emailTrimmed, subject, body })
+    addToast({
+      type: 'success',
+      message: `Đã khởi tạo phiếu yêu cầu nhập thêm ${selectedList.length} sản phẩm gửi tới ${emailTrimmed}.`,
+    })
+  }
+
+  const selectedRestockList = Object.values(selectedRestockItems)
+  const totalRequestedRestockQty = selectedRestockList.reduce((sum, it) => sum + Number(it.requestedQuantity || 0), 0)
+
   return (
     <div className="space-y-6">
-      <header><h2 className="text-xl font-semibold text-ink">Kho hàng</h2>
-        <p className="mt-1 text-sm text-muted">Theo dõi tồn kho, xác nhận phiếu nhập/xuất và kiểm tra nguồn biến động.</p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-ink">Kho hàng</h2>
+          <p className="mt-1 text-sm text-muted">Nhập thêm hàng theo lô, kiểm nhận QC và theo dõi chi phí thực nhận. Tạo sản phẩm mới không làm tăng tồn kho.</p>
+        </div>
+        {view === 'balance' && (
+          <Button
+            variant={restockMode ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => {
+              setRestockMode((prev) => !prev)
+              setSentEmailPreview(null)
+            }}
+          >
+            {restockMode ? 'Đóng chế độ yêu cầu nhập hàng' : 'Yêu cầu nhập thêm hàng'}
+          </Button>
+        )}
       </header>
       <nav aria-label="Các mục quản lý kho" className="flex flex-wrap gap-2">
         {VIEWS.map((item) => <Button key={item.id} variant="secondary" size="sm" aria-current={view === item.id ? 'page' : undefined}
           className={view === item.id ? 'border-brand text-brand font-semibold' : ''} onClick={() => changeView(item.id)}>{item.label}</Button>)}
       </nav>
+
+      {view === 'balance' && restockMode && (
+        <div className="rounded-xl border border-brand bg-white p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-ink">Tích chọn sản phẩm & Gửi mail yêu cầu nhập thêm cho nhân viên kho</h3>
+              <p className="text-xs text-muted">Đã chọn <strong>{selectedRestockList.length}</strong> sản phẩm · Tổng số lượng yêu cầu: <strong>{totalRequestedRestockQty}</strong></p>
+            </div>
+            {selectedRestockList.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setSelectedRestockItems({})}>
+                Bỏ chọn tất cả
+              </Button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+            <Input
+              id="inventory-warehouse-email"
+              label="Email nhân viên kho"
+              type="email"
+              value={warehouseEmail}
+              onChange={(e) => setWarehouseEmail(e.target.value)}
+              placeholder="kho@m4n.vn"
+            />
+            <Input
+              id="inventory-restock-note"
+              label="Ghi chú yêu cầu"
+              value={restockNote}
+              onChange={(e) => setRestockNote(e.target.value)}
+              placeholder="Ghi chú đợt nhập hàng…"
+            />
+            <Button onClick={handleSendRestockEmail} disabled={selectedRestockList.length === 0}>
+              Gửi mail yêu cầu nhập thêm
+            </Button>
+          </div>
+          {sentEmailPreview && (
+            <div className="rounded-lg border border-border bg-[#F6F7F8] p-3 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span>Nội dung gửi tới: <strong>{sentEmailPreview.to}</strong></span>
+                <a
+                  href={`mailto:${encodeURIComponent(sentEmailPreview.to)}?subject=${encodeURIComponent(sentEmailPreview.subject)}&body=${encodeURIComponent(sentEmailPreview.body)}`}
+                  className="font-semibold text-brand underline"
+                >
+                  Mở ứng dụng Mail để gửi
+                </a>
+              </div>
+              <pre className="text-xs bg-white p-2.5 rounded border border-border whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
+                {sentEmailPreview.body}
+              </pre>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-end gap-3">
         {view === 'balance' ? <>
           <form onSubmit={(event) => { event.preventDefault(); setFilters((current) => ({ ...current, page: 0, keyword: search.trim() })) }} className="flex items-end gap-2 flex-1 min-w-64 max-w-lg">
@@ -137,18 +313,29 @@ export default function AdminInventoryPage() {
         </>}
         <Button variant="secondary" size="sm" onClick={reload} disabled={loading}>Làm mới</Button>
       </div>
-      <section className="rounded-xl border border-border bg-white overflow-hidden" aria-label={VIEWS.find((item) => item.id === view).label} aria-busy={loading}>
-        {loading ? <LoadingState message="Đang tải dữ liệu kho…" /> : error ? <ErrorState message={error} onRetry={reload} />
+      <section className="rounded-xl border border-border bg-white overflow-hidden" aria-label={VIEWS.find((item) => item.id === view).label} aria-busy={pending}>
+        {pending ? <LoadingState message="Đang tải dữ liệu kho…" /> : error ? <ErrorState message={error} onRetry={reload} />
           : items.length === 0 ? <EmptyState title="Không có dữ liệu phù hợp" message={view === 'balance' ? 'Thử đổi từ khóa hoặc trạng thái kho.' : 'Thử đổi bộ lọc. Phiếu mới và biến động kho sẽ xuất hiện tại đây.'} />
-            : view === 'balance' ? <InventoryBalanceTable items={items} onDraft={(item, documentType) => setDraftTarget({ product: item, type: documentType })} onHistory={historyFor} />
+            : view === 'balance' ? (
+              <InventoryBalanceTable
+                items={items}
+                onDraft={setDraftTarget}
+                onHistory={historyFor}
+                restockMode={restockMode}
+                selectedRestockItems={selectedRestockItems}
+                onToggleRestockItem={toggleRestockItem}
+                onUpdateRestockQuantity={updateRestockQuantity}
+                onToggleSelectAllPage={toggleSelectAllPage}
+              />
+            )
               : view === 'documents' ? <StockDocumentsTable items={items} onConfirm={setConfirmTarget} onHistory={historyFor} /> : <InventoryMovementsTable items={items} />}
-        {!loading && !error && items.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+        {!pending && !error && items.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
           <p className="text-xs text-muted tabular-nums">{totalElements.toLocaleString('vi-VN')} bản ghi · Trang {page + 1} / {totalPages}</p>
           <div className="flex gap-2"><Button variant="secondary" size="sm" disabled={page === 0} onClick={() => setFilters((current) => ({ ...current, page: current.page - 1 }))}>Trước</Button>
             <Button variant="secondary" size="sm" disabled={page >= totalPages - 1} onClick={() => setFilters((current) => ({ ...current, page: current.page + 1 }))}>Sau</Button></div>
         </div>}
       </section>
-      {draftTarget && <StockDraftDialog {...draftTarget} onClose={() => setDraftTarget(null)} onCreated={created} />}
+      {draftTarget && <StockDraftDialog product={draftTarget} onClose={() => setDraftTarget(null)} onCreated={created} />}
       {confirmTarget && <StockConfirmationDialog document={confirmTarget} onClose={() => setConfirmTarget(null)} onConfirmed={confirmed}
         onStale={() => { setConfirmTarget(null); reload(); addToast({ type: 'error', message: 'Phiếu đã được cập nhật bởi người khác. Danh sách đã được tải lại.' }) }} />}
     </div>

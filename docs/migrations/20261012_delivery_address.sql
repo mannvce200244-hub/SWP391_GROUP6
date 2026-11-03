@@ -1,4 +1,0 @@
-BEGIN;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_province_id INTEGER;
-ALTER TABLE orders ADD COLUMN IF NOT EXISTS shipping_ward_id INTEGER;
-COMMIT;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Button from '../../components/ui/Button.jsx'
-import posMomoService from '../../services/posMomoService.js'
+import posVnpayService from '../../services/posMomoService.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 
 export default function PosMomoPendingPayments({ onSelect }) {
@@ -11,7 +11,7 @@ export default function PosMomoPendingPayments({ onSelect }) {
   const [retry, setRetry] = useState(0)
   useEffect(() => {
     let active = true
-    posMomoService.recent(page)
+    posVnpayService.recent(page)
       .then((result) => { if (active) { setData(result); setError('') } })
       .catch((err) => { if (active) setError(err.message) })
       .finally(() => { if (active) setLoading(false) })
@@ -21,7 +21,7 @@ export default function PosMomoPendingPayments({ onSelect }) {
   const rows = data?.content || []
   return (
     <details className="rounded-xl border border-border bg-white p-4">
-      <summary className="cursor-pointer text-sm font-semibold text-ink">Giao dịch MoMo chưa xuất hóa đơn</summary>
+      <summary className="cursor-pointer text-sm font-semibold text-ink">Giao dịch VNPay chưa xuất hóa đơn</summary>
       <div className="mt-3 space-y-3" aria-busy={loading}>
         {loading && <p role="status" className="text-sm text-muted">Đang tải giao dịch…</p>}
         {error && <p role="alert" className="text-sm text-danger">{error}</p>}

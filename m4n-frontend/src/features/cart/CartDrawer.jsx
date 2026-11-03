@@ -14,6 +14,7 @@ import useAuth from '../auth/useAuth.js'
 import useToast from '../../components/ui/useToast.js'
 import { CUSTOMER_ROUTES, navigateTo } from '../../routes/customerRoutes.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
+import { cartCheckoutUrl, cartSelectionError } from './cartSelection.js'
 
 function CartDrawer({ isOpen, onClose }) {
   const {
@@ -43,6 +44,7 @@ function CartDrawer({ isOpen, onClose }) {
   if (!isOpen) return null
 
   const items = cart?.items || []
+  const checkoutError = cartSelectionError(selectedCartItemIds)
   const selectedIds = new Set(selectedCartItemIds)
   const selectedTotal = selectedCartItems.reduce((total, item) => total + Number(item.subtotal || 0), 0)
 
@@ -206,10 +208,10 @@ function CartDrawer({ isOpen, onClose }) {
                 </button>
                 <button
                   type="button"
-                  disabled={loading || Boolean(error) || selectedCartItems.length === 0}
+                  disabled={loading || Boolean(error) || Boolean(checkoutError)}
                   onClick={() => {
                     onClose()
-                    navigateTo(CUSTOMER_ROUTES.checkout)
+                    navigateTo(cartCheckoutUrl(selectedCartItemIds))
                   }}
                   className="w-full py-2.5 px-4 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-md shadow-brand/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
                 >
@@ -217,7 +219,7 @@ function CartDrawer({ isOpen, onClose }) {
                   <ChevronRight size={15} />
                 </button>
               </div>
-              {selectedCartItems.length === 0 && <p className="text-xs text-muted" role="status">Chọn ít nhất một sản phẩm để thanh toán.</p>}
+              {checkoutError && <p className="text-xs text-muted" role="status">{checkoutError}</p>}
             </div>
           )}
 
