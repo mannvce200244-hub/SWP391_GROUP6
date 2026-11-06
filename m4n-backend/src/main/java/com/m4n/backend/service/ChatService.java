@@ -1,0 +1,34 @@
+package com.m4n.backend.service;
+
+import com.m4n.backend.dto.request.ChatMessageRequest;
+import com.m4n.backend.dto.request.StaffConversationScope;
+import com.m4n.backend.dto.response.ChatMessageResponse;
+import com.m4n.backend.dto.response.ConversationResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+public interface ChatService {
+
+    Page<ConversationResponse> getAdminConversations(String search,
+            com.m4n.backend.entity.ConversationStatus status, Pageable pageable, String email);
+
+    Page<ChatMessageResponse> getAdminMessages(Long conversationId, Pageable pageable, String email);
+
+    ConversationResponse getMyCustomerConversation(String customerEmail);
+
+    ConversationResponse startMyCustomerConversation(String customerEmail);
+
+    ConversationResponse getConversation(Long conversationId, String userEmail);
+
+    Page<ChatMessageResponse> getMessages(Long conversationId, Pageable pageable, String userEmail);
+
+    ChatMessageResponse sendMessage(Long conversationId, ChatMessageRequest request, String senderEmail);
+
+    Page<ConversationResponse> getStaffConversations(StaffConversationScope scope, Pageable pageable, String staffEmail);
+
+    ConversationResponse assignStaff(Long conversationId, String staffEmail);
+
+    ConversationResponse takeOver(Long conversationId, Long expectedStaffId, String staffEmail);
+
+    ConversationResponse closeConversation(Long conversationId, String staffEmail);
+}

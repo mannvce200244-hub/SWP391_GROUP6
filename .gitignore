@@ -95,3 +95,34 @@ harness.config.yaml
 # Playwright output
 test-results/
 playwright-report/
+
+# M4N Java, frontend and local development artifacts
+.pnp
+.pnp.js
+dist-ssr/
+target/
+*.war
+*.ear
+*.nar
+*.rar
+.env.development.local
+.env.test.local
+.env.production.local
+*.local
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.iml
+*.ipr
+*.iws
+.settings/
+.project
+.classpath
+.factorypath
+.springBeans
+.sts4-cache
+ehthumbs.db
+[Dd]esktop.ini
+push.ps1

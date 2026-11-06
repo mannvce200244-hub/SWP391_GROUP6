@@ -1,3 +1,16 @@
+# Repository projects
+
+This repository contains two independent applications:
+
+| Project | Source code | Setup guide |
+| --- | --- | --- |
+| LumiGap — research collaboration | `apps/`, `packages/` | The LumiGap guide below |
+| M4N — traditional musical instruments store | `m4n-backend/`, `m4n-frontend/` | [M4N guide](docs/m4n-project-readme.md) |
+
+Each application keeps its own dependencies and runtime. Run setup commands from the repository root unless a guide specifies another directory.
+
+---
+
 # LumiGap — Publication Trend System
 
 > **AI-assisted Scientific Publication Trend Analysis** — multi-source academic metadata aggregation + vector semantic search + LLM-grounded analytical reports + MCP tool calling, to help researchers discover trends, evaluate papers, and identify research gaps.

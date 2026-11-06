@@ -1,0 +1,86 @@
+function generatePageNumbers(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1)
+  }
+
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, '...', totalPages]
+  }
+
+  if (currentPage >= totalPages - 3) {
+    return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+  }
+
+  return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages]
+}
+
+function Pagination({ className = '', currentPage = 1, onPageChange, totalPages = 1, showSinglePage = false, disabled = false }) {
+  if (totalPages < 1 || (totalPages === 1 && !showSinglePage)) return null
+
+  const pages = generatePageNumbers(currentPage, totalPages)
+
+  return (
+    <nav
+      aria-label="Điều hướng phân trang"
+      className={`flex flex-wrap items-center justify-center gap-1.5 pt-8 pb-4 select-none ${className}`}
+    >
+      {/* Previous button */}
+      <button
+        aria-label="Trang trước"
+        className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-control-border bg-surface text-ink text-sm font-medium hover:bg-surface-secondary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+        disabled={disabled || currentPage <= 1}
+        onClick={() => onPageChange(currentPage - 1)}
+        type="button"
+      >
+        ←
+      </button>
+
+      {/* Page numbers */}
+      {pages.map((page, idx) => {
+        if (page === '...') {
+          return (
+            <span
+              key={`ellipsis-${idx}`}
+              className="w-11 h-11 flex items-center justify-center text-xs text-muted"
+            >
+              …
+            </span>
+          )
+        }
+
+        const isCurrent = page === currentPage
+        return (
+          <button
+            key={page}
+            aria-current={isCurrent ? 'page' : undefined}
+            disabled={disabled || isCurrent}
+            aria-label={`Trang ${page}`}
+            className={`w-11 h-11 flex items-center justify-center rounded-md text-xs font-semibold transition-colors cursor-pointer disabled:pointer-events-none ${
+              isCurrent
+                ? 'bg-brand text-white shadow-xs'
+                : 'border border-control-border bg-surface text-ink hover:bg-surface-secondary'
+            }`}
+            onClick={() => onPageChange(page)}
+            type="button"
+          >
+            {page}
+          </button>
+        )
+      })}
+
+      {/* Next button */}
+      <button
+        aria-label="Trang kế tiếp"
+        className="inline-flex items-center justify-center w-11 h-11 rounded-md border border-control-border bg-surface text-ink text-sm font-medium hover:bg-surface-secondary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+        disabled={disabled || currentPage >= totalPages}
+        onClick={() => onPageChange(currentPage + 1)}
+        type="button"
+      >
+        →
+      </button>
+    </nav>
+  )
+}
+
+export default Pagination
+
