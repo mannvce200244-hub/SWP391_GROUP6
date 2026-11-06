@@ -67,6 +67,36 @@ export function ProductGridSkeleton({ count = 6, className = 'lg:grid-cols-3' })
   )
 }
 
+export function LoginFormSkeleton() {
+  return (
+    <div role="status" aria-busy="true" className="mx-auto flex w-full max-w-lg flex-col gap-6">
+      <span className="sr-only">Đang chuẩn bị trang đăng nhập…</span>
+      <div aria-hidden="true" className="flex flex-col gap-2">
+        <Skeleton height="2.5rem" width="85%" />
+        <Skeleton height="1.25rem" width="100%" />
+        <Skeleton height="1.25rem" width="70%" />
+      </div>
+      <div aria-hidden="true" className="flex flex-col gap-5">
+        {[0, 1].map((field) => (
+          <div key={field} className="flex flex-col gap-2">
+            <Skeleton height="1rem" width="30%" />
+            <Skeleton height="3rem" width="100%" />
+          </div>
+        ))}
+        <div className="pt-3"><Skeleton height="3rem" width="100%" /></div>
+      </div>
+      <div aria-hidden="true" className="flex flex-col items-center gap-3">
+        <Skeleton height="1rem" width="20%" />
+        <Skeleton height="3rem" width="100%" />
+        <Skeleton height="1rem" width="65%" />
+      </div>
+      <div aria-hidden="true" className="flex justify-center border-t border-border pt-4">
+        <Skeleton height="1.25rem" width="70%" />
+      </div>
+    </div>
+  )
+}
+
 export function ArticleListSkeleton() {
   return (
     <div role="status" aria-label="Đang tải bài viết…">

@@ -2,19 +2,23 @@ import { Suspense } from 'react'
 import LoadingState from '../components/ui/LoadingState.jsx'
 import Skeleton, {
   ArticleListSkeleton,
+  LoginFormSkeleton,
   ProductDetailSkeleton,
   ProductGridSkeleton,
 } from '../components/ui/Skeleton.jsx'
 import { CUSTOMER_ROUTES, matchProductDetailPath } from './customerRoutes.js'
 
 const authPaths = [
-  CUSTOMER_ROUTES.login,
   CUSTOMER_ROUTES.register,
   CUSTOMER_ROUTES.forgotPassword,
   CUSTOMER_ROUTES.resetPassword,
 ]
 
 function RouteSkeleton({ pathname }) {
+  if (pathname === CUSTOMER_ROUTES.login) {
+    return <LoginFormSkeleton />
+  }
+
   if (authPaths.includes(pathname)) {
     return (
       <div role="status" aria-busy="true" className="loading-reveal flex flex-col gap-6 p-6 sm:p-10">
