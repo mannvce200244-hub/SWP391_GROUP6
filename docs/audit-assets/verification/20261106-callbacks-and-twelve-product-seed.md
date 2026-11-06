@@ -42,6 +42,15 @@ verified immutable GitHub asset URLs so the import does not depend on an
 unreleased frontend deployment. Import results are recorded locally in
 `20261106-twelve-product-import.json` after successful commit.
 
+Production import completed: 12 active products, four in each instrument group;
+the seven listed codes were created. All ten distinct photographs were fetched
+and decoded from immutable asset commit
+`f279bf88cc8d454815fca210c6cf291561fa3db7` before the transaction. Existing prices,
+inventory and order/invoice/payment counts were preserved. A full private backup
+and rollback records were saved before writes. Railway variables were updated
+in the ignored local deployment copy only; remote Railway variables were not
+changed by the database import.
+
 ## Verification
 
 - Backend `mvnw.cmd -q clean verify`: 561 tests, zero failures/errors; dedicated
@@ -57,3 +66,7 @@ unreleased frontend deployment. Import results are recorded locally in
 - The separately reported anonymous startup session race remains outside this
   change. Production hosting configuration and a full sandbox payment on the
   deployed release still require verification after Railway redeploy.
+- After import, both the direct Railway health endpoint and the same API via
+  Vercel returned HTTP 502. Database import and image checks succeeded, but the
+  rendered production catalogue/payment flow cannot be accepted while hosting
+  is unavailable. No browser or client-side success shortcut was substituted.
