@@ -50,6 +50,11 @@ public class ProductionConfiguration {
         require(value(environment, "spring.mail.username").matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"), "spring.mail.username");
         require(!value(environment, "spring.mail.password").isBlank(), "spring.mail.password");
         require(!flag(environment, "m4n.payment.vnpay.enabled"), "m4n.payment.vnpay.enabled (sandbox only)");
+        if (flag(environment, "m4n.auth.google.enabled")) {
+            require(frontend.equals(value(environment, "m4n.auth.google.frontend-url")), "m4n.auth.google.frontend-url");
+            require((frontend + "/api/v1/auth/google/callback/google")
+                    .equals(value(environment, "m4n.auth.google.redirect-uri")), "m4n.auth.google.redirect-uri");
+        }
         if (flag(environment, "m4n.payment.momo.enabled")) {
             require(flag(environment, "m4n.payment.momo.sandbox-deployment-enabled"),
                     "m4n.payment.momo.sandbox-deployment-enabled (demo only)");

@@ -89,6 +89,18 @@ class ProductionConfigurationTest {
     }
 
     @Test
+    void hostedGoogleCannotReturnToLocalhostOrAnotherSite() {
+        var env = safeEnvironment().withProperty("m4n.auth.google.enabled", "true")
+                .withProperty("m4n.auth.google.frontend-url", "https://shop.example.test")
+                .withProperty("m4n.auth.google.redirect-uri", "https://shop.example.test/api/v1/auth/google/callback/google");
+        assertThatCode(() -> ProductionConfiguration.validate(env)).doesNotThrowAnyException();
+        env.withProperty("m4n.auth.google.redirect-uri", "http://localhost:8080/login/oauth2/code/google");
+        assertThatThrownBy(() -> ProductionConfiguration.validate(env)).hasMessageContaining("m4n.auth.google.redirect-uri");
+        env.withProperty("m4n.auth.google.frontend-url", "https://temporary.trycloudflare.com");
+        assertThatThrownBy(() -> ProductionConfiguration.validate(env)).hasMessageContaining("m4n.auth.google.frontend-url");
+    }
+
+    @Test
     void maintainedOtpFlowsRequireSenderConfiguration() {
         reject("m4n.auth.otp-email.enabled", "false");
         reject("spring.mail.username", "");

@@ -65,7 +65,7 @@ export default function AdminInstrumentsPage() {
   const loadMasterData = useCallback(async () => {
     try {
       const [cats, arts, vils] = await Promise.all([
-        categoryService.getCategories(),
+        categoryService.getAdminCategories(),
         artisanService.getAdminArtisans(),
         craftVillageService.getCraftVillages(),
       ])
@@ -81,7 +81,7 @@ export default function AdminInstrumentsPage() {
   useEffect(() => {
     let active = true
     Promise.all([
-      categoryService.getCategories(),
+      categoryService.getAdminCategories(),
       artisanService.getAdminArtisans(),
       craftVillageService.getCraftVillages(),
     ]).then(([cats, arts, vils]) => {

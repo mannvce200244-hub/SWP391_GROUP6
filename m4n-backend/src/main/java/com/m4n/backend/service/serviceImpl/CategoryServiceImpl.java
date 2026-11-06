@@ -28,7 +28,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<CategorySummaryResponse> listCategories() {
-        return categoryRepository.findAll().stream()
+        return categoryRepository.findStorefrontCategories().stream()
                 .map(cat -> new CategorySummaryResponse(cat.getId(), cat.getCode(), cat.getName()))
                 .toList();
     }

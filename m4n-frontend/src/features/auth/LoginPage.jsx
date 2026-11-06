@@ -10,6 +10,7 @@ import AppLoadingScreen from '../../components/ui/AppLoadingScreen.jsx'
 import { paymentReturnOrderId } from '../../services/paymentService.js'
 import { posPaymentReturnId } from '../../services/posMomoService.js'
 import GoogleLoginButton from './GoogleLoginButton.jsx'
+import { loginErrorMessage } from './loginErrorMessage.js'
 
 function getRoleHome(role, paymentOrderId, posPaymentId) {
   if (role === 'POS_STAFF' && posPaymentId) return `${CUSTOMER_ROUTES.pos}?m4nPosPaymentId=${encodeURIComponent(posPaymentId)}`
@@ -115,13 +116,7 @@ function LoginPage() {
         return
       }
       if (err.fieldErrors) setFieldErrors(err.fieldErrors)
-      const message =
-        err?.status === 401
-          ? 'Email hoặc mật khẩu không chính xác.'
-          : err?.status === 403
-            ? 'Tài khoản của bạn đã bị tạm khóa hoặc ngừng hoạt động.'
-            : err?.message || 'Đăng nhập không thành công. Vui lòng thử lại.'
-      setGeneralError(message)
+      setGeneralError(loginErrorMessage(err))
     } finally {
       setIsSubmitting(false)
     }

@@ -36,7 +36,7 @@ class CategoryServiceTest {
         Category c1 = Category.builder().id(1L).code("DAY").name("Nhạc cụ dây").build();
         Category c2 = Category.builder().id(2L).code("HOI").name("Nhạc cụ hơi").build();
 
-        when(categoryRepository.findAll()).thenReturn(List.of(c1, c2));
+        when(categoryRepository.findStorefrontCategories()).thenReturn(List.of(c1, c2));
 
         List<CategorySummaryResponse> result = categoryService.listCategories();
 

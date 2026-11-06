@@ -32,6 +32,7 @@ class ProductGalleryIntegrationTest {
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private Validator validator;
+    @Autowired private CategoryService categoryService;
 
     private Category category;
     private final List<Long> createdProductIds = new ArrayList<>();
@@ -50,6 +51,16 @@ class ProductGalleryIntegrationTest {
             jdbcTemplate.update("DELETE FROM products WHERE id = ?", productId);
         }
         if (category != null) categoryRepository.deleteById(category.getId());
+    }
+
+    @Test
+    void storefrontHidesCategoriesWhoseProductsAreAllDisabledAndAdminRetainsThem() {
+        assertThat(categoryService.listCategories()).anyMatch(c -> c.id().equals(category.getId()));
+        var product = createProduct("Catalog visibility regression");
+        assertThat(categoryService.listCategories()).anyMatch(c -> c.id().equals(category.getId()));
+        jdbcTemplate.update("UPDATE products SET is_active = false WHERE id = ?", product.id());
+        assertThat(categoryService.listCategories()).noneMatch(c -> c.id().equals(category.getId()));
+        assertThat(categoryService.listAdminCategories()).anyMatch(c -> c.id().equals(category.getId()));
     }
 
     @Test

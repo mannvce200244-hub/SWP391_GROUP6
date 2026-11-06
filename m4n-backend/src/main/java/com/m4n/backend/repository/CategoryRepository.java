@@ -11,6 +11,11 @@ import java.util.Optional;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
+    @Query("SELECT c FROM Category c WHERE " +
+            "NOT EXISTS (SELECT p.id FROM Product p WHERE p.category = c) OR " +
+            "EXISTS (SELECT p.id FROM Product p WHERE p.category = c AND p.isActive = true) ORDER BY c.id")
+    List<Category> findStorefrontCategories();
+
     Optional<Category> findByCodeIgnoreCase(String code);
     Optional<Category> findByNameIgnoreCase(String name);
     boolean existsByCodeIgnoreCase(String code);

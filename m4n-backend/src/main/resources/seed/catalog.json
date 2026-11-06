@@ -1,0 +1,98 @@
+[
+  {
+    "code": "TRN-001", "name": "Đàn Tranh 16 Dây", "category": "DAY",
+    "price": "8500000", "weightKg": "4.500", "stock": 15,
+    "description": "Đàn tranh 16 dây dùng cho độc tấu, đệm hát và hòa tấu nhạc truyền thống. Dây được gảy bằng móng; tay trái nhấn, rung để tạo sắc thái. Thông số và giá trong bộ dữ liệu demo là cấu hình tham khảo.",
+    "material": "Thân gỗ, mặt cộng hưởng gỗ ngô đồng, dây kim loại",
+    "dimensions": "Dài khoảng 115 cm, rộng 22 cm", "musicalRange": "Thay đổi theo cách lên dây", "origin": "Việt Nam",
+    "image": "prod-dan-tranh.jpg", "alt": "Ảnh minh họa đàn tranh 16 dây"
+  },
+  {
+    "code": "BAU-001", "name": "Đàn Bầu Gỗ Mun", "category": "DAY",
+    "price": "6200000", "weightKg": "3.200", "stock": 8,
+    "description": "Đàn bầu là nhạc cụ một dây, khai thác các bồi âm và độ uốn của cần đàn để tạo tiếng luyến đặc trưng. Phù hợp luyện tập độc tấu và đệm dân ca. Cấu hình demo; ảnh minh họa loại nhạc cụ.",
+    "material": "Thân gỗ, dây kim loại, cần đàn đàn hồi",
+    "dimensions": "Dài khoảng 105 cm", "musicalRange": "Các bồi âm trên một dây", "origin": "Việt Nam",
+    "image": "prod-dan-bau.jpg", "alt": "Ảnh minh họa đàn bầu"
+  },
+  {
+    "code": "NGU-001", "name": "Đàn Nguyệt Gỗ Gụ", "category": "DAY",
+    "price": "5800000", "weightKg": "2.000", "stock": 12,
+    "description": "Đàn nguyệt có hộp đàn tròn, hai dây và cần dài với phím cao, thuận tiện cho kỹ thuật nhấn và rung. Được dùng trong nhiều hình thức âm nhạc truyền thống. Cấu hình và giá demo mang tính tham khảo.",
+    "material": "Thân gỗ, mặt cộng hưởng gỗ, hai dây",
+    "dimensions": "Đường kính hộp đàn khoảng 36 cm", "musicalRange": "Thay đổi theo cách lên dây", "origin": "Việt Nam",
+    "image": "prod-dan-nguyet.jpg", "alt": "Ảnh minh họa đàn nguyệt"
+  },
+  {
+    "code": "SAO-001", "name": "Sáo Trúc Tone C", "category": "HOI",
+    "price": "650000", "weightKg": "0.250", "stock": 30,
+    "description": "Sáo trúc thổi ngang giọng Đô, phù hợp tập lấy hơi, luyện ngón và chơi các làn điệu quen thuộc. Ống sáo gọn nhẹ, nên lau khô sau khi sử dụng. Cấu hình demo; ảnh minh họa sáo trúc.",
+    "material": "Trúc hoặc nứa tự nhiên", "dimensions": "Dài khoảng 52 cm",
+    "musicalRange": "Giọng Đô (C), tùy kỹ thuật thổi", "origin": "Việt Nam",
+    "image": "prod-sao-truc.jpg", "alt": "Ảnh minh họa sáo trúc; không thể hiện riêng giọng C"
+  },
+  {
+    "code": "TIEU-001", "name": "Tiêu Bát Khổng Nứa Bắc", "category": "HOI",
+    "price": "750000", "weightKg": "0.350", "stock": 10,
+    "description": "Tiêu là nhạc cụ hơi thổi dọc với âm sắc trầm, thích hợp luyện hơi dài và các giai điệu chậm. Bản demo giới thiệu cấu hình tám lỗ; ảnh minh họa các kiểu tiêu tre, không phải ảnh một cây hàng cụ thể.",
+    "material": "Nứa tự nhiên", "dimensions": "Dài khoảng 70 cm",
+    "musicalRange": "Thay đổi theo giọng và kỹ thuật thổi", "origin": "Việt Nam",
+    "image": "prod-tieu.jpg", "alt": "Ảnh minh họa tiêu tre với các cách bố trí lỗ bấm"
+  },
+  {
+    "code": "TAM-001", "name": "Đàn Tam 3 Dây", "category": "DAY",
+    "price": "3200000", "weightKg": "1.800", "stock": 9,
+    "description": "Đàn tam có ba dây, cần dài không phím và hộp cộng hưởng nhỏ. Âm thanh rõ, gọn, phù hợp đệm tiết tấu trong dàn nhạc truyền thống. Giá, kích thước và tồn kho là dữ liệu demo.",
+    "material": "Thân gỗ, mặt cộng hưởng bọc da, ba dây",
+    "dimensions": "Dài khoảng 90 cm", "musicalRange": "Thay đổi theo cách lên dây", "origin": "Việt Nam",
+    "image": "prod-dan-tam.jpg", "alt": "Ảnh minh họa đàn tam ba dây"
+  },
+  {
+    "code": "SAO-002", "name": "Sáo Trúc Tone D", "category": "HOI",
+    "price": "550000", "weightKg": "0.220", "stock": 24,
+    "description": "Sáo trúc giọng Rê có kích thước gọn, phù hợp luyện tập và hòa tấu theo giọng D. Lựa chọn giọng sáo theo bản nhạc và tầm tay người chơi. Cấu hình demo; dùng ảnh minh họa chung cho loại sáo trúc.",
+    "material": "Trúc hoặc nứa tự nhiên", "dimensions": "Dài khoảng 47 cm",
+    "musicalRange": "Giọng Rê (D), tùy kỹ thuật thổi", "origin": "Việt Nam",
+    "image": "prod-sao-truc.jpg", "alt": "Ảnh minh họa sáo trúc; không thể hiện riêng giọng D"
+  },
+  {
+    "code": "TIEU-002", "name": "Tiêu Tre Giọng F", "category": "HOI",
+    "price": "680000", "weightKg": "0.300", "stock": 14,
+    "description": "Tiêu tre thổi dọc giọng Fa, dành cho luyện hơi và diễn tấu những giai điệu nhẹ nhàng. Cần giữ ống tiêu khô và tránh thay đổi nhiệt độ đột ngột. Giá và thông số là cấu hình demo; ảnh minh họa chung cho tiêu tre.",
+    "material": "Tre tự nhiên", "dimensions": "Dài khoảng 60 cm",
+    "musicalRange": "Giọng Fa (F), tùy kỹ thuật thổi", "origin": "Việt Nam",
+    "image": "prod-tieu.jpg", "alt": "Ảnh minh họa tiêu tre; không thể hiện riêng giọng F"
+  },
+  {
+    "code": "TCM-001", "name": "Trống Cơm 55 cm", "category": "GO",
+    "price": "1200000", "weightKg": "2.500", "stock": 12,
+    "description": "Trống cơm có thân dài với hai mặt da, thường đeo ngang người và vỗ bằng hai tay. Phù hợp minh họa tiết tấu dân gian, sinh hoạt tập thể và biểu diễn. Cấu hình, giá và tồn kho demo.",
+    "material": "Tang gỗ, hai mặt da", "dimensions": "Dài khoảng 55 cm",
+    "musicalRange": "Nhạc cụ gõ không định cao độ", "origin": "Việt Nam",
+    "image": "prod-trong-com.jpg", "alt": "Ảnh minh họa trống cơm"
+  },
+  {
+    "code": "TDE-001", "name": "Trống Đế", "category": "GO",
+    "price": "950000", "weightKg": "1.500", "stock": 10,
+    "description": "Trống đế là trống nhỏ dùng dùi gõ, gắn với nghệ thuật chèo. Người chơi kết hợp gõ mặt và tang trống để tạo tiếng nhấn, điểm câu. Giá và kích thước thuộc bộ dữ liệu demo.",
+    "material": "Tang gỗ, mặt da, dùi gỗ", "dimensions": "Đường kính mặt khoảng 25 cm",
+    "musicalRange": "Nhạc cụ gõ không định cao độ", "origin": "Việt Nam",
+    "image": "prod-trong-de.jpg", "alt": "Ảnh minh họa trống đế"
+  },
+  {
+    "code": "SLO-001", "name": "Song Loan Gỗ", "category": "GO",
+    "price": "180000", "weightKg": "0.350", "stock": 25,
+    "description": "Song loan, còn gọi là song lang, tạo tiếng gõ rõ và ngắn để giữ nhịp. Nhạc cụ gọn nhẹ, thường được dùng trong đờn ca tài tử và cải lương. Giá, kích thước và tồn kho demo.",
+    "material": "Khối gỗ và cần gõ đàn hồi", "dimensions": "Dài khoảng 18 cm",
+    "musicalRange": "Nhạc cụ giữ nhịp không định cao độ", "origin": "Việt Nam",
+    "image": "prod-song-loan.jpg", "alt": "Ảnh minh họa song loan"
+  },
+  {
+    "code": "PHA-001", "name": "Phách Gỗ Có Cần Gõ", "category": "GO",
+    "price": "220000", "weightKg": "0.400", "stock": 20,
+    "description": "Phách gỗ có cần gõ đàn hồi tạo tiếng nhịp gọn, rõ. Nhấn cần để đầu gõ chạm khối gỗ, phù hợp thực hành tiết tấu. Cấu hình tham khảo cho demo; ảnh là hiện vật bảo tàng, không phải bộ bàn phách tre ca trù.",
+    "material": "Khối gỗ và cần gõ kim loại đàn hồi", "dimensions": "Dài khoảng 20 cm",
+    "musicalRange": "Nhạc cụ gõ không định cao độ", "origin": "Việt Nam",
+    "image": "prod-phach.jpg", "alt": "Ảnh minh họa phách tại Bảo tàng Dân tộc học Việt Nam"
+  }
+]
