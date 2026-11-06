@@ -266,6 +266,41 @@ public class ChatServiceImpl implements ChatService {
         return toConversationResponse(updated, staff.getId(), true);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ConversationResponse> getAdminConversations(String search, ConversationStatus status,
+            Pageable pageable, String email) {
+        assertAdmin(email);
+        String keyword = search == null ? "" : search.trim();
+        if (keyword.length() > 100) throw new IllegalArgumentException("Từ khóa tối đa 100 ký tự.");
+        return conversationRepository.searchForAdmin(keyword, status, adminPage(pageable))
+                .map(conversation -> toConversationResponse(conversation, null, false));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ChatMessageResponse> getAdminMessages(Long conversationId, Pageable pageable, String email) {
+        assertAdmin(email);
+        if (!conversationRepository.existsById(conversationId)) {
+            throw new ResourceNotFoundException("Không tìm thấy đối thoại.");
+        }
+        // Oversight must never acknowledge messages on behalf of either participant.
+        return chatMessageRepository.findByConversationIdOrderByCreatedAtDescIdDesc(conversationId, adminPage(pageable))
+                .map(this::toMessageResponse);
+    }
+
+    private Pageable adminPage(Pageable pageable) {
+        validatePage(pageable);
+        return PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 100));
+    }
+
+    private void assertAdmin(String email) {
+        RoleName role = getUserByEmail(email).getRole().getName();
+        if (role != RoleName.ADMIN && role != RoleName.SUPER_ADMIN) {
+            throw new AccessDeniedException("Chỉ quản trị viên được xem lịch sử tư vấn.");
+        }
+    }
+
     private void validatePage(Pageable pageable) {
         if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");

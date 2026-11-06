@@ -9,6 +9,11 @@ import org.springframework.data.domain.Pageable;
 
 public interface ChatService {
 
+    Page<ConversationResponse> getAdminConversations(String search,
+            com.m4n.backend.entity.ConversationStatus status, Pageable pageable, String email);
+
+    Page<ChatMessageResponse> getAdminMessages(Long conversationId, Pageable pageable, String email);
+
     ConversationResponse getMyCustomerConversation(String customerEmail);
 
     ConversationResponse startMyCustomerConversation(String customerEmail);

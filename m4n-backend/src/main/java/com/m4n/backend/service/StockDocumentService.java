@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface StockDocumentService {
+    StockDocumentResponse getConfirmedReceipt(Long documentId);
     StockDocumentResponse createReceipt(Long productId, StockImportRequest request);
     StockDocumentResponse createIssue(Long productId, StockIssueRequest request);
     StockDocumentResponse confirm(Long documentId, ConfirmStockDocumentRequest request);

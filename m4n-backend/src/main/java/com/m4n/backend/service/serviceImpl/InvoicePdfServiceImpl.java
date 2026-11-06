@@ -19,12 +19,10 @@ import com.m4n.backend.repository.InvoiceRepository;
 import com.m4n.backend.service.InvoicePdfService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.ZoneId;
@@ -40,12 +38,12 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").withZone(VN_ZONE);
 
     private final InvoiceRepository invoiceRepository;
-    private final String configuredFontPath;
+    private final PdfFontProvider fonts;
 
     public InvoicePdfServiceImpl(InvoiceRepository invoiceRepository,
-            @Value("${m4n.pdf.font-path:}") String configuredFontPath) {
+            PdfFontProvider fonts) {
         this.invoiceRepository = invoiceRepository;
-        this.configuredFontPath = configuredFontPath.trim();
+        this.fonts = fonts;
     }
 
     @Override
@@ -58,7 +56,7 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
         Document document = new Document(PageSize.A5, 24, 24, 24, 24);
 
         try {
-            BaseFont baseFont = resolveUnicodeFont();
+            BaseFont baseFont = fonts.resolve();
             PdfWriter.getInstance(document, out);
             document.open();
 
@@ -276,38 +274,6 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
 
         table.addCell(labelCell);
         table.addCell(valueCell);
-    }
-
-    private BaseFont resolveUnicodeFont() {
-        if (!configuredFontPath.isBlank()) {
-            try {
-                return BaseFont.createFont(configuredFontPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-            } catch (java.io.IOException | DocumentException e) {
-                log.error("Configured invoice Unicode font could not be loaded.");
-                throw new IllegalStateException("Phông chữ hóa đơn chưa sẵn sàng. Vui lòng liên hệ quản trị viên.", e);
-            }
-        }
-        // Try common system fonts supporting Vietnamese Unicode
-        String[] candidateFontPaths = {
-                "C:/Windows/Fonts/arial.ttf",
-                "C:/Windows/Fonts/tahoma.ttf",
-                "C:/Windows/Fonts/segoeui.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-        };
-
-        for (String path : candidateFontPaths) {
-            File fontFile = new File(path);
-            if (fontFile.exists() && fontFile.canRead()) {
-                try {
-                    return BaseFont.createFont(path, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
-                } catch (java.io.IOException | DocumentException e) {
-                    log.debug("System invoice Unicode font could not be loaded.");
-                }
-            }
-        }
-
-        throw new IllegalStateException("Phông chữ tiếng Việt cho hóa đơn chưa sẵn sàng. Vui lòng liên hệ quản trị viên.");
     }
 
     private String formatVnd(BigDecimal amount) {

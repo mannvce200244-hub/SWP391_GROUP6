@@ -17,6 +17,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     List<ChatMessage> findByConversationIdOrderByCreatedAtAscIdAsc(Long conversationId);
 
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"sender", "sender.role"})
     Page<ChatMessage> findByConversationIdOrderByCreatedAtDescIdDesc(Long conversationId, Pageable pageable);
 
     Optional<ChatMessage> findFirstByConversationIdOrderByCreatedAtDescIdDesc(Long conversationId);

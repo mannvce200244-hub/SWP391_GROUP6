@@ -14,8 +14,14 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.Instant;
+import java.text.Normalizer;
+import java.util.Locale;
 
 public final class ProductSpecification {
+
+    private static final String VIETNAMESE_LETTERS = "àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ";
+    private static final String PLAIN_LETTERS = "a".repeat(17) + "e".repeat(11) + "i".repeat(5)
+            + "o".repeat(17) + "u".repeat(11) + "y".repeat(5) + "d";
 
     private ProductSpecification() {}
 
@@ -36,10 +42,7 @@ public final class ProductSpecification {
 
             // 2. Keyword matching name, code, or barcode
             if (keyword != null && !keyword.isBlank()) {
-                String term = "%" + keyword.trim().toLowerCase() + "%";
-                Predicate nameMatch = cb.like(cb.lower(root.get("name")), term);
-                Predicate codeMatch = cb.like(cb.lower(root.get("code")), term);
-                predicates.add(cb.or(nameMatch, codeMatch));
+                predicates.add(keywordMatches(root, cb, keyword));
             }
 
             // 3. Category / Group matching category code (e.g. DAY, HOI, GO) or name
@@ -130,11 +133,7 @@ public final class ProductSpecification {
 
             // 2. Keyword matching name, code, or barcode
             if (keyword != null && !keyword.isBlank()) {
-                String term = "%" + keyword.trim().toLowerCase() + "%";
-                Predicate nameMatch = cb.like(cb.lower(root.get("name")), term);
-                Predicate codeMatch = cb.like(cb.lower(root.get("code")), term);
-                Predicate barcodeMatch = cb.like(cb.lower(cb.coalesce(root.get("barcode"), "")), term);
-                predicates.add(cb.or(nameMatch, codeMatch, barcodeMatch));
+                predicates.add(keywordMatches(root, cb, keyword));
             }
 
             // 3. Category ID filter
@@ -154,5 +153,16 @@ public final class ProductSpecification {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private static Predicate keywordMatches(Root<Product> root, CriteriaBuilder cb, String keyword) {
+        String normalized = Normalizer.normalize(keyword.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replace('đ', 'd');
+        String term = "%" + normalized.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        // Translate in the database so accent-insensitive filtering still precedes pagination.
+        Expression<String> name = cb.function("translate", String.class, cb.lower(root.get("name")),
+                cb.literal(VIETNAMESE_LETTERS + "\u0300\u0301\u0303\u0309\u0323\u0302\u0306\u031b"), cb.literal(PLAIN_LETTERS));
+        return cb.or(cb.like(name, term, '\\'), cb.like(cb.lower(root.get("code")), term, '\\'),
+                cb.like(cb.lower(cb.coalesce(root.get("barcode"), "")), term, '\\'));
     }
 }

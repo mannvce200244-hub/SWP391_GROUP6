@@ -118,6 +118,7 @@ function StaffProductsPage() {
                   <th className="text-left px-4 py-3 font-semibold text-ink">Nghệ nhân</th>
                   <th className="text-left px-4 py-3 font-semibold text-ink">Làng nghề</th>
                   <th className="text-right px-4 py-3 font-semibold text-ink">Giá</th>
+                  <th className="text-right px-4 py-3 font-semibold text-ink">Tồn kho</th>
                   <th className="text-center px-4 py-3 font-semibold text-ink">Trạng thái</th>
                 </tr>
               </thead>
@@ -157,6 +158,7 @@ function StaffProductsPage() {
                         ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)
                         : '—'}
                     </td>
+                    <td className="px-4 py-3 text-right font-semibold text-ink tabular-nums">{product.stockQuantity ?? '—'}</td>
                     <td className="px-4 py-3 text-center">
                       {['IN_STOCK', 'LOW_STOCK'].includes(product.availability) ? (
                         <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-jade-soft text-jade border border-jade-border">

@@ -27,7 +27,7 @@ public class ShippingServiceImpl implements ShippingService {
         CarrierShippingQuote quote = carrier.quote(lines, address, name, phone);
         MoneyValidation.requireSupported(quote.fee());
         ShippingSettings settings = settingsRepository.findById(1L).orElse(null);
-        boolean free = settings != null && settings.isFreeShippingEnabled() && settings.getFreeShippingThreshold() != null
+        boolean free = settings != null && settings.getFreeShippingThreshold() != null
                 && subtotal.compareTo(settings.getFreeShippingThreshold()) >= 0;
         return new ShippingQuote(quote.fee(), free ? quote.fee() : BigDecimal.ZERO,
                 free ? BigDecimal.ZERO : quote.fee(), free, quote.fullAddress());
@@ -44,7 +44,7 @@ public class ShippingServiceImpl implements ShippingService {
             throw new IllegalArgumentException("Vui lòng nhập ngưỡng đơn hàng khi bật miễn phí vận chuyển.");
         }
         settings.setEnabled(request.enabled()); settings.setRatePerKg(request.ratePerKg());
-        settings.setFreeShippingEnabled(request.freeShippingEnabled()); settings.setFreeShippingThreshold(request.freeShippingThreshold());
+        settings.setFreeShippingEnabled(request.freeShippingThreshold() != null); settings.setFreeShippingThreshold(request.freeShippingThreshold());
         return toResponse(settingsRepository.saveAndFlush(settings));
     }
 
@@ -61,12 +61,11 @@ public class ShippingServiceImpl implements ShippingService {
             if (product.getBillableWeightKg() == null || product.getBillableWeightKg().signum() <= 0) {
                 throw new IllegalArgumentException("Sản phẩm '" + product.getName() + "' chưa có trọng lượng tính cước hợp lệ. Vui lòng liên hệ nhân viên để cập nhật trước khi đặt hàng.");
             }
-            BigDecimal surcharge = product.getBulkySurcharge() != null ? product.getBulkySurcharge() : BigDecimal.ZERO;
-            base = base.add(product.getBillableWeightKg().multiply(settings.getRatePerKg()).add(surcharge).multiply(BigDecimal.valueOf(line.quantity())));
+            base = base.add(product.getBillableWeightKg().multiply(settings.getRatePerKg()).multiply(BigDecimal.valueOf(line.quantity())));
         }
         base = base.setScale(0, RoundingMode.HALF_UP);
         MoneyValidation.requireSupported(base);
-        boolean free = settings.isFreeShippingEnabled() && settings.getFreeShippingThreshold() != null
+        boolean free = settings.getFreeShippingThreshold() != null
                 && subtotal.compareTo(settings.getFreeShippingThreshold()) >= 0;
         return new ShippingQuote(base, free ? base : BigDecimal.ZERO, free ? BigDecimal.ZERO : base, free);
     }
@@ -79,7 +78,7 @@ public class ShippingServiceImpl implements ShippingService {
     }
 
     private ShippingSettingsResponse toResponse(ShippingSettings settings) {
-        return new ShippingSettingsResponse(settings.isEnabled(), settings.getRatePerKg(), settings.isFreeShippingEnabled(),
+        return new ShippingSettingsResponse(settings.isEnabled(), settings.getRatePerKg(), settings.getFreeShippingThreshold() != null,
                 settings.getFreeShippingThreshold(), settings.getVersion(), settings.getUpdatedAt());
     }
 }

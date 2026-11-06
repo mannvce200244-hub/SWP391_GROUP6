@@ -27,6 +27,7 @@ import {
   TicketPercent,
   Users,
   BookOpen,
+  MessageCircle,
 } from 'lucide-react'
 import { IconInstrument } from '../components/ui/Icons.jsx'
 import useToast from '../components/ui/useToast.js'
@@ -81,6 +82,7 @@ function AdminLayout({ children, pathname }) {
         { label: 'Hóa đơn (POS)', path: CUSTOMER_ROUTES.adminInvoices, Icon: Receipt },
         { label: 'Voucher', path: CUSTOMER_ROUTES.adminVouchers, Icon: TicketPercent },
         { label: 'Giá & vận chuyển', path: CUSTOMER_ROUTES.adminPricing, Icon: TicketPercent },
+        { label: 'Đối thoại khách hàng', path: CUSTOMER_ROUTES.adminChat, Icon: MessageCircle },
       ],
     },
     {
@@ -124,6 +126,8 @@ function AdminLayout({ children, pathname }) {
     pageTitle = 'Hóa đơn bán tại quầy (POS)'
   } else if (pathname === CUSTOMER_ROUTES.adminVouchers) {
     pageTitle = 'Quản lý Mã giảm giá (Voucher)'
+  } else if (pathname === CUSTOMER_ROUTES.adminChat) {
+    pageTitle = 'Đối thoại khách hàng'
   } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
     pageTitle = 'Quản lý Người dùng & Phân quyền'
   } else if (pathname === CUSTOMER_ROUTES.adminProfile) {

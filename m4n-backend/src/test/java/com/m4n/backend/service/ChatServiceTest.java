@@ -41,6 +41,28 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ChatServiceTest {
 
+    @Test void adminTranscriptAccessRejectsEveryNonAdminRoleAndInactiveAdmin() {
+        for (RoleName role : List.of(RoleName.CUSTOMER, RoleName.ONLINE_STAFF, RoleName.POS_STAFF)) {
+            User denied = user(50L, "denied@m4n.test", "Denied", role);
+            when(userRepository.findByEmailIgnoreCase(denied.getEmail())).thenReturn(Optional.of(denied));
+            assertThatThrownBy(() -> chatService.getAdminMessages(100L, PageRequest.of(0, 20), denied.getEmail()))
+                    .isInstanceOf(AccessDeniedException.class);
+        }
+        User inactive = user(51L, "inactive@m4n.test", "Inactive", RoleName.ADMIN);
+        inactive.setActive(false);
+        when(userRepository.findByEmailIgnoreCase(inactive.getEmail())).thenReturn(Optional.of(inactive));
+        assertThatThrownBy(() -> chatService.getAdminConversations("", null, PageRequest.of(0, 20), inactive.getEmail()))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(conversationRepository, never()).existsById(any());
+    }
+
+    @Test void superAdminCanReadTranscriptAndMissingConversationReturnsNotFound() {
+        User admin = user(51L, "super@m4n.test", "Super", RoleName.SUPER_ADMIN);
+        when(userRepository.findByEmailIgnoreCase(admin.getEmail())).thenReturn(Optional.of(admin));
+        assertThatThrownBy(() -> chatService.getAdminMessages(999L, PageRequest.of(0, 20), admin.getEmail()))
+                .isInstanceOf(com.m4n.backend.exception.ResourceNotFoundException.class);
+    }
+
     @Test void takeOverTransfersOwnershipAndRejectsFormerStaff() {
         conversation.setAssignedStaff(onlineStaff);
         when(userRepository.findByEmailIgnoreCaseWithLock(onlineStaff2.getEmail())).thenReturn(Optional.of(onlineStaff2));

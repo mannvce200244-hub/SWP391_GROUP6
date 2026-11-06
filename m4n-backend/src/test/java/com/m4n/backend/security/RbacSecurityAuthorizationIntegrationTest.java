@@ -23,6 +23,24 @@ public class RbacSecurityAuthorizationIntegrationTest {
 
     @Test
     @WithMockUser(username = "customer@m4n.vn", roles = "CUSTOMER")
+    void customerCannotReadAdminConversationAuditOrPosSuggestions() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/chat/conversations")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/chat/conversations/1/messages")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/pos/voucher-suggestions")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/checkout/voucher-suggestions?type=AUTOMATIC_ORDER")).andExpect(status().isBadRequest());
+        mockMvc.perform(get("/api/v1/checkout/voucher-suggestions?type=SHIPPING")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "pos@m4n.vn", roles = "POS_STAFF")
+    void posSuggestionsNeverIncludeShippingAndCannotReadChats() throws Exception {
+        mockMvc.perform(get("/api/v1/pos/voucher-suggestions?type=SHIPPING")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/checkout/voucher-suggestions")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/chat/conversations")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "customer@m4n.vn", roles = "CUSTOMER")
     void customerCannotTakeOverOrListAssignedConversations() throws Exception {
         mockMvc.perform(get("/api/v1/chat/staff/conversations?scope=ASSIGNED")).andExpect(status().isForbidden());
         mockMvc.perform(post("/api/v1/chat/conversations/1/take-over").contentType(MediaType.APPLICATION_JSON)

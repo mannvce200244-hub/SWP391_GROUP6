@@ -48,6 +48,7 @@ export const CUSTOMER_ROUTES = Object.freeze({
   adminProfile: '/admin/profile',
   adminSecurity: '/admin/security',
   adminUsers: '/admin/users',
+  adminChat: '/admin/chat',
   staffChat: '/staff/chat',
   staffOrders: '/staff/orders',
   staffProducts: '/staff/products',

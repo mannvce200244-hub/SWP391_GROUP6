@@ -141,7 +141,7 @@ function StaffDashboardPage() {
         <div className="flex flex-wrap gap-3">
           <div className="flex flex-col rounded-xl border border-border bg-canvas px-4 py-2 text-xs">
             <span className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-              Tài khoản ca trực
+              Tài khoản
             </span>
             <span className="mt-0.5 break-all font-mono font-bold text-ink">{user?.email}</span>
           </div>

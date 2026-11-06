@@ -42,6 +42,38 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest
 public class ChatConcurrencyIntegrationTest {
 
+    @Test
+    void adminOversightPagesAndFiltersWithoutAcknowledgingOrChangingConversation() {
+        var open = chatService.startMyCustomerConversation(customerEmail);
+        var waiting = chatService.startMyCustomerConversation(customer2Email);
+        chatService.assignStaff(open.id(), staffAEmail);
+        chatService.sendMessage(open.id(), new ChatMessageRequest("First message"), customerEmail);
+        chatService.sendMessage(open.id(), new ChatMessageRequest("Second message"), customerEmail);
+        var before = conversationRepository.findById(open.id()).orElseThrow();
+        var updatedAt = before.getUpdatedAt();
+        var first = chatService.getAdminMessages(open.id(), PageRequest.of(0, 1), adminEmail);
+        var second = chatService.getAdminMessages(open.id(), PageRequest.of(1, 1), adminEmail);
+        assertThat(first.getTotalElements()).isEqualTo(2);
+        assertThat(first.getContent()).extracting(ChatMessageResponse::content).containsExactly("Second message");
+        assertThat(second.getContent()).extracting(ChatMessageResponse::content).containsExactly("First message");
+        assertThat(first.getContent().getFirst().isRead()).isFalse();
+        assertThat(chatMessageRepository.findByConversationIdOrderByCreatedAtAscIdAsc(open.id()))
+                .allMatch(message -> !message.isRead());
+        var after = conversationRepository.findById(open.id()).orElseThrow();
+        assertThat(after.getUpdatedAt()).isEqualTo(updatedAt);
+        assertThat(after.getAssignedStaff().getId()).isEqualTo(before.getAssignedStaff().getId());
+        assertThat(chatService.getAdminConversations(customerEmail, ConversationStatus.OPEN,
+                PageRequest.of(0, 1), adminEmail).getContent()).extracting(ConversationResponse::id).containsExactly(open.id());
+        assertThat(chatService.getAdminConversations(customer2Email, null,
+                PageRequest.of(0, 1), adminEmail).getContent()).extracting(ConversationResponse::id).containsExactly(waiting.id());
+        assertThat(chatService.getAdminConversations(customerEmail, ConversationStatus.CLOSED,
+                PageRequest.of(0, 1), adminEmail)).isEmpty();
+        assertThatThrownBy(() -> chatService.getAdminMessages(open.id(), PageRequest.of(0, 10), staffAEmail))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> chatService.sendMessage(open.id(), new ChatMessageRequest("No admin reply"), adminEmail))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
     @Test void concurrentTakeOverHasOneWinnerAndPreservesTranscript() throws Exception {
         String staffCEmail = createFixtureUser("staff-c", UUID.randomUUID().toString(), RoleName.ONLINE_STAFF,
                 passwordEncoder.encode("Password123!"));

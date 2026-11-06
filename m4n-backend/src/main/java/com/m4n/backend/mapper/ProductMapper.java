@@ -127,7 +127,7 @@ public class ProductMapper {
         );
     }
 
-    public ProductSummaryResponse toSummaryResponse(Product product, String availability, ProductMedia primaryMedia, ProductPrice price) {
+    public ProductSummaryResponse toSummaryResponse(Product product, String availability, ProductMedia primaryMedia, ProductPrice price, Integer stockQuantity) {
         if (product == null) {
             return null;
         }
@@ -153,7 +153,8 @@ public class ProductMapper {
                 availability,
                 price.originalUnitPrice(),
                 price.productDiscountAmount(),
-                price.productPromotionId()
+                price.productPromotionId(),
+                stockQuantity
         );
     }
 

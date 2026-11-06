@@ -16,5 +16,6 @@ public record ProductSummaryResponse(
         String availability,
         BigDecimal originalPrice,
         BigDecimal productDiscountAmount,
-        Long productPromotionId
+        Long productPromotionId,
+        Integer stockQuantity
 ) {}

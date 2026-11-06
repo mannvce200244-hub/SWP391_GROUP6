@@ -152,7 +152,7 @@ public class ProductServiceImpl implements ProductService {
                     int quantity = inventoryMap.getOrDefault(product.getId(), 0);
                     String availability = availabilityFor(product, quantity);
                     ProductMedia primaryMedia = primaryMediaMap.get(product.getId());
-                    return productMapper.toSummaryResponse(product, availability, primaryMedia, resolvedPrices.get(product.getId()));
+                    return productMapper.toSummaryResponse(product, availability, primaryMedia, resolvedPrices.get(product.getId()), quantity);
                 })
                 .toList();
 

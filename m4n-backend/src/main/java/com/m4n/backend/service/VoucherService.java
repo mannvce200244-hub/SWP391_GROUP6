@@ -13,6 +13,8 @@ import java.math.BigDecimal;
 
 public interface VoucherService {
 
+    Page<VoucherResponse> getSuggestions(PromotionType type, Pageable pageable);
+
     DiscountCalculationResponse calculateDiscounts(String voucherCode, BigDecimal orderAmount, int quantity);
 
     DiscountCalculationResponse consumeDiscounts(String voucherCode, BigDecimal orderAmount, int quantity);

@@ -64,10 +64,10 @@ class CommercePricingIntegrationTest {
         assertThat(cart.productDiscountAmount()).isEqualByComparingTo("400");
         var preview = orderService.previewCheckout(new CheckoutPreviewRequest(manual.getCode(), shipping.getCode()));
         assertThat(preview.manualDiscountAmount()).isEqualByComparingTo("160");
-        assertThat(preview.baseShippingFee()).isEqualByComparingTo("700");
+        assertThat(preview.baseShippingFee()).isEqualByComparingTo("500");
         assertThat(preview.shippingDiscountAmount()).isEqualByComparingTo("500");
-        assertThat(preview.shippingFee()).isEqualByComparingTo("200");
-        assertThat(preview.finalAmount()).isEqualByComparingTo("1640");
+        assertThat(preview.shippingFee()).isEqualByComparingTo("0");
+        assertThat(preview.finalAmount()).isEqualByComparingTo("1440");
         assertThat(shipping.getUsedCount()).isZero();
         var placed = orderService.placeOrder(request(manual.getCode(), shipping.getCode()));
         assertThat(placed.finalAmount()).isEqualByComparingTo(preview.finalAmount());
@@ -79,7 +79,7 @@ class CommercePricingIntegrationTest {
         var settings = shippingSettings.findById(1L).orElseThrow(); settings.setRatePerKg(new BigDecimal("900"));
         var detail = orderService.getMyOrderDetail(placed.id());
         assertThat(detail.originalTotalAmount()).isEqualByComparingTo("2000");
-        assertThat(detail.finalAmount()).isEqualByComparingTo("1640");
+        assertThat(detail.finalAmount()).isEqualByComparingTo("1440");
         assertThat(detail.items().getFirst().price()).isEqualByComparingTo("800");
         assertThat(detail.items().getFirst().originalUnitPrice()).isEqualByComparingTo("1000");
         orderService.customerCancelOrder(placed.id(), "Kiểm thử");
@@ -108,7 +108,7 @@ class CommercePricingIntegrationTest {
         var shipping = saveShippingVoucher(9999);
         cartService.addToCart(new AddToCartRequest(product.getId(), 1));
         var preview = orderService.previewCheckout(new CheckoutPreviewRequest(null, shipping.getCode()));
-        assertThat(preview.shippingDiscountAmount()).isEqualByComparingTo("350");
+        assertThat(preview.shippingDiscountAmount()).isEqualByComparingTo("250");
         assertThat(preview.shippingFee()).isZero();
         authenticate("pos@m4n.vn");
         assertThatThrownBy(() -> posService.finalizeSale(PosSaleRequest.builder().items(List.of(new PosSaleItemRequest(product.getId(), 1)))
