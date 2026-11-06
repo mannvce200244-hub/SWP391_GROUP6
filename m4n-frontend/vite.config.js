@@ -3,8 +3,12 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, import.meta.dirname, 'DEV_')
+export default defineConfig(({ mode, command }) => {
+  const env = loadEnv(mode, import.meta.dirname, ['DEV_', 'VITE_'])
+  if (command === 'build' && mode === 'production'
+      && env.VITE_API_BASE_URL && env.VITE_API_BASE_URL !== '/api/v1') {
+    throw new Error('For Vercel + Railway, VITE_API_BASE_URL must be /api/v1 to preserve login cookies.')
+  }
 
   return {
     server: {
