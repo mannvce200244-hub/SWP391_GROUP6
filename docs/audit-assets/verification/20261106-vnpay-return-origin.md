@@ -2,9 +2,9 @@
 
 ## Reported incident and recovery
 
-Order 540 returned to localhost after VNPay sandbox payment. Before recovery,
-PostgreSQL held a PENDING VNPay attempt and an unpaid PENDING_CONFIRMATION order
-for 3,200,000 VND, matching the supplied transaction reference and provider amount.
+An online order returned to localhost after VNPay sandbox payment. Before recovery,
+PostgreSQL held a PENDING VNPay attempt and an unpaid PENDING_CONFIRMATION order,
+matching the supplied transaction reference and provider amount.
 
 The customer's exact signed return was sent to the existing public VNPay IPN
 verification endpoint. It returned HTTP 200, RspCode 00, Confirm success. A separate
@@ -34,7 +34,7 @@ Deploy both backend and frontend changes. On Railway, keep
 VNPAY_RETURN_URL=https://swp-391-group-6-acqc.vercel.app/payment-return and the
 matching CORS allowlist; the committed public environment template contains it.
 Existing gateway links retain their original return and cannot be changed after
-signing. Order 540 can be viewed on the stable frontend's payment-return page
+signing. The affected order can be viewed on the stable frontend's payment-return page
 using its internal order ID; another payment is unnecessary.
 VNPay's merchant-side IPN registration must use the public backend IPN URL;
 editing the environment variable alone does not register that callback.
