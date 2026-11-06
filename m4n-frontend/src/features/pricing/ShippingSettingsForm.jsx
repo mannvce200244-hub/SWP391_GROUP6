@@ -55,11 +55,11 @@ export default function ShippingSettingsForm() {
   return (
     <section className="bg-white border border-border rounded-xl p-5 space-y-4">
       <h2 className="text-lg font-semibold">Phí vận chuyển online</h2>
-      <p className="text-sm text-muted">Phí theo địa chỉ và khối lượng tính theo kg. Đạt ngưỡng tiền hàng sẽ được miễn phí.</p>
+      <p className="text-sm text-muted">Phí theo địa chỉ và khối lượng khi dùng GHN; nếu không dùng GHN, tính theo kg. Đạt ngưỡng tiền hàng sẽ được miễn phí.</p>
       {!form && !error ? <LoadingState message="Đang tải cấu hình…" /> : form && <form onSubmit={save} noValidate className="space-y-4">
         <fieldset disabled={busy} className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Input id="shipping-ratePerKg" type="number" min="0" max="999999999999.99" step="0.01" label="Đơn giá / kg (đ)" required value={form.ratePerKg} error={errors.ratePerKg} helperText="Áp dụng khi tính phí theo khối lượng" onChange={(event) => change('ratePerKg', event.target.value)} />
+            <Input id="shipping-ratePerKg" type="number" min="0" max="999999999999.99" step="0.01" label="Đơn giá / kg (đ)" required value={form.ratePerKg} error={errors.ratePerKg} helperText="Áp dụng khi không dùng GHN." onChange={(event) => change('ratePerKg', event.target.value)} />
             <Input id="shipping-freeShippingThreshold" type="number" min="0" max="9999999999999" step="1" label="Miễn phí cho đơn từ (đ)" required value={form.freeShippingThreshold ?? ''} error={errors.freeShippingThreshold} helperText="Tính trên tiền hàng sau giảm theo sản phẩm, trước voucher đơn." onChange={(event) => change('freeShippingThreshold', event.target.value)} />
           </div>
           <Button type="submit" loading={busy} loadingLabel="Đang lưu…">Lưu cấu hình</Button>
