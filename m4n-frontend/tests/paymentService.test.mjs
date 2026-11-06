@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import test from 'node:test'
+import test, { after } from 'node:test'
+
+const previousWindow = globalThis.window
+globalThis.window = { location: { origin: 'https://shop.example.test' } }
+after(() => { globalThis.window = previousWindow })
 
 const source = (await readFile(new URL('../src/services/paymentService.js', import.meta.url), 'utf8'))
   .replace("import apiClient from '../api/apiClient.js'", 'const apiClient = {}; export { apiClient as testApiClient }')
@@ -44,6 +48,36 @@ test('payment redirect accepts only the configured VNPay sandbox checkout endpoi
     'https://sandbox.vnpayment.vn/redirect?target=https://attacker.test',
     'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html#unverified',
   ]) assert.throws(() => verifiedPaymentUrl(unsafe), /Liên kết thanh toán không hợp lệ/)
+})
+
+test('online VNPay starts only with a return to this frontend payment page', async () => {
+  const url = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_ReturnUrl=' + encodeURIComponent('https://shop.example.test/payment-return?orderId=540')
+  testApiClient.post = async (path) => {
+    assert.equal(path, '/payments/orders/540/vnpay')
+    return { paymentUrl: url }
+  }
+  assert.equal(await paymentService.start(540, 'VNPAY'), url)
+})
+
+test('online VNPay rejects stale localhost, other sites, invalid paths and duplicate returns before redirect', async () => {
+  const base = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?'
+  const returns = [
+    '', 'vnp_ReturnUrl=not-a-url',
+    ...['http://localhost:5173/payment-return?orderId=540', 'https://evil.test/payment-return',
+      'https://shop.example.test/pos', 'https://user@shop.example.test/payment-return',
+      'https://shop.example.test/payment-return#unexpected'].map(value => 'vnp_ReturnUrl=' + encodeURIComponent(value)),
+    'vnp_ReturnUrl=' + encodeURIComponent('https://shop.example.test/payment-return') + '&vnp_ReturnUrl=' + encodeURIComponent('https://evil.test/payment-return'),
+  ]
+  for (const query of returns) {
+    testApiClient.post = async () => ({ paymentUrl: base + query })
+    await assert.rejects(paymentService.start(540, 'VNPAY'), /Liên kết trả về chưa hợp lệ/)
+  }
+})
+
+test('online MoMo checkout is unaffected by the VNPay return guard', async () => {
+  const url = 'https://test-payment.momo.vn/v2/gateway/pay?token=fixture'
+  testApiClient.post = async () => ({ paymentUrl: url })
+  assert.equal(await paymentService.start(540, 'MOMO'), url)
 })
 
 

@@ -57,7 +57,21 @@ const paymentService = Object.freeze({
   async start(orderId, method = 'VNPAY') {
     if (!['VNPAY', 'MOMO'].includes(method)) throw new Error('Phương thức thanh toán không hợp lệ.')
     const result = await apiClient.post(`/payments/orders/${encodeURIComponent(orderId)}/${method.toLowerCase()}`, {})
-    return verifiedPaymentUrl(result.paymentUrl, method)
+    const paymentUrl = verifiedPaymentUrl(result.paymentUrl, method)
+    if (method === 'VNPAY') {
+      const returns = new URL(paymentUrl).searchParams.getAll('vnp_ReturnUrl')
+      let returnUrl
+      try {
+        if (returns.length === 1) returnUrl = new URL(returns[0])
+      } catch {
+        // Reject malformed provider returns before the customer enters payment details.
+      }
+      if (!returnUrl || returnUrl.origin !== window.location.origin || returnUrl.pathname !== '/payment-return'
+          || returnUrl.username || returnUrl.password || returnUrl.hash) {
+        throw new Error('Liên kết trả về chưa hợp lệ. Đơn đã tạo; vui lòng kiểm tra tại Đơn hàng của tôi.')
+      }
+    }
+    return paymentUrl
   },
   simulatePayment: (reference, success = true) =>
     apiClient.post('/payments/momo/simulate-payment', { reference, success }),

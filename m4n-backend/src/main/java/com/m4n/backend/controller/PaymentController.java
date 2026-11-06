@@ -17,8 +17,9 @@ public class PaymentController {
     public PaymentOptionsResponse options() { return service.getOptions(); }
     @PostMapping("/orders/{id}/vnpay")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public PaymentUrlResponse create(@PathVariable Long id, Authentication auth, HttpServletRequest request) {
-        return service.createPayment(id, auth.getName(), request.getRemoteAddr());
+    public PaymentUrlResponse create(@PathVariable Long id, Authentication auth, HttpServletRequest request,
+            @RequestHeader(value = "Origin", required = false) String origin) {
+        return service.createPayment(id, auth.getName(), request.getRemoteAddr(), origin);
     }
     @GetMapping("/orders/{id}")
     public PaymentStatusResponse status(@PathVariable Long id, Authentication auth) { return service.getStatus(id, auth.getName()); }

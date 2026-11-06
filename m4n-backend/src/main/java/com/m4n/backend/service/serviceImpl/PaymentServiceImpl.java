@@ -101,8 +101,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     @Transactional
-    public PaymentUrlResponse createPayment(Long id, String email, String ipAddress) {
+    public PaymentUrlResponse createPayment(Long id, String email, String ipAddress, String origin) {
         requireAvailable();
+        String returnUrl = properties.checkoutReturnUrlFor(origin);
         Order order = lockOrder(id);
         User actor = actor(email);
         requireOwner(order, actor);
@@ -136,7 +137,7 @@ public class PaymentServiceImpl implements PaymentService {
         params.put("vnp_IpAddr", literalIp(ipAddress));
         params.put("vnp_CreateDate", attempt.getProviderCreateDate());
         params.put("vnp_ExpireDate", PROVIDER_DATE.format(attempt.getExpiresAt()));
-        params.put("vnp_ReturnUrl", properties.returnUrl() + "?orderId=" + order.getId());
+        params.put("vnp_ReturnUrl", returnUrl + "?orderId=" + order.getId());
         return new PaymentUrlResponse(gateway.paymentUrl(params), attempt.getTransactionReference());
     }
 
