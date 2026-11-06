@@ -37,7 +37,6 @@ export default function ProductFormModal({
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
   const [billableWeightKg, setBillableWeightKg] = useState('')
-  const [bulkySurcharge, setBulkySurcharge] = useState('0')
   const [lowStockThreshold, setLowStockThreshold] = useState('5')
   const [categoryId, setCategoryId] = useState('')
   const [artisanId, setArtisanId] = useState('')
@@ -70,7 +69,6 @@ export default function ProductFormModal({
     setName('')
     setPrice('')
     setBillableWeightKg('')
-    setBulkySurcharge('0')
     setLowStockThreshold('5')
     setCategoryId('')
     setArtisanId('')
@@ -133,7 +131,6 @@ export default function ProductFormModal({
             setName(p.name || '')
             setPrice(p.price != null ? String(p.price) : '')
             setBillableWeightKg(p.billableWeightKg == null ? '' : String(p.billableWeightKg))
-            setBulkySurcharge(String(p.bulkySurcharge ?? 0))
             setLowStockThreshold(String(p.lowStockThreshold ?? 5))
             setCategoryId(p.category?.id ? String(p.category.id) : '')
             setArtisanId(p.artisan?.id ? String(p.artisan.id) : '')
@@ -275,9 +272,7 @@ export default function ProductFormModal({
     if (billableWeightKg !== '' && (!/^\d+(\.\d{1,3})?$/.test(billableWeightKg) || Number(billableWeightKg) <= 0 || Number(billableWeightKg) > 9999999.999)) {
       errors.billableWeightKg = 'Khối lượng phải lớn hơn 0, tối đa 9.999.999,999 kg và 3 chữ số thập phân.'
     }
-    if (!/^\d+$/.test(bulkySurcharge) || Number(bulkySurcharge) > 9999999999999) {
-      errors.bulkySurcharge = 'Phụ phí là số nguyên từ 0 đến 9.999.999.999.999đ.'
-    }
+
     const threshold = Number(lowStockThreshold)
     if (lowStockThreshold === '' || !Number.isInteger(threshold) || threshold < 0 || threshold > 2147483647) {
       errors.lowStockThreshold = 'Ngưỡng cảnh báo phải là số nguyên từ 0 đến 2147483647.'
@@ -314,7 +309,7 @@ export default function ProductFormModal({
           name: name.trim(),
           price: Number(price),
           billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
-          bulkySurcharge: Number(bulkySurcharge),
+
           lowStockThreshold: Number(lowStockThreshold),
           categoryId: Number(categoryId),
           artisanId: artisanId ? Number(artisanId) : null,
@@ -350,7 +345,7 @@ export default function ProductFormModal({
           name: name.trim(),
           price: Number(price),
           billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
-          bulkySurcharge: Number(bulkySurcharge),
+
           lowStockThreshold: Number(lowStockThreshold),
           categoryId: Number(categoryId),
           artisanId: artisanId ? Number(artisanId) : null,
@@ -575,7 +570,6 @@ export default function ProductFormModal({
                     </div>
 
                     <Input id="product-billableWeightKg" name="billableWeightKg" type="number" min="0.001" max="9999999.999" step="0.001" label="Khối lượng tính cước (kg)" value={billableWeightKg} error={formErrors.billableWeightKg} helperText="Nhập khối lượng thực tế hoặc quy đổi. Cần có khi bật phí vận chuyển." onChange={(event) => setBillableWeightKg(event.target.value)} />
-                    <Input id="product-bulkySurcharge" name="bulkySurcharge" type="number" min="0" max="9999999999999" step="1" required label="Phụ phí cồng kềnh / sản phẩm (đ)" value={bulkySurcharge} error={formErrors.bulkySurcharge} helperText="0 nếu không cồng kềnh; ví dụ 30.000đ cho một sản phẩm." onChange={(event) => setBulkySurcharge(event.target.value)} />
 
                     <div className="flex flex-col justify-end pb-1 sm:col-span-2 lg:col-span-2">
                       <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-ink">

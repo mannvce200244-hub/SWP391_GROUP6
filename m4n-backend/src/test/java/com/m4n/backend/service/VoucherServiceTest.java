@@ -32,6 +32,23 @@ import static org.mockito.ArgumentMatchers.eq;
 @ExtendWith(MockitoExtension.class)
 class VoucherServiceTest {
 
+    @Test
+    void suggestionsUseOnlyActiveManualOrShippingVouchersAndBoundPageSize() {
+        var page = org.springframework.data.domain.PageRequest.of(0, 1000);
+        when(voucherRepository.search(eq(""), eq(PromotionType.SHIPPING), eq(true), eq("ACTIVE"), any(), any()))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+        voucherService.getSuggestions(PromotionType.SHIPPING, page);
+        var captor = org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        verify(voucherRepository).search(eq(""), eq(PromotionType.SHIPPING), eq(true), eq("ACTIVE"), any(), captor.capture());
+        assertThat(captor.getValue().getPageSize()).isEqualTo(20);
+        assertThat(captor.getValue().getSort().getOrderFor("minimumOrderValue")).isNotNull();
+        assertThatThrownBy(() -> voucherService.getSuggestions(PromotionType.AUTOMATIC_ORDER, page))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> voucherService.getSuggestions(PromotionType.MANUAL,
+                org.springframework.data.domain.PageRequest.of(Integer.MAX_VALUE, 20)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     @Mock
     private VoucherRepository voucherRepository;
 

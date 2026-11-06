@@ -121,7 +121,7 @@ export default function PosScannerDialog({ onClose, onProduct }) {
               : <Button variant="secondary" onClick={() => { sessionRef.current?.stop(); setCameraEnabled(false) }}>Tắt camera</Button>}
           </div>
           <form noValidate onSubmit={(event) => { event.preventDefault(); void findProduct(code) }} className="space-y-3 border-t border-border pt-4">
-            <Input id="pos-scanner-code" name="barcode" label="Nhập mã hoặc dùng máy quét USB / Bluetooth" autoComplete="off" spellCheck={false} maxLength={100}
+            <Input id="pos-scanner-code" name="barcode" label="Nhập mã" autoComplete="off" spellCheck={false} maxLength={100}
               value={code} onChange={(event) => { setCode(event.target.value); if (result?.type === 'error') setResult(null) }} disabled={loading}
               error={result?.type === 'error' ? result.message : undefined}
               aria-describedby={result?.type === 'success' ? 'pos-scanner-feedback' : undefined} />

@@ -10,6 +10,7 @@ import com.m4n.backend.entity.StockDocumentType;
 import com.m4n.backend.entity.StockDocumentStatus;
 import com.m4n.backend.service.InventoryService;
 import com.m4n.backend.service.StockDocumentService;
+import com.m4n.backend.service.StockReceiptPdfService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -36,6 +37,7 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
     private final StockDocumentService stockDocumentService;
+    private final StockReceiptPdfService stockReceiptPdfService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
@@ -83,6 +85,15 @@ public class InventoryController {
     public ResponseEntity<StockDocumentResponse> confirmDocument(@PathVariable Long id,
             @Valid @RequestBody ConfirmStockDocumentRequest request) {
         return ResponseEntity.ok(stockDocumentService.confirm(id, request));
+    }
+
+    @GetMapping(value = "/documents/{id}/pdf", produces = "application/pdf")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
+    public ResponseEntity<byte[]> receiptPdf(@PathVariable Long id) {
+        return ResponseEntity.ok().contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"StockReceipt-" + id + ".pdf\"")
+                .header(org.springframework.http.HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(stockReceiptPdfService.generateReceiptPdf(id));
     }
 
     @GetMapping("/movements")

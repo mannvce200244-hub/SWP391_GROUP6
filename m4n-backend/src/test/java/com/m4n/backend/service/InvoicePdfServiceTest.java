@@ -9,6 +9,7 @@ import com.m4n.backend.entity.RoleName;
 import com.m4n.backend.entity.User;
 import com.m4n.backend.repository.InvoiceRepository;
 import com.m4n.backend.service.serviceImpl.InvoicePdfServiceImpl;
+import com.m4n.backend.service.serviceImpl.PdfFontProvider;
 import com.lowagie.text.pdf.PdfReader;
 import com.lowagie.text.pdf.parser.PdfTextExtractor;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +41,7 @@ class InvoicePdfServiceTest {
 
     @BeforeEach
     void setUp() {
-        invoicePdfService = new InvoicePdfServiceImpl(invoiceRepository, "");
+        invoicePdfService = new InvoicePdfServiceImpl(invoiceRepository, new PdfFontProvider(""));
 
         Role staffRole = Role.builder().id(3L).name(RoleName.POS_STAFF).build();
         User staff = User.builder().id(5L).fullName("Nguyễn Thu Ngân").role(staffRole).build();
@@ -96,7 +97,7 @@ class InvoicePdfServiceTest {
     void configuredMissingFontRejectsExportInsteadOfProducingCorruptedVietnamese() {
         when(invoiceRepository.findWithDetailsById(100L)).thenReturn(Optional.of(sampleInvoice));
         var service = new InvoicePdfServiceImpl(invoiceRepository,
-                java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "m4n-missing-" + java.util.UUID.randomUUID() + ".ttf").toString());
+                new PdfFontProvider(java.nio.file.Path.of(System.getProperty("java.io.tmpdir"), "m4n-missing-" + java.util.UUID.randomUUID() + ".ttf").toString()));
         assertThatThrownBy(() -> service.generateInvoicePdf(100L)).isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Phông chữ hóa đơn chưa sẵn sàng");
     }

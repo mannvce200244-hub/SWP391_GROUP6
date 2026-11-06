@@ -1,6 +1,15 @@
 import apiClient from '../api/apiClient.js'
 
 export const chatService = Object.freeze({
+  async getAdminConversations({ search = '', status = '', page = 0 } = {}) {
+    const params = new URLSearchParams({ search, page: String(page), size: '20' })
+    if (status) params.set('status', status)
+    return apiClient.get(`/admin/chat/conversations?${params}`)
+  },
+
+  async getAdminMessages(id, page = 0) {
+    return apiClient.get(`/admin/chat/conversations/${id}/messages?page=${page}&size=50`)
+  },
   async getMyConversation() {
     return apiClient.get('/chat/my-conversation')
   },

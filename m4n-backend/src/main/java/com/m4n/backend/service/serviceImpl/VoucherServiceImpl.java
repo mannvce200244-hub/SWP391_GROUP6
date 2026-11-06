@@ -39,6 +39,20 @@ public class VoucherServiceImpl implements VoucherService {
     private final CartMapper cartMapper;
 
     @Override
+    public Page<VoucherResponse> getSuggestions(PromotionType type, Pageable pageable) {
+        if (type != PromotionType.MANUAL && type != PromotionType.SHIPPING) {
+            throw new IllegalArgumentException("Chỉ gợi ý voucher tiền hàng hoặc vận chuyển.");
+        }
+        if (pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang.");
+        }
+        return voucherRepository.search("", type, true, "ACTIVE", Instant.now(),
+                PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 20),
+                        org.springframework.data.domain.Sort.by("minimumOrderValue", "id")))
+                .map(this::mapToVoucherResponse);
+    }
+
+    @Override
     public DiscountCalculationResponse calculateDiscounts(String voucherCode, BigDecimal orderAmount, int quantity) {
         return calculateDiscounts(voucherCode, orderAmount, quantity, false);
     }

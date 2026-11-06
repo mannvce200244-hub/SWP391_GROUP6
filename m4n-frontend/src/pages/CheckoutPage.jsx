@@ -1,3 +1,4 @@
+import VoucherSuggestions from '../features/checkout/VoucherSuggestions.jsx'
 import Button from '../components/ui/Button.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import LoadingState from '../components/ui/LoadingState.jsx'
@@ -20,7 +21,6 @@ import {
   Plus,
   Shield,
   ShoppingBag,
-  TicketPercent,
   Trash2,
 } from 'lucide-react'
 import { IconInstrument } from '../components/ui/Icons.jsx'
@@ -87,7 +87,6 @@ function CheckoutPage() {
   const [appliedVoucher, setAppliedVoucher] = useState(null)
   const [voucherLoading, setVoucherLoading] = useState(false)
   const [voucherFeedback, setVoucherFeedback] = useState(null)
-  const [suggestedVouchers, setSuggestedVouchers] = useState([])
   const [shippingCodeInput, setShippingCodeInput] = useState('')
   const [shippingVoucher, setShippingVoucher] = useState(null)
   const [shippingFeedback, setShippingFeedback] = useState('')
@@ -116,25 +115,6 @@ function CheckoutPage() {
       .catch(() => { if (active) setPaymentOptionsError('Không thể kiểm tra cổng thanh toán. Bạn có thể tiếp tục bằng COD.') })
     return () => { active = false }
   }, [optionsRetry])
-
-  useEffect(() => {
-    if (!isAuthenticated) return undefined
-    let active = true
-    orderService
-      .getCheckoutVouchers()
-      .then((list) => {
-        if (active && Array.isArray(list)) {
-          const sorted = [...list].sort(
-            (a, b) => Number(a.minimumOrderValue || 0) - Number(b.minimumOrderValue || 0)
-          )
-          setSuggestedVouchers(sorted)
-        }
-      })
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [isAuthenticated])
 
   // Prefill customer profile data if user loads asynchronously
   useEffect(() => {
@@ -315,13 +295,14 @@ function CheckoutPage() {
   const setPaymentMethod = setSelectedPaymentMethod
 
   // Client-side validation before submission
-  const handleApplyShippingVoucher = async () => {
-    if (voucherLoading || cartLoading || submitting || previewLoading || !shippingCodeInput.trim()) return
+  const handleApplyShippingVoucher = async (chosenCode = shippingCodeInput) => {
+    const code = chosenCode.trim()
+    if (voucherLoading || cartLoading || submitting || previewLoading || !code) return
     const requestId = ++previewSequence.current
     setVoucherLoading(true)
     setShippingFeedback('')
     try {
-      const result = await orderService.previewCheckout(appliedVoucher?.code, shippingCodeInput.trim(), cartItemIds, carrierAddress, recipientName, recipientPhone, directPurchase)
+      const result = await orderService.previewCheckout(appliedVoucher?.code, code, cartItemIds, carrierAddress, recipientName, recipientPhone, directPurchase)
       if (requestId !== previewSequence.current) return
       if (result.shippingVoucherApplied) {
         setShippingVoucher(result.shippingVoucherCode)
@@ -621,105 +602,7 @@ function CheckoutPage() {
                   </div>
                 )}
 
-                {/* Voucher Suggestions based on current order value */}
-                {suggestedVouchers.length > 0 && (
-                  <div className="pt-3 border-t border-border/60 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-ink flex items-center gap-1.5">
-                        <TicketPercent size={14} className="text-brand" />
-                        <span>Gợi ý mã giảm giá theo giá trị đơn hàng</span>
-                      </span>
-                      <span className="text-[11px] text-muted">
-                        Đơn hiện tại: <strong>{formatCurrencyVND(currentOrderSubtotal)}</strong>
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {suggestedVouchers.map((v) => {
-                        const minOrder = Number(v.minimumOrderValue || 0)
-                        const minQty = Number(v.minimumQuantity || 0)
-                        const ratePercent = Math.round(Number(v.discountRate || 0) * 100)
-                        const isEligible =
-                          currentOrderSubtotal >= minOrder &&
-                          currentTotalQuantity >= minQty
-                        const isCurrentlyApplied =
-                          appliedVoucher?.code?.toUpperCase() === v.code?.toUpperCase()
-                        const estimatedSaving = isEligible
-                          ? Math.round(currentOrderSubtotal * Number(v.discountRate || 0))
-                          : 0
-                        const missingAmount = Math.max(0, minOrder - currentOrderSubtotal)
-
-                        return (
-                          <div
-                            key={v.id || v.code}
-                            className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 ${
-                              isCurrentlyApplied
-                                ? 'border-emerald-300 bg-surface-secondary'
-                                : isEligible
-                                  ? 'border-brand/35 bg-white hover:border-brand'
-                                  : 'border-border bg-surface-secondary/60 opacity-80'
-                            }`}
-                          >
-                            <div>
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="font-mono text-xs font-bold text-ink px-2 py-0.5 rounded bg-surface-secondary border border-border">
-                                  {v.code}
-                                </span>
-                                <span
-                                  className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                                    isCurrentlyApplied
-                                      ? 'bg-emerald-100 text-emerald-800'
-                                      : isEligible
-                                        ? 'bg-brand-soft text-brand'
-                                        : 'bg-surface-secondary text-muted'
-                                  }`}
-                                >
-                                  Giảm {ratePercent}%
-                                </span>
-                              </div>
-                              <p className="text-xs text-ink font-medium mt-1.5 line-clamp-2">
-                                {v.description || `Giảm ${ratePercent}% cho đơn từ ${formatCurrencyVND(minOrder)}`}
-                              </p>
-                            </div>
-
-                            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-border/50">
-                              {isEligible ? (
-                                <span className="text-[11px] text-emerald-700 font-semibold">
-                                  Tiết kiệm ~{formatCurrencyVND(estimatedSaving)}
-                                </span>
-                              ) : (
-                                <span className="text-[11px] text-muted">
-                                  {missingAmount > 0
-                                    ? `Mua thêm ${formatCurrencyVND(missingAmount)}`
-                                    : `Cần tối thiểu ${minQty} SP`}
-                                </span>
-                              )}
-
-                              {isCurrentlyApplied ? (
-                                <span className="text-[11px] font-bold text-emerald-700">
-                                  Đang áp dụng
-                                </span>
-                              ) : (
-                                <button
-                                  type="button"
-                                  disabled={checkoutBusy || !isEligible}
-                                  onClick={() => applyVoucherCode(v.code)}
-                                  className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
-                                    isEligible
-                                      ? 'bg-brand text-white hover:bg-brand-hover cursor-pointer'
-                                      : 'bg-surface-secondary text-muted cursor-not-allowed'
-                                  }`}
-                                >
-                                  {isEligible ? 'Áp dụng' : 'Chưa đủ ĐK'}
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
+                <VoucherSuggestions subtotal={currentOrderSubtotal} quantity={currentTotalQuantity} appliedCode={appliedVoucher?.code} disabled={checkoutBusy} onApply={applyVoucherCode} />
               </div>
 
               <div className="rounded-[28px] bg-white border border-border/80 p-6 space-y-3">
@@ -727,9 +610,10 @@ function CheckoutPage() {
                 <p className="text-xs text-muted">Dùng riêng với voucher giảm tiền hàng. Khi đủ ngưỡng freeship, mã ship không cần dùng và không bị trừ lượt.</p>
                 {shippingVoucher ? <div className="flex flex-wrap gap-3 items-center"><strong className="font-mono">{shippingVoucher}</strong><button type="button" disabled={checkoutBusy} onClick={() => { setShippingVoucher(null); setShippingCodeInput(''); setShippingFeedback('') }} className="min-h-11 px-3 text-brand underline">Bỏ voucher ship</button></div> : <>
                   <label htmlFor="checkout-shipping-voucher" className="block text-xs font-semibold">Mã giảm ship</label>
-                  <div className="flex gap-2"><input id="checkout-shipping-voucher" name="shippingVoucherCode" autoComplete="off" maxLength={50} value={shippingCodeInput} disabled={checkoutBusy} onChange={(event) => { setShippingCodeInput(event.target.value.toUpperCase()); setShippingFeedback('') }} className="min-h-11 min-w-0 flex-1 px-3 border border-border rounded-xl font-mono text-sm" /><Button variant="secondary" disabled={checkoutBusy || !shippingCodeInput.trim()} onClick={handleApplyShippingVoucher} className="shrink-0">Áp dụng</Button></div>
+                  <div className="flex gap-2"><input id="checkout-shipping-voucher" name="shippingVoucherCode" autoComplete="off" maxLength={50} value={shippingCodeInput} disabled={checkoutBusy} onChange={(event) => { setShippingCodeInput(event.target.value.toUpperCase()); setShippingFeedback('') }} className="min-h-11 min-w-0 flex-1 px-3 border border-border rounded-xl font-mono text-sm" /><Button variant="secondary" disabled={checkoutBusy || !shippingCodeInput.trim()} onClick={() => handleApplyShippingVoucher()} className="shrink-0">Áp dụng</Button></div>
                 </>}
                 {shippingFeedback && <p role="status" className="text-xs text-muted">{shippingFeedback}</p>}
+                <VoucherSuggestions type="SHIPPING" subtotal={currentOrderSubtotal} quantity={currentTotalQuantity} shippingFee={previewCurrent ? (preview.freeShippingApplied ? 0 : Number(preview.baseShippingFee)) : undefined} appliedCode={shippingVoucher} disabled={checkoutBusy || !previewCurrent} onApply={handleApplyShippingVoucher} />
               </div>
 
               {/* Card 3: Payment Method */}
@@ -786,7 +670,7 @@ function CheckoutPage() {
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-ink">Thanh toán qua VNPay (Sandbox)</span>
+                        <span className="text-sm font-bold text-ink">Thanh toán qua VNPay</span>
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface-secondary text-blue-700 border border-blue-200">
                           Thẻ ATM / QR / Quốc tế
                         </span>
@@ -800,7 +684,7 @@ function CheckoutPage() {
                         {paymentOptions?.vnpayAvailable
                           ? (isVnpayAmountOutOfRange
                               ? `Đơn hàng này (${formatCurrencyVND(currentFinalAmount)}) ngoài hạn mức VNPay (5.000 - 9.999.999.999 ₫). Vui lòng chọn COD.`
-                              : 'Cổng thanh toán VNPay Sandbox. Chuyển thẳng đến màn hình nhập thẻ test NCB (9704198526191432198, OTP 123456) nhanh chóng.')
+                              : 'Thanh toán an toàn bằng thẻ hoặc QR qua VNPay.')
                           : 'Cổng thanh toán VNPay đang tạm bảo trì. Vui lòng chọn COD.'}
                       </p>
                     </div>

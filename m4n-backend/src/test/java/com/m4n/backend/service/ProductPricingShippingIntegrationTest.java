@@ -107,6 +107,31 @@ class ProductPricingShippingIntegrationTest {
     }
 
     @Test
+    void catalogAndAdminSearchIgnoreVietnameseAccentsBeforePagination() {
+        Product product = product("Đàn Nguyệt Gỗ Gụ", "100", null, "0");
+        var catalog = productService.listProducts(prefix + " dan nguyet", null, null, null, null, null, PageRequest.of(0, 1));
+        assertThat(catalog.getTotalElements()).isEqualTo(1);
+        assertThat(catalog.getContent().getFirst().id()).isEqualTo(product.getId());
+        var admin = productRepository.findAll(com.m4n.backend.specification.ProductSpecification.filterAdminProducts(
+                prefix + " ĐÀN NGUYỆT", null, null, null, null), PageRequest.of(0, 1));
+        assertThat(admin.getTotalElements()).isEqualTo(1);
+        assertThat(admin.getContent().getFirst().getId()).isEqualTo(product.getId());
+        var literal = productService.listProducts(prefix + "%", null, null, null, null, null, PageRequest.of(0, 1));
+        assertThat(literal.getTotalElements()).isZero();
+    }
+
+    @Test
+    void configuredThresholdAppliesEvenWhenLegacyToggleIsFalse() {
+        enableShipping("100", false, new BigDecimal("1000"));
+        Product product = product("Always free at threshold", "100", "2", "30000");
+        assertThat(shippingService.calculateShipping(List.of(new ShippingLine(product, 1)), new BigDecimal("999")).shippingFee())
+                .isEqualByComparingTo("200");
+        var quote = shippingService.calculateShipping(List.of(new ShippingLine(product, 1)), new BigDecimal("1000"));
+        assertThat(quote.shippingFee()).isZero();
+        assertThat(quote.freeShippingApplied()).isTrue();
+    }
+
+    @Test
     void stalePromotionUpdateAndDeletePreserveLatestConfiguration() {
         Product product = product("Version", "1000", null, "0");
         var original = createPromotion(product, "0.1", true, null, null);
@@ -130,12 +155,12 @@ class ProductPricingShippingIntegrationTest {
     }
 
     @Test
-    void shippingUsesTotalWeightAndSurchargePerUnitAndRoundsOnlyOnce() {
+    void shippingUsesWeightOnlyAndIgnoresLegacySurchargeAndRoundsOnce() {
         enableShipping("100.05", false, null);
         Product product = product("Weighted", "100", "0.111", "30000");
         var quote = shippingService.calculateShipping(List.of(new ShippingLine(product, 2)), new BigDecimal("200"));
-        assertThat(quote.baseShippingFee()).isEqualByComparingTo("60022");
-        assertThat(quote.shippingFee()).isEqualByComparingTo("60022");
+        assertThat(quote.baseShippingFee()).isEqualByComparingTo("22");
+        assertThat(quote.shippingFee()).isEqualByComparingTo("22");
         assertThat(quote.shippingDiscountAmount()).isEqualByComparingTo("0");
         Product missing = product("Missing", "100", null, "0");
         assertThatThrownBy(() -> shippingService.calculateShipping(List.of(new ShippingLine(missing, 1)), BigDecimal.TEN))
@@ -148,7 +173,7 @@ class ProductPricingShippingIntegrationTest {
         var saved = shippingService.updateSettings(new UpdateShippingSettingsRequest(true, new BigDecimal("15000"), true, new BigDecimal("3000000"), initial.version()));
         Product product = product("Threshold", "100", "2", "30000");
         var lower = shippingService.calculateShipping(List.of(new ShippingLine(product, 1)), new BigDecimal("2999999"));
-        assertThat(lower.shippingFee()).isEqualByComparingTo("60000");
+        assertThat(lower.shippingFee()).isEqualByComparingTo("30000");
         var free = shippingService.calculateShipping(List.of(new ShippingLine(product, 1)), new BigDecimal("3000000"));
         assertThat(free.shippingFee()).isEqualByComparingTo("0");
         assertThat(free.shippingDiscountAmount()).isEqualByComparingTo(free.baseShippingFee());
@@ -160,7 +185,7 @@ class ProductPricingShippingIntegrationTest {
 
     @Test
     void calculatedShippingRejectsMoneyOverflowEvenWhenThresholdWouldWaiveIt() {
-        enableShipping("0", true, BigDecimal.ZERO);
+        enableShipping("999999999999", true, BigDecimal.ZERO);
         Product product = product("Overflow", "100", "1", "999999999999");
         assertThatThrownBy(() -> shippingService.calculateShipping(List.of(new ShippingLine(product, 2)), new BigDecimal("200")))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("giới hạn");

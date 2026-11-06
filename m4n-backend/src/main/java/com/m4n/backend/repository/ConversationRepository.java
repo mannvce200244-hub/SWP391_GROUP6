@@ -19,6 +19,16 @@ import java.util.Optional;
 @Repository
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
+    @EntityGraph(attributePaths = {"customer", "assignedStaff"})
+    @Query("SELECT c FROM Conversation c LEFT JOIN c.assignedStaff s WHERE " +
+            "(:status IS NULL OR c.status = :status) AND " +
+            "(LOWER(c.customer.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(c.customer.email) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.fullName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "ORDER BY COALESCE(c.lastMessageAt, c.createdAt) DESC, c.id DESC")
+    Page<Conversation> searchForAdmin(@Param("search") String search,
+            @Param("status") ConversationStatus status, Pageable pageable);
+
     Optional<Conversation> findFirstByCustomerIdAndStatusOrderByCreatedAtDesc(Long customerId, ConversationStatus status);
 
     Optional<Conversation> findFirstByCustomerIdOrderByCreatedAtDesc(Long customerId);

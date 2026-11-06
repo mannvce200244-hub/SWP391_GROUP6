@@ -6,7 +6,7 @@ function ProductSearch({
   className = '',
   id = 'catalog-search',
   onSearch,
-  placeholder = 'Tìm theo tên hoặc mã nhạc cụ (ví dụ: Đàn Tranh, TRN-001)...',
+  placeholder = 'Tìm theo tên hoặc mã nhạc cụ (ví dụ: Đàn Tranh, TRN-001)…',
   value = '',
 }) {
   const [prevValue, setPrevValue] = useState(value)
@@ -51,14 +51,15 @@ function ProductSearch({
           autoCapitalize="none"
           autoComplete="off"
           autoCorrect="off"
-          className="box-border w-full min-w-0 h-11 sm:h-12 pl-10.5 pr-28 bg-white text-ink text-sm rounded-xl border border-border placeholder:text-subtle transition-[border-color,box-shadow,background-color] duration-150 focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/15 disabled:bg-surface-secondary disabled:cursor-not-allowed shadow-xs hover:border-border-strong"
+          className="box-border w-full min-w-0 h-11 sm:h-12 pl-10.5 pr-36 bg-white text-ink text-sm rounded-xl border border-border placeholder:text-subtle transition-[border-color,box-shadow,background-color] duration-150 focus-visible:outline-none focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-brand/15 disabled:bg-surface-secondary disabled:cursor-not-allowed shadow-xs hover:border-border-strong"
           disabled={busy}
           id={id}
           name="search"
           onChange={(event) => setQuery(event.target.value)}
           placeholder={placeholder}
           spellCheck="false"
-          type="search"
+          type="text"
+          inputMode="search"
           value={query}
         />
 
@@ -66,11 +67,12 @@ function ProductSearch({
           {query ? (
             <button
               aria-label="Xóa từ khóa tìm kiếm"
-              className="p-1.5 rounded-md text-muted hover:text-ink hover:bg-surface-secondary transition-colors cursor-pointer"
+              disabled={busy}
+              className="flex size-9 shrink-0 items-center justify-center rounded-md text-muted hover:text-ink hover:bg-surface-secondary transition-colors cursor-pointer"
               onClick={handleClear}
               type="button"
             >
-              <X size={15} />
+              <X size={18} aria-hidden="true" />
             </button>
           ) : null}
 

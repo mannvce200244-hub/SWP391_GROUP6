@@ -38,6 +38,16 @@ public class StockDocumentServiceImpl implements StockDocumentService {
     private final InventoryRepository inventoryRepository;
     private final InventoryService inventoryService;
 
+    @Override
+    public StockDocumentResponse getConfirmedReceipt(Long documentId) {
+        StockDocument document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Phiếu kho không tồn tại: " + documentId));
+        if (document.getType() != StockDocumentType.RECEIPT || document.getStatus() != StockDocumentStatus.CONFIRMED) {
+            throw new IllegalStateException("Chỉ xuất PDF cho phiếu nhập đã xác nhận.");
+        }
+        return response(document);
+    }
+
     @Override @Transactional
     public StockDocumentResponse createReceipt(Long productId, StockImportRequest request) {
         BigDecimal cost = request.getUnitCost();

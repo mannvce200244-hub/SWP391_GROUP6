@@ -69,7 +69,7 @@ export default function PaymentReturnPage() {
   const canPay = status?.canPay && !actionError && !error && !status.isPaid
   const needsRefresh = status && (presentation?.tone !== 'success' || error || actionError)
   const paymentMethod = status?.paymentMethod === 'VNPAY'
-    ? 'VNPay (Cổng thanh toán Sandbox)'
+    ? 'VNPay'
     : status?.paymentMethod === 'MOMO'
       ? 'Ví điện tử MoMo'
       : status?.paymentMethod === 'COD'
@@ -107,12 +107,7 @@ export default function PaymentReturnPage() {
                 <div className="space-y-4 px-6 py-6 sm:px-10">
                   {error && <p role="alert" className="text-sm text-danger">{error}</p>}
                   {actionError && <p role="alert" className="text-sm text-danger">{actionError}</p>}
-                  {canPay && status.paymentMethod === 'VNPAY' && (
-                    <div className="rounded-xl bg-[#F6F7F8] p-3 border border-border/80 text-xs text-muted text-center space-y-1">
-                      <p className="font-semibold text-ink">Thông tin thẻ test VNPay (NCB):</p>
-                      <p>Số thẻ: <code className="font-mono text-ink">9704198526191432198</code> &bull; Tên: <code className="font-mono text-ink">NGUYEN VAN A</code> &bull; Ngày: <code className="font-mono text-ink">07/15</code> &bull; OTP: <code className="font-mono text-ink">123456</code></p>
-                    </div>
-                  )}
+
                   {(canPay || onlinePending || needsRefresh) && <div className="flex flex-wrap justify-center gap-3">
                     {canPay && <Button loading={busy === 'pay'} disabled={Boolean(busy)} onClick={() => handleAction('pay')}>Thanh toán lại qua {status.paymentMethod === 'MOMO' ? 'MoMo' : 'VNPay'}</Button>}
                     {onlinePending && <Button variant="secondary" loading={busy === 'reconcile'} disabled={Boolean(busy)} onClick={() => handleAction('reconcile')}>Kiểm tra giao dịch</Button>}

@@ -1,3 +1,4 @@
+import VoucherSuggestions from '../features/checkout/VoucherSuggestions.jsx'
 import PosCustomerFields from '../features/pos/PosCustomerFields.jsx'
 import PosScannerDialog from '../features/pos/PosScannerDialog.jsx'
 import PosReceiptDialog from '../features/pos/PosReceiptDialog.jsx'
@@ -223,8 +224,10 @@ function PosDashboardPage() {
   }
 
   // 7. Preview & Voucher Application
-  const handleApplyVoucher = async () => {
-    if (!voucherCode.trim()) {
+  const handleApplyVoucher = async (chosenCode = voucherCode) => {
+    const code = chosenCode.trim()
+    if (voucherState.loading || submittingSale) return
+    if (!code) {
       setVoucherState({ applied: false, discount: 0, message: '', loading: false })
       return
     }
@@ -236,12 +239,13 @@ function PosDashboardPage() {
       return
     }
 
+    setVoucherCode(code)
     const previewVersion = ++voucherPreviewVersionRef.current
-    setVoucherState((prev) => ({ ...prev, loading: true }))
+    setVoucherState({ applied: false, discount: 0, message: '', loading: true })
     try {
       const res = await previewSale({
         items: billItems.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-        voucherCode: voucherCode.trim(),
+        voucherCode: code,
       })
       const data = res?.data || res
       if (previewVersion !== voucherPreviewVersionRef.current) return
@@ -692,7 +696,7 @@ function PosDashboardPage() {
               <button
                 type="button"
                 disabled={voucherState.loading || !voucherCode.trim() || billItems.length === 0}
-                onClick={handleApplyVoucher}
+                onClick={() => handleApplyVoucher()}
                 className="px-3 py-1.5 rounded-xl bg-surface-secondary border border-border hover:border-brand text-xs font-bold text-ink hover:text-brand transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {voucherState.loading ? '...' : 'Áp dụng'}
@@ -708,6 +712,8 @@ function PosDashboardPage() {
                 {voucherState.message}
               </span>
             )}
+
+            <VoucherSuggestions pos subtotal={subtotal} quantity={billItems.reduce((sum, item) => sum + item.quantity, 0)} appliedCode={voucherState.applied ? voucherCode : null} disabled={voucherState.loading || submittingSale || salePreview.loading || Boolean(salePreview.error) || !salePreview.data || billItems.length === 0} onApply={handleApplyVoucher} />
 
             {/* Financial Breakdown */}
             <div className="flex flex-col gap-1 pt-2 border-t border-border/60">
@@ -779,7 +785,7 @@ function PosDashboardPage() {
                 value={customerEmail}
                 onChange={(e) => { setCustomerEmail(e.target.value); setEmailError('') }}
                 error={emailError}
-                helperText="Nếu nhập email, hóa đơn PDF sẽ tự động gửi sau khi thanh toán thành công. Thẻ test NCB: 9704198526191432198 · NGUYEN VAN A · 07/15 · OTP 123456."
+                helperText="Nhập email để nhận hóa đơn sau khi thanh toán."
               />
             )}
 

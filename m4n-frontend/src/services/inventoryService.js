@@ -44,6 +44,31 @@ export async function getInventoryMovements({ page = 0, size = 10, productId, ty
   return apiClient.get(`/inventory/movements?${params}`)
 }
 
+export async function exportStockReceipt(documentId, preview = false) {
+  const previewWindow = preview ? window.open('', '_blank') : null
+  if (preview && !previewWindow) throw new Error('Cho phép cửa sổ bật lên để xem/in, hoặc chọn Tải PDF.')
+  if (previewWindow) previewWindow.opener = null
+  try {
+    const blob = await apiClient.getBlob(`/inventory/documents/${encodeURIComponent(documentId)}/pdf`, {
+      headers: { Accept: 'application/pdf, application/json' },
+    })
+    const url = URL.createObjectURL(blob)
+    if (previewWindow) previewWindow.location.href = url
+    else {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Phieu-nhap-${documentId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (error) {
+    previewWindow?.close()
+    throw error
+  }
+}
+
 export default {
   getInventory,
   importStock,

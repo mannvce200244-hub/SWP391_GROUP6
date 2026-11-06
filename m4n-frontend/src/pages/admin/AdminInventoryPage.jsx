@@ -47,13 +47,6 @@ export default function AdminInventoryPage() {
   const [draftTarget, setDraftTarget] = useState(null)
   const [confirmTarget, setConfirmTarget] = useState(null)
 
-  // Bulk Restock Request Mode (Ý 2)
-  const [restockMode, setRestockMode] = useState(false)
-  const [selectedRestockItems, setSelectedRestockItems] = useState({})
-  const [warehouseEmail, setWarehouseEmail] = useState('kho@m4n.vn')
-  const [restockNote, setRestockNote] = useState('')
-  const [sentEmailPreview, setSentEmailPreview] = useState(null)
-
   const { view, page, type, status, keyword, product } = filters
   const requestKey = JSON.stringify([view, page, type, status, keyword, product?.id, refreshKey])
   const pending = loading || completedRequestKey !== requestKey
@@ -117,179 +110,19 @@ export default function AdminInventoryPage() {
     addToast({ type: 'success', message: `Đã xác nhận phiếu #${document.id}. Tồn kho: ${document.quantityBefore.toLocaleString('vi-VN')} → ${document.quantityAfter.toLocaleString('vi-VN')}.` })
   }
 
-  const toggleRestockItem = (item) => {
-    setSelectedRestockItems((prev) => {
-      const next = { ...prev }
-      if (next[item.productId]) {
-        delete next[item.productId]
-      } else {
-        next[item.productId] = {
-          productId: item.productId,
-          code: item.productCode,
-          name: item.productName,
-          currentStock: item.quantity || 0,
-          requestedQuantity: 10,
-        }
-      }
-      return next
-    })
-  }
-
-  const updateRestockQuantity = (item, value) => {
-    const parsed = Math.max(1, Math.min(9999, Number(value) || 1))
-    setSelectedRestockItems((prev) => ({
-      ...prev,
-      [item.productId]: {
-        productId: item.productId,
-        code: item.productCode,
-        name: item.productName,
-        currentStock: item.quantity || 0,
-        requestedQuantity: parsed,
-      },
-    }))
-  }
-
-  const toggleSelectAllPage = () => {
-    const allSelected = items.length > 0 && items.every((item) => Boolean(selectedRestockItems[item.productId]))
-    setSelectedRestockItems((prev) => {
-      const next = { ...prev }
-      if (allSelected) {
-        items.forEach((item) => { delete next[item.productId] })
-      } else {
-        items.forEach((item) => {
-          if (!next[item.productId]) {
-            next[item.productId] = {
-              productId: item.productId,
-              code: item.productCode,
-              name: item.productName,
-              currentStock: item.quantity || 0,
-              requestedQuantity: 10,
-            }
-          }
-        })
-      }
-      return next
-    })
-  }
-
-  const handleSendRestockEmail = () => {
-    const selectedList = Object.values(selectedRestockItems)
-    if (selectedList.length === 0) {
-      addToast({ type: 'error', message: 'Vui lòng tích chọn ít nhất 1 sản phẩm cần nhập thêm hàng.' })
-      return
-    }
-    const emailTrimmed = warehouseEmail.trim()
-    if (!emailTrimmed || !emailTrimmed.includes('@')) {
-      addToast({ type: 'error', message: 'Vui lòng nhập địa chỉ email nhân viên kho hợp lệ.' })
-      return
-    }
-
-    const totalQty = selectedList.reduce((sum, it) => sum + Number(it.requestedQuantity || 0), 0)
-    const subject = `[M4N Kho] Yêu cầu nhập thêm hàng (${selectedList.length} mã nhạc cụ - Tổng ${totalQty} SP)`
-    const body = [
-      'Kính gửi Bộ phận Kho / Cung ứng M4N,',
-      '',
-      'Hệ thống Quản trị M4N gửi yêu cầu nhập bổ sung tồn kho cho các nhạc cụ sau:',
-      '',
-      ...selectedList.map(
-        (it, idx) =>
-          `${idx + 1}. [${it.code}] ${it.name} — Tồn hiện tại: ${it.currentStock} | Số lượng yêu cầu nhập thêm: +${it.requestedQuantity}`
-      ),
-      '',
-      `Tổng số mã sản phẩm: ${selectedList.length}`,
-      `Tổng số lượng yêu cầu nhập: ${totalQty} sản phẩm`,
-      restockNote.trim() ? `Ghi chú từ Quản trị: ${restockNote.trim()}` : '',
-      '',
-      'Trân trọng,',
-      'Ban Quản trị Hệ thống M4N',
-    ].filter(Boolean).join('\n')
-
-    setSentEmailPreview({ to: emailTrimmed, subject, body })
-    addToast({
-      type: 'success',
-      message: `Đã khởi tạo phiếu yêu cầu nhập thêm ${selectedList.length} sản phẩm gửi tới ${emailTrimmed}.`,
-    })
-  }
-
-  const selectedRestockList = Object.values(selectedRestockItems)
-  const totalRequestedRestockQty = selectedRestockList.reduce((sum, it) => sum + Number(it.requestedQuantity || 0), 0)
-
   return (
     <div className="space-y-6">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-ink">Kho hàng</h2>
-          <p className="mt-1 text-sm text-muted">Nhập thêm hàng theo lô, kiểm nhận QC và theo dõi chi phí thực nhận. Tạo sản phẩm mới không làm tăng tồn kho.</p>
+          <p className="mt-1 text-sm text-muted">Nhập hàng theo lô và theo dõi tồn kho.</p>
         </div>
-        {view === 'balance' && (
-          <Button
-            variant={restockMode ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => {
-              setRestockMode((prev) => !prev)
-              setSentEmailPreview(null)
-            }}
-          >
-            {restockMode ? 'Đóng chế độ yêu cầu nhập hàng' : 'Yêu cầu nhập thêm hàng'}
-          </Button>
-        )}
+
       </header>
       <nav aria-label="Các mục quản lý kho" className="flex flex-wrap gap-2">
         {VIEWS.map((item) => <Button key={item.id} variant="secondary" size="sm" aria-current={view === item.id ? 'page' : undefined}
           className={view === item.id ? 'border-brand text-brand font-semibold' : ''} onClick={() => changeView(item.id)}>{item.label}</Button>)}
       </nav>
-
-      {view === 'balance' && restockMode && (
-        <div className="rounded-xl border border-brand bg-white p-4 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-bold text-ink">Tích chọn sản phẩm & Gửi mail yêu cầu nhập thêm cho nhân viên kho</h3>
-              <p className="text-xs text-muted">Đã chọn <strong>{selectedRestockList.length}</strong> sản phẩm · Tổng số lượng yêu cầu: <strong>{totalRequestedRestockQty}</strong></p>
-            </div>
-            {selectedRestockList.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={() => setSelectedRestockItems({})}>
-                Bỏ chọn tất cả
-              </Button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
-            <Input
-              id="inventory-warehouse-email"
-              label="Email nhân viên kho"
-              type="email"
-              value={warehouseEmail}
-              onChange={(e) => setWarehouseEmail(e.target.value)}
-              placeholder="kho@m4n.vn"
-            />
-            <Input
-              id="inventory-restock-note"
-              label="Ghi chú yêu cầu"
-              value={restockNote}
-              onChange={(e) => setRestockNote(e.target.value)}
-              placeholder="Ghi chú đợt nhập hàng…"
-            />
-            <Button onClick={handleSendRestockEmail} disabled={selectedRestockList.length === 0}>
-              Gửi mail yêu cầu nhập thêm
-            </Button>
-          </div>
-          {sentEmailPreview && (
-            <div className="rounded-lg border border-border bg-[#F6F7F8] p-3 space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span>Nội dung gửi tới: <strong>{sentEmailPreview.to}</strong></span>
-                <a
-                  href={`mailto:${encodeURIComponent(sentEmailPreview.to)}?subject=${encodeURIComponent(sentEmailPreview.subject)}&body=${encodeURIComponent(sentEmailPreview.body)}`}
-                  className="font-semibold text-brand underline"
-                >
-                  Mở ứng dụng Mail để gửi
-                </a>
-              </div>
-              <pre className="text-xs bg-white p-2.5 rounded border border-border whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
-                {sentEmailPreview.body}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
 
       <div className="flex flex-wrap items-end gap-3">
         {view === 'balance' ? <>
@@ -321,11 +154,6 @@ export default function AdminInventoryPage() {
                 items={items}
                 onDraft={setDraftTarget}
                 onHistory={historyFor}
-                restockMode={restockMode}
-                selectedRestockItems={selectedRestockItems}
-                onToggleRestockItem={toggleRestockItem}
-                onUpdateRestockQuantity={updateRestockQuantity}
-                onToggleSelectAllPage={toggleSelectAllPage}
               />
             )
               : view === 'documents' ? <StockDocumentsTable items={items} onConfirm={setConfirmTarget} onHistory={historyFor} /> : <InventoryMovementsTable items={items} />}

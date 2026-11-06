@@ -28,6 +28,8 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest
 class StockDocumentIntegrationTest {
     @Autowired StockDocumentService stock;
+    @Autowired StockReceiptPdfService receiptPdf;
+    @Autowired org.springframework.web.context.WebApplicationContext webContext;
     @Autowired InventoryService inventoryService;
     @Autowired PosService pos;
     @Autowired ProductRepository products;
@@ -68,6 +70,48 @@ class StockDocumentIntegrationTest {
         assertThatThrownBy(() -> stock.confirm(draft.id(), new ConfirmStockDocumentRequest(0, null)))
                 .isInstanceOf(IllegalStateException.class);
         assertThat(inventories.findByProductId(product.getId()).orElseThrow().getQuantity()).isEqualTo(53);
+    }
+
+    @Test void receiptPdfUsesConfirmedQcSnapshotsAndRequiresAdmin() throws Exception {
+        var draft = stock.createReceipt(product.getId(), new StockImportRequest(50, "Kiểm nhận lô hàng", new BigDecimal("120000")));
+        assertThatThrownBy(() -> receiptPdf.generateReceiptPdf(draft.id())).isInstanceOf(IllegalStateException.class);
+        stock.confirm(draft.id(), new ConfirmStockDocumentRequest(2, "Hỏng dây"));
+        // Later catalog edits must not rewrite the receipt's product snapshot.
+        product.setName("Tên mới sau khi nhập");
+        products.saveAndFlush(product);
+        byte[] bytes = receiptPdf.generateReceiptPdf(draft.id());
+        try (var reader = new com.lowagie.text.pdf.PdfReader(bytes)) {
+            var text = new com.lowagie.text.pdf.parser.PdfTextExtractor(reader).getTextFromPage(1);
+            assertThat(text).contains("PHIẾU NHẬP KHO", "48", "5.760.000", "Hỏng dây", draft.productName())
+                    .doesNotContain("Tên mới sau khi nhập");
+        }
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext)
+                .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+        String path = "/api/v1/inventory/documents/" + draft.id() + "/pdf";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN")))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().contentType("application/pdf"));
+        for (String role : List.of("CUSTOMER", "POS_STAFF", "ONLINE_STAFF")) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(path)
+                    .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("staff@test.local").roles(role)))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        }
+        assertThat(quantity()).isEqualTo(53);
+    }
+
+    @Test void legacyReceiptPdfShowsUnknownCostAndDoesNotInventZero() throws Exception {
+        var draft = stock.createReceipt(product.getId(), new StockImportRequest(1, "Phiếu cũ", BigDecimal.ZERO));
+        var entity = documents.findById(draft.id()).orElseThrow();
+        entity.setUnitCost(null);
+        documents.saveAndFlush(entity);
+        stock.confirm(draft.id(), new ConfirmStockDocumentRequest(0, null));
+        try (var reader = new com.lowagie.text.pdf.PdfReader(receiptPdf.generateReceiptPdf(draft.id()))) {
+            assertThat(new com.lowagie.text.pdf.parser.PdfTextExtractor(reader).getTextFromPage(1)).contains("Chưa ghi nhận");
+        }
+        var issue = stock.createIssue(product.getId(), new StockIssueRequest(1, "Legacy issue"));
+        stock.confirm(issue.id(), new ConfirmStockDocumentRequest(0, null));
+        assertThatThrownBy(() -> receiptPdf.generateReceiptPdf(issue.id())).isInstanceOf(IllegalStateException.class);
     }
 
     @Test void receiptDraftAndPartialQcProduceOneAuditedStockIncrease() {

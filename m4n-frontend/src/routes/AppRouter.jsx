@@ -48,6 +48,7 @@ const AdminVouchersPage = lazy(() => import('../pages/admin/AdminVouchersPage.js
 const AdminPricingPage = lazy(() => import('../pages/admin/AdminPricingPage.jsx'))
 const AdminProductDetailPage = lazy(() => import('../pages/admin/AdminProductDetailPage.jsx'))
 const AdminUsersPage = lazy(() => import('../pages/admin/AdminUsersPage.jsx'))
+const AdminChatPage = lazy(() => import('../pages/admin/AdminChatPage.jsx'))
 const StaffChatPage = lazy(() => import('../pages/staff/StaffChatPage.jsx'))
 const StaffProductsPage = lazy(() => import('../pages/staff/StaffProductsPage.jsx'))
 const StaffNotificationsPage = lazy(() => import('../pages/staff/StaffNotificationsPage.jsx'))
@@ -138,7 +139,8 @@ function CurrentRoute() {
     pathname === CUSTOMER_ROUTES.adminPricing ||
     pathname === CUSTOMER_ROUTES.adminProfile ||
     pathname === CUSTOMER_ROUTES.adminSecurity ||
-    pathname === CUSTOMER_ROUTES.adminUsers
+    pathname === CUSTOMER_ROUTES.adminUsers ||
+    pathname === CUSTOMER_ROUTES.adminChat
   ) {
     let adminContent = <AdminDashboardPage />
     if (adminInstrumentDetailId) {
@@ -181,6 +183,8 @@ function CurrentRoute() {
           securityRoute={CUSTOMER_ROUTES.adminSecurity}
         />
       )
+    } else if (pathname === CUSTOMER_ROUTES.adminChat) {
+      adminContent = <AdminChatPage />
     } else if (pathname === CUSTOMER_ROUTES.adminUsers) {
       adminContent = <AdminUsersPage />
     }
