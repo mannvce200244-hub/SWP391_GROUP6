@@ -55,13 +55,20 @@ public class VnpayProperties {
     }
     public String merchantCode() { return merchantCode; }
     public String hashSecret() { return hashSecret; }
-    public String returnUrl() { return returnUrl; }
     public String serverIp() { return serverIp; }
 
+    public String checkoutReturnUrlFor(String origin) {
+        return returnOriginFor(origin) + "/payment-return";
+    }
+
     public String posReturnUrlFor(String origin) {
+        return returnOriginFor(origin) + "/pos";
+    }
+
+    private String returnOriginFor(String origin) {
         if (origin == null) {
             URI configured = URI.create(returnUrl);
-            return configured.getScheme() + "://" + configured.getRawAuthority() + "/pos";
+            origin = configured.getScheme() + "://" + configured.getRawAuthority();
         }
         try {
             URI uri = URI.create(origin);
@@ -70,7 +77,7 @@ public class VnpayProperties {
             if (allowedReturnOrigins.contains(origin) && secureOrLoopback && uri.getHost() != null
                     && uri.getUserInfo() == null && uri.getQuery() == null && uri.getFragment() == null
                     && origin.equals(uri.getScheme() + "://" + uri.getRawAuthority())) {
-                return origin + "/pos";
+                return origin;
             }
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Nguồn thanh toán không hợp lệ.");

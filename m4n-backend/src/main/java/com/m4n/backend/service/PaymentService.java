@@ -15,7 +15,7 @@ public interface PaymentService {
     boolean isPaymentPending(Long orderId);
     void validatePaymentAmount(java.math.BigDecimal amount);
     PaymentOptionsResponse getOptions();
-    PaymentUrlResponse createPayment(Long orderId, String currentEmail, String ipAddress);
+    PaymentUrlResponse createPayment(Long orderId, String currentEmail, String ipAddress, String origin);
     PaymentStatusResponse getStatus(Long orderId, String currentEmail);
     PaymentStatusResponse reconcilePayment(Long orderId, String currentEmail, String ipAddress);
     VnpayIpnResponse processIpn(MultiValueMap<String, String> parameters);

@@ -20,7 +20,8 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest(properties = {"m4n.payment.vnpay.enabled=true", "m4n.payment.vnpay.merchant-code=TEST1234",
-        "m4n.payment.vnpay.hash-secret=test-only-private-secret", "m4n.payment.vnpay.return-url=https://m4n.test/payment-return",
+        "m4n.payment.vnpay.hash-secret=test-only-private-secret", "m4n.payment.vnpay.return-url=http://localhost:5173/payment-return",
+        "m4n.cors.allowed-origins=https://m4n.test",
         "m4n.payment.vnpay.ipn-url=https://m4n.test/api/v1/payments/vnpay/ipn", "m4n.payment.vnpay.server-ip=127.0.0.1"})
 class PaymentIntegrationTest {
     @Autowired PaymentService service;
@@ -48,10 +49,11 @@ class PaymentIntegrationTest {
         users.deleteById(customer.getId()); users.deleteById(admin.getId());
     }
     @Test void urlUsesPersistedBackendAmountAndDoesNotMarkPaidOrChangeFulfillment() {
-        var url = service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1");
+        var url = service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1", "https://m4n.test");
         var captured = org.mockito.ArgumentCaptor.forClass(Map.class);
         verify(gateway).paymentUrl(captured.capture());
         assertThat(captured.getValue()).containsEntry("vnp_Amount", "10000000").containsEntry("vnp_CurrCode", "VND");
+        assertThat(captured.getValue()).containsEntry("vnp_ReturnUrl", "https://m4n.test/payment-return?orderId=" + order.getId());
         assertThat(url.transactionReference()).isEqualTo(attempt().getTransactionReference());
         assertThat(reload().isPaid()).isFalse();
         assertThat(reload().getStatus()).isEqualTo(OrderStatus.PENDING_CONFIRMATION);
@@ -65,11 +67,17 @@ class PaymentIntegrationTest {
         assertThat(reload().isPaid()).isTrue();
         assertThat(reload().getStatus()).isEqualTo(OrderStatus.PENDING_CONFIRMATION);
     }
+    @Test void rejectedReturnSiteCreatesNoPaymentAttemptOrProviderUrl() {
+        assertThatThrownBy(() -> service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1", "https://evil.test"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(payments.findFirstByOrderIdOrderByIdDesc(order.getId())).isEmpty();
+        verify(gateway, never()).paymentUrl(anyMap());
+    }
     @Test void simultaneousPaymentCreationReusesOnePersistedAttempt() throws Exception {
         CountDownLatch start = new CountDownLatch(1);
         try (var executor = Executors.newFixedThreadPool(2)) {
-            var first = executor.submit(() -> { start.await(); return service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1"); });
-            var second = executor.submit(() -> { start.await(); return service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1"); });
+            var first = executor.submit(() -> { start.await(); return service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1", "https://m4n.test"); });
+            var second = executor.submit(() -> { start.await(); return service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1", "https://m4n.test"); });
             start.countDown();
             assertThat(first.get(15, TimeUnit.SECONDS).transactionReference()).isEqualTo(second.get(15, TimeUnit.SECONDS).transactionReference());
         }
@@ -102,7 +110,7 @@ class PaymentIntegrationTest {
         assertThat(reload().isPaid()).isFalse();
     }
     @Test void ownerIsolationAndIntegralVndValidationAreBackendEnforced() {
-        assertThatThrownBy(() -> service.createPayment(order.getId(), admin.getEmail(), "127.0.0.1"))
+        assertThatThrownBy(() -> service.createPayment(order.getId(), admin.getEmail(), "127.0.0.1", "https://m4n.test"))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
         assertThatThrownBy(() -> service.validatePaymentAmount(new BigDecimal("5000.01"))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.validatePaymentAmount(new BigDecimal("4999"))).isInstanceOf(IllegalArgumentException.class);
@@ -111,7 +119,7 @@ class PaymentIntegrationTest {
     @Test void currentNonCustomerRoleCannotStartPaymentForPreviouslyOwnedCustomerOrder() {
         customer.setRole(roles.findByName(RoleName.POS_STAFF).orElseThrow());
         users.saveAndFlush(customer);
-        assertThatThrownBy(() -> service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1"))
+        assertThatThrownBy(() -> service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1", "https://m4n.test"))
                 .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
         verify(gateway, never()).paymentUrl(anyMap());
     }
@@ -219,7 +227,7 @@ class PaymentIntegrationTest {
     @Test void verifiedQueryUpdatesOnlyPaymentStateAndExpiredUnknownAttemptCannotCreateDuplicateCharge() {
         start(); var attempt = attempt(); attempt.setExpiresAt(java.time.Instant.now().minusSeconds(1)); payments.saveAndFlush(attempt);
         assertThat(service.getStatus(order.getId(), customer.getEmail()).canPay()).isFalse();
-        assertThatThrownBy(() -> service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1"))
+        assertThatThrownBy(() -> service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1", "https://m4n.test"))
                 .isInstanceOf(IllegalStateException.class);
         Map<String, String> result = paymentResult("00", "00"); result.put("vnp_Command", "querydr"); result.put("vnp_TransactionType", "01");
         when(gateway.query(anyMap())).thenReturn(result);
@@ -266,7 +274,7 @@ class PaymentIntegrationTest {
     }
     private User user(String email, RoleName role) { return users.saveAndFlush(User.builder().email(email + "@m4n.test")
             .fullName("Payment fixture").password("encoded-test-only").role(roles.findByName(role).orElseThrow()).isActive(true).build()); }
-    private void start() { service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1"); }
+    private void start() { service.createPayment(order.getId(), customer.getEmail(), "127.0.0.1", "https://m4n.test"); }
     private void paid() { start(); ipn(paymentResult("00", "00")); }
     private Order reload() { return orders.findById(order.getId()).orElseThrow(); }
     private PaymentAttempt attempt() { return payments.findFirstByOrderIdOrderByIdDesc(order.getId()).orElseThrow(); }
