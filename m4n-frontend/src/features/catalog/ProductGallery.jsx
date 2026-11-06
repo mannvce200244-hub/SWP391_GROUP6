@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Play } from 'lucide-react'
 import { IconInstrument } from '../../components/ui/Icons.jsx'
-import { getRenderableMedia } from './productMedia.js'
+import { getMediaCredit, getRenderableMedia } from './productMedia.js'
 
 function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thống' }) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -27,6 +27,7 @@ function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thốn
   const safeIndex = activeIndex < validMedia.length ? activeIndex : 0
   const currentMedia = validMedia[safeIndex] || validMedia[0]
   const currentType = currentMedia.type ? String(currentMedia.type).toLowerCase() : 'image'
+  const credit = getMediaCredit(currentMedia.url)
 
   return (
     <div className="flex flex-col gap-3.5 w-full">
@@ -48,7 +49,7 @@ function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thốn
         ) : (
           <img
             alt={currentMedia.alt || productName}
-            className="w-full h-full object-cover animate-in fade-in duration-250"
+            className="w-full h-full object-contain animate-in fade-in duration-250"
             decoding="async"
             height="800"
             key={currentMedia.url}
@@ -59,6 +60,12 @@ function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thốn
           />
         )}
       </div>
+      {currentType === 'image' && currentMedia.alt?.startsWith('Ảnh minh họa') && (
+        <p className="text-xs text-muted leading-relaxed">
+          {credit ? 'Ảnh minh họa tiêu tre với các cách bố trí lỗ bấm' : currentMedia.alt}
+          {credit && <> · <a className="underline" href={credit.source} target="_blank" rel="noreferrer">{credit.author}</a> · <a className="underline" href={credit.licenseUrl} target="_blank" rel="noreferrer">{credit.license}</a></>}
+        </p>
+      )}
 
       {/* 2. Thumbnails Row (only when multiple media exist) */}
       {validMedia.length > 1 && (

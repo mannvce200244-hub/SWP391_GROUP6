@@ -55,4 +55,18 @@ function getFirstProductImage(media) {
   )
 }
 
-export { getFirstProductImage, getRenderableMedia, isSafeMediaUrl }
+function getMediaCredit(url) {
+  if (url === '/assets/images/prod-tieu.jpg'
+      || (typeof url === 'string' && /^https:\/\/raw\.githubusercontent\.com\/mannvce200244-hub\/SWP391_GROUP6\/[0-9a-f]{40}\/m4n-frontend\/public\/assets\/images\/prod-tieu\.jpg$/.test(url))
+      || url === 'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Xiao_with_various_scales.jpg/1280px-Xiao_with_various_scales.jpg') {
+    return {
+      author: 'Victortsang',
+      source: 'https://commons.wikimedia.org/wiki/File:Xiao_with_various_scales.jpg',
+      license: 'CC BY-SA 3.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+    }
+  }
+  return null
+}
+
+export { getFirstProductImage, getRenderableMedia, isSafeMediaUrl, getMediaCredit }

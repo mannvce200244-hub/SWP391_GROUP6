@@ -37,3 +37,13 @@ test('HTTPS pages never embed insecure localhost images', async (t) => {
   assert.equal(isSafeMediaUrl(`http://localhost:8080/api/v1/media/${filename}`), false)
   assert.equal(isSafeMediaUrl('https://api.example.test/api/v1/media/' + filename), true)
 })
+
+test('the bundled and hosted tieu photograph retain the same source and license', async (t) => {
+  const { getMediaCredit } = await mediaHelpers(t, '/api/v1', 'https://shop.example.test')
+  const bundled = getMediaCredit('/assets/images/prod-tieu.jpg')
+  assert.equal(bundled.author, 'Victortsang')
+  assert.equal(bundled.license, 'CC BY-SA 3.0')
+  assert.deepEqual(getMediaCredit('https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Xiao_with_various_scales.jpg/1280px-Xiao_with_various_scales.jpg'), bundled)
+  assert.deepEqual(getMediaCredit('https://raw.githubusercontent.com/mannvce200244-hub/SWP391_GROUP6/0123456789012345678901234567890123456789/m4n-frontend/public/assets/images/prod-tieu.jpg'), bundled)
+  assert.equal(getMediaCredit('https://example.test/prod-tieu.jpg'), null)
+})

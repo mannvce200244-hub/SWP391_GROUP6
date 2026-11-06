@@ -431,11 +431,7 @@ public class DataSeeder implements ApplicationRunner {
                 artisanQuy,
                 villageDaoXa,
                 List.of(
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-tranh.jpg").altText("Toàn cảnh Đàn Tranh 16 Dây gỗ cẩm lai khảm xà cừ").sortOrder(1).build(),
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/hero-dan-tranh.jpg").altText("Mặt gỗ ngô đồng và hệ thống nhạn đàn tinh xảo").sortOrder(2).build(),
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/cat-nhac-cu-day.jpg").altText("Chi tiết dây đàn và đầu cắm trục tinh xảo").sortOrder(3).build(),
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/auth-craft-showcase.jpg").altText("Kỹ nghệ khảm ốc xà cừ thủ công Đào Xá").sortOrder(4).build(),
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/artisan-workshop.jpg").altText("Không gian chế tác nhạc cụ tại xưởng nghệ nhân").sortOrder(5).build()
+                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-tranh.jpg").altText("Ảnh minh họa đàn tranh").sortOrder(1).build()
                 ),
                 15
         );
@@ -453,8 +449,7 @@ public class DataSeeder implements ApplicationRunner {
                 artisanKhanh,
                 villageDaoXa,
                 List.of(
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-bau.jpg").altText("Đàn Bầu Gỗ Mun cẩn hoa văn truyền thống").sortOrder(1).build(),
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/auth-dan-bau.jpg").altText("Chi tiết cần đàn sừng trâu").sortOrder(2).build()
+                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-bau.jpg").altText("Ảnh minh họa đàn bầu").sortOrder(1).build()
                 ),
                 8
         );
@@ -472,8 +467,7 @@ public class DataSeeder implements ApplicationRunner {
                 artisanPhong,
                 villageDaoXa,
                 List.of(
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-nguyet.jpg").altText("Đàn Nguyệt Gỗ Gụ âm sắc cổ truyền").sortOrder(1).build(),
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/thanh-am-dan-nguyet.jpg").altText("Hộp cộng hưởng đàn nguyệt").sortOrder(2).build()
+                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-nguyet.jpg").altText("Ảnh minh họa đàn nguyệt").sortOrder(1).build()
                 ),
                 12
         );
@@ -491,7 +485,7 @@ public class DataSeeder implements ApplicationRunner {
                 artisanBuiKhanh,
                 villageTrucSon,
                 List.of(
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-sao-truc.jpg").altText("Sáo Trúc Tone C nứa già quấn chỉ đen").sortOrder(1).build()
+                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-sao-truc.jpg").altText("Ảnh minh họa sáo trúc").sortOrder(1).build()
                 ),
                 30
         );
@@ -508,7 +502,8 @@ public class DataSeeder implements ApplicationRunner {
                 catHoi,
                 artisanBuiKhanh,
                 villageTrucSon,
-                List.of(),
+                List.of(ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-tieu.jpg")
+                        .altText("Ảnh minh họa tiêu tre với các cách bố trí lỗ bấm").sortOrder(1).build()),
                 10
         );
     }

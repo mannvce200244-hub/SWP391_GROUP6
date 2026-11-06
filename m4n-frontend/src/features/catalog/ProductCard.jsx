@@ -37,7 +37,7 @@ function ProductCard({ priority = false, product }) {
                 ? rawImage.alt.trim()
                 : product.name
             }
-            className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out"
+            className="w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-300 ease-out"
             decoding="async"
             height="500"
             loading={priority ? undefined : 'lazy'}
