@@ -6,7 +6,7 @@ import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { CircleX } from 'lucide-react'
 import useToast from '../../components/ui/useToast.js'
-import AppLoadingScreen from '../../components/ui/AppLoadingScreen.jsx'
+import { LoginFormSkeleton } from '../../components/ui/Skeleton.jsx'
 import { paymentReturnOrderId } from '../../services/paymentService.js'
 import { posPaymentReturnId } from '../../services/posMomoService.js'
 import GoogleLoginButton from './GoogleLoginButton.jsx'
@@ -56,13 +56,13 @@ function LoginPage() {
   }, [])
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (!isLoading && isAuthenticated && user) {
       navigateTo(getRoleHome(user.role, paymentOrderId, posPaymentId))
     }
-  }, [isAuthenticated, user, paymentOrderId, posPaymentId])
+  }, [isLoading, isAuthenticated, user, paymentOrderId, posPaymentId])
 
   if (isLoading || (isAuthenticated && user)) {
-    return <AppLoadingScreen message="Đang chuyển đến khu vực làm việc…" />
+    return <LoginFormSkeleton />
   }
 
   const validate = () => {
