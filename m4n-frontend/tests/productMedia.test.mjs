@@ -47,3 +47,15 @@ test('the bundled and hosted tieu photograph retain the same source and license'
   assert.deepEqual(getMediaCredit('https://raw.githubusercontent.com/mannvce200244-hub/SWP391_GROUP6/0123456789012345678901234567890123456789/m4n-frontend/public/assets/images/prod-tieu.jpg'), bundled)
   assert.equal(getMediaCredit('https://example.test/prod-tieu.jpg'), null)
 })
+
+test('new catalogue illustrations retain attribution without accepting lookalike hosts', async (t) => {
+  const { getMediaCredit } = await mediaHelpers(t)
+  for (const name of ['dan-tam', 'song-loan', 'phach', 'trong-com', 'trong-de']) {
+    const local = getMediaCredit(`/assets/images/prod-${name}.jpg`)
+    assert.ok(local?.author)
+    assert.match(local.licenseUrl, /^https:\/\/creativecommons.org\//)
+    assert.deepEqual(getMediaCredit(`https://raw.githubusercontent.com/mannvce200244-hub/SWP391_GROUP6/0123456789012345678901234567890123456789/m4n-frontend/public/assets/images/prod-${name}.jpg`), local)
+    assert.equal(getMediaCredit(`https://example.test/prod-${name}.jpg`), null)
+  }
+  assert.equal(getMediaCredit('/assets/images/__proto__'), null)
+})

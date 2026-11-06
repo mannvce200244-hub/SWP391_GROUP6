@@ -62,7 +62,7 @@ function ProductGallery({ media = [], productName = 'Nhạc cụ truyền thốn
       </div>
       {currentType === 'image' && currentMedia.alt?.startsWith('Ảnh minh họa') && (
         <p className="text-xs text-muted leading-relaxed">
-          {credit ? 'Ảnh minh họa tiêu tre với các cách bố trí lỗ bấm' : currentMedia.alt}
+          {currentMedia.alt.split(' — ')[0]}
           {credit && <> · <a className="underline" href={credit.source} target="_blank" rel="noreferrer">{credit.author}</a> · <a className="underline" href={credit.licenseUrl} target="_blank" rel="noreferrer">{credit.license}</a></>}
         </p>
       )}

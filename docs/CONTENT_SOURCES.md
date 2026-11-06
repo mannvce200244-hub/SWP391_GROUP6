@@ -21,6 +21,29 @@ This file records the provenance of externally sourced documentary content used 
 - Asset: `m4n-frontend/public/assets/images/prod-tieu.jpg`, the Commons-provided
   1280px thumbnail; no local crop or retouch. Attribution appears in the gallery.
 
+## Additional catalogue illustrations — 2026-11-06
+
+| Local asset | Source and author | License |
+| --- | --- | --- |
+| prod-dan-tam.jpg | [Đàn tam — Hoangkid](https://commons.wikimedia.org/wiki/File:Đàn_tam.jpg), Commons 250px thumbnail | CC0 1.0 |
+| prod-song-loan.jpg | [Song loan — Hoangkid](https://commons.wikimedia.org/wiki/File:Song_loan.jpg), original | CC0 1.0 |
+| prod-trong-com.jpg | [Trống cơm — Trúc Đồng](https://commons.wikimedia.org/wiki/File:Trống_cơm_-_55cm.jpg), Commons 1280px thumbnail | CC BY-SA 4.0 |
+| prod-trong-de.jpg | [Trống đế — Trúc Đồng](https://commons.wikimedia.org/wiki/File:Trống_đế.jpg), Commons 1280px thumbnail | CC BY-SA 4.0 |
+| prod-phach.jpg | [Phach — Daderot](https://commons.wikimedia.org/wiki/File:Phach_(clapper)_-_Vietnam_Museum_of_Ethnology_-_Hanoi,_Vietnam_-_DSC02543.JPG), Commons 960px thumbnail | CC0 1.0 |
+
+No local retouch or crop. Source and license links appear below the gallery.
+License texts: [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/),
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+These are instrument-type illustrations, not photographs of M4N stock or proof
+of a particular artisan, tone, material, or size. New products do not claim an
+unverified artisan/village relationship. The phach photograph shows a wooden
+block with a sprung beater; it is not labelled as a bamboo ca-tru clapper set.
+
+The approved twelve-product demo catalogue is maintained in
+`m4n-backend/src/main/resources/seed/catalog.json`. Prices, weights, dimensions
+and initial quantities are demo examples; production imports preserve existing
+prices and inventory. It does not add customer, order or payment fixtures.
+
 ## Seeded artisan profiles
 
 | Artisan | Biography and photograph source |

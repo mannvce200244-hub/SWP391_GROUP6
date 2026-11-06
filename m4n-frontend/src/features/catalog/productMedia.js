@@ -55,18 +55,44 @@ function getFirstProductImage(media) {
   )
 }
 
+const catalogueCredits = {
+  'prod-tieu.jpg': {
+    author: 'Victortsang',
+    source: 'https://commons.wikimedia.org/wiki/File:Xiao_with_various_scales.jpg',
+    license: 'CC BY-SA 3.0',
+    licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+  },
+  'prod-dan-tam.jpg': {
+    author: 'Hoangkid', source: 'https://commons.wikimedia.org/wiki/File:Đàn_tam.jpg',
+    license: 'CC0 1.0', licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+  },
+  'prod-song-loan.jpg': {
+    author: 'Hoangkid', source: 'https://commons.wikimedia.org/wiki/File:Song_loan.jpg',
+    license: 'CC0 1.0', licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+  },
+  'prod-phach.jpg': {
+    author: 'Daderot', source: 'https://commons.wikimedia.org/wiki/File:Phach_(clapper)_-_Vietnam_Museum_of_Ethnology_-_Hanoi,_Vietnam_-_DSC02543.JPG',
+    license: 'CC0 1.0', licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+  },
+  'prod-trong-com.jpg': {
+    author: 'Trúc Đồng', source: 'https://commons.wikimedia.org/wiki/File:Trống_cơm_-_55cm.jpg',
+    license: 'CC BY-SA 4.0', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+  },
+  'prod-trong-de.jpg': {
+    author: 'Trúc Đồng', source: 'https://commons.wikimedia.org/wiki/File:Trống_đế.jpg',
+    license: 'CC BY-SA 4.0', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+  },
+}
+
 function getMediaCredit(url) {
-  if (url === '/assets/images/prod-tieu.jpg'
-      || (typeof url === 'string' && /^https:\/\/raw\.githubusercontent\.com\/mannvce200244-hub\/SWP391_GROUP6\/[0-9a-f]{40}\/m4n-frontend\/public\/assets\/images\/prod-tieu\.jpg$/.test(url))
-      || url === 'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Xiao_with_various_scales.jpg/1280px-Xiao_with_various_scales.jpg') {
-    return {
-      author: 'Victortsang',
-      source: 'https://commons.wikimedia.org/wiki/File:Xiao_with_various_scales.jpg',
-      license: 'CC BY-SA 3.0',
-      licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
-    }
+  if (typeof url !== 'string') return null
+  if (url === 'https://thumb.wikimedia.org/wikipedia/commons/thumb/f/ff/Xiao_with_various_scales.jpg/1280px-Xiao_with_various_scales.jpg') {
+    return catalogueCredits['prod-tieu.jpg']
   }
-  return null
+  const local = /^\/assets\/images\/([^/]+)$/.exec(url)
+  const hosted = /^https:\/\/raw\.githubusercontent\.com\/mannvce200244-hub\/SWP391_GROUP6\/[0-9a-f]{40}\/m4n-frontend\/public\/assets\/images\/([^/]+)$/.exec(url)
+  const filename = (local || hosted)?.[1]
+  return filename && Object.hasOwn(catalogueCredits, filename) ? catalogueCredits[filename] : null
 }
 
 export { getFirstProductImage, getRenderableMedia, isSafeMediaUrl, getMediaCredit }

@@ -417,95 +417,35 @@ public class DataSeeder implements ApplicationRunner {
             log.info("Migrated verified photograph and origin for artisan: {}", artisanBuiKhanh.getName());
         }
 
-        // 4. Products & Inventories
-        seedProductIfNotExists(
-                "TRN-001",
-                "Đàn Tranh 16 Dây",
-                new BigDecimal("8500000"),
-                "Đàn Tranh 16 dây là biểu tượng của âm nhạc truyền thống cung đình và thính phòng Việt Nam. Cây đàn được chế tác thủ công từ gỗ cẩm lai tự nhiên qua xử lý chống cong vênh mối mọt, mặt đàn làm từ gỗ ngô đồng phơi sương tạo độ cộng hưởng ngân vang trong trẻo và thanh thoát. Khảm ốc xà cừ hoa văn rồng phụng tinh xảo dọc thân đàn bởi các bậc thầy làng nghề Đào Xá.",
-                "Gỗ cẩm lai khảm xà cừ, mặt gỗ ngô đồng, ngựa đàn bằng xương trâu",
-                "115 cm × 22 cm × 18 cm, trọng lượng 4.5 kg",
-                "3 quãng tám (G3 - D6)",
-                "Làng Đào Xá, Hà Nội, Việt Nam",
-                catDay,
-                artisanQuy,
-                villageDaoXa,
-                List.of(
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-tranh.jpg").altText("Ảnh minh họa đàn tranh").sortOrder(1).build()
-                ),
-                15
-        );
+        // Keep one catalogue shared by development startup and the reviewed deployment import.
+        var categories = java.util.Map.of("DAY", catDay, "HOI", catHoi, "GO", catGo);
+        for (CatalogProduct seed : catalogProducts()) {
+            Artisan artisan = switch (seed.code()) {
+                case "TRN-001" -> artisanQuy;
+                case "BAU-001" -> artisanKhanh;
+                case "NGU-001" -> artisanPhong;
+                case "SAO-001", "TIEU-001" -> artisanBuiKhanh;
+                default -> null;
+            };
+            CraftVillage village = switch (seed.code()) {
+                case "TRN-001", "BAU-001", "NGU-001" -> villageDaoXa;
+                case "SAO-001", "TIEU-001" -> villageTrucSon;
+                default -> null;
+            };
+            seedProductIfNotExists(seed, categories.get(seed.category()), artisan, village);
+        }
+    }
 
-        seedProductIfNotExists(
-                "BAU-001",
-                "Đàn Bầu Gỗ Mun",
-                new BigDecimal("6200000"),
-                "Đàn Bầu (Độc huyền cầm) là nhạc cụ độc đáo chỉ có một dây nhưng tạo nên muôn vàn thanh âm trầm bổng, da diết như tiếng ru và hơi thở dân tộc. Thân đàn bằng gỗ mun sừng đen tuyền cứng chắc, vòi đàn uốn dẻo bằng sừng trâu thật giúp biểu đạt trọn vẹn những nốt luyến láy tinh tế của dân ca ba miền.",
-                "Gỗ mun sừng tuyển chọn, bầu đàn bằng vỏ bầu nậm tự nhiên, cần đàn bằng sừng trâu đen",
-                "105 cm × 12 cm × 14 cm, trọng lượng 3.2 kg",
-                "Hệ thống bồi âm phong phú, linh hoạt trên nền âm thanh gốc",
-                "Hà Nội, Việt Nam",
-                catDay,
-                artisanKhanh,
-                villageDaoXa,
-                List.of(
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-bau.jpg").altText("Ảnh minh họa đàn bầu").sortOrder(1).build()
-                ),
-                8
-        );
+    record CatalogProduct(String code, String name, String category, String price, String weightKg,
+            int stock, String description, String material, String dimensions, String musicalRange,
+            String origin, String image, String alt) { }
 
-        seedProductIfNotExists(
-                "NGU-001",
-                "Đàn Nguyệt Gỗ Gụ",
-                new BigDecimal("5800000"),
-                "Đàn Nguyệt (Đàn Kìm) giữ vai trò chủ đạo trong âm nhạc Chầu Văn, Đờn ca tài tử và Cải lương. Tiếng đàn ấm áp, chắc nịch nhưng vô cùng tình cảm. Cần đàn dài với các phím cao đặc trưng cho phép nhấn nhá tạo những nốt rung và vuốt duyên dáng.",
-                "Gỗ gụ mật lâu năm, mặt đàn gỗ ngô đồng mỏng nhẹ, phím đàn bằng tre già",
-                "Đường kính thùng 36 cm, cần đàn dài 75 cm",
-                "Hơn 2 quãng tám (C3 - G5)",
-                "Làng Đào Xá, Hà Nội",
-                catDay,
-                artisanPhong,
-                villageDaoXa,
-                List.of(
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-dan-nguyet.jpg").altText("Ảnh minh họa đàn nguyệt").sortOrder(1).build()
-                ),
-                12
-        );
-
-        seedProductIfNotExists(
-                "SAO-001",
-                "Sáo Trúc Tone C",
-                new BigDecimal("650000"),
-                "Sáo Trúc tone C (Đô) chuẩn âm hòa tấu 440Hz, âm thanh tròn trịa, rung ấm ở quãng trầm và réo rắt trong sáng ở quãng cao. Được chế tác từ nứa già phơi tự nhiên nhiều năm, lỗ bấm khoét thủ công chuẩn xác cho việc biểu diễn chuyên nghiệp lẫn thưởng thức.",
-                "Nứa nam già trên 5 năm tuổi, quấn chỉ đen bảo vệ",
-                "Dài 52 cm, đường kính lòng trong 13.5 mm",
-                "Gần 3 quãng tám (C4 - G6)",
-                "Chương Mỹ, Hà Nội",
-                catHoi,
-                artisanBuiKhanh,
-                villageTrucSon,
-                List.of(
-                        ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-sao-truc.jpg").altText("Ảnh minh họa sáo trúc").sortOrder(1).build()
-                ),
-                30
-        );
-
-        seedProductIfNotExists(
-                "TIEU-001",
-                "Tiêu Bát Khổng Nứa Bắc",
-                new BigDecimal("750000"),
-                "Cây tiêu bát khổng chế tác từ thân nứa bắc tự nhiên tròn đều, thành ống dày dặn, âm sắc trầm ấm mộc mạc.",
-                "Nứa bắc già phơi sương, quấn chỉ dù bảo vệ",
-                "Dài 70 cm, đường kính lòng trong 18 mm",
-                "2 quãng tám rưỡi (D4 - A6)",
-                "Chương Mỹ, Hà Nội",
-                catHoi,
-                artisanBuiKhanh,
-                villageTrucSon,
-                List.of(ProductMedia.builder().mediaType(MediaType.IMAGE).url("/assets/images/prod-tieu.jpg")
-                        .altText("Ảnh minh họa tiêu tre với các cách bố trí lỗ bấm").sortOrder(1).build()),
-                10
-        );
+    static CatalogProduct[] catalogProducts() {
+        try (var input = new org.springframework.core.io.ClassPathResource("seed/catalog.json").getInputStream()) {
+            return tools.jackson.databind.json.JsonMapper.builder().build().readValue(input, CatalogProduct[].class);
+        } catch (java.io.IOException ex) {
+            throw new IllegalStateException("Cannot read the bundled instrument catalogue.", ex);
+        }
     }
 
     private Artisan upsertSeedArtisan(
@@ -533,58 +473,21 @@ public class DataSeeder implements ApplicationRunner {
         return saved;
     }
 
-    private void seedProductIfNotExists(
-            String code,
-            String name,
-            BigDecimal price,
-            String description,
-            String material,
-            String dimensions,
-            String musicalRange,
-            String origin,
-            Category category,
-            Artisan artisan,
-            CraftVillage craftVillage,
-            List<ProductMedia> mediaList,
-            int stockQuantity
-    ) {
-        var existingOpt = productRepository.findByCodeIgnoreCase(code);
-        String standardBarcode = deriveBarcode(code);
-        if (existingOpt.isPresent()) {
-            return;
-        }
+    private void seedProductIfNotExists(CatalogProduct seed, Category category,
+            Artisan artisan, CraftVillage craftVillage) {
+        if (productRepository.findByCodeIgnoreCase(seed.code()).isPresent()) return;
 
         Product product = Product.builder()
-                .code(code)
-                .barcode(standardBarcode)
-                .name(name)
-                .price(price)
-                .description(description)
-                .material(material)
-                .dimensions(dimensions)
-                .musicalRange(musicalRange)
-                .origin(origin)
-                .category(category)
-                .artisan(artisan)
-                .craftVillage(craftVillage)
-                .isActive(true)
-                .media(new ArrayList<>())
-                .build();
-
-        for (ProductMedia m : mediaList) {
-            m.setProduct(product);
-            product.getMedia().add(m);
-        }
-
+                .code(seed.code()).barcode(deriveBarcode(seed.code())).name(seed.name())
+                .price(new BigDecimal(seed.price())).billableWeightKg(new BigDecimal(seed.weightKg()))
+                .description(seed.description()).material(seed.material()).dimensions(seed.dimensions())
+                .musicalRange(seed.musicalRange()).origin(seed.origin()).category(category)
+                .artisan(artisan).craftVillage(craftVillage).isActive(true).media(new ArrayList<>()).build();
+        product.getMedia().add(ProductMedia.builder().product(product).mediaType(MediaType.IMAGE)
+                .url("/assets/images/" + seed.image()).altText(seed.alt()).sortOrder(1).build());
         Product savedProduct = productRepository.save(product);
-
-        Inventory inventory = Inventory.builder()
-                .product(savedProduct)
-                .quantity(stockQuantity)
-                .build();
-        inventoryRepository.save(inventory);
-
-        log.info("Seeded product: [{}] {} (Stock: {}, Barcode: {})", code, name, stockQuantity, standardBarcode);
+        inventoryRepository.save(Inventory.builder().product(savedProduct).quantity(seed.stock()).build());
+        log.info("Seeded product: [{}] {}", seed.code(), seed.name());
     }
 
     private String deriveBarcode(String code) {
@@ -593,7 +496,7 @@ public class DataSeeder implements ApplicationRunner {
             case "BAU-001" -> "8938500000025";
             case "NGU-001" -> "8938500000032";
             case "SAO-001" -> "8938500000049";
-            default -> "893850000" + String.format("%04d", Math.abs(code.hashCode() % 10000));
+            default -> code;
         };
     }
 
