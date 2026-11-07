@@ -4,6 +4,7 @@ import EditorialEyebrow from '../components/common/EditorialEyebrow.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import ErrorState from '../components/ui/ErrorState.jsx'
 import ProductCard from '../features/catalog/ProductCard.jsx'
+import ArtisanPortrait from '../features/artisans/ArtisanPortrait.jsx'
 import RelatedArticles from '../features/content/RelatedArticles.jsx'
 import useAuth from '../features/auth/useAuth.js'
 import ArtisanManagementModal from '../components/admin/ArtisanManagementModal.jsx'
@@ -218,13 +219,13 @@ function ArtisanDetailPage({ artisanId }) {
 
       <section className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center lg:gap-16 lg:px-8 lg:py-20">
         <div className="aspect-4/5 overflow-hidden rounded-2xl border border-border bg-surface-secondary shadow-sm">
-          <img
-            alt={`Chân dung ${artisan.name}`}
+          <ArtisanPortrait
+            name={artisan.name}
             className="h-full w-full object-cover"
             decoding="async"
             fetchPriority="high"
             height="800"
-            src={artisan.avatar || '/assets/images/vietnamese-instrument-shop.jpg'}
+            src={artisan.avatar}
             width="640"
           />
         </div>

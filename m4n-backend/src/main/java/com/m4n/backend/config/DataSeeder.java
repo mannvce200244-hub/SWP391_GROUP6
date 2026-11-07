@@ -382,7 +382,7 @@ public class DataSeeder implements ApplicationRunner {
                 "Nghệ nhân Nguyễn Văn Quý",
                 "Nghệ nhân Đào Văn Soạn",
                 "Nghệ nhân Ưu tú Đào Văn Soạn thuộc gia đình bốn đời làm đàn tại làng Đào Xá. Ông có hơn 50 năm gắn bó với nghề và dành nhiều tâm huyết truyền dạy kỹ thuật chế tác nhạc cụ dân tộc.",
-                "https://cdnphoto.dantri.com.vn/rXJUZum4ZizngoqSIdYqaUXfonk=/2020/10/11/8-nghe-nhan-dao-soan-lam-dan-dan-toc-1602355642451.jpg",
+                "https://cdnphoto.dantri.com.vn/rXJUZum4ZizngoqSIdYqaUXfonk%3D/2020/10/11/8-nghe-nhan-dao-soan-lam-dan-dan-toc-1602355642451.jpg",
                 villageDaoXa
         );
 
