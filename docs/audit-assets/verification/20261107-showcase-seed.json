@@ -1,0 +1,62 @@
+{
+  "batch": "M4N-SHOWCASE-20261107",
+  "removedUnusedFixtureVouchers": 3,
+  "added": {
+    "articles": 16,
+    "product_promotions": 6,
+    "vouchers": 4,
+    "orders": 21,
+    "invoices": 6,
+    "reviews": 12,
+    "stock_documents": 15,
+    "users": 12
+  },
+  "totals": {
+    "products": 13,
+    "categories": 3,
+    "artisans": 4,
+    "craft_villages": 8,
+    "articles": 16,
+    "product_promotions": 6,
+    "vouchers": 9,
+    "orders": 98,
+    "invoices": 12,
+    "reviews": 12,
+    "stock_documents": 15,
+    "users": 376
+  },
+  "orderStates": {
+    "COMPLETED": 12,
+    "PENDING_CONFIRMATION": 3,
+    "CONFIRMED": 2,
+    "SHIPPING": 1,
+    "DELIVERED": 1,
+    "CANCELLED": 2
+  },
+  "stockDocuments": {
+    "CONFIRMED": 12,
+    "DRAFT": 3
+  },
+  "netAddedStock": 121,
+  "demoRevenueVnd": "48697325.00",
+  "checks": {
+    "oldHistoryUnchanged": true,
+    "inventoryConserved": true,
+    "qcAndMovementsConsistent": true,
+    "reviewOwnershipAndCompletedPurchases": true,
+    "serverTotalsMatchLines": true,
+    "noOnlinePaymentsAdded": true,
+    "allPublishedArticlesHttp200": true,
+    "idempotentRerunCreatedZero": true,
+    "manualAndAutomaticDiscountCombined": true,
+    "packagedFontAndLicense": true
+  },
+  "backupSha256": "fd81f5ef29517324f4688f5cabd78d0f42b7b24c92a19f3a1f6b240014cc1070",
+  "activeProducts": 12,
+  "backendTests": {
+    "tests": 567,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

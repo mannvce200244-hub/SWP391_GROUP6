@@ -94,6 +94,14 @@ class InvoicePdfServiceTest {
     }
 
     @Test
+    void defaultFontComesFromApplicationResourcesAndSupportsVietnamese() {
+        var font = new PdfFontProvider("").resolve();
+        assertThat(font.getPostscriptFontName()).isEqualTo("BeVietnamPro-Regular");
+        "Đặng Nguyễn Trần Hồng ẮằặỄỠự ₫".codePoints()
+                .forEach(character -> assertThat(font.charExists(character)).isTrue());
+    }
+
+    @Test
     void configuredMissingFontRejectsExportInsteadOfProducingCorruptedVietnamese() {
         when(invoiceRepository.findWithDetailsById(100L)).thenReturn(Optional.of(sampleInvoice));
         var service = new InvoicePdfServiceImpl(invoiceRepository,
