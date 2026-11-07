@@ -1,5 +1,6 @@
 import RouterLink from '../../routes/RouterLink.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
+import ArtisanPortrait from './ArtisanPortrait.jsx'
 
 function ArtisanCard({ artisan }) {
   if (!artisan) return null
@@ -12,13 +13,13 @@ function ArtisanCard({ artisan }) {
     >
       {/* 1. Portrait Visual Frame (4:5 Aspect Ratio) */}
       <div className="aspect-4/5 w-full overflow-hidden bg-surface-secondary relative">
-        <img
-          alt={artisan.name}
+        <ArtisanPortrait
+          name={artisan.name}
           className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500 ease-out"
           decoding="async"
           height="450"
           loading="lazy"
-          src={artisan.avatar || '/assets/images/vietnamese-instrument-shop.jpg'}
+          src={artisan.avatar}
           width="360"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-80 group-hover:opacity-70 transition-opacity pointer-events-none" />

@@ -1,0 +1,38 @@
+{
+  "backupVerified": true,
+  "removed": {
+    "notifications": 34,
+    "pos_momo_payments": 94,
+    "payment_attempts": 2,
+    "reviews": 1,
+    "invoice_items": 37,
+    "invoices": 37,
+    "order_items": 14,
+    "orders": 13,
+    "inventory_movements": 54,
+    "stock_documents": 6,
+    "cart_items": 0,
+    "product_promotions": 0,
+    "product_media": 0,
+    "inventories": 90,
+    "products": 90,
+    "categories": 87,
+    "vouchers": 1
+  },
+  "displayNamesAnonymized": {
+    "users": 2,
+    "orders": 7,
+    "invoices": 2,
+    "saved_delivery_addresses": 1,
+    "pos_customers": 0
+  },
+  "remaining": {
+    "products": 13,
+    "categories": 3,
+    "orders": 77,
+    "invoices": 6
+  },
+  "unchangedRemainingRecordsVerified": true,
+  "activeProducts": 12,
+  "backupSha256": "3b91248874db5467e48a48fb447f900876e00f4051c59d9d593b16cc839a2514"
+}
