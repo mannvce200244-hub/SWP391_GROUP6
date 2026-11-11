@@ -63,5 +63,6 @@ PROJECT.md
 # Tests
 tests/
 *StressTest.java
+*StockReceiptPdfServiceTest.java
 *.test.*
 

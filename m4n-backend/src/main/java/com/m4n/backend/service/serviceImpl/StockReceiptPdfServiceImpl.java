@@ -60,7 +60,8 @@ public class StockReceiptPdfServiceImpl implements StockReceiptPdfService {
             row(table, "Bị loại", String.valueOf(receipt.rejectedQuantity()), body);
             row(table, "Đơn giá nhập", money(receipt.unitCost()), body);
             row(table, "Thành tiền thực nhập", money(receipt.receivedAmount()), bold);
-            row(table, "Tồn kho trước → sau", receipt.quantityBefore() + " → " + receipt.quantityAfter(), body);
+            row(table, "Tồn kho trước", String.valueOf(receipt.quantityBefore()), body);
+            row(table, "Tồn kho sau", String.valueOf(receipt.quantityAfter()), body);
             document.add(table);
             if (receipt.reason() != null) document.add(new Paragraph("Ghi chú: " + receipt.reason(), body));
             if (receipt.rejectedQuantity() > 0) document.add(new Paragraph("Lý do loại: " + receipt.rejectionReason(), body));
