@@ -35,7 +35,7 @@ import java.util.Set;
 public class DashboardServiceImpl implements DashboardService {
 
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    private static final Set<String> ALLOWED_PERIODS = Set.of("day", "week", "month", "quarter");
+    private static final Set<String> ALLOWED_PERIODS = Set.of("day", "week", "month", "quarter", "year");
 
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -177,6 +177,26 @@ public class DashboardServiceImpl implements DashboardService {
                             + invoiceRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end);
 
                     String label = "Quý " + q;
+                    points.add(new RevenuePointResponse(label, rev, count));
+                }
+            }
+            case "year" -> {
+                int startYear = Math.max(2020, year - 4);
+                for (int y = startYear; y <= year; y++) {
+                    LocalDate yearStart = LocalDate.of(y, 1, 1);
+                    LocalDate yearEnd = LocalDate.of(y + 1, 1, 1);
+                    Instant start = yearStart.atStartOfDay(VN_ZONE).toInstant();
+                    Instant end = yearEnd.atStartOfDay(VN_ZONE).toInstant();
+
+                    BigDecimal onlineRev = orderRepository.sumFinalAmountByStatusAndCompletedAtBetween(OrderStatus.COMPLETED, start, end);
+                    BigDecimal posRev = invoiceRepository.sumFinalAmountByCreatedAtBetween(start, end);
+                    BigDecimal rev = (onlineRev != null ? onlineRev : BigDecimal.ZERO)
+                            .add(posRev != null ? posRev : BigDecimal.ZERO);
+
+                    long count = orderRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end)
+                            + invoiceRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(start, end);
+
+                    String label = "Năm " + y;
                     points.add(new RevenuePointResponse(label, rev, count));
                 }
             }

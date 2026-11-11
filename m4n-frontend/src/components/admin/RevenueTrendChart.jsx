@@ -31,7 +31,7 @@ function RevenueTrendChart({ data = [] }) {
   const svgHeight = 250
   const padLeft = 60
   const padRight = 25
-  const padTop = 30
+  const padTop = 38
   const padBottom = 35
 
   const chartW = svgWidth - padLeft - padRight
@@ -39,7 +39,7 @@ function RevenueTrendChart({ data = [] }) {
 
   // Values
   const values = data.map((d) => Number(d.revenue) || 0)
-  const maxVal = Math.max(...values, 1000000) // minimum scale 1M
+  const maxVal = Math.max(...values, 1000000) * 1.15 // minimum scale 1M with 15% headroom
   // Round up maxVal to a clean ceiling
   const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)))
   const yMax = Math.ceil(maxVal / magnitude) * magnitude
@@ -69,8 +69,16 @@ function RevenueTrendChart({ data = [] }) {
 
   const activePoint = hoverIndex !== null ? points[hoverIndex] : null
 
+  // Dynamic flip and clamp positioning for tooltip
+  const isNearTop = activePoint ? (activePoint.y < 85 || activePoint.y / svgHeight < 0.35) : false
+  const isNearLeft = activePoint ? activePoint.x < 110 : false
+  const isNearRight = activePoint ? activePoint.x > svgWidth - 110 : false
+
+  const translateX = isNearLeft ? '-10%' : isNearRight ? '-90%' : '-50%'
+  const translateY = isNearTop ? '16px' : 'calc(-100% - 14px)'
+
   return (
-    <div className="relative w-full overflow-hidden select-none">
+    <div className="relative w-full overflow-visible select-none">
       <svg
         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
         className="w-full h-auto overflow-visible"
@@ -186,11 +194,11 @@ function RevenueTrendChart({ data = [] }) {
       {/* Floating Tooltip */}
       {activePoint && (
         <div
-          className="absolute pointer-events-none z-20 bg-zinc-900 text-white px-3 py-2 rounded-xl shadow-xl text-xs flex flex-col gap-0.5 border border-zinc-700/80 transition-all duration-150"
+          className="absolute pointer-events-none z-30 whitespace-nowrap bg-zinc-900 text-white px-3 py-2 rounded-xl shadow-xl text-xs flex flex-col gap-0.5 border border-zinc-700/80 transition-all duration-150"
           style={{
             left: `${(activePoint.x / svgWidth) * 100}%`,
             top: `${(activePoint.y / svgHeight) * 100}%`,
-            transform: 'translate(-50%, -120%)',
+            transform: `translate(${translateX}, ${translateY})`,
           }}
         >
           <div className="text-[10px] text-zinc-400 font-medium">

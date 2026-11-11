@@ -17,9 +17,9 @@ import prodSaoTruc from '../assets/images/prod-sao-truc.jpg'
 
 const PERIOD_OPTIONS = [
   { id: 'day', label: 'Ngày' },
-  { id: 'week', label: 'Tuần' },
   { id: 'month', label: 'Tháng' },
   { id: 'quarter', label: 'Quý' },
+  { id: 'year', label: 'Năm' },
 ]
 
 const START_YEAR = 2020
@@ -28,6 +28,21 @@ const YEAR_OPTIONS = Array.from(
   { length: Math.max(1, CURRENT_YEAR - START_YEAR + 1) },
   (_, index) => CURRENT_YEAR - index
 )
+
+function getTrendSubtitle(period, selectedYear) {
+  switch (period) {
+    case 'day':
+      return `Thống kê doanh thu theo ngày năm ${selectedYear}`
+    case 'month':
+      return `Thống kê doanh thu 12 tháng năm ${selectedYear}`
+    case 'quarter':
+      return `Thống kê doanh thu theo quý (3 tháng/quý) năm ${selectedYear}`
+    case 'year':
+      return `Thống kê doanh thu theo từng năm (${START_YEAR} - ${CURRENT_YEAR})`
+    default:
+      return `Thống kê doanh thu theo tháng năm ${selectedYear}`
+  }
+}
 
 const PRODUCT_IMAGE_MAP = {
   'TRN-001': prodDanTranh,
@@ -119,7 +134,7 @@ function AdminDashboardPage() {
   useEffect(() => {
     let active = true
 
-    getDashboardSummary(period, selectedYear)
+    getDashboardSummary(period, period === 'year' ? null : selectedYear)
       .then((data) => {
         if (active) {
           setDashboardState({ status: 'success', data, error: null })
@@ -292,22 +307,27 @@ function AdminDashboardPage() {
                 Biến động Doanh thu
               </h3>
               <p className="text-xs text-zinc-400">
-                Thống kê doanh thu theo {PERIOD_OPTIONS.find((p) => p.id === period)?.label.toLowerCase()} năm {selectedYear}
+                {getTrendSubtitle(period, selectedYear)}
               </p>
             </div>
 
             {/* Filter controls: Year Select + Period Segmented Buttons */}
             <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
               {/* Year Select dropdown from 2020 */}
-              <div className="inline-flex items-center gap-1.5">
+              <div
+                className={`inline-flex items-center gap-1.5 ${
+                  period === 'year' ? 'hidden' : ''
+                }`}
+              >
                 <label htmlFor="dashboard-year-select" className="text-xs text-zinc-500 font-medium">
                   Năm:
                 </label>
                 <select
                   id="dashboard-year-select"
                   value={selectedYear}
+                  disabled={period === 'year'}
                   onChange={(e) => handleYearChange(Number(e.target.value))}
-                  className="px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-brand/20 shadow-2xs cursor-pointer"
+                  className="px-2.5 py-1.5 text-xs font-semibold rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] hover:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-brand/20 shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Chọn năm thống kê"
                 >
                   {YEAR_OPTIONS.map((y) => (
