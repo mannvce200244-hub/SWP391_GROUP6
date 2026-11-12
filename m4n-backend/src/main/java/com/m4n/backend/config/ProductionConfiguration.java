@@ -47,8 +47,17 @@ public class ProductionConfiguration {
         require(absolutePath(value(environment, "m4n.media.directory")), "m4n.media.directory");
         // Registration and the maintained password-reset UI both require email OTP delivery.
         require(flag(environment, "m4n.auth.otp-email.enabled"), "m4n.auth.otp-email.enabled");
-        require(value(environment, "spring.mail.username").matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"), "spring.mail.username");
-        require(!value(environment, "spring.mail.password").isBlank(), "spring.mail.password");
+        String otpProvider = environment.getProperty("m4n.auth.otp-email.provider", "gmail");
+        if (otpProvider.equals("brevo")) {
+            String key = value(environment, "m4n.auth.otp-email.api-key");
+            require(!key.isBlank() && !key.startsWith("xsmtpsib-")
+                    && key.chars().noneMatch(Character::isWhitespace), "m4n.auth.otp-email.api-key");
+            require(value(environment, "m4n.auth.otp-email.from").matches("[^\\s<>@]+@[^\\s<>@]+\\.[^\\s<>@]+"), "m4n.auth.otp-email.from");
+        } else {
+            require(otpProvider.equals("gmail"), "m4n.auth.otp-email.provider");
+            require(value(environment, "spring.mail.username").matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"), "spring.mail.username");
+            require(!value(environment, "spring.mail.password").isBlank(), "spring.mail.password");
+        }
         require(!flag(environment, "m4n.payment.vnpay.enabled"), "m4n.payment.vnpay.enabled (sandbox only)");
         if (flag(environment, "m4n.auth.google.enabled")) {
             require(frontend.equals(value(environment, "m4n.auth.google.frontend-url")), "m4n.auth.google.frontend-url");
