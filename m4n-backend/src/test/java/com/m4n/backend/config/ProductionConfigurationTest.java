@@ -108,6 +108,24 @@ class ProductionConfigurationTest {
     }
 
     @Test
+    void brevoOtpRequiresApiKeyAndVerifiedSenderButNoSmtpCredentials() {
+        var env = safeEnvironment().withProperty("m4n.auth.otp-email.provider", "brevo")
+                .withProperty("spring.mail.username", "").withProperty("spring.mail.password", "")
+                .withProperty("m4n.auth.otp-email.api-key", "test-api-key")
+                .withProperty("m4n.auth.otp-email.from", "verify@example.test");
+        assertThatCode(() -> ProductionConfiguration.validate(env)).doesNotThrowAnyException();
+        env.withProperty("m4n.auth.otp-email.from", "invalid");
+        assertThatThrownBy(() -> ProductionConfiguration.validate(env)).hasMessageContaining("m4n.auth.otp-email.from");
+        env.withProperty("m4n.auth.otp-email.from", "verify@example.test");
+        for (String key : new String[]{"", "xsmtpsib-unit-test-smtp-key", "private\r\ninjected"}) {
+            env.withProperty("m4n.auth.otp-email.api-key", key);
+            assertThatThrownBy(() -> ProductionConfiguration.validate(env))
+                    .hasMessageContaining("m4n.auth.otp-email.api-key").hasMessageNotContaining("injected");
+        }
+        reject("m4n.auth.otp-email.provider", "unsupported");
+    }
+
+    @Test
     void enabledGhnMustUseProductionAndCompleteCredentials() {
         MockEnvironment environment = safeEnvironment().withProperty("m4n.shipping.ghn.enabled", "true");
         assertThatThrownBy(() -> ProductionConfiguration.validate(environment)).hasMessageContaining("m4n.shipping.ghn.production");
