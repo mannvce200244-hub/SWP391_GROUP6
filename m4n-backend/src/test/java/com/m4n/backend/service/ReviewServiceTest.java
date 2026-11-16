@@ -29,6 +29,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +40,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
@@ -53,6 +59,11 @@ class ReviewServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private Clock clock;
+
+    private static final Instant NOW = Instant.parse("2026-11-16T10:00:00Z");
+
     @InjectMocks
     private ReviewServiceImpl reviewService;
 
@@ -66,6 +77,7 @@ class ReviewServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(clock.instant()).thenReturn(NOW);
         Role customerRole = Role.builder().id(1L).name(RoleName.CUSTOMER).build();
 
         testUser = User.builder()
@@ -97,6 +109,7 @@ class ReviewServiceTest {
                 .user(testUser)
                 .orderCode("M4N-2026-100")
                 .status(OrderStatus.COMPLETED)
+                .completedAt(NOW.minus(Duration.ofDays(1)))
                 .items(new ArrayList<>())
                 .build();
 
@@ -172,6 +185,7 @@ class ReviewServiceTest {
                 .id(102L)
                 .user(testUser)
                 .status(OrderStatus.COMPLETED)
+                .completedAt(NOW.minus(Duration.ofDays(1)))
                 .items(new ArrayList<>())
                 .build();
 
@@ -201,6 +215,7 @@ class ReviewServiceTest {
                 .id(103L)
                 .user(testUser)
                 .status(OrderStatus.COMPLETED)
+                .completedAt(NOW.minus(Duration.ofDays(1)))
                 .items(new ArrayList<>())
                 .build();
 
@@ -212,12 +227,74 @@ class ReviewServiceTest {
         completedOrder.getItems().add(item);
 
         when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
-        when(orderRepository.findUnreviewedPurchaseIds(1L, 10L, OrderStatus.COMPLETED, PageRequest.of(0, 1)))
+        when(orderRepository.findUnreviewedPurchaseIds(1L, 10L, OrderStatus.COMPLETED, NOW.minus(Duration.ofDays(7)), NOW, PageRequest.of(0, 1)))
                 .thenReturn(List.of(103L));
 
         ReviewEligibilityResponse response = reviewService.checkEligibility(10L);
 
         assertThat(response.eligible()).isTrue();
         assertThat(response.eligibleOrderId()).isEqualTo(103L);
+    }
+
+    @Test
+    void exactSevenDayBoundaryIsAccepted() {
+        Order order = reviewableOrder(NOW.minus(Duration.ofDays(7)));
+        stubPurchase(order);
+        when(reviewRepository.save(any(Review.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        assertThat(reviewService.createReview(new CreateReviewRequest(100L, 10L, 4, "Đánh giá đúng hạn")).rating()).isEqualTo(4);
+    }
+
+    @Test
+    void expiredEvenByOneNanosecondIsRejectedWithoutSaving() {
+        stubPurchase(reviewableOrder(NOW.minus(Duration.ofDays(7)).minusNanos(1)));
+        assertThatThrownBy(() -> reviewService.createReview(new CreateReviewRequest(100L, 10L, 4, "Quá hạn")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("hết hạn");
+        verify(reviewRepository, never()).save(any());
+    }
+
+    @Test
+    void missingOrFutureReceiptTimestampCannotOpenWindow() {
+        Order order = reviewableOrder(null);
+        stubPurchase(order);
+        assertThatThrownBy(() -> reviewService.createReview(new CreateReviewRequest(100L, 10L, 4, "")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("thời điểm");
+        order.setCompletedAt(NOW.plusSeconds(1));
+        assertThatThrownBy(() -> reviewService.createReview(new CreateReviewRequest(100L, 10L, 4, "")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("thời điểm");
+        verify(reviewRepository, never()).save(any());
+    }
+
+    @Test
+    void anotherCustomersRecentCompletedOrderStillCannotBeReviewed() {
+        Order order = reviewableOrder(NOW);
+        order.setUser(User.builder().id(999L).build());
+        stubPurchase(order);
+        assertThatThrownBy(() -> reviewService.createReview(new CreateReviewRequest(100L, 10L, 5, "")))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        verify(reviewRepository, never()).save(any());
+    }
+
+    @Test
+    void eligibilityDoesNotGrantPermissionAfterTheWindowCloses() {
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(orderRepository.findUnreviewedPurchaseIds(1L, 10L, OrderStatus.COMPLETED,
+                NOW.minus(Duration.ofDays(7)), NOW, PageRequest.of(0, 1))).thenReturn(List.of());
+        var eligibility = reviewService.checkEligibility(10L);
+        assertThat(eligibility.eligible()).isFalse();
+        assertThat(eligibility.eligibleOrderId()).isNull();
+        assertThat(eligibility.message()).contains("7 ngày");
+    }
+
+    private Order reviewableOrder(Instant receivedAt) {
+        Order order = Order.builder().id(100L).user(testUser).status(OrderStatus.COMPLETED)
+                .completedAt(receivedAt).items(new ArrayList<>()).build();
+        order.getItems().add(OrderItem.builder().product(testProduct).quantity(1).build());
+        return order;
+    }
+
+    private void stubPurchase(Order order) {
+        when(userRepository.findByEmailIgnoreCase(testUser.getEmail())).thenReturn(Optional.of(testUser));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(testProduct));
+        when(orderRepository.findByIdWithLock(100L)).thenReturn(Optional.of(order));
     }
 }

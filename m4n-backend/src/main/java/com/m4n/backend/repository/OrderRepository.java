@@ -36,12 +36,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("""
             SELECT o.id FROM Order o
             WHERE o.user.id = :userId AND o.status = :status
+              AND o.completedAt >= :receivedAfter AND o.completedAt <= :now
               AND EXISTS (SELECT oi.id FROM OrderItem oi WHERE oi.order = o AND oi.product.id = :productId)
               AND NOT EXISTS (SELECT r.id FROM Review r WHERE r.order = o AND r.product.id = :productId)
-            ORDER BY o.createdAt DESC, o.id DESC
+            ORDER BY o.completedAt DESC, o.id DESC
             """)
     List<Long> findUnreviewedPurchaseIds(@Param("userId") Long userId, @Param("productId") Long productId,
-            @Param("status") OrderStatus status, Pageable pageable);
+            @Param("status") OrderStatus status, @Param("receivedAfter") Instant receivedAfter,
+            @Param("now") Instant now, Pageable pageable);
 
     Optional<Order> findByIdAndUserId(Long id, Long userId);
 

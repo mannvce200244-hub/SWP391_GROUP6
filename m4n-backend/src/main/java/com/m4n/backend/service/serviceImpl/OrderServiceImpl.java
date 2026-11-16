@@ -648,7 +648,7 @@ public class OrderServiceImpl implements OrderService {
         }
         Order savedOrder = orderRepository.save(order);
         notifyUser(savedOrder.getUser(), "Đơn hàng hoàn thành",
-                "Đơn hàng " + savedOrder.getOrderCode() + " đã hoàn thành. Quý khách có thể đánh giá sản phẩm ngay!",
+                "Đơn hàng " + savedOrder.getOrderCode() + " đã hoàn thành. Quý khách có thể đánh giá sản phẩm trong 7 ngày kể từ khi xác nhận nhận hàng.",
                 NotificationType.ORDER, "/account/orders");
         return savedOrder;
     }

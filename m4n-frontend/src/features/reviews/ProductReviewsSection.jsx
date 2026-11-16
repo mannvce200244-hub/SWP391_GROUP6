@@ -100,8 +100,8 @@ export default function ProductReviewsSection({ productId, productName }) {
               </div>
               <p className="text-muted leading-relaxed">
                 {isAuthenticated
-                  ? 'Khách hàng có đơn hàng đã hoàn thành chứa sản phẩm này có thể gửi đánh giá.'
-                  : 'Đăng nhập tài khoản đã mua hàng để chia sẻ trải nghiệm với nhạc cụ.'}
+                  ? 'Bạn có thể đánh giá sản phẩm đã mua trong vòng 7 ngày kể từ khi bấm “Đã nhận được hàng”.'
+                  : 'Đăng nhập để đánh giá sản phẩm đã mua trong 7 ngày kể từ khi xác nhận nhận hàng.'}
               </p>
               {eligibility.message && (
                 <div className="text-muted flex items-start gap-2">
@@ -129,7 +129,7 @@ export default function ProductReviewsSection({ productId, productName }) {
             <div className="p-8 text-center text-sm text-muted bg-white border border-border rounded-2xl flex flex-col items-center gap-2">
               <Star aria-hidden="true" className="w-8 h-8 text-zinc-300" />
               <span className="font-semibold text-ink">Chưa có đánh giá nào cho nhạc cụ này.</span>
-              <span>Bạn có thể chia sẻ cảm nhận sau khi hoàn thành đơn hàng.</span>
+              <span>Bạn có thể chia sẻ cảm nhận trong 7 ngày sau khi xác nhận nhận hàng.</span>
             </div>
           ) : (
             <>

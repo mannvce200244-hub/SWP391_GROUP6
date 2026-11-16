@@ -41,7 +41,7 @@ export default function ProductReviewForm({ productId, productName, orderId, onS
         <span className="text-xs font-semibold">Đã mua từ đơn hàng #{orderId}</span>
       </div>
       <h3 className="text-base font-semibold text-ink mb-1 break-words">Viết đánh giá cho {productName || 'nhạc cụ'}</h3>
-      <p className="text-sm text-muted mb-4">Chia sẻ trải nghiệm về âm sắc và độ hoàn thiện.</p>
+      <p className="text-sm text-muted mb-4">Gửi đánh giá trong 7 ngày kể từ khi xác nhận nhận hàng.</p>
       {formError && <p role="alert" className="p-3 mb-4 rounded-xl border border-danger-border text-sm text-danger">{formError}</p>}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" aria-busy={submitting}>
