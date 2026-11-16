@@ -29,16 +29,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
+    private static final Duration REVIEW_WINDOW = Duration.ofDays(7);
 
     private final ReviewRepository reviewRepository;
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     @Override
     @Transactional
@@ -61,6 +66,13 @@ public class ReviewServiceImpl implements ReviewService {
         // 3. BR-REVIEW-01: Order must have status COMPLETED
         if (order.getStatus() != OrderStatus.COMPLETED) {
             throw new IllegalArgumentException("Chỉ có thể đánh giá sản phẩm từ đơn hàng đã hoàn thành (COMPLETED).");
+        }
+        Instant now = clock.instant();
+        if (order.getCompletedAt() == null || order.getCompletedAt().isAfter(now)) {
+            throw new IllegalArgumentException("Đơn hàng chưa có thời điểm xác nhận nhận hàng hợp lệ để đánh giá.");
+        }
+        if (order.getCompletedAt().isBefore(now.minus(REVIEW_WINDOW))) {
+            throw new IllegalArgumentException("Đã hết hạn đánh giá. Bạn chỉ có thể đánh giá trong vòng 7 ngày kể từ khi xác nhận nhận hàng.");
         }
 
         // 4. Verify Order contains the product
@@ -138,13 +150,16 @@ public class ReviewServiceImpl implements ReviewService {
             throw new AccessDeniedException("Chỉ khách hàng mới có thể kiểm tra điều kiện đánh giá.");
         }
 
+        Instant now = clock.instant();
         List<Long> purchaseIds = orderRepository.findUnreviewedPurchaseIds(user.getId(), productId,
-                OrderStatus.COMPLETED, PageRequest.of(0, 1));
+                OrderStatus.COMPLETED, now.minus(REVIEW_WINDOW), now, PageRequest.of(0, 1));
         if (!purchaseIds.isEmpty()) {
-            return new ReviewEligibilityResponse(true, purchaseIds.getFirst(), "Quý khách đủ điều kiện đánh giá sản phẩm này.");
+            return new ReviewEligibilityResponse(true, purchaseIds.getFirst(),
+                    "Bạn có thể đánh giá trong vòng 7 ngày kể từ khi xác nhận nhận hàng.");
         }
 
-        return new ReviewEligibilityResponse(false, null, "Bạn chỉ có thể đánh giá sau khi đã mua và hoàn thành đơn hàng chứa sản phẩm này.");
+        return new ReviewEligibilityResponse(false, null,
+                "Chỉ được đánh giá sản phẩm đã mua trong vòng 7 ngày kể từ khi xác nhận nhận hàng, mỗi sản phẩm một lần cho mỗi đơn.");
     }
 
     private ReviewResponse mapToResponse(Review r) {

@@ -36,7 +36,7 @@ public class ReviewController {
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Submit a product review", description = "Allows customer to review a product from an eligible COMPLETED order.")
+    @Operation(summary = "Submit a product review", description = "Allows customer to review a purchased product within 7 days of receipt confirmation on their COMPLETED order.")
     public ResponseEntity<ReviewResponse> createReview(@Valid @RequestBody CreateReviewRequest request) {
         ReviewResponse response = reviewService.createReview(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
