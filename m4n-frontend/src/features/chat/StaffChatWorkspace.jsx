@@ -19,6 +19,7 @@ import ErrorState from '../../components/ui/ErrorState.jsx'
 import useChatMessages from './useChatMessages.js'
 import StaffConversationQueue from './StaffConversationQueue.jsx'
 import { extractContent, formatMessageTime } from './chatMessages.js'
+import { ROUTE_CHANGE_EVENT } from '../../routes/customerRoutes.js'
 
 
 export function StaffChatWorkspace() {
@@ -43,6 +44,7 @@ export function StaffChatWorkspace() {
   const messagesEndRef = useRef(null)
   const listSequence = useRef(0)
   const selectedId = useRef(null)
+  const linkedSelection = useRef(0)
   const mutationPending = useRef(false)
   const handleAccessLost = (conversationId) => {
     if (selectedId.current !== conversationId) return
@@ -63,6 +65,26 @@ export function StaffChatWorkspace() {
   })
   const { messages, isLoading: isLoadingMessages } = thread
   const latestMessageId = messages.at(-1)?.id
+  useEffect(() => {
+    const selectLinked = () => {
+      const request = ++linkedSelection.current
+      const id = new URLSearchParams(window.location.search).get('conversationId')
+      if (!/^[1-9]\d*$/.test(id ?? '')) return
+      chatService.getStaffConversationSummary(id).then((conversation) => {
+        if (request !== linkedSelection.current) return
+        selectedId.current = conversation.id
+        setActiveConversation(conversation)
+        setReplyText('')
+        setScope(conversation.status === 'CLOSED' ? 'CLOSED' : !conversation.assignedStaffId ? 'WAITING'
+          : conversation.assignedStaffId === user?.id ? 'MINE' : 'ASSIGNED')
+        setListPage(1)
+      }).catch((error) => { if (request === linkedSelection.current) addToast({ message: error.message || 'Không thể mở hội thoại.', type: 'error' }) })
+    }
+    selectLinked()
+    window.addEventListener(ROUTE_CHANGE_EVENT, selectLinked)
+    window.addEventListener('popstate', selectLinked)
+    return () => { linkedSelection.current += 1; window.removeEventListener(ROUTE_CHANGE_EVENT, selectLinked); window.removeEventListener('popstate', selectLinked) }
+  }, [user?.id, addToast])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -155,6 +177,7 @@ export function StaffChatWorkspace() {
   }
 
   const handleScopeChange = (nextScope) => {
+    linkedSelection.current += 1
     if (nextScope === scope) return
     setScope(nextScope)
     listSequence.current += 1
@@ -171,6 +194,7 @@ export function StaffChatWorkspace() {
   }
 
   const handleSelectConversation = (nextConversation) => {
+    linkedSelection.current += 1
     selectedId.current = nextConversation?.id ?? null
     setActiveConversation(nextConversation)
     setReplyText('')

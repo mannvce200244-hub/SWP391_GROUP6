@@ -88,7 +88,7 @@ class ProductImageIntegrationTest {
 
     private CreateProductRequest request(String code) {
         return new CreateProductRequest(code, null, "Uploaded instrument", BigDecimal.valueOf(100000), category.getId(),
-                null, null, "Wood", "30 x 20 x 10 cm", null, null, "Upload fixture", List.of(), 5, BigDecimal.ONE, BigDecimal.ZERO);
+                null, null, "Wood", "30 x 20 x 10 cm", null, null, "Upload fixture", List.of(), 5, BigDecimal.ONE, BigDecimal.ZERO, null, null);
     }
     private MockMultipartFile png(String filename) throws Exception {
         var bytes = new ByteArrayOutputStream(); ImageIO.write(new BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB), "png", bytes);

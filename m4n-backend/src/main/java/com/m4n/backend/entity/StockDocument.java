@@ -31,7 +31,7 @@ public class StockDocument {
     private Product product;
     @Column(name = "product_code", nullable = false, length = 50)
     private String productCode;
-    @Column(name = "product_name", nullable = false, length = 200)
+    @Column(name = "product_name", nullable = false, length = 303)
     private String productName;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private StockDocumentType type;

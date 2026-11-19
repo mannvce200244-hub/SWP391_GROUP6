@@ -122,7 +122,7 @@ function ProductDetailPage({ productId }) {
 
         {detail.status === 'success' && detail.product ? (
           <>
-            <ProductDetailInfo product={detail.product} />
+            <ProductDetailInfo key={`product-${detail.product.id}`} product={detail.product} />
             <RelatedArticles key={detail.product.id} productId={detail.product.id} />
             <ProductReviewsSection
               productId={detail.product.id}

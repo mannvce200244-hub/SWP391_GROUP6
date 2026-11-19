@@ -87,7 +87,7 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional
     public void recordMovement(InventoryMovement movement) {
         movement.setProductCode(movement.getProduct().getCode());
-        movement.setProductName(movement.getProduct().getName());
+        movement.setProductName(movement.getProduct().getDisplayName());
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         movement.setActorEmail(authentication == null ? null : authentication.getName());
         inventoryMovementRepository.save(movement);
@@ -108,7 +108,7 @@ public class InventoryServiceImpl implements InventoryService {
             Product product = movement.getProduct();
             return new InventoryMovementResponse(movement.getId(), product.getId(),
                     movement.getProductCode() == null ? product.getCode() : movement.getProductCode(),
-                    movement.getProductName() == null ? product.getName() : movement.getProductName(),
+                    movement.getProductName() == null ? product.getDisplayName() : movement.getProductName(),
                     movement.getType(), movement.getQuantity(), movement.getQuantityBefore(), movement.getQuantityAfter(),
                     movement.getRejectedQuantity() == null ? 0 : movement.getRejectedQuantity(), movement.getRejectionReason(),
                     movement.getReason(), movement.getActorEmail(), movement.getCreatedAt(), movement.getSourceType(), movement.getSourceId());
@@ -144,7 +144,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .productId(product.getId())
                 .productCode(product.getCode())
                 .barcode(product.getBarcode())
-                .productName(product.getName())
+                .productName(product.getDisplayName())
                 .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
                 .price(product.getPrice())
                 .quantity(qty)

@@ -33,6 +33,12 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductDetail(id));
     }
 
+    @GetMapping("/{id}/variants")
+    public ResponseEntity<Page<ProductSummaryResponse>> listVariants(@PathVariable Long id,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return ResponseEntity.ok(productService.listVariants(id, pageable));
+    }
+
     @GetMapping
     @Operation(summary = "Browse and filter product catalog", description = "Returns paginated list of active musical instruments matching optional search and filter criteria.")
     public ResponseEntity<Page<ProductSummaryResponse>> listProducts(

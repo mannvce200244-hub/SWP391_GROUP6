@@ -99,6 +99,21 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<ProductSummaryResponse> listVariants(Long productId, Pageable pageable) {
+        Product selected = productRepository.findByIdAndIsActiveTrue(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+        if (pageable.getOffset() > Integer.MAX_VALUE || pageable.getSort().isSorted()) {
+            throw new IllegalArgumentException("Trang biến thể không hợp lệ.");
+        }
+        Specification<Product> family = (root, query, cb) -> cb.and(cb.isTrue(root.get("isActive")),
+                selected.getVariantGroup() == null ? cb.equal(root.get("id"), selected.getId())
+                    : cb.equal(cb.lower(root.get("variantGroup")), selected.getVariantGroup().toLowerCase(java.util.Locale.ROOT)));
+        return catalogPage(productRepository.findAll(family, PageRequest.of(pageable.getPageNumber(),
+                Math.min(pageable.getPageSize(), 100), Sort.by("variantLabel").and(Sort.by("id")))));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<ProductSummaryResponse> listProducts(
             String keyword,
             String group,
@@ -120,7 +135,10 @@ public class ProductServiceImpl implements ProductService {
             catalogPageable = catalogPageable.isPaged() ? PageRequest.of(catalogPageable.getPageNumber(), catalogPageable.getPageSize()) : Pageable.unpaged();
         }
         Page<Product> productPage = productRepository.findAll(spec, catalogPageable);
+        return catalogPage(productPage);
+    }
 
+    private Page<ProductSummaryResponse> catalogPage(Page<Product> productPage) {
         List<Long> productIds = productPage.getContent().stream()
                 .map(Product::getId)
                 .toList();
@@ -294,6 +312,7 @@ public class ProductServiceImpl implements ProductService {
                 .isActive(true)
                 .build();
 
+        configureVariant(product, request.variantGroup(), request.variantLabel());
         Product savedProduct = productRepository.save(product);
 
         // Auto-generate code and/or EAN-13 barcode if omitted
@@ -354,6 +373,25 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toAdminDetailResponse(savedProduct, "OUT_OF_STOCK", 0);
     }
 
+    private void configureVariant(Product product, String group, String label) {
+        String normalizedGroup = group == null || group.isBlank() ? null
+                : java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC);
+        String normalizedLabel = label == null || label.isBlank() ? null
+                : java.text.Normalizer.normalize(label.trim(), java.text.Normalizer.Form.NFC);
+        if ((normalizedGroup == null) != (normalizedLabel == null)) {
+            throw new IllegalArgumentException("Nhập cả nhóm sản phẩm và tên biến thể, hoặc để trống cả hai.");
+        }
+        if (normalizedGroup != null && (normalizedGroup.length() > 100 || normalizedLabel.length() > 100)) {
+            throw new IllegalArgumentException("Nhóm và tên biến thể tối đa 100 ký tự.");
+        }
+        if (normalizedGroup != null && productRepository.existsByVariantGroupIgnoreCaseAndVariantLabelIgnoreCaseAndIdNot(
+                normalizedGroup, normalizedLabel, product.getId() == null ? -1L : product.getId())) {
+            throw new DuplicateResourceException("Biến thể này đã có trong nhóm sản phẩm.", "PRODUCT_VARIANT_EXISTS");
+        }
+        product.setVariantGroup(normalizedGroup);
+        product.setVariantLabel(normalizedLabel);
+    }
+
     private String generateEan13Barcode(Long id) {
         long safeId = id != null ? Math.abs(id) : 1L;
         String base12 = String.format("893850%06d", safeId % 1_000_000L);
@@ -393,6 +431,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         product.setName(request.name().trim());
+        configureVariant(product, request.variantGroup(), request.variantLabel());
         product.setPrice(request.price());
         product.setBillableWeightKg(request.billableWeightKg());
         product.setBulkySurcharge(request.bulkySurcharge() != null ? request.bulkySurcharge() : BigDecimal.ZERO);

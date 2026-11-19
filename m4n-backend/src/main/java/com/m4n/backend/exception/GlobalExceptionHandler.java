@@ -293,7 +293,10 @@ public class GlobalExceptionHandler {
         String msg;
         String errorCode = "DATA_INTEGRITY_CONFLICT";
 
-        if (raw.contains("products_code_key") || raw.contains("uq_product_code")) {
+        if (raw.contains("products_variant_group_label_uq")) {
+            msg = "Biến thể này đã có trong nhóm sản phẩm.";
+            errorCode = "PRODUCT_VARIANT_EXISTS";
+        } else if (raw.contains("products_code_key") || raw.contains("uq_product_code")) {
             msg = "Mã sản phẩm đã tồn tại trong hệ thống.";
             errorCode = "PRODUCT_CODE_EXISTS";
         } else if (raw.contains("categories_code_key") || raw.contains("uq_category_code")) {

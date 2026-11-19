@@ -73,7 +73,7 @@ public class StockDocumentServiceImpl implements StockDocumentService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm không tồn tại: " + productId));
         StockDocument document = StockDocument.builder().product(product).productCode(product.getCode())
-                .productName(product.getName()).type(type).status(StockDocumentStatus.DRAFT)
+                .productName(product.getDisplayName()).type(type).status(StockDocumentStatus.DRAFT)
                 .quantity(quantity).unitCost(unitCost).reason(normalizedReason).createdBy(actor()).build();
         return response(documentRepository.save(document));
     }

@@ -56,5 +56,9 @@ public record UpdateProductRequest(
         BigDecimal billableWeightKg,
         @DecimalMin(value = "0", message = "Phụ phí cồng kềnh không được âm")
         @Digits(integer = 13, fraction = 0, message = "Phụ phí là số VND nguyên, tối đa 13 chữ số")
-        BigDecimal bulkySurcharge
+        BigDecimal bulkySurcharge,
+        @Size(max = 100, message = "Nhóm biến thể tối đa 100 ký tự")
+        String variantGroup,
+        @Size(max = 100, message = "Tên biến thể tối đa 100 ký tự")
+        String variantLabel
 ) {}

@@ -76,7 +76,7 @@ class ProductControllerTest {
                 new BigDecimal("8500000"),
                 BigDecimal.ZERO,
                 null
-        );
+        , null, null);
 
         when(productService.getProductDetail(1L)).thenReturn(response);
 

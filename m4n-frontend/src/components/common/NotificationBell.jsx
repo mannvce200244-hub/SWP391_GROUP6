@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import notificationService from '../../services/notificationService.js'
 import useAuth from '../../features/auth/useAuth.js'
 import useToast from '../ui/useToast.js'
+import { openNotification } from '../../features/notifications/notificationNavigation.js'
 import {
   Bell,
   MessageSquare,
@@ -10,7 +11,7 @@ import {
 } from 'lucide-react'
 
 function NotificationBellContent() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const { addToast } = useToast()
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState([])
@@ -24,6 +25,7 @@ function NotificationBellContent() {
   const mutationRevision = useRef(0)
   const countRequest = useRef(0)
   const containerRef = useRef(null)
+  const latestNotificationId = useRef(null)
 
   useEffect(() => notificationService.subscribeReadChanges(() => {
     mutationRevision.current += 1
@@ -38,22 +40,31 @@ function NotificationBellContent() {
         if (pendingReads.current.size || markingAllRef.current) return
         const revision = mutationRevision.current
         const request = ++countRequest.current
-        notificationService
-          .getUnreadCount()
-          .then((count) => {
-            if (active && request === countRequest.current && revision === mutationRevision.current) setUnreadCount(count)
+        Promise.all([notificationService.getUnreadCount(),
+          user?.role === 'ONLINE_STAFF' ? notificationService.getRecentNotifications() : Promise.resolve(null)])
+          .then(([count, recent]) => {
+            if (!active || request !== countRequest.current || revision !== mutationRevision.current) return
+            setUnreadCount(count)
+            if (Array.isArray(recent)) {
+              const newest = Math.max(0, ...recent.map((item) => item.id))
+              const incoming = recent.filter((item) => item.id > (latestNotificationId.current ?? newest) && item.type === 'CHAT' && !item.isRead)
+              if (incoming.length) addToast({ message: incoming.length === 1 ? incoming[0].title : `Bạn có ${incoming.length} thông báo hỗ trợ mới.`, type: 'info' })
+              latestNotificationId.current = Math.max(latestNotificationId.current ?? 0, newest)
+              setNotifications(recent)
+              setError('')
+            }
           })
-          .catch(() => { if (active && revision === mutationRevision.current) setError('Không thể cập nhật thông báo. Vui lòng thử lại.') })
+          .catch(() => { if (active && request === countRequest.current && revision === mutationRevision.current) setError('Không thể cập nhật thông báo. Vui lòng thử lại.') })
       }
       refreshCount()
-      const interval = setInterval(refreshCount, 30000)
+      const interval = setInterval(refreshCount, user?.role === 'ONLINE_STAFF' ? 10000 : 30000)
 
       return () => {
         active = false
         clearInterval(interval)
       }
     }
-  }, [isAuthenticated, refreshKey])
+  }, [isAuthenticated, refreshKey, user?.role, addToast])
 
   useEffect(() => {
     let active = true
@@ -214,7 +225,7 @@ function NotificationBellContent() {
                   <button
                     type="button"
                     key={n.id}
-                    onClick={() => handleMarkAsRead(n.id, n.isRead)}
+                    onClick={() => { handleMarkAsRead(n.id, n.isRead); setIsOpen(false); openNotification(n, user?.role) }}
                     className={`w-full text-left p-3.5 transition-colors cursor-pointer flex gap-3 items-start ${
                       n.isRead ? 'bg-white hover:bg-surface-secondary' : 'bg-surface-secondary hover:bg-white'
                     }`}

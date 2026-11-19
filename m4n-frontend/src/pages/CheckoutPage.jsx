@@ -1,3 +1,4 @@
+import QuantitySelector from '../components/ui/QuantitySelector.jsx'
 import VoucherSuggestions from '../features/checkout/VoucherSuggestions.jsx'
 import Button from '../components/ui/Button.jsx'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -17,8 +18,6 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
-  Minus,
-  Plus,
   Shield,
   ShoppingBag,
   Trash2,
@@ -185,6 +184,10 @@ function CheckoutPage() {
 
   const handleQuantityChange = async (item, nextQuantity) => {
     if (nextQuantity < 1 || nextQuantity > 2147483647) return
+    if (nextQuantity > (item.stockQuantity ?? 0)) {
+      addToast({ message: `Chỉ còn ${item.stockQuantity ?? 0} sản phẩm trong kho.`, type: 'error' })
+      return
+    }
     if (directPurchase) {
       direct.setQuantity(nextQuantity)
       return
@@ -726,13 +729,7 @@ function CheckoutPage() {
                         <div className="text-xs text-muted mt-0.5">Đơn giá: {item.unitPriceDisplay}</div>
                         {Number(item.productDiscountAmount) > 0 && <div className="text-xs text-jade">Giá gốc: {formatCurrencyVND(item.originalUnitPrice)}</div>}
                         <div className="mt-2 flex items-center gap-1.5">
-                          <button type="button" onClick={() => handleQuantityChange(item, item.quantity - 1)} disabled={checkoutBusy || item.quantity <= 1} aria-label={`Giảm số lượng ${item.productName}`} className="h-11 w-11 rounded-lg border border-border bg-white flex items-center justify-center disabled:opacity-40">
-                            <Minus size={13} />
-                          </button>
-                          <span className="min-w-7 text-center text-xs font-bold text-ink">{item.quantity}</span>
-                          <button type="button" disabled={checkoutBusy} onClick={() => handleQuantityChange(item, item.quantity + 1)} aria-label={`Tăng số lượng ${item.productName}`} className="h-11 w-11 rounded-lg border border-border bg-white flex items-center justify-center disabled:opacity-40">
-                            <Plus size={13} />
-                          </button>
+                          <QuantitySelector label={`Số lượng ${item.productName}`} disabled={checkoutBusy} value={item.quantity} max={item.stockQuantity ?? 0} onChange={(quantity) => handleQuantityChange(item, quantity)} />
                           <button type="button" disabled={checkoutBusy} onClick={() => handleRemoveItem(item)} aria-label={`Xóa ${item.productName}`} className="ml-1 h-11 w-11 rounded-lg text-danger hover:bg-surface-secondary flex items-center justify-center disabled:opacity-40">
                             <Trash2 size={14} />
                           </button>

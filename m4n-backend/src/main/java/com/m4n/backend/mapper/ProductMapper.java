@@ -106,7 +106,7 @@ public class ProductMapper {
         return new ProductDetailResponse(
                 product.getId(),
                 product.getCode(),
-                product.getName(),
+                product.getDisplayName(),
                 price.chargedUnitPrice(),
                 formatPriceDisplay(price.chargedUnitPrice()),
                 product.getDescription(),
@@ -123,7 +123,9 @@ public class ProductMapper {
                 product.getLowStockThreshold(),
                 price.originalUnitPrice(),
                 price.productDiscountAmount(),
-                price.productPromotionId()
+                price.productPromotionId(),
+                product.getVariantGroup(),
+                product.getVariantLabel()
         );
     }
 
@@ -143,7 +145,7 @@ public class ProductMapper {
         return new ProductSummaryResponse(
                 product.getId(),
                 product.getCode(),
-                product.getName(),
+                product.getDisplayName(),
                 price.chargedUnitPrice(),
                 formatPriceDisplay(price.chargedUnitPrice()),
                 groupName,
@@ -154,7 +156,9 @@ public class ProductMapper {
                 price.originalUnitPrice(),
                 price.productDiscountAmount(),
                 price.productPromotionId(),
-                stockQuantity
+                stockQuantity,
+                product.getVariantGroup(),
+                product.getVariantLabel()
         );
     }
 
@@ -171,7 +175,7 @@ public class ProductMapper {
                 product.getId(),
                 product.getCode(),
                 product.getBarcode(),
-                product.getName(),
+                product.getDisplayName(),
                 product.getPrice(),
                 formatPriceDisplay(product.getPrice()),
                 toCategorySummary(product.getCategory()),
@@ -217,7 +221,9 @@ public class ProductMapper {
                 product.getUpdatedAt(),
                 product.getLowStockThreshold(),
                 product.getBillableWeightKg(),
-                product.getBulkySurcharge()
+                product.getBulkySurcharge(),
+                product.getVariantGroup(),
+                product.getVariantLabel()
         );
     }
 }

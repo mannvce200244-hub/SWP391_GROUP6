@@ -54,6 +54,7 @@ class CartServiceTest {
     private CartService cartService;
     private User testUser;
 
+    @Mock private com.m4n.backend.repository.InventoryRepository inventoryRepository;
     @Mock private ProductPricingService productPricingService;
 
     @BeforeEach
@@ -64,8 +65,10 @@ class CartServiceTest {
                     product -> new ProductPrice(product.getPrice(), product.getPrice(), BigDecimal.ZERO, null), (first, duplicate) -> first));
         });
 
+        org.mockito.Mockito.lenient().when(inventoryRepository.findByProductId(any())).thenReturn(Optional.of(
+                com.m4n.backend.entity.Inventory.builder().quantity(100).build()));
         cartMapper = new CartMapper();
-        cartService = new CartServiceImpl(cartRepository, cartItemRepository, productRepository, userRepository, cartMapper, productPricingService);
+        cartService = new CartServiceImpl(cartRepository, cartItemRepository, productRepository, userRepository, cartMapper, productPricingService, inventoryRepository);
 
         Role role = Role.builder().id(1L).name(RoleName.CUSTOMER).build();
         testUser = User.builder()

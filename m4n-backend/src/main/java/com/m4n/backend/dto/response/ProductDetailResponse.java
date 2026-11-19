@@ -23,5 +23,7 @@ public record ProductDetailResponse(
         Integer lowStockThreshold,
         BigDecimal originalPrice,
         BigDecimal productDiscountAmount,
-        Long productPromotionId
+        Long productPromotionId,
+        String variantGroup,
+        String variantLabel
 ) {}

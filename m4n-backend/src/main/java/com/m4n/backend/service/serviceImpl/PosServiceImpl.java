@@ -134,13 +134,13 @@ public class PosServiceImpl implements PosService {
 
             if (!isSufficient) {
                 warnings.add(String.format("Sản phẩm '%s' hiện chỉ còn %d trong kho (yêu cầu: %d).",
-                        product.getName(), availableQty, qty));
+                        product.getDisplayName(), availableQty, qty));
             }
 
             previewItems.add(PosSalePreviewResponse.PreviewItem.builder()
                     .productId(product.getId())
                     .productCode(product.getCode())
-                    .productName(product.getName())
+                    .productName(product.getDisplayName())
                     .price(price)
                     .originalUnitPrice(pricing.originalUnitPrice())
                     .productDiscountAmount(pricing.productDiscountAmount())
@@ -347,7 +347,7 @@ public class PosServiceImpl implements PosService {
             InvoiceItem item = InvoiceItem.builder()
                     .invoice(invoice)
                     .product(product)
-                    .productName(product.getName())
+                    .productName(product.getDisplayName())
                     .productCode(product.getCode())
                     .unitPrice(unitPrice)
                     .originalUnitPrice(pricing.originalUnitPrice())
@@ -482,7 +482,8 @@ public class PosServiceImpl implements PosService {
                 .id(product.getId())
                 .code(product.getCode())
                 .barcode(product.getBarcode())
-                .name(product.getName())
+                .name(product.getDisplayName())
+                .variantGroup(product.getVariantGroup()).variantLabel(product.getVariantLabel())
                 .price(pricing.chargedUnitPrice())
                 .originalUnitPrice(pricing.originalUnitPrice())
                 .productDiscountAmount(pricing.productDiscountAmount())

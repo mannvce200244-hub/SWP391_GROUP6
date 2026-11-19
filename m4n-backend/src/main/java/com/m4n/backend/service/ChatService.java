@@ -20,6 +20,8 @@ public interface ChatService {
 
     ConversationResponse getConversation(Long conversationId, String userEmail);
 
+    ConversationResponse getStaffConversationSummary(Long conversationId, String staffEmail);
+
     Page<ChatMessageResponse> getMessages(Long conversationId, Pageable pageable, String userEmail);
 
     ChatMessageResponse sendMessage(Long conversationId, ChatMessageRequest request, String senderEmail);

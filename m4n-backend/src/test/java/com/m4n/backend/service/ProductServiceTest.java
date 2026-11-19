@@ -331,7 +331,7 @@ class ProductServiceTest {
                 null,
                 null,
                 BigDecimal.ZERO
-        );
+        , null, null);
 
         com.m4n.backend.dto.response.AdminProductDetailResponse response = productService.createProduct(request);
 
@@ -359,7 +359,7 @@ class ProductServiceTest {
                 null,
                 null,
                 BigDecimal.ZERO
-        );
+        , null, null);
 
         assertThatThrownBy(() -> productService.createProduct(request))
                 .isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class)
@@ -453,7 +453,7 @@ class ProductServiceTest {
                 null,
                 null,
                 BigDecimal.ZERO
-        );
+        , null, null);
 
         productService.createProduct(req);
 
@@ -483,7 +483,7 @@ class ProductServiceTest {
                 null,
                 null,
                 BigDecimal.ZERO
-        );
+        , null, null);
 
         assertThatThrownBy(() -> productService.createProduct(req))
                 .isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class)

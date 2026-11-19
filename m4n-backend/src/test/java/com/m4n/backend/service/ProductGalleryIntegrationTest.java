@@ -121,7 +121,7 @@ class ProductGalleryIntegrationTest {
         jdbcTemplate.update("UPDATE inventories SET quantity = 5 WHERE product_id = ?", original.id());
         assertThat(productService.getProductDetail(original.id()).availability()).isEqualTo("LOW_STOCK");
         var request = new UpdateProductRequest("Threshold updated", null, new BigDecimal("100.25"), category.getId(),
-                null, null, null, null, null, null, null, true, null, 0, null, BigDecimal.ZERO);
+                null, null, null, null, null, null, null, true, null, 0, null, BigDecimal.ZERO, null, null);
         assertThat(validator.validate(request)).isEmpty();
         productService.updateProduct(original.id(), request);
         assertThat(productService.getProductDetail(original.id()).availability()).isEqualTo("IN_STOCK");
@@ -129,7 +129,7 @@ class ProductGalleryIntegrationTest {
         jdbcTemplate.update("UPDATE inventories SET quantity = 0 WHERE product_id = ?", original.id());
         assertThat(productService.getProductDetail(original.id()).availability()).isEqualTo("OUT_OF_STOCK");
         var invalid = new UpdateProductRequest("Invalid threshold", null, BigDecimal.ZERO, category.getId(),
-                null, null, null, null, null, null, null, true, null, -1, null, BigDecimal.ZERO);
+                null, null, null, null, null, null, null, true, null, -1, null, BigDecimal.ZERO, null, null);
         assertThat(validator.validate(invalid)).anyMatch(violation -> violation.getPropertyPath().toString().equals("lowStockThreshold"));
     }
 
@@ -143,11 +143,11 @@ class ProductGalleryIntegrationTest {
         return new CreateProductRequest("P-" + UUID.randomUUID(), null, name, price, category.getId(),
                 null, null, null, null, null, null, null, List.of(
                 new CreateProductMediaRequest(MediaType.IMAGE, "/original.jpg", "Original", 0),
-                new CreateProductMediaRequest(MediaType.IMAGE, "/removed.jpg", "Removed", 1)), null, null, BigDecimal.ZERO);
+                new CreateProductMediaRequest(MediaType.IMAGE, "/removed.jpg", "Removed", 1)), null, null, BigDecimal.ZERO, null, null);
     }
 
     private UpdateProductRequest update(String name, List<ProductMediaItemRequest> media) {
         return new UpdateProductRequest(name, null, new BigDecimal("100.25"), category.getId(),
-                null, null, null, null, null, null, null, true, media, null, null, BigDecimal.ZERO);
+                null, null, null, null, null, null, null, true, media, null, null, BigDecimal.ZERO, null, null);
     }
 }

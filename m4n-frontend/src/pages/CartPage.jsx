@@ -1,3 +1,4 @@
+import QuantitySelector from '../components/ui/QuantitySelector.jsx'
 import useCart from '../features/cart/useCart.js'
 import useAuth from '../features/auth/useAuth.js'
 import ErrorState from '../components/ui/ErrorState.jsx'
@@ -209,29 +210,7 @@ function CartPage() {
 
                   <div className="flex items-center justify-between w-full sm:w-auto gap-6 shrink-0 pt-2 sm:pt-0">
                     {/* Quantity Selector */}
-                    <div className="inline-flex items-center border border-border rounded-xl bg-surface-secondary/60 p-1">
-                      <button
-                        type="button"
-                        disabled={loading || item.quantity <= 1}
-                        onClick={() => handleQuantityChange(item, item.quantity - 1)}
-                        className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
-                        aria-label="Giảm số lượng"
-                      >
-                        -
-                      </button>
-                      <span className="w-10 text-center text-xs font-bold text-ink">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        disabled={loading}
-                        onClick={() => handleQuantityChange(item, item.quantity + 1)}
-                        className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
-                        aria-label="Tăng số lượng"
-                      >
-                        +
-                      </button>
-                    </div>
+                    <QuantitySelector label={`Số lượng ${item.productName}`} disabled={loading} value={item.quantity} max={item.stockQuantity ?? 0} onChange={(quantity) => handleQuantityChange(item, quantity)} />
 
                     {/* Subtotal */}
                     <div className="text-right min-w-[100px]">
