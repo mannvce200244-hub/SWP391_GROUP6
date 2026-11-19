@@ -5,10 +5,10 @@ import test from 'node:test'
 const paymentSource = (await readFile(new URL('../src/services/paymentService.js', import.meta.url), 'utf8'))
   .replace("import apiClient from '../api/apiClient.js'", 'const apiClient = {}')
 const { verifiedPaymentUrl } = await import(`data:text/javascript;base64,${Buffer.from(paymentSource).toString('base64')}`)
-globalThis.posMomoVerify = verifiedPaymentUrl
+globalThis.posVnpayVerify = verifiedPaymentUrl
 const source = (await readFile(new URL('../src/services/posMomoService.js', import.meta.url), 'utf8'))
   .replace("import apiClient from '../api/apiClient.js'", 'const apiClient = {}; export { apiClient as testApiClient }')
-  .replace("import { verifiedPaymentUrl } from './paymentService.js'", 'const verifiedPaymentUrl = globalThis.posMomoVerify')
+  .replace("import { verifiedPaymentUrl } from './paymentService.js'", 'const verifiedPaymentUrl = globalThis.posVnpayVerify')
 const { posPaymentReturnId, posPaymentMethodLabel, default: service, testApiClient } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`)
 
 test('POS return accepts only one valid intent ID regardless of client success flags', () => {
@@ -18,12 +18,12 @@ test('POS return accepts only one valid intent ID regardless of client success f
     `?m4nPosPaymentId=pos-${'A'.repeat(32)}`, `?orderId=${id}`]) assert.equal(posPaymentReturnId(value), null)
 })
 
-test('POS MoMo opens only official sandbox card checkout', () => {
+test('POS VNPay opens only the official sandbox checkout', () => {
   let redirected
-  globalThis.window = { location: { assign: (value) => { redirected = value } } }
-  const url = 'https://test-payment.momo.vn/v2/gateway/pay?token=fixture'
+  globalThis.window = { location: { origin: 'http://localhost:5173', assign: (value) => { redirected = value } } }
+  const url = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=fixture'
   service.open({ paymentUrl: url }); assert.equal(redirected, url)
-  for (const value of ['https://evil.test/v2/gateway/pay', 'javascript:alert(1)', 'http://test-payment.momo.vn/v2/gateway/pay']) {
+  for (const value of ['https://evil.test/paymentv2/vpcpay.html', 'javascript:alert(1)', 'http://sandbox.vnpayment.vn/paymentv2/vpcpay.html', 'https://test-payment.momo.vn/v2/gateway/pay', 'https://sandbox.vnpayment.vn:8443/paymentv2/vpcpay.html', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html#fragment']) {
     assert.throws(() => service.open({ paymentUrl: value }))
   }
 })
@@ -32,12 +32,13 @@ test('reconciliation uses persisted intent without sending any client success or
   let call
   testApiClient.post = async (path, body) => { call = { path, body }; return { status: 'PENDING' } }
   assert.deepEqual(await service.reconcile('pos-fixture'), { status: 'PENDING' })
-  assert.deepEqual(call, { path: '/pos/payments/momo/pos-fixture/reconcile', body: {} })
+  assert.deepEqual(call, { path: '/pos/payments/vnpay/pos-fixture/reconcile', body: {} })
   testApiClient.post = async () => { throw new Error('Provider unavailable') }
   await assert.rejects(service.reconcile('pos-fixture'), /Provider unavailable/)
 })
 
 test('receipt and history distinguish MoMo from manual bank transfer', () => {
+  assert.equal(posPaymentMethodLabel('VNPAY'), 'VNPay (Thẻ ATM / QR)')
   assert.equal(posPaymentMethodLabel('MOMO'), 'Thẻ quốc tế qua MoMo')
   assert.equal(posPaymentMethodLabel('BANK_TRANSFER'), 'Chuyển khoản')
   assert.equal(posPaymentMethodLabel('CASH'), 'Tiền mặt')
@@ -49,7 +50,7 @@ test('cancellation requests only the owned intent and preserves server cancellat
   const result = { status: 'PENDING', cancelRequested: true, invoiceId: null, refundStatus: 'NONE' }
   testApiClient.post = async (path, body) => { call = { path, body }; return result }
   assert.deepEqual(await service.cancel('pos-fixture'), result)
-  assert.deepEqual(call, { path: '/pos/payments/momo/pos-fixture/cancel', body: {} })
+  assert.deepEqual(call, { path: '/pos/payments/vnpay/pos-fixture/cancel', body: {} })
   testApiClient.post = async () => { throw new Error('Invoice already issued') }
   await assert.rejects(service.cancel('pos-fixture'), /Invoice already issued/)
 })

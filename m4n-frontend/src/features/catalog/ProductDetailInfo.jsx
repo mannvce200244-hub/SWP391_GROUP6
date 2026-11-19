@@ -16,7 +16,7 @@ function ProductDetailInfo({ product }) {
   const [quantity, setQuantity] = useState(1)
   const [isAdding, setIsAdding] = useState(false)
   const [isBuying, setIsBuying] = useState(false)
-  const { addToCart, buyNow } = useCart()
+  const { addToCart, buyNow, cart, loading: cartLoading } = useCart()
   const { isAuthenticated, user } = useAuth()
   const { addToast } = useToast()
 
@@ -30,9 +30,12 @@ function ProductDetailInfo({ product }) {
     product.priceDisplay ||
     (product.price != null ? formatCurrencyVND(product.price) : 'Liên hệ')
   const canPurchase = !isAuthenticated || user?.role === 'CUSTOMER'
+  const inCart = cart?.items?.find((item) => item.productId === product.id)?.quantity ?? 0
+  const remainingForCart = Math.max(0, (product.stockQuantity ?? 0) - inCart)
+  const exceedsCartStock = inCart > 0 && quantity > remainingForCart
 
   const handleAddToCart = async () => {
-    if (isOutOfStock || isAdding || isBuying) return
+    if (isOutOfStock || isAdding || isBuying || cartLoading || exceedsCartStock) return
 
     try {
       setIsAdding(true)
@@ -127,7 +130,7 @@ function ProductDetailInfo({ product }) {
           </div>
 
           {/* Instrument Title */}
-          <h1 className="text-2xl sm:text-3xl font-bold font-sans text-ink tracking-tight leading-snug">
+          <h1 className="break-words text-2xl sm:text-3xl font-bold font-sans text-ink tracking-tight leading-snug">
             {product.name}
           </h1>
 
@@ -197,7 +200,7 @@ function ProductDetailInfo({ product }) {
             {/* Row 1: Quantity Selector + Add to Cart */}
             <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
               <QuantitySelector
-                disabled={isOutOfStock || isAdding || isBuying}
+                disabled={isOutOfStock || isAdding || isBuying || cartLoading}
                 max={product.stockQuantity != null && product.stockQuantity > 0 ? product.stockQuantity : (isOutOfStock ? 0 : 99)}
                 min={1}
                 onChange={setQuantity}
@@ -206,7 +209,7 @@ function ProductDetailInfo({ product }) {
               <button
                 aria-label={isOutOfStock ? 'Sản phẩm tạm hết hàng' : 'Thêm nhạc cụ vào giỏ hàng'}
                 className="flex-1 h-11 px-4 rounded-lg text-sm font-semibold text-brand bg-brand-soft/60 hover:bg-brand-soft border border-brand/30 active:bg-brand-soft/90 transition-all duration-150 flex items-center justify-center gap-2 shadow-2xs disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                disabled={isOutOfStock || isAdding || isBuying}
+                disabled={isOutOfStock || isAdding || isBuying || cartLoading || exceedsCartStock}
                 onClick={handleAddToCart}
                 type="button"
               >
@@ -216,6 +219,10 @@ function ProductDetailInfo({ product }) {
                 </span>
               </button>
             </div>
+
+            {inCart > 0 && <p role="status" className={`text-xs ${exceedsCartStock ? 'text-danger' : 'text-muted'}`}>
+              Đã có {inCart} sản phẩm trong giỏ. {remainingForCart > 0 ? `Có thể thêm tối đa ${remainingForCart} sản phẩm.` : 'Đã đạt số lượng tồn kho.'}
+            </p>}
 
             {/* Row 2: Buy Now Primary Button */}
             <button

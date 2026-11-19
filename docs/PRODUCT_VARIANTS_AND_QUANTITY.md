@@ -33,6 +33,11 @@ price and inventory. Customers and POS choose the SKU they want to buy.
   controls. Plus stops at the displayed SKU stock. Typing above that stock clamps
   the field immediately and explains the limit; blur/Enter commits a valid integer.
   Clearing a field and leaving it restores the prior value; Escape cancels editing.
+- A plus/minus click while editing uses the typed quantity and submits one update.
+  If newer stock is lower than a bill/cart quantity, the control explains the new
+  limit; minus brings it down to that limit. Product detail also shows quantities
+  already in the cart and prevents adding a combined quantity above stock. Buy-now
+  quantities remain independent of the cart.
 - Adding to an existing cart row checks its combined quantity against current
   inventory. Updating a row also checks stock. These checks provide early feedback;
   they never reserve or deduct inventory. Online confirmation and POS settlement
@@ -40,6 +45,8 @@ price and inventory. Customers and POS choose the SKU they want to buy.
 - On desktop, the catalog and bill body scroll independently. Payment remains
   outside the bill's scrolling body. On smaller screens, the catalog has a bounded
   scroll area so users can reach the bill without traversing every product.
+- POS stock remembered from previews is cleared for an empty/new bill and on
+  retry, so a previous bill's low stock does not block newly available inventory.
 
 ## Support notifications
 
@@ -51,6 +58,8 @@ price and inventory. Customers and POS choose the SKU they want to buy.
 - Clicking notifications marks them read and opens their destination, including
   already-read notifications. Staff chat links select the referenced conversation;
   customer chat notifications open the support dialog and the referenced thread.
+- Late notification lookups cannot overwrite a newer manual queue/conversation
+  selection. Successful staff polling clears temporary notification-load errors.
 - Queue metadata lookup is restricted to active Online Staff. Messages still
   require customer ownership or current staff assignment. Closed chats belonging
   to a different staff member remain inaccessible through this lookup.

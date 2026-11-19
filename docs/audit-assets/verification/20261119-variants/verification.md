@@ -8,9 +8,9 @@ live payment or real customer message was used for fixtures.
 - `mvnw.cmd clean verify`: 612 tests passed, zero failures/errors/skips; packaged
   Spring Boot JAR built. The test process used Hikari maximum pool size 5.
 - `npm run lint` and `npm run build`: passed.
-- `npm test`: 98/101 passed. The same 3 pre-existing failures remain in
-  `posMomoService.test.mjs`: MoMo URL/reconcile/cancel expectations do not match
-  the unchanged VNPay service. They are outside this request.
+- `npm test`: 101/101 passed after the recheck. Three stale MoMo service
+  expectations were corrected to the existing VNPay controller/checkout contract;
+  legacy MoMo invoice labels remain covered. Production payment code was unchanged.
 - Added integration coverage proves per-SKU price/stock, paged active siblings,
   accent-insensitive variant search, combined cart quantity limits, no stock
   deduction from cart edits, POS deduction of only the selected SKU, variant
@@ -52,6 +52,34 @@ live payment or real customer message was used for fixtures.
 
 Browser sessions were signed out, the temporary tab was closed and the viewport
 override was reset. Task-specific servers were stopped after verification.
+
+## Additional recheck
+
+- Product detail: type 5 then immediately plus => 6; type 5 then minus => 4.
+  Enter commits, Escape restores the previous value, and an empty field restores
+  its previous quantity. Typing 15 with stock 9 clamps to 9 and disables plus.
+- Cart drawer with asynchronous API updates: type 5 then minus => 4, with the
+  confirmed total changing to 400,000 VND. There is no blur/click double update.
+- Product detail with 4 already in the cart and stock 9 explains that at most 5
+  more can be added; selecting 6 disables Add while Buy now remains usable.
+  See `recheck-cart-limit.jpg`.
+- POS: type 5 then plus => 6. Simulate stock dropping from 9 to 2 on the local
+  database: the next preview blocks checkout and the quantity control explains
+  the new limit. Minus brings an existing quantity 8 down to 2. After removing
+  the last item and restoring stock to 9, adding the SKU again accepts quantity 9;
+  the previous preview's cached stock does not constrain the new bill.
+  See `recheck-pos-stock.jpg` (40 catalog entries; payment stays visible).
+- A QA-only loopback proxy delayed chat-summary replies by 12 seconds. Switching
+  to Closed before the reply arrived remained selected after it completed.
+  A simulated 503 on recent notifications showed an error; restoring the connection
+  cleared it through polling without closing/reopening the dropdown. Clicking
+  the already-read notice then selected conversation 141 in Mine. See
+  `recheck-chat-recovery.jpg`.
+- On a 390x844 viewport, a 100-character unbroken variant label wraps within the
+  product heading and picker. Document scroll width equals client width (375px,
+  accounting for the browser scrollbar). See `recheck-variant-mobile.jpg`.
+- Temporary stock/label changes were restored. The proxy, backend and frontend
+  QA servers were stopped; browser logout, tab cleanup and viewport reset completed.
 
 ## Review and UI acceptance
 

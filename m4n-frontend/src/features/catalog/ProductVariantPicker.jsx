@@ -23,8 +23,8 @@ export default function ProductVariantPicker({ product, onSelect, purchasing = f
         <div className="flex flex-wrap gap-2">
           {state.data.content.map((variant) => <button key={variant.id} type="button" aria-pressed={variant.id === product.id}
             disabled={purchasing && variant.stockQuantity <= 0} onClick={() => onSelect(variant)}
-            className={`min-h-11 rounded-xl border bg-white px-3 py-2 text-left text-sm hover:border-brand focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-40 ${variant.id === product.id ? 'border-brand text-brand' : 'border-border text-ink'}`}>
-            <span className="block font-semibold">{variant.variantLabel || variant.name}</span>
+            className={`min-h-11 min-w-0 max-w-full rounded-xl border bg-white px-3 py-2 text-left text-sm hover:border-brand focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-40 ${variant.id === product.id ? 'border-brand text-brand' : 'border-border text-ink'}`}>
+            <span className="block break-words font-semibold">{variant.variantLabel || variant.name}</span>
             <span className="block text-xs">{formatCurrencyVND(variant.price)} · {variant.stockQuantity > 0 ? `Còn ${variant.stockQuantity}` : 'Hết hàng'}</span>
           </button>)}
         </div>

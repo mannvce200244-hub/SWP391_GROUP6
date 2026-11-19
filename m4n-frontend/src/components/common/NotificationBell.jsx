@@ -51,9 +51,10 @@ function NotificationBellContent() {
               if (incoming.length) addToast({ message: incoming.length === 1 ? incoming[0].title : `Bạn có ${incoming.length} thông báo hỗ trợ mới.`, type: 'info' })
               latestNotificationId.current = Math.max(latestNotificationId.current ?? 0, newest)
               setNotifications(recent)
+              setError('')
             }
           })
-          .catch(() => { if (active && revision === mutationRevision.current) setError('Không thể cập nhật thông báo. Vui lòng thử lại.') })
+          .catch(() => { if (active && request === countRequest.current && revision === mutationRevision.current) setError('Không thể cập nhật thông báo. Vui lòng thử lại.') })
       }
       refreshCount()
       const interval = setInterval(refreshCount, user?.role === 'ONLINE_STAFF' ? 10000 : 30000)

@@ -12,6 +12,7 @@ export default function usePosSalePreview(items, voucherCode) {
   if (inputKey !== key) {
     setInputKey(key)
     setPreview({ key: '', data: null, error: '' })
+    if (!items.length) setKnownStock({})
   }
 
   useEffect(() => {
@@ -37,6 +38,6 @@ export default function usePosSalePreview(items, voucherCode) {
     knownStock,
     error: preview.key === key ? preview.error : '',
     loading: Boolean(items.length && (preview.key !== key || (!preview.data && !preview.error))),
-    retry: () => { setPreview({ key: '', data: null, error: '' }); setRetryKey((value) => value + 1) },
+    retry: () => { setPreview({ key: '', data: null, error: '' }); setKnownStock({}); setRetryKey((value) => value + 1) },
   }
 }
