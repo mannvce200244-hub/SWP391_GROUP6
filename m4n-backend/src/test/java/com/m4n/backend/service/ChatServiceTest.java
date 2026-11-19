@@ -374,7 +374,7 @@ class ChatServiceTest {
                 eq("Tin nhắn mới từ khách hàng"),
                 any(String.class),
                 eq(NotificationType.CHAT),
-                eq("/staff/chat")
+                eq("/staff/chat?conversationId=100")
         );
     }
 
@@ -394,6 +394,38 @@ class ChatServiceTest {
 
         assertThat(result).isEmpty();
         verify(conversationRepository).findMyClosedQueue(onlineStaff.getId(), pageable);
+    }
+
+    @Test void unassignedCustomerMessagesNotifyAvailableStaffWithoutSharingTranscript() {
+        mockUserLookup(customer1);
+        when(conversationRepository.findByIdWithLock(100L)).thenReturn(Optional.of(conversation));
+        when(chatMessageRepository.save(any(ChatMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findByRole_NameAndIsActiveTrue(RoleName.ONLINE_STAFF)).thenReturn(List.of(onlineStaff, onlineStaff2));
+        chatService.sendMessage(100L, new ChatMessageRequest("Private customer message"), customer1.getEmail());
+        for (User staff : List.of(onlineStaff, onlineStaff2)) {
+            verify(notificationService).createNotification(eq(staff), eq("Khách hàng đang chờ hỗ trợ"),
+                    eq("Có tin nhắn mới trong hàng đợi hỗ trợ."), eq(NotificationType.CHAT), eq("/staff/chat?conversationId=100"));
+        }
+    }
+
+    @Test void notificationTargetExposesQueueMetadataButNeverMessagesBeforeClaim() {
+        when(userRepository.findByEmailIgnoreCase(onlineStaff.getEmail())).thenReturn(Optional.of(onlineStaff));
+        when(conversationRepository.findById(100L)).thenReturn(Optional.of(conversation));
+        var result = chatService.getStaffConversationSummary(100L, onlineStaff.getEmail());
+        assertThat(result.id()).isEqualTo(100L);
+        assertThat(result.lastMessage()).isNull();
+        verify(chatMessageRepository, never()).findFirstByConversationIdOrderByCreatedAtDescIdDesc(any());
+        mockUserLookup(onlineStaff);
+        when(conversationRepository.findByIdWithLock(100L)).thenReturn(Optional.of(conversation));
+        assertThatThrownBy(() -> chatService.getMessages(100L, PageRequest.of(0, 20), onlineStaff.getEmail()))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test void posCannotUseNotificationSummaryToAccessSupportQueue() {
+        when(userRepository.findByEmailIgnoreCase(posStaff.getEmail())).thenReturn(Optional.of(posStaff));
+        assertThatThrownBy(() -> chatService.getStaffConversationSummary(100L, posStaff.getEmail()))
+                .isInstanceOf(AccessDeniedException.class);
+        verify(conversationRepository, never()).findById(any());
     }
 
     private void mockUserLookup(User user) {

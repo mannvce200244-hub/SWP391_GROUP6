@@ -6,6 +6,7 @@ export default function usePosSalePreview(items, voucherCode) {
   const [preview, setPreview] = useState({ key: '', data: null, error: '' })
   const [inputKey, setInputKey] = useState(key)
   const [retryKey, setRetryKey] = useState(0)
+  const [knownStock, setKnownStock] = useState({})
 
   // Returning to a previous bill must request current prices and stock again.
   if (inputKey !== key) {
@@ -19,7 +20,11 @@ export default function usePosSalePreview(items, voucherCode) {
     let active = true
     const timer = setTimeout(() => {
       previewSale(request).then((data) => {
-        if (active) setPreview({ key, data, error: '' })
+        if (active) {
+          setKnownStock((previous) => ({ ...previous, ...Object.fromEntries((data.items ?? [])
+            .map((item) => [item.productId, item.availableQuantity])) }))
+          setPreview({ key, data, error: '' })
+        }
       }).catch((error) => {
         if (active) setPreview({ key, data: null, error: error.message || 'Không thể tính hóa đơn. Vui lòng thử lại.' })
       })
@@ -29,6 +34,7 @@ export default function usePosSalePreview(items, voucherCode) {
 
   return {
     data: preview.key === key ? preview.data : null,
+    knownStock,
     error: preview.key === key ? preview.error : '',
     loading: Boolean(items.length && (preview.key !== key || (!preview.data && !preview.error))),
     retry: () => { setPreview({ key: '', data: null, error: '' }); setRetryKey((value) => value + 1) },

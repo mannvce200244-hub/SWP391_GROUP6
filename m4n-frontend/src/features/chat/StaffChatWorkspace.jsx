@@ -19,6 +19,7 @@ import ErrorState from '../../components/ui/ErrorState.jsx'
 import useChatMessages from './useChatMessages.js'
 import StaffConversationQueue from './StaffConversationQueue.jsx'
 import { extractContent, formatMessageTime } from './chatMessages.js'
+import { ROUTE_CHANGE_EVENT } from '../../routes/customerRoutes.js'
 
 
 export function StaffChatWorkspace() {
@@ -63,6 +64,27 @@ export function StaffChatWorkspace() {
   })
   const { messages, isLoading: isLoadingMessages } = thread
   const latestMessageId = messages.at(-1)?.id
+  useEffect(() => {
+    let revision = 0
+    const selectLinked = () => {
+      const request = ++revision
+      const id = new URLSearchParams(window.location.search).get('conversationId')
+      if (!/^[1-9]\d*$/.test(id ?? '')) return
+      chatService.getStaffConversationSummary(id).then((conversation) => {
+        if (request !== revision) return
+        selectedId.current = conversation.id
+        setActiveConversation(conversation)
+        setReplyText('')
+        setScope(conversation.status === 'CLOSED' ? 'CLOSED' : !conversation.assignedStaffId ? 'WAITING'
+          : conversation.assignedStaffId === user?.id ? 'MINE' : 'ASSIGNED')
+        setListPage(1)
+      }).catch((error) => { if (request === revision) addToast({ message: error.message || 'Không thể mở hội thoại.', type: 'error' }) })
+    }
+    selectLinked()
+    window.addEventListener(ROUTE_CHANGE_EVENT, selectLinked)
+    window.addEventListener('popstate', selectLinked)
+    return () => { revision += 1; window.removeEventListener(ROUTE_CHANGE_EVENT, selectLinked); window.removeEventListener('popstate', selectLinked) }
+  }, [user?.id, addToast])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

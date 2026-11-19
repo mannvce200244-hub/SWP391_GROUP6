@@ -11,7 +11,7 @@ import useDialogFocus from '../../hooks/useDialogFocus.js'
 import useChatMessages from './useChatMessages.js'
 import { formatMessageTime } from './chatMessages.js'
 
-function CustomerChatPanel({ isAuthenticated, user, isOpen, onOpenChange }) {
+function CustomerChatPanel({ isAuthenticated, user, isOpen, onOpenChange, conversationId }) {
   const { addToast } = useToast()
   const [conversation, setConversation] = useState(null)
   const [newMessage, setNewMessage] = useState('')
@@ -43,13 +43,14 @@ function CustomerChatPanel({ isAuthenticated, user, isOpen, onOpenChange }) {
   useEffect(() => {
     const sequence = ++requestSequence.current
     if (!isOpen || !ownerId) return undefined
-    chatService.getMyConversation().then((nextConversation) => {
+    const request = conversationId ? chatService.getConversation(conversationId) : chatService.getMyConversation()
+    request.then((nextConversation) => {
       if (requestSequence.current === sequence) setConversation({ ...nextConversation, ownerId })
     }).catch((error) => {
       if (requestSequence.current === sequence) setLoadError(error.message || 'Không thể mở hỗ trợ trực tuyến.')
     })
     return () => { if (requestSequence.current === sequence) requestSequence.current += 1 }
-  }, [isOpen, ownerId, retryKey])
+  }, [isOpen, ownerId, retryKey, conversationId])
 
   const handleSendMessage = async (event) => {
     event.preventDefault()
@@ -242,10 +243,10 @@ function CustomerChatPanel({ isAuthenticated, user, isOpen, onOpenChange }) {
   )
 }
 
-export function CustomerChatWidget({ isOpen, onOpenChange }) {
+export function CustomerChatWidget({ isOpen, onOpenChange, conversationId }) {
   const { isAuthenticated, user } = useAuth()
   if (isAuthenticated && user?.role !== 'CUSTOMER') return null
-  return <CustomerChatPanel key={user?.id ?? 'guest'} isAuthenticated={isAuthenticated} user={user} isOpen={isOpen} onOpenChange={onOpenChange} />
+  return <CustomerChatPanel key={`${user?.id ?? 'guest'}-${conversationId ?? 'current'}`} conversationId={conversationId} isAuthenticated={isAuthenticated} user={user} isOpen={isOpen} onOpenChange={onOpenChange} />
 }
 
 export default CustomerChatWidget

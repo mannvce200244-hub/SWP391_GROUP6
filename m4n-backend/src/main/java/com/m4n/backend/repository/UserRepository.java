@@ -35,6 +35,8 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     boolean existsByRoleName(RoleName name);
 
+    List<User> findByRole_NameAndIsActiveTrue(RoleName role);
+
     /**
      * Locks all active accounts of a role with PESSIMISTIC_WRITE. Used before demoting or
      * disabling a SUPER_ADMIN so concurrent privileged transitions serialize on the same rows

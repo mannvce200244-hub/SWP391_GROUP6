@@ -48,6 +48,16 @@ public class Product {
     @Column(nullable = false, length = 200)
     private String name;
 
+    @Column(name = "variant_group", length = 100)
+    private String variantGroup;
+
+    @Column(name = "variant_label", length = 100)
+    private String variantLabel;
+
+    public String getDisplayName() {
+        return variantLabel == null ? name : name + " · " + variantLabel;
+    }
+
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal price;
 

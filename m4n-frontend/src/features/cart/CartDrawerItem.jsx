@@ -1,3 +1,4 @@
+import QuantitySelector from '../../components/ui/QuantitySelector.jsx'
 import RouterLink from '../../routes/RouterLink.jsx'
 import { IconInstrument } from '../../components/ui/Icons.jsx'
 import { CUSTOMER_ROUTES } from '../../routes/customerRoutes.js'
@@ -36,27 +37,7 @@ function CartDrawerItem({ item, selected, loading, onToggle, onQuantityChange, o
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="inline-flex items-center border border-border rounded-lg bg-surface-secondary p-0.5">
-            <button
-              type="button"
-              disabled={loading || item.quantity <= 1}
-              onClick={() => onQuantityChange(item, item.quantity - 1)}
-              className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded transition-colors disabled:opacity-40 cursor-pointer"
-              aria-label={`Giảm số lượng ${item.productName}`}
-            >
-              −
-            </button>
-            <span className="w-8 text-center text-xs font-bold text-ink tabular-nums">{item.quantity}</span>
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => onQuantityChange(item, item.quantity + 1)}
-              className="w-11 h-11 flex items-center justify-center text-xs font-bold text-ink hover:bg-white rounded transition-colors disabled:opacity-40 cursor-pointer"
-              aria-label={`Tăng số lượng ${item.productName}`}
-            >
-              +
-            </button>
-          </div>
+          <QuantitySelector label={`Số lượng ${item.productName}`} disabled={loading} value={item.quantity} max={item.stockQuantity ?? 0} onChange={(quantity) => onQuantityChange(item, quantity)} />
           <button
             type="button"
             disabled={loading}

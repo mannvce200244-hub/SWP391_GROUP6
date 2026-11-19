@@ -160,7 +160,9 @@ public final class ProductSpecification {
                 .replaceAll("\\p{M}+", "").replace('đ', 'd');
         String term = "%" + normalized.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
         // Translate in the database so accent-insensitive filtering still precedes pagination.
-        Expression<String> name = cb.function("translate", String.class, cb.lower(root.get("name")),
+        Expression<String> searchableName = cb.concat(cb.concat(root.get("name"), cb.concat(" ", cb.coalesce(root.get("variantGroup"), ""))),
+                cb.concat(" ", cb.coalesce(root.get("variantLabel"), "")));
+        Expression<String> name = cb.function("translate", String.class, cb.lower(searchableName),
                 cb.literal(VIETNAMESE_LETTERS + "\u0300\u0301\u0303\u0309\u0323\u0302\u0306\u031b"), cb.literal(PLAIN_LETTERS));
         return cb.or(cb.like(name, term, '\\'), cb.like(cb.lower(root.get("code")), term, '\\'),
                 cb.like(cb.lower(cb.coalesce(root.get("barcode"), "")), term, '\\'));

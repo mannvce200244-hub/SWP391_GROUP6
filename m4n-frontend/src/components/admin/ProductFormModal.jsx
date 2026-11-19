@@ -6,6 +6,7 @@ import craftVillageService from '../../services/craftVillageService.js'
 import useToast from '../ui/useToast.js'
 import useDialogFocus from '../../hooks/useDialogFocus.js'
 import Input from '../ui/Input.jsx'
+import ProductVariantFields from './ProductVariantFields.jsx'
 import CategoryManagementModal from './CategoryManagementModal.jsx'
 import ArtisanManagementModal from './ArtisanManagementModal.jsx'
 import CraftVillageManagementModal from './CraftVillageManagementModal.jsx'
@@ -17,6 +18,7 @@ export default function ProductFormModal({
   onClose,
   onSuccess,
   productId = null,
+  variantSource = null,
 }) {
   const { addToast } = useToast()
   const isEdit = Boolean(productId)
@@ -35,6 +37,8 @@ export default function ProductFormModal({
   const [code, setCode] = useState('')
   const [barcode, setBarcode] = useState('')
   const [name, setName] = useState('')
+  const [variantGroup, setVariantGroup] = useState('')
+  const [variantLabel, setVariantLabel] = useState('')
   const [price, setPrice] = useState('')
   const [billableWeightKg, setBillableWeightKg] = useState('')
   const [lowStockThreshold, setLowStockThreshold] = useState('5')
@@ -55,10 +59,10 @@ export default function ProductFormModal({
   const [newMediaType, setNewMediaType] = useState('IMAGE')
   const [newMediaAlt, setNewMediaAlt] = useState('')
 
-  const [loading, setLoading] = useState(Boolean(productId))
+  const [loading, setLoading] = useState(Boolean(productId || variantSource))
   const [masterDataError, setMasterDataError] = useState('')
   const [masterDataReady, setMasterDataReady] = useState(false)
-  const [productReady, setProductReady] = useState(!productId)
+  const [productReady, setProductReady] = useState(!productId && !variantSource)
   const [submitting, setSubmitting] = useState(false)
   const [formErrors, setFormErrors] = useState({})
   const [serverError, setServerError] = useState('')
@@ -67,6 +71,8 @@ export default function ProductFormModal({
     setCode('')
     setBarcode('')
     setName('')
+    setVariantGroup('')
+    setVariantLabel('')
     setPrice('')
     setBillableWeightKg('')
     setLowStockThreshold('5')
@@ -121,14 +127,16 @@ export default function ProductFormModal({
       if (active) setMasterDataError(error.message || 'Không thể tải dữ liệu phân loại. Vui lòng tải lại trước khi lưu.')
     })
 
-    if (productId) {
-      adminProductService
-        .getProductDetail(productId)
+    if (productId || variantSource) {
+      const request = variantSource ? Promise.resolve(variantSource) : adminProductService.getProductDetail(productId)
+      request
         .then((p) => {
           if (active) {
-            setCode(p.code || '')
-            setBarcode(p.barcode || '')
+            setCode(variantSource ? '' : p.code || '')
+            setBarcode(variantSource ? '' : p.barcode || '')
             setName(p.name || '')
+            setVariantGroup(p.variantGroup || '')
+            setVariantLabel(variantSource ? '' : p.variantLabel || '')
             setPrice(p.price != null ? String(p.price) : '')
             setBillableWeightKg(p.billableWeightKg == null ? '' : String(p.billableWeightKg))
             setLowStockThreshold(String(p.lowStockThreshold ?? 5))
@@ -140,7 +148,7 @@ export default function ProductFormModal({
             setMusicalRange(p.musicalRange || '')
             setOrigin(p.origin || '')
             setDescription(p.description || '')
-            setIsActive(Boolean(p.isActive))
+            setIsActive(variantSource ? true : Boolean(p.isActive))
             const sortedMedia = [...(p.media || [])].sort(
               (left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0),
             )
@@ -169,7 +177,7 @@ export default function ProductFormModal({
     return () => {
       active = false
     }
-  }, [isOpen, productId])
+  }, [isOpen, productId, variantSource])
 
   const handleClose = () => {
     if (submitting) return
@@ -300,6 +308,11 @@ export default function ProductFormModal({
     if (submitting || loading || !masterDataReady || !productReady || masterDataError) return
     if (!validate()) return
 
+    if (Boolean(variantGroup.trim()) !== Boolean(variantLabel.trim())) {
+      setFormErrors((previous) => ({ ...previous, variantLabel: 'Nhập cả nhóm sản phẩm và tên biến thể.' }))
+      document.getElementById('product-variant-label')?.focus()
+      return
+    }
     setSubmitting(true)
     setServerError('')
     try {
@@ -307,6 +320,8 @@ export default function ProductFormModal({
         const updatePayload = {
           barcode: barcode.trim() || null,
           name: name.trim(),
+          variantGroup: variantGroup.trim() || null,
+          variantLabel: variantLabel.trim() || null,
           price: Number(price),
           billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
 
@@ -343,6 +358,8 @@ export default function ProductFormModal({
           code: code.trim() ? code.trim().toUpperCase() : null,
           barcode: barcode.trim() || null,
           name: name.trim(),
+          variantGroup: variantGroup.trim() || null,
+          variantLabel: variantLabel.trim() || null,
           price: Number(price),
           billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
 
@@ -520,6 +537,9 @@ export default function ProductFormModal({
                       )}
                     </div>
 
+                    <ProductVariantFields group={variantGroup} label={variantLabel} onGroupChange={setVariantGroup}
+                      onLabelChange={(value) => { setVariantLabel(value); setFormErrors((previous) => ({ ...previous, variantLabel: '' })) }}
+                      error={formErrors.variantLabel} />
                     <div>
                       <label htmlFor="product-price" className="block text-sm font-semibold text-ink mb-1.5">
                         Đơn giá niêm yết (VND) <span className="text-rose-500">*</span>

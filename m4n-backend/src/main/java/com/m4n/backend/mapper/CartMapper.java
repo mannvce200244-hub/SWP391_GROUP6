@@ -29,7 +29,7 @@ public class CartMapper {
         return formatter.format(price) + " ₫";
     }
 
-    public CartItemResponse toCartItemResponse(CartItem item, ProductPrice pricing) {
+    public CartItemResponse toCartItemResponse(CartItem item, ProductPrice pricing, Integer stockQuantity) {
         if (item == null) {
             return null;
         }
@@ -51,7 +51,7 @@ public class CartMapper {
                 item.getId(),
                 product != null ? product.getId() : null,
                 product != null ? product.getCode() : null,
-                product != null ? product.getName() : null,
+                product != null ? product.getDisplayName() : null,
                 unitPrice,
                 formatPriceDisplay(unitPrice),
                 item.getQuantity(),
@@ -59,17 +59,19 @@ public class CartMapper {
                 formatPriceDisplay(subtotal),
                 imageUrl,
                 pricing.originalUnitPrice(),
-                pricing.productDiscountAmount()
+                pricing.productDiscountAmount(),
+                stockQuantity
         );
     }
 
-    public CartResponse toCartResponse(Cart cart, Map<Long, ProductPrice> prices) {
+    public CartResponse toCartResponse(Cart cart, Map<Long, ProductPrice> prices, Map<Long, Integer> stocks) {
         if (cart == null) {
             return new CartResponse(null, 0, Collections.emptyList(), BigDecimal.ZERO, formatPriceDisplay(BigDecimal.ZERO), BigDecimal.ZERO, BigDecimal.ZERO);
         }
 
         List<CartItemResponse> itemResponses = cart.getItems() != null
-                ? cart.getItems().stream().map(item -> toCartItemResponse(item, prices.get(item.getProduct().getId()))).toList()
+                ? cart.getItems().stream().map(item -> toCartItemResponse(item, prices.get(item.getProduct().getId()),
+                    stocks.getOrDefault(item.getProduct().getId(), 0))).toList()
                 : Collections.emptyList();
 
         int totalItems = cart.getItems() != null

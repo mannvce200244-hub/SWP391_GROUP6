@@ -40,6 +40,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByCodeIgnoreCaseAndIdNot(String code, Long id);
 
+    boolean existsByVariantGroupIgnoreCaseAndVariantLabelIgnoreCaseAndIdNot(String group, String label, Long id);
+
     long countByCategoryId(Long categoryId);
 
     @Query("SELECT p.category.id, COUNT(p) FROM Product p WHERE p.category.id IS NOT NULL GROUP BY p.category.id")
@@ -70,7 +72,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             "(:keyword IS NULL OR :keyword = '' OR " +
             "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.barcode) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            "LOWER(p.barcode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(p.variantGroup) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(p.variantLabel) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Product> searchPosProducts(@Param("keyword") String keyword, Pageable pageable);
 
     @EntityGraph(attributePaths = {"category", "artisan", "craftVillage", "media"})

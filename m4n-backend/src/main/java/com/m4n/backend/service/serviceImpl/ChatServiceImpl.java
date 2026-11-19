@@ -106,6 +106,20 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ConversationResponse getStaffConversationSummary(Long conversationId, String staffEmail) {
+        User staff = getUserByEmail(staffEmail);
+        assertOnlineStaff(staff);
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hội thoại."));
+        if (conversation.getStatus() != ConversationStatus.OPEN && (conversation.getAssignedStaff() == null
+                || !conversation.getAssignedStaff().getId().equals(staff.getId()))) {
+            throw new AccessDeniedException("Bạn không có quyền xem hội thoại đã đóng này.");
+        }
+        return toConversationResponse(conversation, staff.getId(), false);
+    }
+
+    @Override
     @Transactional
     public ChatMessageResponse sendMessage(Long conversationId, ChatMessageRequest request, String senderEmail) {
         User sender = getLockedUser(senderEmail);
@@ -141,8 +155,14 @@ public class ChatServiceImpl implements ChatService {
                         "Tin nhắn mới từ khách hàng",
                         sender.getFullName() + ": " + (text.length() > 60 ? text.substring(0, 57) + "..." : text),
                         NotificationType.CHAT,
-                        "/staff/chat"
+                        "/staff/chat?conversationId=" + conversationId
                 );
+            } else {
+                for (User staff : userRepository.findByRole_NameAndIsActiveTrue(RoleName.ONLINE_STAFF)) {
+                    notificationService.createNotification(staff, "Khách hàng đang chờ hỗ trợ",
+                            "Có tin nhắn mới trong hàng đợi hỗ trợ.", NotificationType.CHAT,
+                            "/staff/chat?conversationId=" + conversationId);
+                }
             }
         } else {
             // Staff replied -> notify customer
@@ -151,7 +171,7 @@ public class ChatServiceImpl implements ChatService {
                     "Phản hồi từ bộ phận hỗ trợ M4N",
                     "Nhân viên " + sender.getFullName() + " vừa trả lời tin nhắn của bạn.",
                     NotificationType.CHAT,
-                    "/profile"
+                    "/?chat=" + conversationId
             );
         }
 

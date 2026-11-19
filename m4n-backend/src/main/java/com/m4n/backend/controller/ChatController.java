@@ -63,6 +63,12 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getConversation(id, authentication.getName()));
     }
 
+    @GetMapping("/staff/conversations/{id}/summary")
+    @PreAuthorize("hasRole('ONLINE_STAFF')")
+    public ResponseEntity<ConversationResponse> getStaffConversationSummary(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(chatService.getStaffConversationSummary(id, authentication.getName()));
+    }
+
     @GetMapping("/conversations/{id}/messages")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ONLINE_STAFF')")
     @Operation(summary = "Get messages for conversation", description = "Returns messages newest first; later pages contain older messages. Marks only returned incoming messages read and enforces conversation ownership.")

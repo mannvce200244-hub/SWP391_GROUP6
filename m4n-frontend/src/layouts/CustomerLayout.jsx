@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { OPEN_CUSTOMER_CHAT_EVENT } from '../features/notifications/notificationNavigation.js'
 import SiteFooter from '../components/common/SiteFooter.jsx'
 import SiteHeader from '../components/common/SiteHeader.jsx'
 import CustomerChatWidget from '../features/chat/CustomerChatWidget.jsx'
@@ -9,6 +10,12 @@ import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
 function CustomerLayout({ children, pathname }) {
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
+  const [chatConversationId, setChatConversationId] = useState(null)
+  useEffect(() => {
+    const open = (event) => { setChatConversationId(event.detail?.conversationId ?? null); setIsCartOpen(false); setIsChatOpen(true) }
+    window.addEventListener(OPEN_CUSTOMER_CHAT_EVENT, open)
+    return () => window.removeEventListener(OPEN_CUSTOMER_CHAT_EVENT, open)
+  }, [])
   const { isAuthenticated, user } = useAuth()
   const canOpenCustomerChat = !isAuthenticated || user?.role === 'CUSTOMER'
 
@@ -25,11 +32,12 @@ function CustomerLayout({ children, pathname }) {
         {children}
       </main>
       <SiteFooter
-        onOpenChat={canOpenCustomerChat ? () => setIsChatOpen(true) : undefined}
+        onOpenChat={canOpenCustomerChat ? () => { setChatConversationId(null); setIsChatOpen(true) } : undefined}
         supportHref={user?.role === 'ONLINE_STAFF' ? CUSTOMER_ROUTES.staffChat : undefined}
       />
       {!isCartOpen && <WorkbenchFloatingButton />}
-      {!isCartOpen && <CustomerChatWidget isOpen={isChatOpen} onOpenChange={setIsChatOpen} />}
+      {!isCartOpen && <CustomerChatWidget conversationId={chatConversationId} isOpen={isChatOpen}
+        onOpenChange={(open) => { setIsChatOpen(open); if (!open) setChatConversationId(null) }} />}
     </div>
   )
 }

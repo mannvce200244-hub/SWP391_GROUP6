@@ -1,3 +1,5 @@
+import PosVariantDialog from '../features/pos/PosVariantDialog.jsx'
+import QuantitySelector from '../components/ui/QuantitySelector.jsx'
 import VoucherSuggestions from '../features/checkout/VoucherSuggestions.jsx'
 import PosCustomerFields from '../features/pos/PosCustomerFields.jsx'
 import PosScannerDialog from '../features/pos/PosScannerDialog.jsx'
@@ -44,7 +46,13 @@ function PosDashboardPage() {
   const [lookupLoading, setLookupLoading] = useState(false)
 
   // Current POS Bill State
-  const [billItems, setBillItems] = useState([])
+  const [billItems, setBillItemsState] = useState([])
+  const billItemsRef = useRef([])
+  const setBillItems = useCallback((next) => {
+    const items = typeof next === 'function' ? next(billItemsRef.current) : next
+    billItemsRef.current = items
+    setBillItemsState(items)
+  }, [])
   const [voucherCode, setVoucherCode] = useState('')
   const voucherPreviewVersionRef = useRef(0)
   const [voucherState, setVoucherState] = useState({
@@ -76,9 +84,13 @@ function PosDashboardPage() {
 
   // Camera Scanner Modal State
   const [scannerOpen, setScannerOpen] = useState(false)
+  const [variantProduct, setVariantProduct] = useState(null)
   // Success Modal State
   const [successSale, setSuccessSale] = useState(null)
   const salePreview = usePosSalePreview(billItems, voucherState.applied ? voucherCode.trim() : '')
+  const availableQuantity = (item) => salePreview.data?.items?.find((entry) => entry.productId === item.productId)?.availableQuantity
+    ?? Math.min(salePreview.knownStock[item.productId] ?? Number.MAX_SAFE_INTEGER,
+      catalog.find((entry) => entry.id === item.productId)?.quantity ?? item.availableQuantity ?? 0)
 
   useEffect(() => {
     let active = true
@@ -120,6 +132,12 @@ function PosDashboardPage() {
   // 2. Add product to Bill
   const handleAddToBill = useCallback((product) => {
     if (salePending.current || successSale || vnpayPaymentId) return
+    const existingItem = billItemsRef.current.find((item) => item.productId === product.id)
+    const available = Math.min(product.quantity, salePreview.knownStock[product.id] ?? product.quantity)
+    if ((existingItem?.quantity ?? 0) >= available) {
+      addToast({ message: `Chỉ còn ${available} sản phẩm “${product.name}”.`, type: 'error' })
+      return
+    }
     voucherPreviewVersionRef.current += 1
     setVoucherState((previous) => previous.applied || previous.loading
       ? { applied: false, discount: 0, message: 'Hóa đơn đã thay đổi. Vui lòng áp dụng lại voucher.', loading: false }
@@ -129,7 +147,7 @@ function PosDashboardPage() {
       if (existing) {
         return prev.map((item) =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + 1, availableQuantity: product.quantity }
             : item
         )
       }
@@ -151,25 +169,21 @@ function PosDashboardPage() {
       message: `Đã thêm '${product.name}' vào đơn hàng.`,
       type: 'success',
     })
-  }, [addToast, successSale, vnpayPaymentId])
+  }, [addToast, successSale, vnpayPaymentId, setBillItems, salePreview.knownStock])
 
   // 3. Update quantity
-  const handleUpdateQty = (productId, delta) => {
+  const handleUpdateQty = (productId, quantity) => {
+    const item = billItemsRef.current.find((entry) => entry.productId === productId)
+    const available = item ? availableQuantity(item) : 0
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > available) {
+      addToast({ message: `Chỉ còn ${available} sản phẩm trong kho.`, type: 'error' })
+      return
+    }
     voucherPreviewVersionRef.current += 1
     setVoucherState((previous) => previous.applied || previous.loading
       ? { applied: false, discount: 0, message: 'Hóa đơn đã thay đổi. Vui lòng áp dụng lại voucher.', loading: false }
       : previous)
-    setBillItems((prev) =>
-      prev
-        .map((item) => {
-          if (item.productId === productId) {
-            const nextQty = item.quantity + delta
-            return nextQty > 0 ? { ...item, quantity: nextQty } : item
-          }
-          return item
-        })
-        .filter((item) => item.quantity > 0)
-    )
+    setBillItems((previous) => previous.map((entry) => entry.productId === productId ? { ...entry, quantity } : entry))
   }
 
   // 4. Remove item from Bill
@@ -491,9 +505,9 @@ function PosDashboardPage() {
       </div>
 
       {/* Main 2-Column POS Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div className="grid min-h-0 grid-cols-1 lg:grid-cols-12 gap-5 lg:h-[calc(100dvh-12rem)]">
         {/* Left Column: Product Catalog Grid (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col gap-3">
+        <div className="lg:col-span-7 min-h-0 min-w-0 flex flex-col gap-3 max-h-[45dvh] lg:max-h-none overflow-y-auto overscroll-contain">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-bold text-ink uppercase tracking-wider">
               Danh mục nhạc cụ showroom ({catalog.length})
@@ -520,14 +534,14 @@ function PosDashboardPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {catalog.map((prod) => {
-                const isOutOfStock = prod.quantity <= 0
+                const isOutOfStock = !prod.variantGroup && prod.quantity <= 0
                 return (
                   <button
                     key={prod.id}
                     type="button"
                     disabled={isOutOfStock}
-                    onClick={() => handleAddToBill(prod)}
-                    className={`bg-surface rounded-xl border border-border p-3 flex flex-col justify-between text-left shadow-xs hover:shadow-md hover:border-brand/60 transition-all group cursor-pointer ${
+                    onClick={() => prod.variantGroup ? setVariantProduct(prod) : handleAddToBill(prod)}
+                    className={`min-w-0 w-full bg-surface rounded-xl border border-border p-3 flex flex-col justify-between text-left shadow-xs hover:shadow-md hover:border-brand/60 transition-all group cursor-pointer ${
                       isOutOfStock ? 'opacity-60 cursor-not-allowed bg-canvas' : ''
                     }`}
                   >
@@ -560,7 +574,7 @@ function PosDashboardPage() {
 
                       {/* Info */}
                       <div className="flex flex-col">
-                        <span className="text-xs text-muted font-mono">{prod.code}</span>
+                        <span className="text-xs text-muted font-mono break-all">{prod.code}</span>
                         <h4 className="text-xs font-bold text-ink line-clamp-2 leading-tight group-hover:text-brand transition-colors mt-0.5">
                           {prod.name}
                         </h4>
@@ -584,9 +598,9 @@ function PosDashboardPage() {
         </div>
 
         {/* Right Column: Current Bill & Payment Panel (5 cols) */}
-        <div className="lg:col-span-5 bg-surface rounded-2xl border border-border shadow-xs flex flex-col overflow-hidden sticky top-20">
+        <div className="lg:col-span-5 min-h-0 lg:h-full max-h-[calc(100dvh-7rem)] bg-white rounded-2xl border border-border shadow-xs flex flex-col overflow-hidden">
           {/* Bill Header */}
-          <div className="p-4 border-b border-border bg-surface-secondary/30 flex items-center justify-between">
+          <div className="shrink-0 p-4 border-b border-border bg-surface-secondary flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-ink uppercase tracking-wider">Hóa đơn hiện tại</h3>
               <span className="px-2 py-0.5 rounded-full bg-brand text-white text-xs font-semibold">
@@ -604,6 +618,7 @@ function PosDashboardPage() {
             )}
           </div>
 
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {/* Bill Items List */}
           <div className="p-4 flex flex-col gap-2.5 max-h-72 overflow-y-auto divide-y divide-border/60">
             {billItems.length === 0 ? (
@@ -616,8 +631,8 @@ function PosDashboardPage() {
               </div>
             ) : (
               billItems.map((item) => (
-                <div key={item.productId} className="pt-2.5 first:pt-0 flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div key={item.productId} className="pt-2.5 first:pt-0 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto sm:flex-1">
                     {item.primaryImage ? (
                       <img
                         src={item.primaryImage}
@@ -630,31 +645,14 @@ function PosDashboardPage() {
                       </div>
                     )}
                     <div className="flex flex-col min-w-0">
-                      <span className="font-bold text-ink truncate">{item.name}</span>
+                      <span className="font-bold text-ink break-words">{item.name}</span>
                       <span className="text-xs text-muted font-mono">{formatCurrencyVND(item.price)}</span>
                     </div>
                   </div>
 
-                  {/* Quantity controls */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      aria-label={`Giảm số lượng ${item.name}`}
-                      onClick={() => handleUpdateQty(item.productId, -1)}
-                      className="w-6 h-6 rounded-md border border-border bg-canvas hover:bg-surface-secondary text-ink font-bold flex items-center justify-center cursor-pointer transition-colors"
-                    >
-                      -
-                    </button>
-                    <span className="w-6 text-center font-bold text-ink font-mono">{item.quantity}</span>
-                    <button
-                      type="button"
-                      aria-label={`Tăng số lượng ${item.name}`}
-                      onClick={() => handleUpdateQty(item.productId, 1)}
-                      className="w-6 h-6 rounded-md border border-border bg-canvas hover:bg-surface-secondary text-ink font-bold flex items-center justify-center cursor-pointer transition-colors"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <QuantitySelector label={`Số lượng ${item.name}`} value={item.quantity}
+                    max={availableQuantity(item)}
+                    onChange={(quantity) => handleUpdateQty(item.productId, quantity)} />
 
                   {/* Line Total & Remove */}
                   <div className="flex items-center gap-2 shrink-0">
@@ -843,13 +841,16 @@ function PosDashboardPage() {
                 setCustomerError('')
               }} />
 
+          </div>
+          </div>
+          <div className="shrink-0 border-t border-border bg-white p-3">
             {/* Checkout Action Button */}
             {vnpayAmountInvalid && <p role="alert" className="text-xs text-danger">VNPay yêu cầu tổng thanh toán nguyên VND từ 5.000 đến 9.999.999.999 ₫. Vui lòng chọn tiền mặt.</p>}
             <button
               type="button"
               disabled={submittingSale || billItems.length === 0 || cashInsufficient || Boolean(vnpayAmountInvalid) || salePreview.loading || Boolean(salePreview.error) || !salePreview.data || Boolean(salePreview.data?.stockWarnings?.length)}
               onClick={handleFinalizeSale}
-              className="w-full mt-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full mt-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               {submittingSale ? (
                 <>
@@ -870,6 +871,8 @@ function PosDashboardPage() {
       {/* Camera Scanner Modal */}
       </fieldset>
       <ConfirmDialog isOpen={clearConfirmOpen} title="Xóa toàn bộ hóa đơn đang nhập?" description="Các sản phẩm và voucher trong hóa đơn này sẽ được xóa." confirmLabel="Xóa hóa đơn" onConfirm={handleClearBill} onCancel={() => setClearConfirmOpen(false)} variant="danger" />
+      {variantProduct && <PosVariantDialog product={variantProduct} onClose={() => setVariantProduct(null)}
+        onSelect={(variant) => { handleAddToBill(variant); setVariantProduct(null) }} />}
       {scannerOpen && <PosScannerDialog onClose={() => setScannerOpen(false)} onProduct={handleAddToBill} />}
 
       {successSale && <PosReceiptDialog sale={successSale} staffName={user?.fullName} onNewSale={handleNewSale} />}

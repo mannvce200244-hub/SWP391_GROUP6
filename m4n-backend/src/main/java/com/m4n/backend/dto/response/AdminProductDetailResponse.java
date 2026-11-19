@@ -27,5 +27,7 @@ public record AdminProductDetailResponse(
         Instant updatedAt,
         Integer lowStockThreshold,
         BigDecimal billableWeightKg,
-        BigDecimal bulkySurcharge
+        BigDecimal bulkySurcharge,
+        String variantGroup,
+        String variantLabel
 ) {}

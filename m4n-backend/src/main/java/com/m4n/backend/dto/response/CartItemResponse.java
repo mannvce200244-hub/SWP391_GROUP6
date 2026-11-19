@@ -14,5 +14,6 @@ public record CartItemResponse(
         String subtotalDisplay,
         String imageUrl,
         BigDecimal originalUnitPrice,
-        BigDecimal productDiscountAmount
+        BigDecimal productDiscountAmount,
+        Integer stockQuantity
 ) {}

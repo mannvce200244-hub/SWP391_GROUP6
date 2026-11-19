@@ -9,7 +9,8 @@ import EditorialEyebrow from '../../components/common/EditorialEyebrow.jsx'
 import ArtisanVillageSection from './ArtisanVillageSection.jsx'
 import ProductGallery from './ProductGallery.jsx'
 import ProductSpecs from './ProductSpecs.jsx'
-import QuantitySelector from './QuantitySelector.jsx'
+import QuantitySelector from '../../components/ui/QuantitySelector.jsx'
+import ProductVariantPicker from './ProductVariantPicker.jsx'
 
 function ProductDetailInfo({ product }) {
   const [quantity, setQuantity] = useState(1)
@@ -177,6 +178,8 @@ function ProductDetailInfo({ product }) {
             )}
           </div>
 
+          {product.variantGroup && <ProductVariantPicker key={product.id} product={product}
+            onSelect={(variant) => { if (variant.id !== product.id) navigateTo(CUSTOMER_ROUTES.productDetail(variant.id)) }} />}
           {/* Purchase / Add to Cart Actions */}
           {canPurchase ? (
           <div className="pt-3 flex flex-col gap-3">

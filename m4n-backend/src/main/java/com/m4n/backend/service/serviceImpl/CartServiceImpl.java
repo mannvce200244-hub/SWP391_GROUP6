@@ -15,6 +15,7 @@ import com.m4n.backend.repository.CartItemRepository;
 import com.m4n.backend.repository.CartRepository;
 import com.m4n.backend.repository.ProductRepository;
 import com.m4n.backend.repository.UserRepository;
+import com.m4n.backend.repository.InventoryRepository;
 import com.m4n.backend.service.CartService;
 import com.m4n.backend.service.ProductPricingService;
 import com.m4n.backend.validation.MoneyValidation;
@@ -33,6 +34,7 @@ public class CartServiceImpl implements CartService {
     private final UserRepository userRepository;
     private final CartMapper cartMapper;
     private final ProductPricingService productPricingService;
+    private final InventoryRepository inventoryRepository;
 
     public CartServiceImpl(
             CartRepository cartRepository,
@@ -40,7 +42,8 @@ public class CartServiceImpl implements CartService {
             ProductRepository productRepository,
             UserRepository userRepository,
             CartMapper cartMapper,
-            ProductPricingService productPricingService
+            ProductPricingService productPricingService,
+            InventoryRepository inventoryRepository
     ) {
         this.cartRepository = cartRepository;
         this.cartItemRepository = cartItemRepository;
@@ -48,6 +51,7 @@ public class CartServiceImpl implements CartService {
         this.userRepository = userRepository;
         this.cartMapper = cartMapper;
         this.productPricingService = productPricingService;
+        this.inventoryRepository = inventoryRepository;
     }
 
     @Override
@@ -74,6 +78,8 @@ public class CartServiceImpl implements CartService {
         CartItem existingItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), product.getId())
                 .orElse(null);
         validateTotalQuantity(cart, null, request.quantity());
+        long requested = (long) request.quantity() + (existingItem == null ? 0 : existingItem.getQuantity());
+        validateStock(product.getId(), requested);
 
         if (existingItem != null) {
             try {
@@ -117,6 +123,7 @@ public class CartServiceImpl implements CartService {
         if (request.quantity() <= 0) {
             cart.getItems().remove(item);
         } else {
+            validateStock(item.getProduct().getId(), request.quantity());
             item.setQuantity(request.quantity());
             cartItemRepository.save(item);
         }
@@ -159,11 +166,20 @@ public class CartServiceImpl implements CartService {
     }
 
     private CartResponse cartResponse(Cart cart) {
-        CartResponse response = cartMapper.toCartResponse(cart, productPricingService.resolvePrices(
-                cart.getItems().stream().map(CartItem::getProduct).distinct().toList()));
+        var products = cart.getItems().stream().map(CartItem::getProduct).distinct().toList();
+        var stocks = inventoryRepository.findByProductIdIn(products.stream().map(Product::getId).toList()).stream()
+                .collect(java.util.stream.Collectors.toMap(i -> i.getProduct().getId(), i -> i.getQuantity()));
+        CartResponse response = cartMapper.toCartResponse(cart, productPricingService.resolvePrices(products), stocks);
         MoneyValidation.requireSupported(response.totalAmount());
         MoneyValidation.requireSupported(response.originalTotalAmount());
         return response;
+    }
+
+    private void validateStock(Long productId, long quantity) {
+        int available = inventoryRepository.findByProductId(productId).map(i -> i.getQuantity()).orElse(0);
+        if (quantity > available) {
+            throw new IllegalArgumentException("Sản phẩm chỉ còn " + available + " trong kho. Vui lòng giảm số lượng.");
+        }
     }
 
     private Cart getOrCreateCart(User user) {

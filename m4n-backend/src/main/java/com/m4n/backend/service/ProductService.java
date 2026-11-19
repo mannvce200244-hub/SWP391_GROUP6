@@ -12,6 +12,8 @@ public interface ProductService {
 
     ProductDetailResponse getProductDetail(Long productId);
 
+    Page<ProductSummaryResponse> listVariants(Long productId, Pageable pageable);
+
     Page<ProductSummaryResponse> listProducts(
             String keyword,
             String group,

@@ -31,6 +31,7 @@ export default function useDirectPurchase() {
     productId: product.id,
     productName: product.name,
     quantity: directPurchase.quantity,
+    stockQuantity: product.stockQuantity,
     imageUrl: getFirstProductImage(product.media)?.url,
     unitPriceDisplay: product.priceDisplay || formatCurrencyVND(product.price),
     subtotalDisplay: formatCurrencyVND(Number(product.price) * directPurchase.quantity),

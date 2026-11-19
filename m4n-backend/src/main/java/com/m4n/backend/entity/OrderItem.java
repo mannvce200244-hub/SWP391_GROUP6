@@ -38,7 +38,7 @@ public class OrderItem {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(name = "product_name", nullable = false, length = 200)
+    @Column(name = "product_name", nullable = false, length = 303)
     private String productName;
 
     @Column(name = "product_code", nullable = false, length = 50)

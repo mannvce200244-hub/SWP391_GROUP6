@@ -35,7 +35,7 @@ public class InventoryMovement {
 
     @Column(name = "product_code", length = 50)
     private String productCode;
-    @Column(name = "product_name", length = 200)
+    @Column(name = "product_name", length = 303)
     private String productName;
     @Builder.Default
     @Column(name = "rejected_quantity")

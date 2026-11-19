@@ -5,6 +5,7 @@ import LoadingState from '../../components/ui/LoadingState.jsx'
 import EmptyState from '../../components/ui/EmptyState.jsx'
 import ErrorState from '../../components/ui/ErrorState.jsx'
 import useToast from '../../components/ui/useToast.js'
+import { openNotification } from '../../features/notifications/notificationNavigation.js'
 
 function StaffNotificationsPage() {
   const { addToast } = useToast()
@@ -134,7 +135,7 @@ function StaffNotificationsPage() {
               <button
                 key={n.id}
                 type="button"
-                onClick={() => handleMarkRead(n)}
+                onClick={() => { handleMarkRead(n); openNotification(n, 'ONLINE_STAFF') }}
                 className={`w-full text-left p-4 flex items-start gap-3 hover:bg-surface-secondary/50 transition-colors cursor-pointer ${
                   !isRead ? 'bg-jade-soft/30' : ''
                 }`}

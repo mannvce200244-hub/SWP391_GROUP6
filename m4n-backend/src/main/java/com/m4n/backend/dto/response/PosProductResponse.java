@@ -26,4 +26,6 @@ public class PosProductResponse {
     private String primaryImage;
     private Integer quantity;
     private String availability;
+    private String variantGroup;
+    private String variantLabel;
 }

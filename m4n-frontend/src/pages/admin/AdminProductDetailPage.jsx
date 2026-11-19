@@ -28,6 +28,7 @@ export default function AdminProductDetailPage({ productId }) {
 
   // Modals & Action states
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showVariantModal, setShowVariantModal] = useState(false)
   const [togglingStatus, setTogglingStatus] = useState(false)
 
   useEffect(() => {
@@ -158,6 +159,7 @@ export default function AdminProductDetailPage({ productId }) {
             <h1 className="text-2xl sm:text-3xl font-bold text-ink tracking-tight">
               {product.name}
             </h1>
+            {product.variantLabel && <span className="rounded-lg border border-border bg-surface-secondary px-3 py-1 text-sm font-semibold text-ink">{product.variantLabel}</span>}
             <span
               className={`px-3 py-1 rounded-full text-xs font-semibold border ${
                 product.isActive
@@ -187,6 +189,11 @@ export default function AdminProductDetailPage({ productId }) {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
+          <button type="button" className="min-h-11 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-surface-secondary"
+            onClick={() => {
+              if (product.variantGroup && product.variantLabel) setShowVariantModal(true)
+              else { setShowEditModal(true); addToast({ message: 'Điền nhóm và tên biến thể hiện tại trước, ví dụ: Sáo trúc / Tone Đô.', type: 'info' }) }
+            }}>Thêm biến thể</button>
           <button
             type="button"
             onClick={handleToggleStatus}
@@ -489,6 +496,9 @@ export default function AdminProductDetailPage({ productId }) {
         </div>
       </div>
 
+      {product.variantLabel && <p className="text-sm text-muted">Nhóm: {product.variantGroup} · Biến thể: {product.variantLabel}</p>}
+      {showVariantModal && <ProductFormModal isOpen variantSource={product} onClose={() => setShowVariantModal(false)}
+        onSuccess={(id) => { setShowVariantModal(false); navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(id)) }} />}
       {/* Edit Product Modal */}
       {showEditModal && <ProductFormModal
         isOpen={showEditModal}

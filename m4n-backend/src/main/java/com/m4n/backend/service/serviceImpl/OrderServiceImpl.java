@@ -68,6 +68,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -153,6 +154,8 @@ public class OrderServiceImpl implements OrderService {
         int totalItems = 0;
         Map<Long, Product> products = sellableProducts(selectedItems);
         Map<Long, ProductPrice> prices = productPricingService.resolvePrices(new ArrayList<>(products.values()));
+        Map<Long, Integer> previewStocks = inventoryRepository.findByProductIdIn(products.keySet()).stream()
+                .collect(Collectors.toMap(i -> i.getProduct().getId(), Inventory::getQuantity));
 
         for (CartItem item : selectedItems) {
             // Load fresh product from DB for authoritative price and sellability
@@ -163,7 +166,7 @@ public class OrderServiceImpl implements OrderService {
             subtotal = subtotal.add(lineTotal);
             originalTotal = originalTotal.add(pricing.originalUnitPrice().multiply(BigDecimal.valueOf(qty)));
             totalItems = Math.addExact(totalItems, qty);
-            previewItems.add(cartMapper.toCartItemResponse(item, pricing));
+            previewItems.add(cartMapper.toCartItemResponse(item, pricing, previewStocks.getOrDefault(item.getProduct().getId(), 0)));
         }
 
         String voucherCode = request != null ? request.voucherCode() : null;
@@ -256,7 +259,7 @@ public class OrderServiceImpl implements OrderService {
             int availableQuantity = inventory == null || inventory.getQuantity() == null ? 0 : inventory.getQuantity();
             if (qty > availableQuantity) {
                 throw new InsufficientStockException(
-                        "Sản phẩm '" + product.getName() + "' chỉ còn " + availableQuantity
+                        "Sản phẩm '" + product.getDisplayName() + "' chỉ còn " + availableQuantity
                                 + " sản phẩm. Vui lòng điều chỉnh số lượng trước khi đặt hàng."
                 );
             }
@@ -267,7 +270,7 @@ public class OrderServiceImpl implements OrderService {
 
             OrderItem orderItem = OrderItem.builder()
                     .product(product)
-                    .productName(product.getName())
+                    .productName(product.getDisplayName())
                     .productCode(product.getCode())
                     .price(unitPrice)
                     .originalUnitPrice(pricing.originalUnitPrice())
