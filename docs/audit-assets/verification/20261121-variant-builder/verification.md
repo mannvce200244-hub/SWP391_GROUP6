@@ -119,3 +119,26 @@ created by this task; the normal local backend was restarted with the new JAR.
   (294 lines). This recheck adds only the SKU key to its existing quantity
   control. Splitting the larger purchase/detail view is outside this focused
   fix; no new behavior boundary or dependency was added.
+
+## Variant form context on 2026-11-21
+
+- Adding from an existing SKU now uses “Thêm biến thể cho …”, an explanation
+  of prefilled attributes/new identifiers, “Thông tin biến thể mới”, “Tạo biến
+  thể”, and a variant-specific success message/zero-stock note. Independent
+  product creation and editing retain their own existing titles and actions.
+- The close control is 44px and does not shrink against a long group title.
+  The heading can wrap while retaining its dialog accessible name.
+- Browser on loopback `m4n_test`: opening from receiving prefilled the existing
+  name/group/price/gallery; code/barcode/label were empty. Created Tone La (A)
+  21/11 at 820,000 VND as SKU 1560. The parent receipt selected that new SKU.
+  Source SKU 1555 retained its label, price 650,000 VND and stock 0; new stock
+  remained 0. No receipt or payment was submitted. See `variant-context-form.jpg`.
+- Browser verified existing edit still shows “Lưu thay đổi” and standalone
+  creation still shows “Tạo sản phẩm”. Both were cancelled without saving.
+- All 103 frontend tests, lint and production build passed. No backend/API,
+  dependency, database schema, or business-rule change.
+- Large file detected: m4n-frontend/src/components/admin/ProductFormModal.jsx.
+  This existing large form receives only contextual labels and header sizing;
+  a full form refactor is outside the requested correction.
+- Test session/tab/services were cleaned up. Normal 8080/5173 remain running;
+  no production data was changed by this task.
