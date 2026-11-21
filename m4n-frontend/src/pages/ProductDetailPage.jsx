@@ -6,12 +6,18 @@ import ProductDetailInfo from '../features/catalog/ProductDetailInfo.jsx'
 import ProductReviewsSection from '../features/reviews/ProductReviewsSection.jsx'
 import RelatedArticles from '../features/content/RelatedArticles.jsx'
 import RouterLink from '../routes/RouterLink.jsx'
-import { CUSTOMER_ROUTES } from '../routes/customerRoutes.js'
+import { CUSTOMER_ROUTES, navigateTo } from '../routes/customerRoutes.js'
 import productService from '../services/productService.js'
 
 function ProductDetailPage({ productId }) {
   const [requestSequence, setRequestSequence] = useState(0)
   const [detail, setDetail] = useState({ status: 'loading', product: null })
+  const [selection, setSelection] = useState(null)
+  const current = detail.productId === String(productId) && detail.sequence === requestSequence
+  const selected = selection?.id === Number(productId) ? selection : null
+  const product = current ? detail.product : selected ? { ...detail.product, ...selected } : null
+  const switching = !current && Boolean(selected)
+  const loading = !current && !selected
 
   useEffect(() => {
     let active = true
@@ -20,12 +26,12 @@ function ProductDetailPage({ productId }) {
       .getProductById(productId)
       .then((product) => {
         if (active) {
-          setDetail({ status: 'success', product })
+          setDetail({ status: 'success', product, productId: String(productId), sequence: requestSequence })
         }
       })
       .catch(() => {
         if (active) {
-          setDetail({ status: 'error', product: null })
+          setDetail({ status: 'error', product: null, productId: String(productId), sequence: requestSequence })
         }
       })
 
@@ -35,21 +41,26 @@ function ProductDetailPage({ productId }) {
   }, [productId, requestSequence])
 
   useEffect(() => {
-    if (detail.product?.name) {
+    if (product?.name) {
       const originalTitle = document.title
-      document.title = `${detail.product.name} · M4N Nhạc Cụ Truyền Thống`
+      document.title = `${product.name} · M4N Nhạc Cụ Truyền Thống`
       return () => {
         document.title = originalTitle
       }
     }
-  }, [detail.product?.name])
+  }, [product?.name])
 
   const retry = () => {
     setDetail({ status: 'loading', product: null })
     setRequestSequence((current) => current + 1)
   }
 
-  const productName = detail.product?.name
+  const productName = product?.name
+  const selectVariant = (variant) => {
+    if (variant.id === Number(productId)) return
+    setSelection(variant)
+    navigateTo(CUSTOMER_ROUTES.productDetail(variant.id), { preserveScroll: true })
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
@@ -90,12 +101,12 @@ function ProductDetailPage({ productId }) {
 
       {/* Main Content Area */}
       <section
-        aria-busy={detail.status === 'loading'}
+        aria-busy={loading || switching}
         aria-label="Chi tiết sản phẩm"
       >
-        {detail.status === 'loading' ? <ProductDetailSkeleton /> : null}
+        {loading ? <ProductDetailSkeleton /> : null}
 
-        {detail.status === 'error' ? (
+        {current && detail.status === 'error' ? (
           <div className="py-12">
             <ErrorState
               message="Không thể lấy thông tin chi tiết nhạc cụ lúc này. Vui lòng thử lại hoặc kiểm tra kết nối."
@@ -104,7 +115,7 @@ function ProductDetailPage({ productId }) {
           </div>
         ) : null}
 
-        {detail.status === 'success' && !detail.product ? (
+        {current && detail.status === 'success' && !product ? (
           <div className="py-12">
             <EmptyState
               message="Nhạc cụ này có thể đã dừng lưu hành hoặc đường dẫn không còn hiệu lực."
@@ -120,14 +131,15 @@ function ProductDetailPage({ productId }) {
           </div>
         ) : null}
 
-        {detail.status === 'success' && detail.product ? (
+        {product ? (
           <>
-            <ProductDetailInfo key={`product-${detail.product.id}`} product={detail.product} />
-            <RelatedArticles key={detail.product.id} productId={detail.product.id} />
+            <ProductDetailInfo product={product} switching={switching} onSelectVariant={selectVariant} />
+            {!switching && <RelatedArticles key={product.id} productId={product.id} />}
+            {!switching &&
             <ProductReviewsSection
-              productId={detail.product.id}
-              productName={detail.product.name}
-            />
+              productId={product.id}
+              productName={product.name}
+            />}
           </>
         ) : null}
       </section>

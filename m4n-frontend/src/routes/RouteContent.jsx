@@ -92,7 +92,7 @@ function RouteSkeleton({ pathname }) {
 
 export default function RouteContent({ children, pathname }) {
   return (
-    <Suspense key={pathname} fallback={<RouteSkeleton pathname={pathname} />}>
+    <Suspense key={matchProductDetailPath(pathname) ? '/products/:id' : pathname} fallback={<RouteSkeleton pathname={pathname} />}>
       {children}
     </Suspense>
   )

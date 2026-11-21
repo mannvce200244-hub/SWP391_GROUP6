@@ -1,6 +1,7 @@
 package com.m4n.backend.service;
 
 import com.m4n.backend.dto.request.CreateProductRequest;
+import com.m4n.backend.dto.request.CreateProductVariantsRequest;
 import com.m4n.backend.entity.Category;
 import com.m4n.backend.repository.CategoryRepository;
 import org.junit.jupiter.api.*;
@@ -89,6 +90,41 @@ class ProductImageIntegrationTest {
     private CreateProductRequest request(String code) {
         return new CreateProductRequest(code, null, "Uploaded instrument", BigDecimal.valueOf(100000), category.getId(),
                 null, null, "Wood", "30 x 20 x 10 cm", null, null, "Upload fixture", List.of(), 5, BigDecimal.ONE, BigDecimal.ZERO, null, null);
+    }
+
+    private CreateProductRequest variant(String group, String label) {
+        var base = request(null);
+        return new CreateProductRequest(null, null, base.name(), base.price(), base.categoryId(), null, null,
+                base.material(), base.dimensions(), null, base.origin(), null, List.of(), 5, null, null, group, label);
+    }
+
+    @Test void variantUploadIsSharedAndRolledBackWithTheEntireBatch() throws Exception {
+        String group = "Uploaded tones " + UUID.randomUUID();
+        var created = images.createVariants(new CreateProductVariantsRequest(List.of(variant(group, "C"), variant(group, "D"))), List.of(png("tones.png")));
+        assertThat(created).hasSize(2);
+        assertThat(created.getFirst().media().getFirst().url()).isEqualTo(created.getLast().media().getFirst().url());
+        long before;
+        try (var files = Files.list(DIR)) { before = files.count(); }
+        var duplicate = variant("Rollback tones " + UUID.randomUUID(), "C");
+        assertThatThrownBy(() -> images.createVariants(new CreateProductVariantsRequest(List.of(duplicate, duplicate)), List.of(png("rollback.png"))))
+                .isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class);
+        try (var files = Files.list(DIR)) { assertThat(files.count()).isEqualTo(before); }
+    }
+
+    @Test void variantBatchEndpointsValidateNestedRowsAndRequireAdmin() throws Exception {
+        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+        String payload = new ObjectMapper().writeValueAsString(new CreateProductVariantsRequest(List.of(variant("Web tones " + UUID.randomUUID(), "C"))));
+        mvc.perform(post("/api/v1/admin/products/variants").contentType("application/json").content(payload))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/admin/products/variants").contentType("application/json").content(payload)
+                        .with(user("customer@example.test").roles("CUSTOMER"))).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/products/variants").contentType("application/json").content("{\"variants\":[null]}")
+                        .with(user("admin@example.test").roles("ADMIN"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/admin/products/variants").contentType("application/json").content(payload)
+                        .with(user("admin@example.test").roles("ADMIN"))).andExpect(status().isCreated())
+                .andExpect(jsonPath("$[0].stockQuantity").value(0));
+        mvc.perform(get("/api/v1/admin/products/1/variants").with(user("cashier@example.test").roles("POS_STAFF")))
+                .andExpect(status().isForbidden());
     }
     private MockMultipartFile png(String filename) throws Exception {
         var bytes = new ByteArrayOutputStream(); ImageIO.write(new BufferedImage(8, 8, BufferedImage.TYPE_INT_RGB), "png", bytes);

@@ -46,6 +46,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
             "(:keyword IS NULL OR :keyword = '' OR " +
             "LOWER(i.product.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(i.product.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(i.product.variantGroup) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+            "LOWER(i.product.variantLabel) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(i.product.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
             "(:status IS NULL OR :status = '' OR " +
             "(:status = 'IN_STOCK' AND i.quantity > COALESCE(i.product.lowStockThreshold, 5)) OR " +

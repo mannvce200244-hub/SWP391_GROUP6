@@ -311,7 +311,7 @@ function CurrentRoute() {
     const villageSlugOrId = matchCraftVillageDetailPath(pathname)
 
     if (productId) {
-      pageContent = <ProductDetailPage key={productId} productId={productId} />
+      pageContent = <ProductDetailPage productId={productId} />
     } else if (artisanId) {
       pageContent = <ArtisanDetailPage artisanId={artisanId} key={artisanId} />
     } else if (articleId) {

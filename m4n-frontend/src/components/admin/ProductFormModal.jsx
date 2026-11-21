@@ -7,6 +7,8 @@ import useToast from '../ui/useToast.js'
 import useDialogFocus from '../../hooks/useDialogFocus.js'
 import Input from '../ui/Input.jsx'
 import ProductVariantFields from './ProductVariantFields.jsx'
+import ProductVariantRows from './ProductVariantRows.jsx'
+import { variantFormErrors, variantRequests } from '../../features/catalog/productVariantForm.js'
 import CategoryManagementModal from './CategoryManagementModal.jsx'
 import ArtisanManagementModal from './ArtisanManagementModal.jsx'
 import CraftVillageManagementModal from './CraftVillageManagementModal.jsx'
@@ -22,6 +24,7 @@ export default function ProductFormModal({
 }) {
   const { addToast } = useToast()
   const isEdit = Boolean(productId)
+  const isVariant = !isEdit && Boolean(variantSource)
 
   // Master data state
   const [categories, setCategories] = useState([])
@@ -39,6 +42,7 @@ export default function ProductFormModal({
   const [name, setName] = useState('')
   const [variantGroup, setVariantGroup] = useState('')
   const [variantLabel, setVariantLabel] = useState('')
+  const [variantRows, setVariantRows] = useState([])
   const [price, setPrice] = useState('')
   const [billableWeightKg, setBillableWeightKg] = useState('')
   const [lowStockThreshold, setLowStockThreshold] = useState('5')
@@ -73,6 +77,7 @@ export default function ProductFormModal({
     setName('')
     setVariantGroup('')
     setVariantLabel('')
+    setVariantRows([])
     setPrice('')
     setBillableWeightKg('')
     setLowStockThreshold('5')
@@ -308,7 +313,7 @@ export default function ProductFormModal({
     if (submitting || loading || !masterDataReady || !productReady || masterDataError) return
     if (!validate()) return
 
-    if (Boolean(variantGroup.trim()) !== Boolean(variantLabel.trim())) {
+    if (Boolean(variantGroup.trim()) !== Boolean(variantLabel.trim()) || (variantRows.length && !variantGroup.trim())) {
       setFormErrors((previous) => ({ ...previous, variantLabel: 'Nhập cả nhóm sản phẩm và tên biến thể.' }))
       document.getElementById('product-variant-label')?.focus()
       return
@@ -380,9 +385,22 @@ export default function ProductFormModal({
           })),
         }
 
-        const created = await adminProductService.createProduct(createPayload, imageFiles)
+        if (variantRows.length) {
+          const errors = variantFormErrors({ ...createPayload, price, code, barcode, variantLabel }, variantRows)
+          if (Object.keys(errors).length) {
+            setFormErrors(errors)
+            requestAnimationFrame(() => dialogRef.current?.querySelector('[aria-invalid="true"]')?.focus())
+            return
+          }
+        }
+        const createdVariants = variantRows.length
+          ? await adminProductService.createVariants(variantRequests(createPayload, variantRows), imageFiles)
+          : [await adminProductService.createProduct(createPayload, imageFiles)]
+        const created = createdVariants[0]
         addToast({
-          message: `Đã tạo mới sản phẩm "${name.trim()}". Mã: ${created.code || 'đã tạo tự động'}. Tồn kho = 0.`,
+          message: createdVariants.length > 1 ? `Đã tạo ${createdVariants.length} biến thể cho “${name.trim()}”. Nhập kho riêng cho từng biến thể.`
+            : isVariant ? `Đã thêm biến thể “${variantLabel.trim()}” cho “${variantGroup.trim()}”. Mã: ${created.code || 'đã tạo tự động'}. Tồn kho = 0.`
+              : `Đã tạo mới sản phẩm "${name.trim()}". Mã: ${created.code || 'đã tạo tự động'}. Tồn kho = 0.`,
           type: 'success',
         })
         if (onSuccess) onSuccess(created.id)
@@ -390,7 +408,8 @@ export default function ProductFormModal({
         onClose()
       }
     } catch (err) {
-      setFormErrors(err.fieldErrors || err.data?.fieldErrors || {})
+      const fields = err.fieldErrors || err.data?.fieldErrors || {}
+      setFormErrors(Object.fromEntries(Object.entries(fields).map(([key, message]) => [key.replace(/^variants\[0\]\./, ''), message])))
       setServerError(err.message || 'Đã xảy ra lỗi khi lưu thông tin sản phẩm')
     } finally {
       setSubmitting(false)
@@ -412,28 +431,29 @@ export default function ProductFormModal({
         <div className="bg-[#FFFFFF] rounded-2xl border border-[#E3E6E8] shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
           {/* Modal Header */}
           <div className="px-6 py-4.5 border-b border-[#E3E6E8] flex items-center justify-between bg-[#FFFFFF]">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-brand/10 text-brand flex items-center justify-center font-bold text-sm shrink-0">
                 <IconInstrument size={20} />
               </div>
-              <div>
-                <h2 id="product-form-modal-title" className="text-lg font-bold text-ink">
-                  {isEdit ? `Chỉnh sửa nhạc cụ: ${code}` : 'Thêm mới nhạc cụ truyền thống'}
+              <div className="min-w-0">
+                <h2 id="product-form-modal-title" className="break-words text-lg font-bold text-ink">
+                  {isEdit ? `Chỉnh sửa nhạc cụ: ${code}` : isVariant ? `Thêm biến thể cho “${variantSource.variantGroup || variantSource.name}”` : 'Thêm mới nhạc cụ truyền thống'}
                 </h2>
                 <p className="text-xs text-secondary mt-0.5">
                   {isEdit
                     ? 'Cập nhật thông số kỹ thuật, phân loại và bộ sưu tập đa phương tiện'
-                    : 'Khai báo thông tin sản phẩm. Mã và mã vạch được tự động tạo nếu để trống.'}
+                    : isVariant ? 'Thông tin đã được điền từ sản phẩm gốc. Nhập tone mới và kiểm tra giá; SKU, mã vạch được tạo riêng.'
+                      : 'Khai báo thông tin sản phẩm. Mã và mã vạch được tự động tạo nếu để trống.'}
                 </p>
               </div>
             </div>
             <button
               type="button"
               onClick={handleClose}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-secondary hover:text-ink hover:bg-[#F2F4F5] transition-colors cursor-pointer"
+              className="w-11 h-11 shrink-0 rounded-lg flex items-center justify-center text-secondary hover:text-ink hover:bg-[#F2F4F5] transition-colors cursor-pointer"
               aria-label="Đóng"
             >
-              <X size={18} />
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
 
@@ -462,7 +482,7 @@ export default function ProductFormModal({
                 {/* 1. THÔNG TIN CƠ BẢN */}
                 <div className="bg-[#FFFFFF] p-6 rounded-2xl border border-[#E3E6E8] shadow-2xs">
                   <h3 className="text-base font-semibold text-ink mb-4 pb-2.5 border-b border-[#E3E6E8] flex items-center justify-between">
-                    <span>1. Thông tin cơ bản</span>
+                    <span>{isVariant ? '1. Thông tin biến thể mới' : '1. Thông tin cơ bản'}</span>
                     <span className="text-xs text-secondary font-normal">
                       * Các trường bắt buộc
                     </span>
@@ -607,6 +627,12 @@ export default function ProductFormModal({
                     </div>
                   </div>
                 </div>
+
+                {!isEdit && <ProductVariantRows rows={variantRows} errors={formErrors} onChange={(rows, changedField) => {
+                  setVariantRows(rows)
+                  setFormErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) =>
+                    changedField ? key !== changedField : !key.startsWith('variants['))))
+                }} />}
 
                 {/* 2. PHÂN LOẠI, NGHỆ NHÂN & LÀNG NGHỀ */}
                 <div className="bg-[#FFFFFF] p-6 rounded-2xl border border-[#E3E6E8] shadow-2xs">
@@ -942,7 +968,7 @@ export default function ProductFormModal({
                     <div className="flex items-center gap-2 text-sm text-secondary">
                       <Package size={18} className="text-brand shrink-0" />
                       <span>
-                        Tồn kho sản phẩm mới sẽ mặc định là 0. Quản lý kho qua chức năng <strong>Nhập kho</strong>.
+                        {isVariant ? 'Biến thể mới có tồn kho 0, dùng SKU và giá riêng. Nhập hàng qua ' : 'Tồn kho sản phẩm mới sẽ mặc định là 0. Quản lý kho qua chức năng '}<strong>Nhập kho</strong>.
                       </span>
                     </div>
                   ) : (
@@ -963,7 +989,7 @@ export default function ProductFormModal({
                       aria-busy={submitting}
                       className="px-6 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                     >
-                      {submitting ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi' : 'Tạo sản phẩm'}
+                      {submitting ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : variantRows.length ? `Tạo ${variantRows.length + 1} biến thể` : isVariant ? 'Tạo biến thể' : 'Tạo sản phẩm'}
                     </button>
                   </div>
                 </div>

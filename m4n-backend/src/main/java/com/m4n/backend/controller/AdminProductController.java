@@ -2,6 +2,8 @@ package com.m4n.backend.controller;
 
 import com.m4n.backend.dto.request.CreateProductMediaRequest;
 import com.m4n.backend.dto.request.CreateProductRequest;
+import com.m4n.backend.dto.request.CreateProductVariantsRequest;
+import com.m4n.backend.dto.response.ProductSummaryResponse;
 import com.m4n.backend.dto.request.ProductStatusUpdateRequest;
 import com.m4n.backend.dto.request.UpdateProductMediaRequest;
 import com.m4n.backend.dto.request.UpdateProductRequest;
@@ -46,6 +48,25 @@ public class AdminProductController {
 
     private final ProductService productService;
     private final ProductImageService productImages;
+
+    @GetMapping("/{id}/variants")
+    public Page<ProductSummaryResponse> listVariants(@PathVariable Long id,
+            @PageableDefault(size = 20) Pageable pageable) {
+        return productService.listAdminVariants(id, pageable);
+    }
+
+    @PostMapping("/variants")
+    public ResponseEntity<List<AdminProductDetailResponse>> createVariants(
+            @Valid @RequestBody CreateProductVariantsRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(productService.createVariants(request));
+    }
+
+    @PostMapping(value = "/variants/with-images", consumes = "multipart/form-data")
+    public ResponseEntity<List<AdminProductDetailResponse>> createVariantsWithImages(
+            @Valid @RequestPart("product") CreateProductVariantsRequest request,
+            @RequestPart("images") List<MultipartFile> images) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(productImages.createVariants(request, images));
+    }
 
     @PostMapping(value = "/with-images", consumes = "multipart/form-data")
     public ResponseEntity<AdminProductDetailResponse> createWithImages(

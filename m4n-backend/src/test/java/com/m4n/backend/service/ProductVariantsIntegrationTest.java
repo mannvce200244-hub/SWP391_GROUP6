@@ -2,6 +2,7 @@ package com.m4n.backend.service;
 
 import com.m4n.backend.dto.request.AddToCartRequest;
 import com.m4n.backend.dto.request.CreateProductRequest;
+import com.m4n.backend.dto.request.CreateProductVariantsRequest;
 import com.m4n.backend.dto.request.UpdateCartItemRequest;
 import com.m4n.backend.dto.request.PosSaleItemRequest;
 import com.m4n.backend.dto.request.PosSaleRequest;
@@ -16,6 +17,7 @@ import com.m4n.backend.repository.RoleRepository;
 import com.m4n.backend.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,22 +40,28 @@ class ProductVariantsIntegrationTest {
     @Autowired private ProductService service;
     @Autowired private CartService cart;
     @Autowired private PosService pos;
+    @Autowired private StockDocumentService receipts;
+    @Autowired private InventoryService inventory;
     @Autowired private ProductRepository products;
     @Autowired private CategoryRepository categories;
     @Autowired private InventoryRepository stocks;
     @Autowired private UserRepository users;
     @Autowired private RoleRepository roles;
     @Autowired private JdbcTemplate jdbc;
+    @Autowired private org.springframework.transaction.PlatformTransactionManager transactions;
     private Category category;
     private String group;
     private User customer;
     private Product doTone;
     private Product reTone;
 
-    @BeforeEach void fixtures() {
+    @BeforeAll static void variantIndex(@Autowired JdbcTemplate jdbc) {
         // Same expression index as the deployment migration, also enforceable in dev tests.
         jdbc.execute("CREATE UNIQUE INDEX IF NOT EXISTS products_variant_group_label_uq "
                 + "ON products (lower(trim(variant_group)), lower(trim(variant_label))) WHERE variant_group IS NOT NULL");
+    }
+
+    @BeforeEach void fixtures() {
         group = "Sáo trúc " + UUID.randomUUID();
         category = categories.saveAndFlush(Category.builder().code("VAR-" + UUID.randomUUID()).name(group).build());
         customer = user(RoleName.CUSTOMER);
@@ -135,6 +143,62 @@ class ProductVariantsIntegrationTest {
         assertThat(options.getContent().getFirst().variantLabel()).isNull();
     }
 
+    @Test void createsSeveralVariantsWithIndependentPricesAndAutomaticIdentifiers() {
+        var created = service.createVariants(new CreateProductVariantsRequest(List.of(
+                request(group, "Tone Fa", "120000"), request(group, "Tone Sol", "190000"))));
+        assertThat(created).hasSize(2);
+        assertThat(created).extracting(item -> item.variantLabel()).containsExactly("Tone Fa", "Tone Sol");
+        assertThat(created.getFirst().price()).isEqualByComparingTo("120000");
+        assertThat(created.getLast().price()).isEqualByComparingTo("190000");
+        assertThat(created).extracting(item -> item.id()).doesNotHaveDuplicates();
+        assertThat(created).extracting(item -> item.barcode()).doesNotHaveDuplicates().doesNotContainNull();
+        assertThat(created).allSatisfy(item -> assertThat(item.stockQuantity()).isZero());
+    }
+
+    @Test void failedBatchRollsBackAllCreatedSkusAndStocks() {
+        var transaction = new org.springframework.transaction.support.TransactionTemplate(transactions);
+        transaction.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        String batchGroup = "Rollback " + UUID.randomUUID();
+        String firstCode = "BATCH-" + UUID.randomUUID();
+        assertThatThrownBy(() -> transaction.executeWithoutResult(status -> {
+            var ownCategory = categories.saveAndFlush(Category.builder().code("BATCH-" + UUID.randomUUID()).name("Sáo").build());
+            var first = new CreateProductRequest(firstCode, null, "Sáo", new BigDecimal("100000"), ownCategory.getId(),
+                    null, null, null, null, null, null, null, List.of(), 5, null, null, batchGroup, "Tone Đô");
+            service.createVariants(new CreateProductVariantsRequest(List.of(first, first)));
+        })).isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class);
+        assertThat(products.existsByCodeIgnoreCase(firstCode)).isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM products WHERE variant_group = ?", Long.class, batchGroup)).isZero();
+    }
+
+    @Test void adminCanChooseInactiveAndZeroStockVariantsForReceiving() {
+        reTone.setActive(false);
+        products.saveAndFlush(reTone);
+        var options = service.listAdminVariants(reTone.getId(), PageRequest.of(0, 20));
+        assertThat(options.getContent()).extracting(item -> item.id()).contains(doTone.getId(), reTone.getId());
+        assertThat(service.listVariants(doTone.getId(), PageRequest.of(0, 20)).getContent())
+                .extracting(item -> item.id()).containsExactly(doTone.getId());
+        assertThatThrownBy(() -> service.createVariants(new CreateProductVariantsRequest(List.of(
+                request(group, "Tone Fa", "100000"), request("Other group", "Tone Sol", "100000")))))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("cùng một nhóm");
+    }
+
+    @Test void receiptQcAddsOnlyTheChosenVariantsAcceptedQuantityAndKeepsSalePrice() {
+        authenticate(user(RoleName.ADMIN));
+        var input = new com.m4n.backend.dto.request.StockImportRequest();
+        input.setQuantity(5);
+        input.setUnitCost(new BigDecimal("40000"));
+        var draft = receipts.createReceipt(reTone.getId(), input);
+        assertThat(stocks.findByProductId(reTone.getId()).orElseThrow().getQuantity()).isEqualTo(2);
+        var confirmed = receipts.confirm(draft.id(), new com.m4n.backend.dto.request.ConfirmStockDocumentRequest(2, "Hai cây không đạt QC"));
+        assertThat(confirmed.productName()).contains("Tone Rê");
+        assertThat(confirmed.receivedAmount()).isEqualByComparingTo("120000");
+        assertThat(stocks.findByProductId(reTone.getId()).orElseThrow().getQuantity()).isEqualTo(5);
+        assertThat(stocks.findByProductId(doTone.getId()).orElseThrow().getQuantity()).isEqualTo(9);
+        assertThat(service.getAdminProductDetail(reTone.getId()).price()).isEqualByComparingTo("150000");
+        assertThat(inventory.listInventory(group, null, PageRequest.of(0, 20)).getContent())
+                .extracting(item -> item.getProductId()).contains(doTone.getId(), reTone.getId());
+    }
+
     @Test void maximumLengthBaseNameAndVariantLabelFitTransactionSnapshots() {
         reTone.setName("N".repeat(200));
         reTone.setVariantLabel("T".repeat(100));
@@ -169,6 +233,7 @@ class ProductVariantsIntegrationTest {
     }
 
     private void authenticate(User account) {
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(account.getEmail(), null, List.of()));
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(account.getEmail(), null,
+                List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + account.getRole().getName()))));
     }
 }

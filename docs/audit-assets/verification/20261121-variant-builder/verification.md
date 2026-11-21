@@ -1,0 +1,180 @@
+# Variant creation, receiving and customer selection
+
+Verified on 2026-11-21. Browser fixtures and integration tests used loopback
+PostgreSQL `m4n_test`, never the configured Neon application database.
+
+## Validation
+
+- `mvnw.cmd clean verify`: 618 tests passed, zero failures/errors/skips; JAR built.
+- `npm test`: 103 passed, zero failures/skips.
+- `npm run lint` and `npm run build`: passed.
+- Added backend checks for independent batch prices/identifiers/zero stock,
+  complete rollback, shared uploaded images and rollback cleanup, nested request
+  validation, Admin authorization, inactive SKU selection and per-variant QC.
+- QC case: receive 5, reject 2, accept 3 on Tone Re only; the other SKU's stock and
+  the selected SKU's listed price remain unchanged. Cost uses accepted quantity.
+- Native frontend tests cover construction of per-row requests, equal/different
+  prices, optional generated identifiers and duplicate/invalid field feedback.
+
+## Browser acceptance
+
+- Admin created three variants in one submission: Tone Do 650,000 VND, Tone Re
+  720,000 VND, Tone Mi 650,000 VND. Each received an independent generated SKU,
+  barcode and zero balance. A duplicate tone ignoring case was rejected before
+  sending the batch. See `admin-variant-rows.jpg`.
+- From Do's Inventory row, Admin opened a receipt and switched to Re. Previous
+  quantity/unit cost were cleared. A new draft for 5 Re units at 420,000 VND was
+  confirmed with 2 rejected: Re stock became 3, with actual cost 1,260,000 VND;
+  Do/Mi stock stayed 0. See `stock-variant-selection.jpg`.
+- Admin used Create more variants inside the receipt dialog to create Tone Fa
+  at 790,000 VND. The parent dialog resumed with Fa's new SKU selected, zero stock
+  and empty quantity/unit cost. No receipt is created by creating a variant.
+- Customer chose Re from Do's product page. Selected price immediately changed
+  to 720,000 VND while details were pending; purchase stayed disabled until those
+  details arrived. Scroll remained at the purchase section (about 195px desktop),
+  rather than resetting to the top. See `customer-selected-tone-price.jpg`.
+- Switching to out-of-stock Mi displayed 650,000 VND and disabled purchase.
+  Back navigation and rapid Fa -> Re selection ended on Re, quantity 1.
+- Adding Re to the cart added its own product ID; Buy now opened
+  `/checkout?productId=1556&quantity=1` and showed Re, not another tone.
+- At 390x844, customer selection and Admin additional-row fields stayed within
+  viewport width. See `customer-mobile-variants.jpg` and `admin-mobile-rows.jpg`.
+- Sessions were logged out, temporary tab closed, viewport reset and isolated
+  QA backend/frontend stopped. Normal localhost 8080/5173 services remain running.
+
+## Review
+
+- No dependency or migration added. Batch creation uses existing product, price,
+  code/barcode, media and zero-stock rules. Controllers only delegate DTOs.
+- Admin endpoints require Admin/Super Admin; public variants remain active-only.
+  Stock receiving still creates one SKU receipt and follows the original QC flow.
+- Only trusted backend responses supply displayed sale prices/stock. Checkout
+  and inventory confirmation retain their authoritative checks. Stale selection
+  responses are discarded. Customer variant URLs stay within central routing.
+- All fields have labels, row errors, visible focus and touch-sized controls.
+  Dialogs retain keyboard containment and neutral white/cool-gray surfaces.
+- Large file detected: m4n-backend/src/main/java/com/m4n/backend/service/serviceImpl/ProductServiceImpl.java
+- Large file detected: m4n-frontend/src/components/admin/ProductFormModal.jsx
+- Large file detected: m4n-frontend/src/pages/admin/AdminInstrumentsPage.jsx
+- Large file detected: m4n-frontend/src/pages/admin/AdminProductDetailPage.jsx
+
+These files were already large. The additional-row editor is a separate focused
+component and its validation/request construction is covered by native tests.
+Unrelated product/POS refactoring was kept out of this change.
+
+## Rollout
+
+The existing variant schema is sufficient. Deploy backend before frontend for
+the new Admin batch/list endpoints. No production product, receipt or stock was
+created by this task; the normal local backend was restarted with the new JAR.
+
+## Recheck on 2026-11-21
+
+- Fixed clicking the already selected receipt tone clearing quantity/unit cost.
+  Browser: enter 12 at 400,000 VND on Do, click Do again: both values remain;
+  switch to Re: both clear.
+- Fixed retry after creating a variant inside receiving loading the original
+  product instead of the new SKU. An isolated HTTP proxy injected one 503 on
+  the new SKU detail request. Submission remained disabled; Retry loaded
+  M4N-HOI-1559, Tone Sol (G) recheck, at 810,000 VND with empty quantity/cost.
+  The unresolved new SKU no longer displays the original SKU as its heading.
+  See `recheck-retry-selected-sku.jpg`.
+- Fixed the gallery retaining another tone's selected thumbnail. Starting on
+  Do's second photo and selecting Re now shows Re's primary photo, 720,000 VND,
+  stock 3 and quantity 1. See `recheck-customer-gallery.jpg`.
+- Browser quantity regression: entering 15 when Re stock is 3 immediately
+  clamps to 3, displays the stock message and disables increment.
+- Re-ran all 103 frontend tests, lint and production build successfully. Backend
+  source is unchanged in this recheck; the 618-test clean verify above remains
+  the backend validation for this PR.
+- Recheck used isolated ports 8083/8084/5183 and loopback `m4n_test` only.
+  No receipt/order/payment was submitted. The additional test SKU and gallery
+  references exist only in the test database. Sessions were logged out and the
+  temporary browser tab closed. QA services were stopped; normal 8080/5173
+  services remain running.
+
+## Additional recheck on 2026-11-21
+
+- Fixed quantity feedback leaking between SKUs: enter 15 on Tone Do with stock
+  9, then switch to Re with stock 2. Do clamps to 9 and explains its limit; Re
+  starts at 1 without carrying the previous warning or editing state. The
+  quantity control is now keyed by product ID, like the gallery.
+- Fixed focus loss when dismissing Create more variants from the receipt.
+  The source button was disabled during its async lookup, so the nested dialog
+  could capture body as its previous focus. Closing now explicitly restores
+  the source button (or the receipt quantity field if that button is absent).
+  Browser: Shift+Tab wraps from the child close button to its submit button;
+  Escape closes only the child, focuses Create more variants, and preserves
+  receipt quantity 12/unit cost 400,000 VND. See `recheck-keyboard-return.jpg`.
+- Injected one 503 for the customer detail of SKU 985 during a tone switch.
+  The error view contains no purchase button. Retry restores the same selected
+  SKU, correct price/stock and quantity 1.
+- All 103 native frontend tests, lint and production build were rerun and passed.
+  The recheck only changes two frontend components; backend validation above
+  remains applicable. No dependencies, API contracts or business rules changed.
+- Used only loopback `m4n_test`; no product, receipt, order or payment was created
+  during this additional recheck. Temporary tab/session/services were cleaned
+  up while normal localhost 8080/5173 services remained running.
+- Large file detected: m4n-frontend/src/features/catalog/ProductDetailInfo.jsx
+  (294 lines). This recheck adds only the SKU key to its existing quantity
+  control. Splitting the larger purchase/detail view is outside this focused
+  fix; no new behavior boundary or dependency was added.
+
+## Variant form context on 2026-11-21
+
+- Adding from an existing SKU now uses “Thêm biến thể cho …”, an explanation
+  of prefilled attributes/new identifiers, “Thông tin biến thể mới”, “Tạo biến
+  thể”, and a variant-specific success message/zero-stock note. Independent
+  product creation and editing retain their own existing titles and actions.
+- The close control is 44px and does not shrink against a long group title.
+  The heading can wrap while retaining its dialog accessible name.
+- Browser on loopback `m4n_test`: opening from receiving prefilled the existing
+  name/group/price/gallery; code/barcode/label were empty. Created Tone La (A)
+  21/11 at 820,000 VND as SKU 1560. The parent receipt selected that new SKU.
+  Source SKU 1555 retained its label, price 650,000 VND and stock 0; new stock
+  remained 0. No receipt or payment was submitted. See `variant-context-form.jpg`.
+- Browser verified existing edit still shows “Lưu thay đổi” and standalone
+  creation still shows “Tạo sản phẩm”. Both were cancelled without saving.
+- All 103 frontend tests, lint and production build passed. No backend/API,
+  dependency, database schema, or business-rule change.
+- Large file detected: m4n-frontend/src/components/admin/ProductFormModal.jsx.
+  This existing large form receives only contextual labels and header sizing;
+  a full form refactor is outside the requested correction.
+- Test session/tab/services were cleaned up. Normal 8080/5173 remain running;
+  no production data was changed by this task.
+
+## Receiving load/price synchronization on 2026-11-21
+
+- Root causes: detail and variant list loaded in series; choosing a SKU repeated
+  the same family query; selected detail used a listed price while summary DTOs
+  used an effective promotional price. Initial development effect replay also
+  sent duplicate reads.
+- Receiving now starts both reads together and reveals editable fields only
+  after both succeed, with one skeleton/status and disabled submission while
+  pending. A per-dialog request reference shares effect-replay reads, without
+  caching between openings or accounts. Retry and new-variant creation reload
+  both current-SKU reads; late replies remain ignored.
+- The picker accepts the preloaded first page and reuses a current family page
+  on SKU selection. Other pages retain loading/error/retry/pagination behavior.
+  Admin cards and the selected SKU show the explicitly labelled listed price;
+  public cards retain the effective promotional price.
+- Browser with artificial delays of 1s for detail and 4s for variants: exactly
+  two reads started together; completion was about 4.05s. While pending, no
+  quantity/cost controls were exposed and Create receipt was disabled. Switching
+  Do -> Re -> Do left the product request count at 2 and cleared old quantity/cost.
+  See `stock-sync-requests.json` and `stock-sync-listed-price.jpg`. These are
+  controlled local timings, not a production latency benchmark.
+- With a test-only 5% promotion, listed price 650,000 VND appeared in both Admin
+  locations, while public detail/cards still showed 617,500 VND.
+- Injecting one 503 on the variant list hid the editable fields and disabled
+  submission; Retry recovered the same SKU with both reads complete.
+- A 21-SKU test group verified page 2 selection and returning to page 1: only
+  the initial detail/page-0 and one page-1 read occurred; selecting SKU 1581
+  then SKU 1562 did not refetch the family. Creating Tone Si (B) sync returned
+  receiving to new SKU 1582 with zero stock and both reads refreshed.
+- All 103 native frontend tests, lint and production build passed. Only two
+  frontend components changed; no backend contract, dependency or business-rule
+  change. No receipt, order or payment was submitted.
+- All fixtures/promotion writes were restricted to loopback `m4n_test`.
+  Temporary sessions/tab/services were cleaned up. Normal localhost 8080/5173
+  services were restarted and their health/API proxy verified.

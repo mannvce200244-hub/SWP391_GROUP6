@@ -1,5 +1,7 @@
 package com.m4n.backend.service;
 
+import com.m4n.backend.dto.request.CreateProductVariantsRequest;
+import com.m4n.backend.dto.response.AdminProductDetailResponse;
 import com.m4n.backend.dto.response.ProductDetailResponse;
 import com.m4n.backend.dto.response.ProductSummaryResponse;
 import org.springframework.data.domain.Page;
@@ -13,6 +15,10 @@ public interface ProductService {
     ProductDetailResponse getProductDetail(Long productId);
 
     Page<ProductSummaryResponse> listVariants(Long productId, Pageable pageable);
+
+    Page<ProductSummaryResponse> listAdminVariants(Long productId, Pageable pageable);
+
+    List<AdminProductDetailResponse> createVariants(CreateProductVariantsRequest request);
 
     Page<ProductSummaryResponse> listProducts(
             String keyword,

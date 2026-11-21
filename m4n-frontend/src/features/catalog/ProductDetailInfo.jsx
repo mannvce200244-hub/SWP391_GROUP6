@@ -12,13 +12,16 @@ import ProductSpecs from './ProductSpecs.jsx'
 import QuantitySelector from '../../components/ui/QuantitySelector.jsx'
 import ProductVariantPicker from './ProductVariantPicker.jsx'
 
-function ProductDetailInfo({ product }) {
-  const [quantity, setQuantity] = useState(1)
+function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
+  const [quantityState, setQuantityState] = useState({ id: product?.id, value: 1 })
+  const quantity = quantityState.id === product?.id ? quantityState.value : 1
+  const setQuantity = (value) => setQuantityState({ id: product.id, value })
   const [isAdding, setIsAdding] = useState(false)
   const [isBuying, setIsBuying] = useState(false)
   const { addToCart, buyNow, cart, loading: cartLoading } = useCart()
   const { isAuthenticated, user } = useAuth()
   const { addToast } = useToast()
+  if (quantityState.id !== product?.id) setQuantityState({ id: product?.id, value: 1 })
 
   if (!product) return null
 
@@ -35,7 +38,7 @@ function ProductDetailInfo({ product }) {
   const exceedsCartStock = inCart > 0 && quantity > remainingForCart
 
   const handleAddToCart = async () => {
-    if (isOutOfStock || isAdding || isBuying || cartLoading || exceedsCartStock) return
+    if (switching || isOutOfStock || isAdding || isBuying || cartLoading || exceedsCartStock) return
 
     try {
       setIsAdding(true)
@@ -72,7 +75,7 @@ function ProductDetailInfo({ product }) {
   }
 
   const handleBuyNow = async () => {
-    if (isOutOfStock || isAdding || isBuying) return
+    if (switching || isOutOfStock || isAdding || isBuying) return
 
     try {
       setIsBuying(true)
@@ -115,7 +118,7 @@ function ProductDetailInfo({ product }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
         {/* Left Column (7 cols): Gallery */}
         <div className="lg:col-span-7">
-          <ProductGallery media={product.media} productName={product.name} />
+          <ProductGallery key={product.id} media={product.media} productName={product.name} />
         </div>
 
         {/* Right Column (5 cols): Details & Purchase */}
@@ -181,8 +184,9 @@ function ProductDetailInfo({ product }) {
             )}
           </div>
 
-          {product.variantGroup && <ProductVariantPicker key={product.id} product={product}
-            onSelect={(variant) => { if (variant.id !== product.id) navigateTo(CUSTOMER_ROUTES.productDetail(variant.id)) }} />}
+          {product.variantGroup && <ProductVariantPicker product={product} disabled={isAdding || isBuying}
+            onSelect={onSelectVariant} />}
+          {product.variantLabel && <p role="status" className="text-sm text-muted">Đã chọn: <strong className="text-ink">{product.variantLabel}</strong> · {formattedPrice}{switching ? ' · Đang kiểm tra thông tin…' : ''}</p>}
           {/* Purchase / Add to Cart Actions */}
           {canPurchase ? (
           <div className="pt-3 flex flex-col gap-3">
@@ -200,7 +204,8 @@ function ProductDetailInfo({ product }) {
             {/* Row 1: Quantity Selector + Add to Cart */}
             <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
               <QuantitySelector
-                disabled={isOutOfStock || isAdding || isBuying || cartLoading}
+                key={product.id}
+                disabled={switching || isOutOfStock || isAdding || isBuying || cartLoading}
                 max={product.stockQuantity != null && product.stockQuantity > 0 ? product.stockQuantity : (isOutOfStock ? 0 : 99)}
                 min={1}
                 onChange={setQuantity}
@@ -209,7 +214,7 @@ function ProductDetailInfo({ product }) {
               <button
                 aria-label={isOutOfStock ? 'Sản phẩm tạm hết hàng' : 'Thêm nhạc cụ vào giỏ hàng'}
                 className="flex-1 h-11 px-4 rounded-lg text-sm font-semibold text-brand bg-brand-soft/60 hover:bg-brand-soft border border-brand/30 active:bg-brand-soft/90 transition-all duration-150 flex items-center justify-center gap-2 shadow-2xs disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                disabled={isOutOfStock || isAdding || isBuying || cartLoading || exceedsCartStock}
+                disabled={switching || isOutOfStock || isAdding || isBuying || cartLoading || exceedsCartStock}
                 onClick={handleAddToCart}
                 type="button"
               >
@@ -228,7 +233,7 @@ function ProductDetailInfo({ product }) {
             <button
               aria-label={isOutOfStock ? 'Sản phẩm tạm hết hàng' : `Mua ngay ${product.name}`}
               className="w-full h-12 px-6 rounded-lg text-sm font-bold uppercase tracking-wider text-white bg-brand hover:bg-brand-hover active:bg-brand-dark transition-all duration-150 flex items-center justify-center gap-2 shadow-xs hover:shadow-md disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-              disabled={isOutOfStock || isAdding || isBuying}
+              disabled={switching || isOutOfStock || isAdding || isBuying}
               onClick={handleBuyNow}
               type="button"
             >

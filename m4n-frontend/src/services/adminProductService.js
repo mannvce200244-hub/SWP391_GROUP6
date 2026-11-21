@@ -36,6 +36,14 @@ export const adminProductService = Object.freeze({
     return apiClient.get(`/admin/products/${id}`)
   },
 
+  listVariants: (id, page = 0) => apiClient.get(`/admin/products/${encodeURIComponent(id)}/variants?page=${page}&size=20`),
+
+  createVariants(variants, files = []) {
+    const payload = { variants }
+    return files.length ? apiClient.post('/admin/products/variants/with-images', productFormData(payload, files))
+      : apiClient.post('/admin/products/variants', payload)
+  },
+
   async createProduct(payload, files = []) {
     return files.length ? apiClient.post('/admin/products/with-images', productFormData(payload, files))
       : apiClient.post('/admin/products', payload)

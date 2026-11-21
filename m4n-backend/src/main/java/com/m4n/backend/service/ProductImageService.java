@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface ProductImageService {
     AdminProductDetailResponse create(CreateProductRequest request, List<MultipartFile> images);
+    List<AdminProductDetailResponse> createVariants(CreateProductVariantsRequest request, List<MultipartFile> images);
     AdminProductDetailResponse update(Long productId, UpdateProductRequest request, List<MultipartFile> images);
     Resource getImage(String filename);
 }
