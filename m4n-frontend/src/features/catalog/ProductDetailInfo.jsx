@@ -204,6 +204,7 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
             {/* Row 1: Quantity Selector + Add to Cart */}
             <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
               <QuantitySelector
+                key={product.id}
                 disabled={switching || isOutOfStock || isAdding || isBuying || cartLoading}
                 max={product.stockQuantity != null && product.stockQuantity > 0 ? product.stockQuantity : (isOutOfStock ? 0 : 99)}
                 min={1}

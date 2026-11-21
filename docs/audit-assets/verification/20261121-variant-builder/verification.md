@@ -92,3 +92,30 @@ created by this task; the normal local backend was restarted with the new JAR.
   references exist only in the test database. Sessions were logged out and the
   temporary browser tab closed. QA services were stopped; normal 8080/5173
   services remain running.
+
+## Additional recheck on 2026-11-21
+
+- Fixed quantity feedback leaking between SKUs: enter 15 on Tone Do with stock
+  9, then switch to Re with stock 2. Do clamps to 9 and explains its limit; Re
+  starts at 1 without carrying the previous warning or editing state. The
+  quantity control is now keyed by product ID, like the gallery.
+- Fixed focus loss when dismissing Create more variants from the receipt.
+  The source button was disabled during its async lookup, so the nested dialog
+  could capture body as its previous focus. Closing now explicitly restores
+  the source button (or the receipt quantity field if that button is absent).
+  Browser: Shift+Tab wraps from the child close button to its submit button;
+  Escape closes only the child, focuses Create more variants, and preserves
+  receipt quantity 12/unit cost 400,000 VND. See `recheck-keyboard-return.jpg`.
+- Injected one 503 for the customer detail of SKU 985 during a tone switch.
+  The error view contains no purchase button. Retry restores the same selected
+  SKU, correct price/stock and quantity 1.
+- All 103 native frontend tests, lint and production build were rerun and passed.
+  The recheck only changes two frontend components; backend validation above
+  remains applicable. No dependencies, API contracts or business rules changed.
+- Used only loopback `m4n_test`; no product, receipt, order or payment was created
+  during this additional recheck. Temporary tab/session/services were cleaned
+  up while normal localhost 8080/5173 services remained running.
+- Large file detected: m4n-frontend/src/features/catalog/ProductDetailInfo.jsx
+  (294 lines). This recheck adds only the SKU key to its existing quantity
+  control. Splitting the larger purchase/detail view is outside this focused
+  fix; no new behavior boundary or dependency was added.

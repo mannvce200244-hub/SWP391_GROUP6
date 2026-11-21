@@ -30,12 +30,18 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
     return () => { active = false }
   }, [detailTargetId, retry])
   const errorRef = useRef(null)
+  const variantButtonRef = useRef(null)
   const dialogRef = useDialogFocus(true, onClose, busy)
   const action = 'nhập'
   const count = Number(quantity)
   const cost = Number(unitCost)
   const validQuantity = quantity.trim() !== '' && Number.isInteger(count) && count > 0 && count <= 2147483647
   const validCost = unitCost.trim() !== '' && Number.isSafeInteger(cost) && cost >= 0 && cost <= 9999999999
+
+  function closeVariantForm() {
+    setVariantSource(null)
+    requestAnimationFrame(() => (variantButtonRef.current || dialogRef.current?.querySelector('[data-dialog-initial-focus]'))?.focus())
+  }
 
   async function submit(event) {
     event.preventDefault()
@@ -86,7 +92,7 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
             if (variant.id === selection.id) return
             setSelection(variant); setQuantity(''); setUnitCost(''); setErrors({}); setError('')
           }} />}
-        {selection?.variantGroup && <Button variant="secondary" disabled={busy} onClick={async () => {
+        {selection?.variantGroup && <Button ref={variantButtonRef} variant="secondary" disabled={busy} onClick={async () => {
           setBusy(true)
           try { setVariantSource(await adminProductService.getProductDetail(selection.id)) }
           catch (failure) { setError(failure.message || 'Không thể tải thông tin biến thể.') }
@@ -108,7 +114,7 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
         </div>
       </form>
     </div>
-    {variantSource && <ProductFormModal isOpen variantSource={variantSource} onClose={() => setVariantSource(null)} onSuccess={(id) => {
+    {variantSource && <ProductFormModal isOpen variantSource={variantSource} onClose={closeVariantForm} onSuccess={(id) => {
       setVariantSource(null)
       setPickerVersion((value) => value + 1)
       setQuantity(''); setUnitCost(''); setErrors({}); setError('')
