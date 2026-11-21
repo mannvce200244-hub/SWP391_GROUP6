@@ -4,6 +4,7 @@ import adminProductService from '../../services/adminProductService.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import useToast from '../../components/ui/useToast.js'
 import ProductFormModal from '../../components/admin/ProductFormModal.jsx'
+import ProductVariantPicker from '../../features/catalog/ProductVariantPicker.jsx'
 import {
   ArrowLeft,
   Copy,
@@ -496,7 +497,14 @@ export default function AdminProductDetailPage({ productId }) {
         </div>
       </div>
 
-      {product.variantLabel && <p className="text-sm text-muted">Nhóm: {product.variantGroup} · Biến thể: {product.variantLabel}</p>}
+      {product.variantLabel && <section className="rounded-xl border border-border bg-white p-5 space-y-3">
+        <h2 className="font-semibold text-ink">Các biến thể của {product.variantGroup}</h2>
+        <p className="text-sm text-muted">Chọn để xem giá, SKU và tồn kho của từng biến thể. Dùng “Thêm biến thể” để tạo thêm tone.</p>
+        <ProductVariantPicker key={`${product.id}-${refreshKey}`} product={product} admin
+          onSelect={(variant) => { if (variant.id !== product.id) navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(variant.id)) }} />
+        <button type="button" className="min-h-11 rounded-lg border border-border px-4 text-sm font-semibold hover:bg-surface-secondary"
+          onClick={() => navigateTo(`${CUSTOMER_ROUTES.adminInventory}?keyword=${encodeURIComponent(product.variantGroup)}`)}>Nhập kho các biến thể</button>
+      </section>}
       {showVariantModal && <ProductFormModal isOpen variantSource={product} onClose={() => setShowVariantModal(false)}
         onSuccess={(id) => { setShowVariantModal(false); navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(id)) }} />}
       {/* Edit Product Modal */}

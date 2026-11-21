@@ -1,10 +1,13 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { importStock } from '../../services/inventoryService.js'
 import { formatCurrencyVND } from '../../utils/currency.js'
 import useDialogFocus from '../../hooks/useDialogFocus.js'
 import Button from '../ui/Button.jsx'
 import Input from '../ui/Input.jsx'
+import adminProductService from '../../services/adminProductService.js'
+import ProductVariantPicker from '../../features/catalog/ProductVariantPicker.jsx'
+import ProductFormModal from './ProductFormModal.jsx'
 
 export default function StockDraftDialog({ product, onClose, onCreated }) {
   const [quantity, setQuantity] = useState('')
@@ -13,6 +16,18 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
   const [busy, setBusy] = useState(false)
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
+  const [selection, setSelection] = useState(null)
+  const [productError, setProductError] = useState('')
+  const [retry, setRetry] = useState(0)
+  const [variantSource, setVariantSource] = useState(null)
+  const [pickerVersion, setPickerVersion] = useState(0)
+  useEffect(() => {
+    let active = true
+    adminProductService.getProductDetail(product.productId).then((data) => {
+      if (active) { setSelection(data); setProductError('') }
+    }).catch((failure) => { if (active) setProductError(failure.message || 'Không thể tải biến thể. Hãy thử lại.') })
+    return () => { active = false }
+  }, [product.productId, retry])
   const errorRef = useRef(null)
   const dialogRef = useDialogFocus(true, onClose, busy)
   const action = 'nhập'
@@ -23,7 +38,7 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
 
   async function submit(event) {
     event.preventDefault()
-    if (busy) return
+    if (busy || !selection || productError) return
     const nextErrors = {}
     if (!validQuantity) {
       nextErrors.quantity = 'Số lượng phải là số nguyên từ 1 đến 2.147.483.647.'
@@ -40,7 +55,7 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
     }
     setBusy(true)
     try {
-      const draft = await importStock(product.productId, { quantity: count, unitCost: cost, notes: reason.trim() })
+      const draft = await importStock(selection.id, { quantity: count, unitCost: cost, notes: reason.trim() })
       onCreated(draft)
     } catch (failure) {
       setErrors({ ...failure.fieldErrors, reason: failure.fieldErrors?.notes })
@@ -49,7 +64,7 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
     } finally { setBusy(false) }
   }
 
-  return (
+  return (<>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
       <form onSubmit={submit} noValidate role="dialog" aria-modal="true" aria-labelledby="stock-draft-title"
         aria-describedby="stock-draft-description" tabIndex={-1} ref={dialogRef}
@@ -58,8 +73,19 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
           <h3 id="stock-draft-title" className="text-lg font-semibold text-ink">Nhập thêm hàng theo lô</h3>
           <Button variant="ghost" size="sm" disabled={busy} onClick={onClose} aria-label="Đóng hộp thoại tạo phiếu kho"><X size={18} aria-hidden="true" /></Button>
         </div>
-        <p className="text-sm break-words"><strong>{product.productName}</strong> · <span translate="no">{product.productCode}</span></p>
-        <p id="stock-draft-description" className="text-sm text-muted">Mỗi phiếu ghi nhận một lô của sản phẩm này. Sau kiểm nhận QC, chỉ hàng đạt chất lượng được cộng vào kho và tính tiền.</p>
+        <p className="text-sm break-words"><strong>{selection?.variantLabel ? `${selection.variantGroup} · ${selection.variantLabel}` : selection?.name || product.productName}</strong> · <span translate="no">{selection?.code || product.productCode}</span></p>
+        <p id="stock-draft-description" className="text-sm text-muted">Chọn đúng biến thể trước khi nhập số lượng và giá nhập. Chỉ hàng đạt QC được cộng vào tồn của SKU đã chọn.</p>
+        {!selection && !productError && <p role="status" className="text-sm text-muted">Đang tải sản phẩm…</p>}
+        {productError && <p role="alert" className="text-sm text-danger">{productError} <button type="button" className="underline" onClick={() => setRetry((value) => value + 1)}>Thử lại</button></p>}
+        {selection?.variantGroup && <ProductVariantPicker key={`${product.productId}-${pickerVersion}`} product={selection} admin disabled={busy}
+          onSelect={(variant) => { setSelection(variant); setQuantity(''); setUnitCost(''); setErrors({}); setError('') }} />}
+        {selection?.variantGroup && <Button variant="secondary" disabled={busy} onClick={async () => {
+          setBusy(true)
+          try { setVariantSource(await adminProductService.getProductDetail(selection.id)) }
+          catch (failure) { setError(failure.message || 'Không thể tải thông tin biến thể.') }
+          finally { setBusy(false) }
+        }}>Tạo thêm biến thể</Button>}
+        {selection && <p className="text-xs text-muted">SKU: <strong translate="no">{selection.code}</strong> · Giá bán: {formatCurrencyVND(selection.price)}. Giá nhập của lô được khai báo bên dưới.</p>}
         {error && <p role="alert" ref={errorRef} tabIndex={-1} className="text-sm text-danger focus-visible:outline focus-visible:outline-danger">{error}</p>}
         <Input id="stock-draft-quantity" name="quantity" label={`Số lượng ${action}`} required type="number" inputMode="numeric"
           autoComplete="off" min={1} max={2147483647} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)}
@@ -71,9 +97,19 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
           autoComplete="off" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} error={errors.reason} disabled={busy} />
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="secondary" disabled={busy} onClick={onClose}>Đóng</Button>
-          <Button type="submit" loading={busy} loadingLabel="Đang tạo phiếu…">Tạo phiếu {action}</Button>
+          <Button type="submit" disabled={!selection || Boolean(productError)} loading={busy} loadingLabel="Đang tạo phiếu…">Tạo phiếu {action}</Button>
         </div>
       </form>
     </div>
+    {variantSource && <ProductFormModal isOpen variantSource={variantSource} onClose={() => setVariantSource(null)} onSuccess={async (id) => {
+      setVariantSource(null)
+      setPickerVersion((value) => value + 1)
+      setQuantity(''); setUnitCost(''); setErrors({})
+      setBusy(true)
+      try { setSelection(await adminProductService.getProductDetail(id)); setProductError('') }
+      catch (failure) { setSelection(null); setProductError(failure.message || 'Không thể tải biến thể vừa tạo.') }
+      finally { setBusy(false) }
+    }} />}
+    </>
   )
 }

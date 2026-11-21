@@ -2,6 +2,7 @@ package com.m4n.backend.service.serviceImpl;
 
 import com.m4n.backend.dto.request.CreateProductMediaRequest;
 import com.m4n.backend.dto.request.CreateProductRequest;
+import com.m4n.backend.dto.request.CreateProductVariantsRequest;
 import com.m4n.backend.dto.request.UpdateProductMediaRequest;
 import com.m4n.backend.dto.request.UpdateProductRequest;
 import com.m4n.backend.dto.request.ProductMediaItemRequest;
@@ -102,10 +103,22 @@ public class ProductServiceImpl implements ProductService {
     public Page<ProductSummaryResponse> listVariants(Long productId, Pageable pageable) {
         Product selected = productRepository.findByIdAndIsActiveTrue(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
+        return variantPage(selected, pageable, true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductSummaryResponse> listAdminVariants(Long productId, Pageable pageable) {
+        Product selected = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
+        return variantPage(selected, pageable, false);
+    }
+
+    private Page<ProductSummaryResponse> variantPage(Product selected, Pageable pageable, boolean activeOnly) {
         if (pageable.getOffset() > Integer.MAX_VALUE || pageable.getSort().isSorted()) {
             throw new IllegalArgumentException("Trang biến thể không hợp lệ.");
         }
-        Specification<Product> family = (root, query, cb) -> cb.and(cb.isTrue(root.get("isActive")),
+        Specification<Product> family = (root, query, cb) -> cb.and(activeOnly ? cb.isTrue(root.get("isActive")) : cb.conjunction(),
                 selected.getVariantGroup() == null ? cb.equal(root.get("id"), selected.getId())
                     : cb.equal(cb.lower(root.get("variantGroup")), selected.getVariantGroup().toLowerCase(java.util.Locale.ROOT)));
         return catalogPage(productRepository.findAll(family, PageRequest.of(pageable.getPageNumber(),
@@ -259,6 +272,26 @@ public class ProductServiceImpl implements ProductService {
                 .toList();
 
         return new PageImpl<>(content, productPage.getPageable(), productPage.getTotalElements());
+    }
+
+    @Override
+    @Transactional
+    public List<AdminProductDetailResponse> createVariants(CreateProductVariantsRequest request) {
+        if (request.variants() == null || request.variants().isEmpty() || request.variants().getFirst() == null) {
+            throw new IllegalArgumentException("Thêm ít nhất một biến thể.");
+        }
+        String group = request.variants().getFirst().variantGroup();
+        if (group == null || group.isBlank()) throw new IllegalArgumentException("Nhập nhóm biến thể.");
+        String normalized = java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC);
+        for (CreateProductRequest variant : request.variants()) {
+            if (variant == null || variant.variantGroup() == null || !normalized.equalsIgnoreCase(
+                    java.text.Normalizer.normalize(variant.variantGroup().trim(), java.text.Normalizer.Form.NFC))) {
+                throw new IllegalArgumentException("Các biến thể phải thuộc cùng một nhóm sản phẩm.");
+            }
+        }
+        List<AdminProductDetailResponse> created = new ArrayList<>();
+        for (CreateProductRequest variant : request.variants()) created.add(createProduct(variant));
+        return created;
     }
 
     @Override

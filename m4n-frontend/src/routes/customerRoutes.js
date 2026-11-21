@@ -67,11 +67,11 @@ export const HOME_ARTISAN_SECTION = Object.freeze({
 
 export const ROUTE_CHANGE_EVENT = 'm4n:navigate'
 
-export function navigateTo(pathname) {
+export function navigateTo(pathname, { preserveScroll = false } = {}) {
   if (typeof window === 'undefined') return
   window.history.pushState(null, '', pathname)
   window.dispatchEvent(new Event(ROUTE_CHANGE_EVENT))
-  window.scrollTo(0, 0)
+  if (!preserveScroll) window.scrollTo(0, 0)
 }
 
 export function normalizePathname(pathname) {

@@ -27,6 +27,37 @@ price and inventory. Customers and POS choose the SKU they want to buy.
   invoice and stock-document snapshots retain that label. Historical snapshots
   and product IDs are preserved.
 
+## Admin creation and receiving update — 2026-11-21
+
+- The create form includes an additional-variants editor. Its initial SKU uses
+  the name/label/code/barcode/price at the top; each extra row has its own label,
+  optional code/barcode and required positive listed price. The common group,
+  category, specifications and gallery are copied into each independent SKU.
+  Equal prices are allowed; a different tone does not require a different price.
+- `POST /api/v1/admin/products/variants` accepts `{variants: CreateProductRequest[]}`.
+  All rows must belong to the same nonblank group and satisfy existing product
+  validation. It returns the created detail DTOs in input order. The transaction
+  creates all SKUs/inventory rows or none. No stock is added during this operation.
+- `POST /api/v1/admin/products/variants/with-images` accepts the same request as
+  multipart `product` plus existing `images` parts. Validated uploads are stored
+  once, with a media reference on each SKU. Rollback removes the uploaded files.
+- Admin list/detail offers adding more variants to an existing group. The Admin
+  detail shows sibling prices/stock. `GET /api/v1/admin/products/{id}/variants`
+  pages siblings, including inactive and zero-stock SKUs for stock receiving;
+  it is restricted to Admin/Super Admin. Public selection remains active-only.
+- Stock receiving lets Admin select the intended tone, or create additional
+  variants from the dialog. Changing SKU clears quantity and purchase unit cost.
+  Each receipt still represents one SKU/batch and follows the existing QC flow.
+  Accepted units affect only that SKU; purchase unit cost never changes its
+  listed sale price. Group/label search is available in Inventory.
+- Customer variant selection preserves the purchase section's scroll position,
+  updates the visible selected price immediately from the variant response, then
+  loads that SKU's current details. Purchase is disabled until the detail succeeds.
+  Late responses cannot overwrite the latest selection. URL/back/reload identifies
+  the selected SKU; quantity resets to one on a SKU change.
+- This extension needs no additional database migration or dependency. Deploy
+  backend before frontend for the new Admin endpoints.
+
 ## Quantity and POS layout
 
 - Product detail, cart drawer, cart, checkout and POS share editable quantity

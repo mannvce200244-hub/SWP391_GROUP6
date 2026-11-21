@@ -43,10 +43,26 @@ public class ProductImageServiceImpl implements ProductImageService {
         for (String url : storeImages(images)) {
             media.add(new CreateProductMediaRequest(MediaType.IMAGE, url, request.name(), media.size()));
         }
-        return products.createProduct(new CreateProductRequest(request.code(), request.barcode(), request.name(),
+        return products.createProduct(withMedia(request, media));
+    }
+
+    @Override
+    @Transactional
+    public List<AdminProductDetailResponse> createVariants(CreateProductVariantsRequest request, List<MultipartFile> images) {
+        List<String> urls = storeImages(images);
+        List<CreateProductRequest> variants = request.variants().stream().map(variant -> {
+            List<CreateProductMediaRequest> media = new ArrayList<>(variant.media() == null ? List.of() : variant.media());
+            for (String url : urls) media.add(new CreateProductMediaRequest(MediaType.IMAGE, url, variant.name(), media.size()));
+            return withMedia(variant, media);
+        }).toList();
+        return products.createVariants(new CreateProductVariantsRequest(variants));
+    }
+
+    private CreateProductRequest withMedia(CreateProductRequest request, List<CreateProductMediaRequest> media) {
+        return new CreateProductRequest(request.code(), request.barcode(), request.name(),
                 request.price(), request.categoryId(), request.artisanId(), request.craftVillageId(), request.material(),
                 request.dimensions(), request.musicalRange(), request.origin(), request.description(), media,
-                request.lowStockThreshold(), request.billableWeightKg(), request.bulkySurcharge(), request.variantGroup(), request.variantLabel()));
+                request.lowStockThreshold(), request.billableWeightKg(), request.bulkySurcharge(), request.variantGroup(), request.variantLabel());
     }
 
     @Override
