@@ -1,4 +1,4 @@
-import PosVariantDialog from '../features/pos/PosVariantDialog.jsx'
+import PosCatalog from '../features/pos/PosCatalog.jsx'
 import QuantitySelector from '../components/ui/QuantitySelector.jsx'
 import VoucherSuggestions from '../features/checkout/VoucherSuggestions.jsx'
 import PosCustomerFields from '../features/pos/PosCustomerFields.jsx'
@@ -84,7 +84,6 @@ function PosDashboardPage() {
 
   // Camera Scanner Modal State
   const [scannerOpen, setScannerOpen] = useState(false)
-  const [variantProduct, setVariantProduct] = useState(null)
   // Success Modal State
   const [successSale, setSuccessSale] = useState(null)
   const salePreview = usePosSalePreview(billItems, voucherState.applied ? voucherCode.trim() : '')
@@ -434,6 +433,7 @@ function PosDashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
+      <h1 className="sr-only">Bán hàng tại quầy</h1>
       {vnpayPaymentId && (
         <PosMomoPaymentPanel
           key={vnpayPaymentId}
@@ -509,10 +509,10 @@ function PosDashboardPage() {
         {/* Left Column: Product Catalog Grid (7 cols) */}
         <div className="lg:col-span-7 min-h-0 min-w-0 flex flex-col gap-3 max-h-[45dvh] lg:max-h-none overflow-y-auto overscroll-contain">
           <div className="flex items-center justify-between px-1">
-            <span className="text-xs font-bold text-ink uppercase tracking-wider">
-              Danh mục nhạc cụ showroom ({catalog.length})
-            </span>
-            <span className="text-xs text-muted">Bấm vào nhạc cụ để thêm vào hóa đơn</span>
+            <h2 className="text-xs font-bold text-ink uppercase tracking-wider">
+              Danh mục nhạc cụ showroom
+            </h2>
+            <span className="text-xs text-muted">Bấm sản phẩm hoặc tone để thêm vào hóa đơn</span>
           </div>
 
           {loadingCatalog ? (
@@ -532,68 +532,8 @@ function PosDashboardPage() {
               <p className="text-xs text-muted">Thử nhập từ khóa khác hoặc quét mã vạch trực tiếp.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {catalog.map((prod) => {
-                const isOutOfStock = !prod.variantGroup && prod.quantity <= 0
-                return (
-                  <button
-                    key={prod.id}
-                    type="button"
-                    disabled={isOutOfStock}
-                    onClick={() => prod.variantGroup ? setVariantProduct(prod) : handleAddToBill(prod)}
-                    className={`min-w-0 w-full bg-surface rounded-xl border border-border p-3 flex flex-col justify-between text-left shadow-xs hover:shadow-md hover:border-brand/60 transition-all group cursor-pointer ${
-                      isOutOfStock ? 'opacity-60 cursor-not-allowed bg-canvas' : ''
-                    }`}
-                  >
-                    <div className="flex flex-col gap-2 w-full">
-                      {/* Image */}
-                      <div className="w-full aspect-4/3 rounded-lg overflow-hidden bg-surface-secondary relative">
-                        {prod.primaryImage ? (
-                          <img
-                            src={prod.primaryImage}
-                            alt={prod.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted">
-                            <Package size={24} />
-                          </div>
-                        )}
-                        <span
-                          className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded text-xs font-semibold ${
-                            prod.quantity > 5
-                              ? 'bg-emerald-600/90 text-white'
-                              : prod.quantity > 0
-                              ? 'bg-brand text-white'
-                              : 'bg-rose-600/90 text-white'
-                          }`}
-                        >
-                          {prod.quantity > 0 ? `Còn ${prod.quantity}` : 'Hết hàng'}
-                        </span>
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex flex-col">
-                        <span className="text-xs text-muted font-mono break-all">{prod.code}</span>
-                        <h4 className="text-xs font-bold text-ink line-clamp-2 leading-tight group-hover:text-brand transition-colors mt-0.5">
-                          {prod.name}
-                        </h4>
-                      </div>
-                    </div>
-
-                    {/* Price & Add */}
-                    <div className="mt-3 pt-2 border-t border-border/60 flex items-center justify-between w-full">
-                      <span className="text-xs font-bold text-brand font-mono">
-                        {formatCurrencyVND(prod.price)}
-                      </span>
-                      <span className="w-6 h-6 rounded-md bg-surface-secondary text-ink group-hover:bg-brand group-hover:text-white flex items-center justify-center text-xs font-bold transition-colors">
-                        +
-                      </span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+            <PosCatalog products={catalog} onAdd={handleAddToBill}
+              disabled={submittingSale || Boolean(successSale) || Boolean(vnpayPaymentId)} />
           )}
         </div>
 
@@ -602,7 +542,7 @@ function PosDashboardPage() {
           {/* Bill Header */}
           <div className="shrink-0 p-4 border-b border-border bg-surface-secondary flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-ink uppercase tracking-wider">Hóa đơn hiện tại</h3>
+              <h2 className="text-sm font-bold text-ink uppercase tracking-wider">Hóa đơn hiện tại</h2>
               <span className="px-2 py-0.5 rounded-full bg-brand text-white text-xs font-semibold">
                 {billItems.length} món
               </span>
@@ -871,8 +811,6 @@ function PosDashboardPage() {
       {/* Camera Scanner Modal */}
       </fieldset>
       <ConfirmDialog isOpen={clearConfirmOpen} title="Xóa toàn bộ hóa đơn đang nhập?" description="Các sản phẩm và voucher trong hóa đơn này sẽ được xóa." confirmLabel="Xóa hóa đơn" onConfirm={handleClearBill} onCancel={() => setClearConfirmOpen(false)} variant="danger" />
-      {variantProduct && <PosVariantDialog product={variantProduct} onClose={() => setVariantProduct(null)}
-        onSelect={(variant) => { handleAddToBill(variant); setVariantProduct(null) }} />}
       {scannerOpen && <PosScannerDialog onClose={() => setScannerOpen(false)} onProduct={handleAddToBill} />}
 
       {successSale && <PosReceiptDialog sale={successSale} staffName={user?.fullName} onNewSale={handleNewSale} />}

@@ -21,8 +21,13 @@ price and inventory. Customers and POS choose the SKU they want to buy.
 - `GET /api/v1/products/{id}/variants?page=0&size=20` lists active siblings from
   the same group, with price, stock and label. The page size is capped at 100;
   pagination uses fixed label/ID order. Ungrouped products return only themselves.
-- Product detail lets shoppers switch SKUs; POS shows a variant picker for grouped
-  products. Scanning a specific SKU/barcode adds that exact variant directly.
+- Product detail lets shoppers switch SKUs. User clarification (2026-11-21): POS
+  groups related SKUs into one catalog card and shows tone buttons directly on
+  that card, without a selection dialog. One click adds that exact variant to
+  the bill. Show effective price/stock per variant, including disabled out-of-stock
+  variants. Load the active family even when search matched only one SKU; large
+  families retain the existing pagination. Scanning a specific SKU/barcode still
+  adds that exact variant directly; ungrouped products keep one-click addition.
 - Cart/order/invoice/receipt display names include the variant label. New order,
   invoice and stock-document snapshots retain that label. Historical snapshots
   and product IDs are preserved.
