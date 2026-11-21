@@ -142,3 +142,39 @@ created by this task; the normal local backend was restarted with the new JAR.
   a full form refactor is outside the requested correction.
 - Test session/tab/services were cleaned up. Normal 8080/5173 remain running;
   no production data was changed by this task.
+
+## Receiving load/price synchronization on 2026-11-21
+
+- Root causes: detail and variant list loaded in series; choosing a SKU repeated
+  the same family query; selected detail used a listed price while summary DTOs
+  used an effective promotional price. Initial development effect replay also
+  sent duplicate reads.
+- Receiving now starts both reads together and reveals editable fields only
+  after both succeed, with one skeleton/status and disabled submission while
+  pending. A per-dialog request reference shares effect-replay reads, without
+  caching between openings or accounts. Retry and new-variant creation reload
+  both current-SKU reads; late replies remain ignored.
+- The picker accepts the preloaded first page and reuses a current family page
+  on SKU selection. Other pages retain loading/error/retry/pagination behavior.
+  Admin cards and the selected SKU show the explicitly labelled listed price;
+  public cards retain the effective promotional price.
+- Browser with artificial delays of 1s for detail and 4s for variants: exactly
+  two reads started together; completion was about 4.05s. While pending, no
+  quantity/cost controls were exposed and Create receipt was disabled. Switching
+  Do -> Re -> Do left the product request count at 2 and cleared old quantity/cost.
+  See `stock-sync-requests.json` and `stock-sync-listed-price.jpg`. These are
+  controlled local timings, not a production latency benchmark.
+- With a test-only 5% promotion, listed price 650,000 VND appeared in both Admin
+  locations, while public detail/cards still showed 617,500 VND.
+- Injecting one 503 on the variant list hid the editable fields and disabled
+  submission; Retry recovered the same SKU with both reads complete.
+- A 21-SKU test group verified page 2 selection and returning to page 1: only
+  the initial detail/page-0 and one page-1 read occurred; selecting SKU 1581
+  then SKU 1562 did not refetch the family. Creating Tone Si (B) sync returned
+  receiving to new SKU 1582 with zero stock and both reads refreshed.
+- All 103 native frontend tests, lint and production build passed. Only two
+  frontend components changed; no backend contract, dependency or business-rule
+  change. No receipt, order or payment was submitted.
+- All fixtures/promotion writes were restricted to loopback `m4n_test`.
+  Temporary sessions/tab/services were cleaned up. Normal localhost 8080/5173
+  services were restarted and their health/API proxy verified.

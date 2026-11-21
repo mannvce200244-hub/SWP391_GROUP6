@@ -50,6 +50,10 @@ price and inventory. Customers and POS choose the SKU they want to buy.
   Each receipt still represents one SKU/batch and follows the existing QC flow.
   Accepted units affect only that SKU; purchase unit cost never changes its
   listed sale price. Group/label search is available in Inventory.
+- Receiving loads SKU detail and the first variant page in parallel, then
+  reveals the form together. Admin selection/receiving display listed prices;
+  customer selection still displays effective promotional prices. Reuse loaded
+  pages when changing the selected SKU; refresh after creating a new variant.
 - When adding to an existing group, the form is titled “Thêm biến thể cho …”
   and submits with “Tạo biến thể”. Shared information is prefilled and editable;
   SKU/barcode/label are new. Editing an existing SKU still uses “Lưu thay đổi”.

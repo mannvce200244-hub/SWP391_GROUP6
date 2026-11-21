@@ -1,0 +1,56 @@
+{
+  "environment": "loopback m4n_test only",
+  "artificialDetailDelaySeconds": 1,
+  "artificialVariantDelaySeconds": 4,
+  "initialLoad": [
+    {
+      "phase": "start",
+      "method": "GET",
+      "path": "/api/v1/admin/products/1555",
+      "time": 407.046
+    },
+    {
+      "phase": "start",
+      "method": "GET",
+      "path": "/api/v1/admin/products/1555/variants?page=0&size=20",
+      "time": 407.046
+    },
+    {
+      "phase": "end",
+      "method": "GET",
+      "path": "/api/v1/admin/products/1555",
+      "time": 408.062,
+      "status": 200
+    },
+    {
+      "phase": "end",
+      "method": "GET",
+      "path": "/api/v1/admin/products/1555/variants?page=0&size=20",
+      "time": 411.093,
+      "status": 200
+    }
+  ],
+  "requestCountAfterDoReDo": 2,
+  "paginationRequests": [
+    {
+      "phase": "start",
+      "method": "GET",
+      "path": "/api/v1/admin/products/1561",
+      "time": 524.734
+    },
+    {
+      "phase": "start",
+      "method": "GET",
+      "path": "/api/v1/admin/products/1561/variants?page=0&size=20",
+      "time": 524.75
+    },
+    {
+      "phase": "start",
+      "method": "GET",
+      "path": "/api/v1/admin/products/1561/variants?page=1&size=20",
+      "time": 580.234
+    }
+  ],
+  "listedPrice": 650000,
+  "customerEffectivePriceWithFivePercentPromotion": 617500
+}
