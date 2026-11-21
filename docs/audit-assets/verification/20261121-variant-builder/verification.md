@@ -67,3 +67,28 @@ Unrelated product/POS refactoring was kept out of this change.
 The existing variant schema is sufficient. Deploy backend before frontend for
 the new Admin batch/list endpoints. No production product, receipt or stock was
 created by this task; the normal local backend was restarted with the new JAR.
+
+## Recheck on 2026-11-21
+
+- Fixed clicking the already selected receipt tone clearing quantity/unit cost.
+  Browser: enter 12 at 400,000 VND on Do, click Do again: both values remain;
+  switch to Re: both clear.
+- Fixed retry after creating a variant inside receiving loading the original
+  product instead of the new SKU. An isolated HTTP proxy injected one 503 on
+  the new SKU detail request. Submission remained disabled; Retry loaded
+  M4N-HOI-1559, Tone Sol (G) recheck, at 810,000 VND with empty quantity/cost.
+  The unresolved new SKU no longer displays the original SKU as its heading.
+  See `recheck-retry-selected-sku.jpg`.
+- Fixed the gallery retaining another tone's selected thumbnail. Starting on
+  Do's second photo and selecting Re now shows Re's primary photo, 720,000 VND,
+  stock 3 and quantity 1. See `recheck-customer-gallery.jpg`.
+- Browser quantity regression: entering 15 when Re stock is 3 immediately
+  clamps to 3, displays the stock message and disables increment.
+- Re-ran all 103 frontend tests, lint and production build successfully. Backend
+  source is unchanged in this recheck; the 618-test clean verify above remains
+  the backend validation for this PR.
+- Recheck used isolated ports 8083/8084/5183 and loopback `m4n_test` only.
+  No receipt/order/payment was submitted. The additional test SKU and gallery
+  references exist only in the test database. Sessions were logged out and the
+  temporary browser tab closed. QA services were stopped; normal 8080/5173
+  services remain running.

@@ -118,7 +118,7 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
         {/* Left Column (7 cols): Gallery */}
         <div className="lg:col-span-7">
-          <ProductGallery media={product.media} productName={product.name} />
+          <ProductGallery key={product.id} media={product.media} productName={product.name} />
         </div>
 
         {/* Right Column (5 cols): Details & Purchase */}

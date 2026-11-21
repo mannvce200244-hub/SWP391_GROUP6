@@ -17,17 +17,18 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [selection, setSelection] = useState(null)
+  const [detailTargetId, setDetailTargetId] = useState(product.productId)
   const [productError, setProductError] = useState('')
   const [retry, setRetry] = useState(0)
   const [variantSource, setVariantSource] = useState(null)
   const [pickerVersion, setPickerVersion] = useState(0)
   useEffect(() => {
     let active = true
-    adminProductService.getProductDetail(product.productId).then((data) => {
+    adminProductService.getProductDetail(detailTargetId).then((data) => {
       if (active) { setSelection(data); setProductError('') }
     }).catch((failure) => { if (active) setProductError(failure.message || 'Không thể tải biến thể. Hãy thử lại.') })
     return () => { active = false }
-  }, [product.productId, retry])
+  }, [detailTargetId, retry])
   const errorRef = useRef(null)
   const dialogRef = useDialogFocus(true, onClose, busy)
   const action = 'nhập'
@@ -73,12 +74,18 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
           <h3 id="stock-draft-title" className="text-lg font-semibold text-ink">Nhập thêm hàng theo lô</h3>
           <Button variant="ghost" size="sm" disabled={busy} onClick={onClose} aria-label="Đóng hộp thoại tạo phiếu kho"><X size={18} aria-hidden="true" /></Button>
         </div>
-        <p className="text-sm break-words"><strong>{selection?.variantLabel ? `${selection.variantGroup} · ${selection.variantLabel}` : selection?.name || product.productName}</strong> · <span translate="no">{selection?.code || product.productCode}</span></p>
+        <p className="text-sm break-words">
+          <strong>{selection?.variantLabel ? `${selection.variantGroup} · ${selection.variantLabel}` : selection?.name || (detailTargetId === product.productId ? product.productName : 'Biến thể vừa tạo')}</strong>
+          {(selection?.code || detailTargetId === product.productId) && <> · <span translate="no">{selection?.code || product.productCode}</span></>}
+        </p>
         <p id="stock-draft-description" className="text-sm text-muted">Chọn đúng biến thể trước khi nhập số lượng và giá nhập. Chỉ hàng đạt QC được cộng vào tồn của SKU đã chọn.</p>
         {!selection && !productError && <p role="status" className="text-sm text-muted">Đang tải sản phẩm…</p>}
         {productError && <p role="alert" className="text-sm text-danger">{productError} <button type="button" className="underline" onClick={() => setRetry((value) => value + 1)}>Thử lại</button></p>}
         {selection?.variantGroup && <ProductVariantPicker key={`${product.productId}-${pickerVersion}`} product={selection} admin disabled={busy}
-          onSelect={(variant) => { setSelection(variant); setQuantity(''); setUnitCost(''); setErrors({}); setError('') }} />}
+          onSelect={(variant) => {
+            if (variant.id === selection.id) return
+            setSelection(variant); setQuantity(''); setUnitCost(''); setErrors({}); setError('')
+          }} />}
         {selection?.variantGroup && <Button variant="secondary" disabled={busy} onClick={async () => {
           setBusy(true)
           try { setVariantSource(await adminProductService.getProductDetail(selection.id)) }
@@ -101,14 +108,11 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
         </div>
       </form>
     </div>
-    {variantSource && <ProductFormModal isOpen variantSource={variantSource} onClose={() => setVariantSource(null)} onSuccess={async (id) => {
+    {variantSource && <ProductFormModal isOpen variantSource={variantSource} onClose={() => setVariantSource(null)} onSuccess={(id) => {
       setVariantSource(null)
       setPickerVersion((value) => value + 1)
-      setQuantity(''); setUnitCost(''); setErrors({})
-      setBusy(true)
-      try { setSelection(await adminProductService.getProductDetail(id)); setProductError('') }
-      catch (failure) { setSelection(null); setProductError(failure.message || 'Không thể tải biến thể vừa tạo.') }
-      finally { setBusy(false) }
+      setQuantity(''); setUnitCost(''); setErrors({}); setError('')
+      setSelection(null); setProductError(''); setDetailTargetId(id)
     }} />}
     </>
   )
