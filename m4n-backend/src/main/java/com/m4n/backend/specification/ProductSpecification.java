@@ -25,6 +25,41 @@ public final class ProductSpecification {
 
     private ProductSpecification() {}
 
+    public static Specification<Product> familyRepresentatives(Specification<Product> filter, Specification<Product> matchingVariants) {
+        return (root, query, cb) -> {
+            Predicate matches = filter.toPredicate(root, query, cb);
+            var representative = query.subquery(Long.class);
+            var sibling = representative.from(Product.class);
+            representative.select(cb.min(sibling.<Long>get("id"))).where(sameFamily(root, sibling, cb),
+                    matchingVariants.toPredicate(sibling, query, cb));
+            return cb.and(matches, cb.equal(root.get("id"), representative));
+        };
+    }
+
+    private static Predicate sameFamily(jakarta.persistence.criteria.Path<Product> first, jakarta.persistence.criteria.Path<Product> second, CriteriaBuilder cb) {
+        return cb.or(cb.equal(first.get("id"), second.get("id")),
+                cb.and(cb.isNotNull(first.get("family").get("id")), cb.equal(first.get("family").get("id"), second.get("family").get("id"))));
+    }
+
+    public static Specification<Product> familyInventoryStatus(String status) {
+        return (root, query, cb) -> {
+            if (status == null || status.isBlank() || status.equalsIgnoreCase("ALL")) return cb.conjunction();
+            var balance = query.subquery(Long.class);
+            var inventory = balance.from(com.m4n.backend.entity.Inventory.class);
+            balance.select(cb.coalesce(cb.sum(inventory.<Integer>get("quantity")).as(Long.class), 0L))
+                    .where(sameFamily(root, inventory.get("product"), cb));
+            var threshold = query.subquery(Long.class);
+            var sibling = threshold.from(Product.class);
+            threshold.select(cb.sum(cb.coalesce(sibling.<Integer>get("lowStockThreshold"), 5)).as(Long.class)).where(sameFamily(root, sibling, cb));
+            return switch (status.toUpperCase(Locale.ROOT)) {
+                case "IN_STOCK" -> cb.greaterThan(balance, threshold);
+                case "LOW_STOCK" -> cb.and(cb.greaterThan(balance, 0L), cb.lessThanOrEqualTo(balance, threshold));
+                case "OUT_OF_STOCK" -> cb.equal(balance, 0L);
+                default -> throw new IllegalArgumentException("Trạng thái tồn kho không hợp lệ.");
+            };
+        };
+    }
+
     public static Specification<Product> filterCatalog(
             String keyword,
             String group,
@@ -102,9 +137,11 @@ public final class ProductSpecification {
     private static Expression<BigDecimal> effectivePrice(Root<Product> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
         var strongestRate = query.subquery(BigDecimal.class);
         var promotion = strongestRate.from(ProductPromotion.class);
+        var legacyProduct = promotion.join("product", jakarta.persistence.criteria.JoinType.LEFT);
+        var target = promotion.join("families", jakarta.persistence.criteria.JoinType.LEFT);
         Instant now = Instant.now();
         strongestRate.select(cb.max(promotion.<BigDecimal>get("discountRate"))).where(
-                cb.equal(promotion.get("product").get("id"), root.get("id")), cb.isTrue(promotion.get("isActive")),
+                cb.or(cb.equal(legacyProduct.get("id"), root.get("id")), cb.equal(target.get("id"), root.get("family").get("id"))), cb.isTrue(promotion.get("isActive")),
                 cb.greaterThan(promotion.get("discountRate"), BigDecimal.ZERO),
                 cb.or(cb.isNull(promotion.get("validFrom")), cb.lessThanOrEqualTo(promotion.get("validFrom"), now)),
                 cb.or(cb.isNull(promotion.get("validUntil")), cb.greaterThan(promotion.get("validUntil"), now)));
@@ -160,7 +197,9 @@ public final class ProductSpecification {
                 .replaceAll("\\p{M}+", "").replace('đ', 'd');
         String term = "%" + normalized.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
         // Translate in the database so accent-insensitive filtering still precedes pagination.
-        Expression<String> searchableName = cb.concat(cb.concat(root.get("name"), cb.concat(" ", cb.coalesce(root.get("variantGroup"), ""))),
+        var family = root.join("family", jakarta.persistence.criteria.JoinType.LEFT);
+        Expression<String> baseName = cb.concat(root.get("name"), cb.concat(" ", cb.coalesce(family.get("name"), "")));
+        Expression<String> searchableName = cb.concat(cb.concat(baseName, cb.concat(" ", cb.coalesce(root.get("variantGroup"), ""))),
                 cb.concat(" ", cb.coalesce(root.get("variantLabel"), "")));
         Expression<String> name = cb.function("translate", String.class, cb.lower(searchableName),
                 cb.literal(VIETNAMESE_LETTERS + "\u0300\u0301\u0303\u0309\u0323\u0302\u0306\u031b"), cb.literal(PLAIN_LETTERS));

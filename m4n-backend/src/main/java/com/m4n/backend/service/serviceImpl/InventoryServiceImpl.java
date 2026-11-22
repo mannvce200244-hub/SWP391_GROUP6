@@ -35,16 +35,55 @@ public class InventoryServiceImpl implements InventoryService {
     private final InventoryRepository inventoryRepository;
     private final InventoryMovementRepository inventoryMovementRepository;
     private final ProductMediaRepository productMediaRepository;
+    private final com.m4n.backend.repository.ProductRepository productRepository;
 
     @Autowired
     public InventoryServiceImpl(
             InventoryRepository inventoryRepository,
             InventoryMovementRepository inventoryMovementRepository,
-            ProductMediaRepository productMediaRepository
+            ProductMediaRepository productMediaRepository,
+            com.m4n.backend.repository.ProductRepository productRepository
     ) {
         this.inventoryRepository = inventoryRepository;
         this.inventoryMovementRepository = inventoryMovementRepository;
         this.productMediaRepository = productMediaRepository;
+        this.productRepository = productRepository;
+    }
+
+    @Override @Transactional(readOnly = true)
+    public Page<InventoryItemResponse> listInventoryFamilies(String keyword, String status, Pageable pageable) {
+        validatePage(pageable);
+        if (pageable.getSort().stream().anyMatch(order -> !Set.of("id", "updatedAt").contains(order.getProperty()))) {
+            throw new IllegalArgumentException("Sắp xếp sản phẩm trong kho theo mã hoặc thời gian cập nhật.");
+        }
+        var filter = com.m4n.backend.specification.ProductSpecification.filterAdminProducts(keyword, null, null, null, null);
+        var spec = com.m4n.backend.specification.ProductSpecification.familyRepresentatives(filter, filter)
+                .and(com.m4n.backend.specification.ProductSpecification.familyInventoryStatus(status));
+        var products = productRepository.findAll(spec, pageable);
+        var ids = products.getContent().stream().map(Product::getId).toList();
+        var familyIds = products.getContent().stream().filter(p -> p.getFamily() != null).map(p -> p.getFamily().getId()).distinct().toList();
+        var totals = familyIds.isEmpty() ? Map.<Long, com.m4n.backend.repository.ProductRepository.FamilyInventoryTotals>of()
+                : productRepository.familyInventoryTotals(familyIds).stream().collect(Collectors.toMap(
+                    com.m4n.backend.repository.ProductRepository.FamilyInventoryTotals::getFamilyId, value -> value));
+        var stocks = ids.isEmpty() ? Map.<Long, Inventory>of() : inventoryRepository.findByProductIdIn(ids).stream()
+                .collect(Collectors.toMap(item -> item.getProduct().getId(), value -> value));
+        return products.map(product -> {
+            var stock = stocks.getOrDefault(product.getId(), Inventory.builder().product(product).quantity(0).build());
+            var response = mapToResponse(stock, Map.of());
+            response.setProductName(product.getFamilyName());
+            response.setVariantCount(1L);
+            if (product.getFamily() != null) {
+                var total = totals.get(product.getFamily().getId());
+                response.setFamilyId(product.getFamily().getId());
+                if (total != null) {
+                    response.setQuantity(total.getQuantity());
+                    response.setVariantCount(total.getVariantCount());
+                    response.setStatus(total.getQuantity() <= 0 ? "OUT_OF_STOCK" : total.getQuantity() <= total.getThreshold() ? "LOW_STOCK" : "IN_STOCK");
+                    response.setStatusLabel(response.getStatus().equals("OUT_OF_STOCK") ? "Hết hàng" : response.getStatus().equals("LOW_STOCK") ? "Sắp hết hàng" : "Còn hàng");
+                }
+            }
+            return response;
+        });
     }
 
     @Override
@@ -96,6 +135,12 @@ public class InventoryServiceImpl implements InventoryService {
     @Override
     @Transactional(readOnly = true)
     public Page<InventoryMovementResponse> listMovements(Long productId, String type, Pageable pageable) {
+        return listMovements(productId, null, type, pageable);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public Page<InventoryMovementResponse> listMovements(Long productId, Long familyId, String type, Pageable pageable) {
+        if (familyId != null && (familyId <= 0 || productId != null)) throw new IllegalArgumentException("Chọn một sản phẩm hoặc một SKU hợp lệ để xem lịch sử.");
         validatePage(pageable);
         if (pageable.getSort().stream().anyMatch(order -> !Set.of("id", "createdAt").contains(order.getProperty()))) {
             throw new IllegalArgumentException("Trường sắp xếp lịch sử kho không được hỗ trợ.");
@@ -104,7 +149,9 @@ public class InventoryServiceImpl implements InventoryService {
         if (normalizedType != null && !Set.of("IMPORT", "RECEIPT", "ISSUE", "ORDER_CONFIRMATION", "POS_SALE", "ORDER_CANCELLATION").contains(normalizedType)) {
             throw new IllegalArgumentException("Loại biến động kho không hợp lệ.");
         }
-        return inventoryMovementRepository.search(productId, normalizedType, pageable).map(movement -> {
+        var movements = familyId == null ? inventoryMovementRepository.search(productId, normalizedType, pageable)
+                : inventoryMovementRepository.searchFamily(familyId, normalizedType, pageable);
+        return movements.map(movement -> {
             Product product = movement.getProduct();
             return new InventoryMovementResponse(movement.getId(), product.getId(),
                     movement.getProductCode() == null ? product.getCode() : movement.getProductCode(),
@@ -147,7 +194,7 @@ public class InventoryServiceImpl implements InventoryService {
                 .productName(product.getDisplayName())
                 .categoryName(product.getCategory() != null ? product.getCategory().getName() : null)
                 .price(product.getPrice())
-                .quantity(qty)
+                .quantity((long) qty)
                 .status(status)
                 .statusLabel(statusLabel)
                 .primaryImage(primaryImages.get(product.getId()))

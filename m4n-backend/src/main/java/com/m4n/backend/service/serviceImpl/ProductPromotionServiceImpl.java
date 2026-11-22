@@ -20,6 +20,7 @@ import java.util.Objects;
 public class ProductPromotionServiceImpl implements ProductPromotionService {
     private final ProductPromotionRepository promotionRepository;
     private final ProductRepository productRepository;
+    private final com.m4n.backend.repository.ProductFamilyRepository familyRepository;
 
     @Override @Transactional(readOnly = true)
     public Page<ProductPromotionResponse> listPromotions(Long productId, Boolean isActive, int page, int size) {
@@ -27,16 +28,23 @@ public class ProductPromotionServiceImpl implements ProductPromotionService {
             throw new IllegalArgumentException("Trang phải từ 0 và nằm trong giới hạn hỗ trợ; số chương trình mỗi trang từ 1 đến 100.");
         }
         if (productId != null && productId <= 0) throw new IllegalArgumentException("ID sản phẩm không hợp lệ.");
-        Specification<ProductPromotion> filters = (root, query, builder) -> builder.and(
-                productId == null ? builder.conjunction() : builder.equal(root.get("product").get("id"), productId),
-                isActive == null ? builder.conjunction() : builder.equal(root.get("isActive"), isActive));
+        Long familyId = productId == null ? null : productRepository.findById(productId)
+                .map(product -> product.getFamily() == null ? null : product.getFamily().getId()).orElse(null);
+        Specification<ProductPromotion> filters = (root, query, builder) -> {
+            var target = productId == null ? builder.conjunction() : builder.equal(root.get("product").get("id"), productId);
+            if (familyId != null) {
+                query.distinct(true);
+                target = builder.or(target, builder.equal(root.join("families", jakarta.persistence.criteria.JoinType.LEFT).get("id"), familyId));
+            }
+            return builder.and(target, isActive == null ? builder.conjunction() : builder.equal(root.get("isActive"), isActive));
+        };
         return promotionRepository.findAll(filters, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt", "id"))).map(this::toResponse);
     }
 
     @Override @Transactional
     public ProductPromotionResponse createPromotion(CreateProductPromotionRequest request) {
         ProductPromotion promotion = new ProductPromotion();
-        updateFields(promotion, request.productId(), request.name(), request.discountRate(), request.isActive(), request.validFrom(), request.validUntil());
+        updateFields(promotion, request.productId(), request.familyIds(), request.name(), request.discountRate(), request.isActive(), request.validFrom(), request.validUntil());
         return toResponse(promotionRepository.saveAndFlush(promotion));
     }
 
@@ -44,7 +52,7 @@ public class ProductPromotionServiceImpl implements ProductPromotionService {
     public ProductPromotionResponse updatePromotion(Long id, UpdateProductPromotionRequest request) {
         ProductPromotion promotion = findPromotion(id);
         checkVersion(promotion, request.expectedVersion());
-        updateFields(promotion, request.productId(), request.name(), request.discountRate(), request.isActive(), request.validFrom(), request.validUntil());
+        updateFields(promotion, request.productId(), request.familyIds(), request.name(), request.discountRate(), request.isActive(), request.validFrom(), request.validUntil());
         return toResponse(promotionRepository.saveAndFlush(promotion));
     }
 
@@ -66,18 +74,47 @@ public class ProductPromotionServiceImpl implements ProductPromotionService {
         if (!Objects.equals(promotion.getVersion(), expectedVersion)) throw new IllegalStateException("Chương trình đã được quản trị viên khác thay đổi. Vui lòng tải lại.");
     }
 
-    private void updateFields(ProductPromotion promotion, Long productId, String name, BigDecimal rate, Boolean active, Instant from, Instant until) {
-        if (from != null && until != null && !until.isAfter(from)) throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu.");
-        boolean sameProduct = promotion.getProduct() != null && productId.equals(promotion.getProduct().getId());
-        promotion.setProduct((sameProduct ? productRepository.findById(productId) : productRepository.findByIdAndIsActiveTrue(productId))
-                .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm không tồn tại hoặc đã ngừng lưu hành.")));
+    private void updateFields(ProductPromotion promotion, Long productId, java.util.List<Long> familyIds, String name, BigDecimal rate, Boolean active, Instant from, Instant until) {
+        Instant baseline = promotion.getCreatedAt() == null ? Instant.now() : promotion.getCreatedAt();
+        if (from != null && from.isAfter(baseline)) baseline = from;
+        if (until != null && until.isBefore(baseline.plusSeconds(3600))) {
+            throw new IllegalArgumentException("Thời gian kết thúc phải cách lúc tạo và lúc bắt đầu ít nhất 1 giờ.");
+        }
+        boolean multiple = familyIds != null && !familyIds.isEmpty();
+        if ((productId == null) == !multiple) throw new IllegalArgumentException("Chọn ít nhất một sản phẩm; không trộn lựa chọn sản phẩm và SKU cũ.");
+        if (multiple) {
+            if (familyIds.stream().anyMatch(id -> id == null || id <= 0) || new java.util.HashSet<>(familyIds).size() != familyIds.size()) {
+                throw new IllegalArgumentException("Danh sách sản phẩm chứa mã không hợp lệ hoặc trùng lặp.");
+            }
+            var existingIds = promotion.getFamilies().stream().map(com.m4n.backend.entity.ProductFamily::getId).collect(java.util.stream.Collectors.toSet());
+            if (promotion.getProduct() != null && promotion.getProduct().getFamily() != null) existingIds.add(promotion.getProduct().getFamily().getId());
+            var families = familyRepository.findAllById(familyIds);
+            if (families.size() != familyIds.size()) throw new ResourceNotFoundException("Một sản phẩm được chọn không còn tồn tại.");
+            for (var family : families) {
+                if (!existingIds.contains(family.getId()) && !productRepository.existsByFamilyIdAndIsActiveTrue(family.getId())) {
+                    throw new IllegalArgumentException("Sản phẩm “" + family.getName() + "” đã ngừng kinh doanh.");
+                }
+            }
+            promotion.setFamilies(new java.util.LinkedHashSet<>(families));
+            promotion.setProduct(null);
+        } else {
+            boolean sameProduct = promotion.getProduct() != null && productId.equals(promotion.getProduct().getId());
+            promotion.setProduct((sameProduct ? productRepository.findById(productId) : productRepository.findByIdAndIsActiveTrue(productId))
+                    .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm không tồn tại hoặc đã ngừng lưu hành.")));
+            promotion.getFamilies().clear();
+        }
         promotion.setName(name.trim()); promotion.setDiscountRate(rate); promotion.setActive(active);
         promotion.setValidFrom(from); promotion.setValidUntil(until);
     }
 
     private ProductPromotionResponse toResponse(ProductPromotion promotion) {
-        return new ProductPromotionResponse(promotion.getId(), promotion.getProduct().getId(), promotion.getProduct().getName(),
+        var targets = promotion.getFamilies().stream().sorted(java.util.Comparator.comparing(com.m4n.backend.entity.ProductFamily::getId))
+                .map(family -> new com.m4n.backend.dto.response.ProductPromotionTargetResponse(family.getId(), family.getName())).toList();
+        if (targets.isEmpty() && promotion.getProduct() != null && promotion.getProduct().getFamily() != null) {
+            targets = java.util.List.of(new com.m4n.backend.dto.response.ProductPromotionTargetResponse(promotion.getProduct().getFamily().getId(), promotion.getProduct().getFamilyName()));
+        }
+        return new ProductPromotionResponse(promotion.getId(), promotion.getProduct() == null ? null : promotion.getProduct().getId(), promotion.getProduct() == null ? null : promotion.getProduct().getName(),
                 promotion.getName(), promotion.getDiscountRate(), promotion.isActive(), promotion.getValidFrom(), promotion.getValidUntil(),
-                promotion.getVersion(), promotion.getCreatedAt(), promotion.getUpdatedAt());
+                promotion.getVersion(), promotion.getCreatedAt(), promotion.getUpdatedAt(), targets);
     }
 }

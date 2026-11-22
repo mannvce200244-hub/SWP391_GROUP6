@@ -120,6 +120,7 @@ export default function AdminInstrumentsPage() {
       setError(null)
       return adminProductService.listProducts({
         keyword,
+        groupVariants: true,
         categoryId: selectedCategory ? Number(selectedCategory) : undefined,
         artisanId: selectedArtisan ? Number(selectedArtisan) : undefined,
         craftVillageId: selectedVillage ? Number(selectedVillage) : undefined,
@@ -182,12 +183,7 @@ export default function AdminInstrumentsPage() {
     setLoadingVariant(true)
     try {
       const source = await adminProductService.getProductDetail(id)
-      if (!source.variantGroup) {
-        handleOpenEditProduct(id)
-        addToast({ type: 'info', message: 'Đặt nhóm và tên cho biến thể hiện tại trước, rồi thêm tone mới.' })
-      } else {
-        setVariantSource(source); setEditingProductId(null); setProductModalOpen(true)
-      }
+      setVariantSource(source); setEditingProductId(null); setProductModalOpen(true)
     } catch (failure) { addToast({ type: 'error', message: failure.message || 'Không thể tải thông tin sản phẩm.' }) }
     finally { setLoadingVariant(false) }
   }
@@ -545,7 +541,7 @@ export default function AdminInstrumentsPage() {
                           {p.primaryImage ? (
                             <img
                                 src={p.primaryImage}
-                                alt={p.name}
+                                alt={p.familyName || p.name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
                                   e.target.style.display = 'none'
@@ -562,13 +558,13 @@ export default function AdminInstrumentsPage() {
                                 navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(p.id))
                               }
                               className="text-sm font-semibold text-[#17191B] hover:text-[#0D9488] transition-colors text-left truncate block max-w-xs sm:max-w-md cursor-pointer"
-                              title={p.name}
+                              title={p.familyName || p.name}
                             >
-                              {p.name}
+                              {p.familyName || p.name}
                             </button>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="font-mono text-xs font-medium text-secondary bg-[#F2F4F5] px-2 py-0.5 rounded">
-                                {p.code}
+                                {p.variantCount > 1 ? `${p.variantCount} biến thể` : p.code}
                               </span>
                               {p.barcode && (
                                 <span className="font-mono text-xs text-muted">
@@ -630,6 +626,8 @@ export default function AdminInstrumentsPage() {
 
                       {/* Active Status Toggle */}
                       <td className="py-3.5 px-4 text-center">
+                        {p.variantCount > 1 ? <button type="button" onClick={() => navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(p.id))}
+                          className="min-h-11 rounded-lg border border-border bg-white px-3 text-xs font-semibold hover:bg-surface-secondary">Theo biến thể</button> : (
                         <button
                           type="button"
                           onClick={() => handleToggleStatus(p)}
@@ -641,7 +639,8 @@ export default function AdminInstrumentsPage() {
                           title="Nhấn để bật / tắt trạng thái bán"
                         >
                           {p.isActive ? 'Kinh doanh' : 'Tạm ngừng'}
-                        </button>
+                        </button>)}
+
                       </td>
 
                       {/* Action buttons */}

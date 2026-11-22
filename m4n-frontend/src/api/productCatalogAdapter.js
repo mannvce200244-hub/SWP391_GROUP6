@@ -3,6 +3,7 @@ import apiClient, { ApiError } from './apiClient.js'
 const productCatalogAdapter = Object.freeze({
   async listProducts(filters = {}) {
     const params = new URLSearchParams()
+    params.set('groupVariants', 'true')
 
     if (filters.keyword && String(filters.keyword).trim()) {
       params.append('keyword', String(filters.keyword).trim())

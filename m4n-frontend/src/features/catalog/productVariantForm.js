@@ -1,5 +1,6 @@
-export function variantFormErrors(base, rows) {
+export function variantFormErrors(base, rows, requireVariant = false) {
   const errors = {}
+  const needsVariant = requireVariant || rows.length > 0 || Boolean(base.variantLabel?.trim())
   const labels = new Set()
   const codes = new Set()
   const barcodes = new Set()
@@ -7,7 +8,7 @@ export function variantFormErrors(base, rows) {
   all.forEach((row, index) => {
     const field = (key) => index ? `variants[${index}].${key}` : key
     const label = row.label.trim().normalize('NFC').toLocaleLowerCase('vi')
-    if (!label || label.length > 100) errors[field('variantLabel')] = 'Nhập tên biến thể, tối đa 100 ký tự.'
+    if (needsVariant && (!label || label.length > 100)) errors[field('variantLabel')] = 'Nhập tên biến thể, tối đa 100 ký tự.'
     else if (labels.has(label)) errors[field('variantLabel')] = 'Tên biến thể đã có trong danh sách.'
     labels.add(label)
     if (!/^\d+(\.\d{1,2})?$/.test(row.price.trim()) || !Number.isFinite(Number(row.price)) || Number(row.price) <= 0 || Number(row.price) >= 1e12) {

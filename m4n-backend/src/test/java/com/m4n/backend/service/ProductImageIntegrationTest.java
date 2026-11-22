@@ -89,13 +89,33 @@ class ProductImageIntegrationTest {
 
     private CreateProductRequest request(String code) {
         return new CreateProductRequest(code, null, "Uploaded instrument", BigDecimal.valueOf(100000), category.getId(),
-                null, null, "Wood", "30 x 20 x 10 cm", null, null, "Upload fixture", List.of(), 5, BigDecimal.ONE, BigDecimal.ZERO, null, null);
+                null, null, "Wood", "30 x 20 x 10 cm", null, null, "Upload fixture", List.of(), 5, BigDecimal.ONE, BigDecimal.ZERO, null, null, null, null);
     }
 
     private CreateProductRequest variant(String group, String label) {
+        return variant(group, label, null);
+    }
+
+    private CreateProductRequest variant(String group, String label, Boolean active) {
         var base = request(null);
         return new CreateProductRequest(null, null, base.name(), base.price(), base.categoryId(), null, null,
-                base.material(), base.dimensions(), null, base.origin(), null, List.of(), 5, null, null, group, label);
+                base.material(), base.dimensions(), null, base.origin(), null, List.of(), 5, null, null, group, label, active, null);
+    }
+
+    @Test void uploadedSingleAndBatchVariantsPreserveInactiveStatus() throws Exception {
+        MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+        String group = "Inactive upload " + UUID.randomUUID();
+        var single = new MockMultipartFile("product", "", "application/json", new ObjectMapper().writeValueAsBytes(variant(group, "C", false)));
+        mvc.perform(multipart("/api/v1/admin/products/with-images").file(single).file(png("single.png"))
+                        .with(user("admin@example.test").roles("ADMIN")))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.isActive").value(false))
+                .andExpect(jsonPath("$.stockQuantity").value(0));
+        var batch = new MockMultipartFile("product", "", "application/json", new ObjectMapper().writeValueAsBytes(
+                new CreateProductVariantsRequest(List.of(variant(group, "D", false), variant(group, "E", true)))));
+        mvc.perform(multipart("/api/v1/admin/products/variants/with-images").file(batch).file(png("batch.png"))
+                        .with(user("admin@example.test").roles("ADMIN")))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$[0].isActive").value(false))
+                .andExpect(jsonPath("$[1].isActive").value(true)).andExpect(jsonPath("$[0].stockQuantity").value(0));
     }
 
     @Test void variantUploadIsSharedAndRolledBackWithTheEntireBatch() throws Exception {

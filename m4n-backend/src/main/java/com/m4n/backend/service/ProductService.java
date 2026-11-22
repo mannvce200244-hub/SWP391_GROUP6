@@ -39,6 +39,12 @@ public interface ProductService {
             BigDecimal maxPrice
     );
 
+    Page<ProductSummaryResponse> listProducts(String keyword, String group, String artisan, String craftVillage,
+            BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable, boolean groupVariants);
+
+    Page<com.m4n.backend.dto.response.AdminProductSummaryResponse> listAdminProducts(String keyword, Long categoryId,
+            Long artisanId, Long craftVillageId, Boolean isActive, Pageable pageable, boolean groupVariants);
+
     com.m4n.backend.dto.response.AdminProductDetailResponse getAdminProductDetail(Long productId);
 
     Page<com.m4n.backend.dto.response.AdminProductSummaryResponse> listAdminProducts(

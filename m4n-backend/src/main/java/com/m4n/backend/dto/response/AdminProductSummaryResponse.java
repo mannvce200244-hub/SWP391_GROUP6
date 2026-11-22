@@ -14,9 +14,12 @@ public record AdminProductSummaryResponse(
         ArtisanSummaryResponse artisan,
         CraftVillageSummaryResponse craftVillage,
         String primaryImage,
-        Integer stockQuantity,
+        Long stockQuantity,
         String availability,
         boolean isActive,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Long familyId,
+        String familyName,
+        long variantCount
 ) {}

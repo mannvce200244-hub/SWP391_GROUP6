@@ -125,13 +125,20 @@ public class StockDocumentServiceImpl implements StockDocumentService {
 
     @Override
     public Page<StockDocumentResponse> list(Long productId, StockDocumentType type, StockDocumentStatus status, Pageable pageable) {
+        return list(productId, null, type, status, pageable);
+    }
+
+    @Override
+    public Page<StockDocumentResponse> list(Long productId, Long familyId, StockDocumentType type, StockDocumentStatus status, Pageable pageable) {
+        if (familyId != null && (familyId <= 0 || productId != null)) throw new IllegalArgumentException("Chọn một sản phẩm hoặc một SKU hợp lệ để xem phiếu kho.");
         if (pageable.isPaged() && pageable.getOffset() > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
         }
         if (pageable.getSort().stream().anyMatch(order -> !Set.of("id", "createdAt", "confirmedAt").contains(order.getProperty()))) {
             throw new IllegalArgumentException("Trường sắp xếp phiếu kho không được hỗ trợ.");
         }
-        return documentRepository.search(productId, type, status, pageable).map(this::response);
+        return (familyId == null ? documentRepository.search(productId, type, status, pageable)
+                : documentRepository.searchFamily(familyId, type, status, pageable)).map(this::response);
     }
 
     private String actor() {

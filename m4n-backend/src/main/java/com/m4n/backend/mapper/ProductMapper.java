@@ -125,15 +125,18 @@ public class ProductMapper {
                 price.productDiscountAmount(),
                 price.productPromotionId(),
                 product.getVariantGroup(),
-                product.getVariantLabel()
+                product.getVariantLabel(),
+                product.getFamily() == null ? null : product.getFamily().getId(),
+                product.getFamilyName()
         );
     }
 
     public ProductSummaryResponse toSummaryResponse(Product product, String availability, ProductMedia primaryMedia, ProductPrice price, Integer stockQuantity) {
-        if (product == null) {
-            return null;
-        }
+        return toSummaryResponse(product, availability, primaryMedia, price, stockQuantity == null ? null : stockQuantity.longValue(), 1);
+    }
 
+    public ProductSummaryResponse toSummaryResponse(Product product, String availability, ProductMedia primaryMedia, ProductPrice price, Long stockQuantity, long variantCount) {
+        if (product == null) return null;
         String groupName = product.getCategory() != null ? product.getCategory().getName() : null;
         String artisanName = product.getArtisan() != null ? product.getArtisan().getName() : null;
         String craftVillageName = product.getCraftVillage() != null ? product.getCraftVillage().getName() : null;
@@ -158,7 +161,10 @@ public class ProductMapper {
                 price.productPromotionId(),
                 stockQuantity,
                 product.getVariantGroup(),
-                product.getVariantLabel()
+                product.getVariantLabel(),
+                product.getFamily() == null ? null : product.getFamily().getId(),
+                product.getFamilyName(),
+                variantCount
         );
     }
 
@@ -171,6 +177,10 @@ public class ProductMapper {
         if (product == null) {
             return null;
         }
+        return toAdminSummaryResponse(product, availability, stockQuantity == null ? null : stockQuantity.longValue(), primaryImage, 1, product.isActive());
+    }
+
+    public AdminProductSummaryResponse toAdminSummaryResponse(Product product, String availability, Long stockQuantity, String primaryImage, long variantCount, boolean active) {
         return new AdminProductSummaryResponse(
                 product.getId(),
                 product.getCode(),
@@ -184,9 +194,12 @@ public class ProductMapper {
                 primaryImage,
                 stockQuantity,
                 availability,
-                product.isActive(),
+                active,
                 product.getCreatedAt(),
-                product.getUpdatedAt()
+                product.getUpdatedAt(),
+                product.getFamily() == null ? null : product.getFamily().getId(),
+                product.getFamilyName(),
+                variantCount
         );
     }
 
@@ -202,7 +215,7 @@ public class ProductMapper {
                 product.getId(),
                 product.getCode(),
                 product.getBarcode(),
-                product.getName(),
+                product.getFamilyName(),
                 product.getPrice(),
                 formatPriceDisplay(product.getPrice()),
                 product.getDescription(),
@@ -223,7 +236,9 @@ public class ProductMapper {
                 product.getBillableWeightKg(),
                 product.getBulkySurcharge(),
                 product.getVariantGroup(),
-                product.getVariantLabel()
+                product.getVariantLabel(),
+                product.getFamily() == null ? null : product.getFamily().getId(),
+                product.getFamilyName()
         );
     }
 }

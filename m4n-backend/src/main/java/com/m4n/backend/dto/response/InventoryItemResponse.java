@@ -22,7 +22,9 @@ public class InventoryItemResponse {
     private String productName;
     private String categoryName;
     private BigDecimal price;
-    private Integer quantity;
+    private Long quantity;
+    private Long familyId;
+    private Long variantCount;
     private String status;
     private String statusLabel;
     private String primaryImage;

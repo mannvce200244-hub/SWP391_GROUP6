@@ -25,7 +25,7 @@ export function InventoryBalanceTable({ items, onDraft, onHistory }) {
         </tr></thead>
         <tbody>{items.map((item) => <tr key={item.productId} className="border-t border-border">
           <th scope="row" className={`${cell} text-left min-w-52 max-w-sm font-medium break-words`}>
-            {item.productName}<span className="block text-xs text-muted font-normal mt-1" translate="no">{item.productCode}</span>
+            {item.productName}<span className="block text-xs text-muted font-normal mt-1" translate="no">{item.variantCount > 1 ? `${item.variantCount} biến thể` : item.productCode}</span>
           </th>
           <td className={`${cell} tabular-nums font-semibold`}>{number.format(item.quantity)}</td>
           <td className={cell}>{item.statusLabel}</td>

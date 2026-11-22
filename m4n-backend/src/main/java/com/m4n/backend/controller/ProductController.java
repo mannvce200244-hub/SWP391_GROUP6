@@ -48,8 +48,10 @@ public class ProductController {
             @RequestParam(required = false) String craftVillage,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "false") boolean groupVariants,
             @PageableDefault(size = 9, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
+        if (groupVariants) return ResponseEntity.ok(productService.listProducts(keyword, group, artisan, craftVillage, minPrice, maxPrice, pageable, true));
         return ResponseEntity.ok(productService.listProducts(
                 keyword, group, artisan, craftVillage, minPrice, maxPrice, pageable
         ));

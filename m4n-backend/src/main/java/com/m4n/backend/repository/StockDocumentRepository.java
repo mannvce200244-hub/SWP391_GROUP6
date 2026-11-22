@@ -21,4 +21,8 @@ public interface StockDocumentRepository extends JpaRepository<StockDocument, Lo
             "AND (:type IS NULL OR d.type = :type) AND (:status IS NULL OR d.status = :status)")
     Page<StockDocument> search(@Param("productId") Long productId, @Param("type") StockDocumentType type,
             @Param("status") StockDocumentStatus status, Pageable pageable);
+
+    @Query("SELECT d FROM StockDocument d WHERE d.product.family.id = :familyId AND (:type IS NULL OR d.type = :type) AND (:status IS NULL OR d.status = :status)")
+    Page<StockDocument> searchFamily(@Param("familyId") Long familyId, @Param("type") StockDocumentType type,
+            @Param("status") StockDocumentStatus status, Pageable pageable);
 }

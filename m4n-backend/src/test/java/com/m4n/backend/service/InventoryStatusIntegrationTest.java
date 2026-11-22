@@ -76,7 +76,7 @@ class InventoryStatusIntegrationTest {
 
         var sorted = inventoryService.listInventory(prefix, null,
                 PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "quantity")));
-        assertThat(sorted.getContent()).extracting(InventoryItemResponse::getQuantity).containsExactly(6, 5, 0);
+        assertThat(sorted.getContent()).extracting(InventoryItemResponse::getQuantity).containsExactly(6L, 5L, 0L);
 
         var lowStock = inventoryService.listInventory(prefix, "LOW_STOCK", PageRequest.of(0, 10));
         assertThat(lowStock.getContent())

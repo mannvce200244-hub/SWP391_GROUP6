@@ -18,14 +18,14 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
-    @EntityGraph(attributePaths = {"category", "artisan", "craftVillage", "media"})
+    @EntityGraph(attributePaths = {"family", "category", "artisan", "craftVillage", "media"})
     Optional<Product> findWithDetailsByIdAndIsActiveTrue(Long id);
 
-    @EntityGraph(attributePaths = {"category", "artisan", "craftVillage", "media"})
+    @EntityGraph(attributePaths = {"family", "category", "artisan", "craftVillage", "media"})
     Optional<Product> findWithDetailsById(Long id);
 
     @Override
-    @EntityGraph(attributePaths = {"category", "artisan", "craftVillage"})
+    @EntityGraph(attributePaths = {"family", "category", "artisan", "craftVillage"})
     Page<Product> findAll(org.springframework.data.jpa.domain.Specification<Product> spec, Pageable pageable);
 
     Optional<Product> findByIdAndIsActiveTrue(Long id);
@@ -42,19 +42,42 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByVariantGroupIgnoreCaseAndVariantLabelIgnoreCaseAndIdNot(String group, String label, Long id);
 
+    boolean existsByFamilyIdAndVariantLabelIgnoreCaseAndIdNot(Long familyId, String label, Long id);
+
+    boolean existsByFamilyIdAndIsActiveTrue(Long familyId);
+
+    interface FamilyInventoryTotals {
+        Long getFamilyId();
+        Long getQuantity();
+        Long getThreshold();
+        Long getVariantCount();
+        Long getActiveCount();
+    }
+
+    // Aggregate only the requested parent page; do not load lazy variant collections.
+    @Query("SELECT p.family.id AS familyId, COALESCE(SUM(i.quantity), 0) AS quantity, "
+            + "COALESCE(SUM(COALESCE(p.lowStockThreshold, 5)), 0) AS threshold, COUNT(p) AS variantCount, SUM(CASE WHEN p.isActive = true THEN 1 ELSE 0 END) AS activeCount "
+            + "FROM Product p LEFT JOIN Inventory i ON i.product = p WHERE p.family.id IN :ids GROUP BY p.family.id")
+    List<FamilyInventoryTotals> familyInventoryTotals(@Param("ids") List<Long> ids);
+
+    @Query("SELECT p.family.id AS familyId, COALESCE(SUM(i.quantity), 0) AS quantity, "
+            + "COALESCE(SUM(COALESCE(p.lowStockThreshold, 5)), 0) AS threshold, COUNT(p) AS variantCount, COUNT(p) AS activeCount "
+            + "FROM Product p LEFT JOIN Inventory i ON i.product = p WHERE p.family.id IN :ids AND p.isActive = true GROUP BY p.family.id")
+    List<FamilyInventoryTotals> activeFamilyInventoryTotals(@Param("ids") List<Long> ids);
+
     long countByCategoryId(Long categoryId);
 
-    @Query("SELECT p.category.id, COUNT(p) FROM Product p WHERE p.category.id IS NOT NULL GROUP BY p.category.id")
+    @Query("SELECT p.category.id, COUNT(DISTINCT p.family.id) + SUM(CASE WHEN p.family IS NULL THEN 1 ELSE 0 END) FROM Product p WHERE p.category.id IS NOT NULL GROUP BY p.category.id")
     List<Object[]> countProductsGroupedByCategoryId();
 
     long countByArtisanId(Long artisanId);
 
-    @Query("SELECT p.artisan.id, COUNT(p) FROM Product p WHERE p.artisan.id IS NOT NULL GROUP BY p.artisan.id")
+    @Query("SELECT p.artisan.id, COUNT(DISTINCT p.family.id) + SUM(CASE WHEN p.family IS NULL THEN 1 ELSE 0 END) FROM Product p WHERE p.artisan.id IS NOT NULL GROUP BY p.artisan.id")
     List<Object[]> countProductsGroupedByArtisanId();
 
     long countByCraftVillageId(Long craftVillageId);
 
-    @Query("SELECT p.craftVillage.id, COUNT(p) FROM Product p WHERE p.craftVillage.id IS NOT NULL GROUP BY p.craftVillage.id")
+    @Query("SELECT p.craftVillage.id, COUNT(DISTINCT p.family.id) + SUM(CASE WHEN p.family IS NULL THEN 1 ELSE 0 END) FROM Product p WHERE p.craftVillage.id IS NOT NULL GROUP BY p.craftVillage.id")
     List<Object[]> countProductsGroupedByCraftVillageId();
 
     Optional<Product> findByBarcodeIgnoreCase(String barcode);
@@ -67,16 +90,6 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             "(LOWER(p.code) = LOWER(:term) OR LOWER(p.barcode) = LOWER(:term))")
     Optional<Product> findByCodeOrBarcode(@Param("term") String term);
 
-    @EntityGraph(attributePaths = {"category"})
-    @Query("SELECT p FROM Product p WHERE p.isActive = true AND " +
-            "(:keyword IS NULL OR :keyword = '' OR " +
-            "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.code) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.barcode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.variantGroup) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
-            "LOWER(p.variantLabel) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-    Page<Product> searchPosProducts(@Param("keyword") String keyword, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"category", "artisan", "craftVillage", "media"})
+    @EntityGraph(attributePaths = {"family", "category", "artisan", "craftVillage", "media"})
     List<Product> findAllByIsActiveTrueOrderByCreatedAtDesc();
 }

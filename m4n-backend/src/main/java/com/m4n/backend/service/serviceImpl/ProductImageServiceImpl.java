@@ -62,7 +62,7 @@ public class ProductImageServiceImpl implements ProductImageService {
         return new CreateProductRequest(request.code(), request.barcode(), request.name(),
                 request.price(), request.categoryId(), request.artisanId(), request.craftVillageId(), request.material(),
                 request.dimensions(), request.musicalRange(), request.origin(), request.description(), media,
-                request.lowStockThreshold(), request.billableWeightKg(), request.bulkySurcharge(), request.variantGroup(), request.variantLabel());
+                request.lowStockThreshold(), request.billableWeightKg(), request.bulkySurcharge(), request.variantGroup(), request.variantLabel(), request.isActive(), request.familyId());
     }
 
     @Override

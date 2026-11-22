@@ -45,6 +45,7 @@ class InventoryServiceTest {
     @Mock
     private ProductMediaRepository productMediaRepository;
 
+    @Mock private com.m4n.backend.repository.ProductRepository productRepository;
     private InventoryService inventoryService;
 
     private Product sampleProduct;
@@ -53,7 +54,7 @@ class InventoryServiceTest {
     @BeforeEach
     void setUp() {
         inventoryService = new InventoryServiceImpl(inventoryRepository,
-                inventoryMovementRepository, productMediaRepository);
+                inventoryMovementRepository, productMediaRepository, productRepository);
 
         Category category = Category.builder().id(1L).name("Nhạc cụ dây").build();
 

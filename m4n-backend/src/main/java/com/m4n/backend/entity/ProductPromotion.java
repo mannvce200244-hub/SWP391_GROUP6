@@ -11,9 +11,15 @@ import java.time.Instant;
 public class ProductPromotion {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "product_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id")
     private Product product;
+    @Builder.Default
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "product_promotion_targets", joinColumns = @JoinColumn(name = "promotion_id"),
+            inverseJoinColumns = @JoinColumn(name = "family_id"))
+    @org.hibernate.annotations.BatchSize(size = 100)
+    private java.util.Set<ProductFamily> families = new java.util.LinkedHashSet<>();
     @Column(nullable = false, length = 150)
     private String name;
     @Column(name = "discount_rate", nullable = false, precision = 6, scale = 4)

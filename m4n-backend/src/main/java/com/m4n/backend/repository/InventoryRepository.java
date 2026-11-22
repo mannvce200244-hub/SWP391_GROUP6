@@ -41,7 +41,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("SELECT COALESCE(SUM(i.quantity), 0) FROM Inventory i")
     long sumTotalQuantity();
 
-    @EntityGraph(attributePaths = {"product", "product.category"})
+    @EntityGraph(attributePaths = {"product", "product.family", "product.category"})
     @Query("SELECT i FROM Inventory i WHERE " +
             "(:keyword IS NULL OR :keyword = '' OR " +
             "LOWER(i.product.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +

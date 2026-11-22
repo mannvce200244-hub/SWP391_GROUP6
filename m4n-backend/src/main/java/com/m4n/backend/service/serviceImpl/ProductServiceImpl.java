@@ -61,6 +61,7 @@ public class ProductServiceImpl implements ProductService {
     private final CraftVillageRepository craftVillageRepository;
     private final ProductMapper productMapper;
     private final ProductPricingService productPricingService;
+    private final com.m4n.backend.repository.ProductFamilyRepository familyRepository;
 
     public ProductServiceImpl(
             ProductRepository productRepository,
@@ -70,7 +71,8 @@ public class ProductServiceImpl implements ProductService {
             ArtisanRepository artisanRepository,
             CraftVillageRepository craftVillageRepository,
             ProductMapper productMapper,
-            ProductPricingService productPricingService
+            ProductPricingService productPricingService,
+            com.m4n.backend.repository.ProductFamilyRepository familyRepository
     ) {
         this.productRepository = productRepository;
         this.inventoryRepository = inventoryRepository;
@@ -80,6 +82,7 @@ public class ProductServiceImpl implements ProductService {
         this.craftVillageRepository = craftVillageRepository;
         this.productMapper = productMapper;
         this.productPricingService = productPricingService;
+        this.familyRepository = familyRepository;
     }
 
     @Override
@@ -119,7 +122,8 @@ public class ProductServiceImpl implements ProductService {
             throw new IllegalArgumentException("Trang biến thể không hợp lệ.");
         }
         Specification<Product> family = (root, query, cb) -> cb.and(activeOnly ? cb.isTrue(root.get("isActive")) : cb.conjunction(),
-                selected.getVariantGroup() == null ? cb.equal(root.get("id"), selected.getId())
+                selected.getFamily() != null ? cb.equal(root.get("family").get("id"), selected.getFamily().getId())
+                : selected.getVariantGroup() == null ? cb.equal(root.get("id"), selected.getId())
                     : cb.equal(cb.lower(root.get("variantGroup")), selected.getVariantGroup().toLowerCase(java.util.Locale.ROOT)));
         return catalogPage(productRepository.findAll(family, PageRequest.of(pageable.getPageNumber(),
                 Math.min(pageable.getPageSize(), 100), Sort.by("variantLabel").and(Sort.by("id")))));
@@ -136,6 +140,12 @@ public class ProductServiceImpl implements ProductService {
             BigDecimal maxPrice,
             Pageable pageable
     ) {
+        return listProducts(keyword, group, artisan, craftVillage, minPrice, maxPrice, pageable, false);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public Page<ProductSummaryResponse> listProducts(String keyword, String group, String artisan, String craftVillage,
+            BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable, boolean groupVariants) {
         validateProductSort(pageable);
         validatePriceFilters(minPrice, maxPrice);
 
@@ -143,15 +153,31 @@ public class ProductServiceImpl implements ProductService {
                 keyword, group, artisan, craftVillage, minPrice, maxPrice, pageable != null ? pageable.getSort() : Sort.unsorted()
         );
 
+        if (groupVariants) spec = ProductSpecification.familyRepresentatives(spec,
+                ProductSpecification.filterCatalog(keyword, group, artisan, craftVillage, minPrice, maxPrice, Sort.unsorted()));
         Pageable catalogPageable = pageable != null ? pageable : Pageable.unpaged();
         if (catalogPageable.getSort().getOrderFor("price") != null) {
             catalogPageable = catalogPageable.isPaged() ? PageRequest.of(catalogPageable.getPageNumber(), catalogPageable.getPageSize()) : Pageable.unpaged();
         }
         Page<Product> productPage = productRepository.findAll(spec, catalogPageable);
-        return catalogPage(productPage);
+        return catalogPage(productPage, groupVariants);
     }
 
     private Page<ProductSummaryResponse> catalogPage(Page<Product> productPage) {
+        return catalogPage(productPage, false);
+    }
+
+    private Map<Long, ProductRepository.FamilyInventoryTotals> familyTotals(List<Product> products, boolean activeOnly) {
+        var ids = products.stream().filter(product -> product.getFamily() != null).map(product -> product.getFamily().getId()).distinct().toList();
+        return ids.isEmpty() ? Map.of() : (activeOnly ? productRepository.activeFamilyInventoryTotals(ids) : productRepository.familyInventoryTotals(ids)).stream()
+                .collect(Collectors.toMap(ProductRepository.FamilyInventoryTotals::getFamilyId, value -> value));
+    }
+
+    private String familyAvailability(long quantity, long threshold) {
+        return quantity <= 0 ? "OUT_OF_STOCK" : quantity <= threshold ? "LOW_STOCK" : "IN_STOCK";
+    }
+
+    private Page<ProductSummaryResponse> catalogPage(Page<Product> productPage, boolean grouped) {
         List<Long> productIds = productPage.getContent().stream()
                 .map(Product::getId)
                 .toList();
@@ -177,12 +203,16 @@ public class ProductServiceImpl implements ProductService {
                         (existing, replacement) -> existing
                 ));
 
+        var totals = grouped ? familyTotals(productPage.getContent(), true) : Map.<Long, ProductRepository.FamilyInventoryTotals>of();
         var resolvedPrices = productPricingService.resolvePrices(productPage.getContent());
         List<ProductSummaryResponse> content = productPage.getContent().stream()
                 .map(product -> {
                     int quantity = inventoryMap.getOrDefault(product.getId(), 0);
                     String availability = availabilityFor(product, quantity);
                     ProductMedia primaryMedia = primaryMediaMap.get(product.getId());
+                    var total = product.getFamily() == null ? null : totals.get(product.getFamily().getId());
+                    if (total != null) return productMapper.toSummaryResponse(product,
+                            familyAvailability(total.getQuantity(), total.getThreshold()), primaryMedia, resolvedPrices.get(product.getId()), total.getQuantity(), total.getVariantCount());
                     return productMapper.toSummaryResponse(product, availability, primaryMedia, resolvedPrices.get(product.getId()), quantity);
                 })
                 .toList();
@@ -229,12 +259,20 @@ public class ProductServiceImpl implements ProductService {
             Boolean isActive,
             Pageable pageable
     ) {
+        return listAdminProducts(keyword, categoryId, artisanId, craftVillageId, isActive, pageable, false);
+    }
+
+    @Override @Transactional(readOnly = true)
+    public Page<AdminProductSummaryResponse> listAdminProducts(String keyword, Long categoryId, Long artisanId,
+            Long craftVillageId, Boolean isActive, Pageable pageable, boolean groupVariants) {
         validateProductSort(pageable);
         Specification<Product> spec = ProductSpecification.filterAdminProducts(
                 keyword, categoryId, artisanId, craftVillageId, isActive
         );
 
+        if (groupVariants) spec = ProductSpecification.familyRepresentatives(spec, spec);
         Page<Product> productPage = productRepository.findAll(spec, pageable != null ? pageable : Pageable.unpaged());
+        var totals = groupVariants ? familyTotals(productPage.getContent(), false) : Map.<Long, ProductRepository.FamilyInventoryTotals>of();
 
         List<Long> productIds = productPage.getContent().stream()
                 .map(Product::getId)
@@ -267,6 +305,9 @@ public class ProductServiceImpl implements ProductService {
                     String availability = availabilityFor(product, quantity);
                     ProductMedia primaryMedia = primaryMediaMap.get(product.getId());
                     String primaryImage = primaryMedia != null ? primaryMedia.getUrl() : null;
+                    var total = product.getFamily() == null ? null : totals.get(product.getFamily().getId());
+                    if (total != null) return productMapper.toAdminSummaryResponse(product,
+                            familyAvailability(total.getQuantity(), total.getThreshold()), total.getQuantity(), primaryImage, total.getVariantCount(), total.getActiveCount() > 0);
                     return productMapper.toAdminSummaryResponse(product, availability, quantity, primaryImage);
                 })
                 .toList();
@@ -280,23 +321,44 @@ public class ProductServiceImpl implements ProductService {
         if (request.variants() == null || request.variants().isEmpty() || request.variants().getFirst() == null) {
             throw new IllegalArgumentException("Thêm ít nhất một biến thể.");
         }
-        String group = request.variants().getFirst().variantGroup();
-        if (group == null || group.isBlank()) throw new IllegalArgumentException("Nhập nhóm biến thể.");
-        String normalized = java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC);
+        var first = request.variants().getFirst();
+        String group = first.variantGroup();
+        String normalized = group == null ? null : java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC);
         for (CreateProductRequest variant : request.variants()) {
-            if (variant == null || variant.variantGroup() == null || !normalized.equalsIgnoreCase(
-                    java.text.Normalizer.normalize(variant.variantGroup().trim(), java.text.Normalizer.Form.NFC))) {
+            if (variant == null || !java.util.Objects.equals(first.familyId(), variant.familyId())
+                    || (normalized != null && (variant.variantGroup() == null || !normalized.equalsIgnoreCase(
+                    java.text.Normalizer.normalize(variant.variantGroup().trim(), java.text.Normalizer.Form.NFC))))) {
                 throw new IllegalArgumentException("Các biến thể phải thuộc cùng một nhóm sản phẩm.");
             }
+            if (variant.variantLabel() == null || variant.variantLabel().isBlank()) throw new IllegalArgumentException("Nhập tên cho từng biến thể.");
         }
+        var family = familyFor(first.familyId(), first.variantGroup(), first.name());
         List<AdminProductDetailResponse> created = new ArrayList<>();
-        for (CreateProductRequest variant : request.variants()) created.add(createProduct(variant));
+        for (CreateProductRequest variant : request.variants()) created.add(createProduct(variant, family));
         return created;
     }
 
     @Override
     @Transactional
     public AdminProductDetailResponse createProduct(CreateProductRequest request) {
+        if (request.familyId() != null && (request.variantLabel() == null || request.variantLabel().isBlank())) {
+            throw new IllegalArgumentException("Nhập tên biến thể mới.");
+        }
+        return createProduct(request, familyFor(request.familyId(), request.variantGroup(), request.name()));
+    }
+
+    private com.m4n.backend.entity.ProductFamily familyFor(Long familyId, String group, String name) {
+        if (familyId != null) return familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm cha không tồn tại."));
+        String key = group == null || group.isBlank() ? null : "group:" + java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC).toLowerCase(java.util.Locale.ROOT);
+        if (key != null) {
+            var existing = familyRepository.findByLegacyKey(key);
+            if (existing.isPresent()) return existing.get();
+        }
+        return familyRepository.save(com.m4n.backend.entity.ProductFamily.builder().name(name.trim()).legacyKey(key).build());
+    }
+
+    private AdminProductDetailResponse createProduct(CreateProductRequest request, com.m4n.backend.entity.ProductFamily family) {
         String trimmedCode = request.code() != null ? request.code().trim() : "";
         boolean autoGenerateCode = trimmedCode.isBlank();
         if (!autoGenerateCode) {
@@ -330,6 +392,7 @@ public class ProductServiceImpl implements ProductService {
                 .code(initialCode)
                 .barcode(trimmedBarcode)
                 .name(request.name().trim())
+                .family(family)
                 .price(request.price())
                 .billableWeightKg(request.billableWeightKg())
                 .bulkySurcharge(request.bulkySurcharge() != null ? request.bulkySurcharge() : BigDecimal.ZERO)
@@ -342,11 +405,12 @@ public class ProductServiceImpl implements ProductService {
                 .category(category)
                 .artisan(artisan)
                 .craftVillage(craftVillage)
-                .isActive(true)
+                .isActive(!Boolean.FALSE.equals(request.isActive()))
                 .build();
 
         configureVariant(product, request.variantGroup(), request.variantLabel());
         Product savedProduct = productRepository.save(product);
+        if (family != null && org.hibernate.Hibernate.isInitialized(family.getVariants())) family.getVariants().add(savedProduct);
 
         // Auto-generate code and/or EAN-13 barcode if omitted
         boolean needsUpdate = false;
@@ -411,14 +475,16 @@ public class ProductServiceImpl implements ProductService {
                 : java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC);
         String normalizedLabel = label == null || label.isBlank() ? null
                 : java.text.Normalizer.normalize(label.trim(), java.text.Normalizer.Form.NFC);
-        if ((normalizedGroup == null) != (normalizedLabel == null)) {
-            throw new IllegalArgumentException("Nhập cả nhóm sản phẩm và tên biến thể, hoặc để trống cả hai.");
+        if (normalizedGroup != null && normalizedLabel == null) {
+            throw new IllegalArgumentException("Nhập tên biến thể cho sản phẩm này.");
         }
-        if (normalizedGroup != null && (normalizedGroup.length() > 100 || normalizedLabel.length() > 100)) {
+        if ((normalizedGroup != null && normalizedGroup.length() > 100) || (normalizedLabel != null && normalizedLabel.length() > 100)) {
             throw new IllegalArgumentException("Nhóm và tên biến thể tối đa 100 ký tự.");
         }
-        if (normalizedGroup != null && productRepository.existsByVariantGroupIgnoreCaseAndVariantLabelIgnoreCaseAndIdNot(
-                normalizedGroup, normalizedLabel, product.getId() == null ? -1L : product.getId())) {
+        boolean duplicate = normalizedLabel != null && (product.getFamily() != null
+                ? productRepository.existsByFamilyIdAndVariantLabelIgnoreCaseAndIdNot(product.getFamily().getId(), normalizedLabel, product.getId() == null ? -1L : product.getId())
+                : normalizedGroup != null && productRepository.existsByVariantGroupIgnoreCaseAndVariantLabelIgnoreCaseAndIdNot(normalizedGroup, normalizedLabel, product.getId() == null ? -1L : product.getId()));
+        if (duplicate) {
             throw new DuplicateResourceException("Biến thể này đã có trong nhóm sản phẩm.", "PRODUCT_VARIANT_EXISTS");
         }
         product.setVariantGroup(normalizedGroup);
@@ -464,6 +530,8 @@ public class ProductServiceImpl implements ProductService {
         }
 
         product.setName(request.name().trim());
+        if (product.getFamily() == null) product.setFamily(familyFor(null, request.variantGroup(), request.name()));
+        product.getFamily().setName(request.name().trim());
         configureVariant(product, request.variantGroup(), request.variantLabel());
         product.setPrice(request.price());
         product.setBillableWeightKg(request.billableWeightKg());

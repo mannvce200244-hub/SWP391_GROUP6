@@ -54,7 +54,7 @@ class CommercePricingIntegrationTest {
     @AfterEach void clean() { SecurityContextHolder.clearContext(); }
 
     @Test void onlinePricingSeparatesProductOrderAndShippingSavingsAndPersistsSnapshots() {
-        promotions.save(ProductPromotion.builder().product(product).name("Giảm sản phẩm")
+        var productPromotion = promotions.save(ProductPromotion.builder().product(product).name("Giảm sản phẩm")
                 .discountRate(new BigDecimal("0.20")).isActive(true).build());
         var manual = savePriceVoucher("MANUAL", new BigDecimal("0.10"));
         var shipping = saveShippingVoucher(500);
@@ -75,7 +75,7 @@ class CommercePricingIntegrationTest {
         assertThat(shipping.getUsedCount()).isEqualTo(1);
         assertThat(inventories.findByProductId(product.getId()).orElseThrow().getQuantity()).isEqualTo(10);
         product.setPrice(new BigDecimal("9999")); products.save(product);
-        promotions.findAll().stream().filter(p -> p.getProduct().getId().equals(product.getId())).forEach(p -> p.setActive(false));
+        productPromotion.setActive(false);
         var settings = shippingSettings.findById(1L).orElseThrow(); settings.setRatePerKg(new BigDecimal("900"));
         var detail = orderService.getMyOrderDetail(placed.id());
         assertThat(detail.originalTotalAmount()).isEqualByComparingTo("2000");

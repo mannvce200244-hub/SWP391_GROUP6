@@ -192,8 +192,7 @@ export default function AdminProductDetailPage({ productId }) {
         <div className="flex items-center gap-3 flex-wrap">
           <button type="button" className="min-h-11 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-surface-secondary"
             onClick={() => {
-              if (product.variantGroup && product.variantLabel) setShowVariantModal(true)
-              else { setShowEditModal(true); addToast({ message: 'Điền nhóm và tên biến thể hiện tại trước, ví dụ: Sáo trúc / Tone Đô.', type: 'info' }) }
+              setShowVariantModal(true)
             }}>Thêm biến thể</button>
           <button
             type="button"
@@ -497,13 +496,13 @@ export default function AdminProductDetailPage({ productId }) {
         </div>
       </div>
 
-      {product.variantLabel && <section className="rounded-xl border border-border bg-white p-5 space-y-3">
-        <h2 className="font-semibold text-ink">Các biến thể của {product.variantGroup}</h2>
+      {(product.familyId || product.variantLabel) && <section className="rounded-xl border border-border bg-white p-5 space-y-3">
+        <h2 className="font-semibold text-ink">Các biến thể của {product.familyName || product.name}</h2>
         <p className="text-sm text-muted">Chọn để xem giá, SKU và tồn kho của từng biến thể. Dùng “Thêm biến thể” để tạo thêm tone.</p>
         <ProductVariantPicker key={`${product.id}-${refreshKey}`} product={product} admin
           onSelect={(variant) => { if (variant.id !== product.id) navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(variant.id)) }} />
         <button type="button" className="min-h-11 rounded-lg border border-border px-4 text-sm font-semibold hover:bg-surface-secondary"
-          onClick={() => navigateTo(`${CUSTOMER_ROUTES.adminInventory}?keyword=${encodeURIComponent(product.variantGroup)}`)}>Nhập kho các biến thể</button>
+          onClick={() => navigateTo(`${CUSTOMER_ROUTES.adminInventory}?keyword=${encodeURIComponent(product.familyName || product.name)}`)}>Nhập kho các biến thể</button>
       </section>}
       {showVariantModal && <ProductFormModal isOpen variantSource={product} onClose={() => setShowVariantModal(false)}
         onSuccess={(id) => { setShowVariantModal(false); navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(id)) }} />}
