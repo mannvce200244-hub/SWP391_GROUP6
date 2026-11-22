@@ -6,6 +6,7 @@ import craftVillageService from '../../services/craftVillageService.js'
 import useToast from '../ui/useToast.js'
 import useDialogFocus from '../../hooks/useDialogFocus.js'
 import Input from '../ui/Input.jsx'
+import MoneyInput from '../ui/MoneyInput.jsx'
 import ProductVariantFields from './ProductVariantFields.jsx'
 import ProductVariantRows from './ProductVariantRows.jsx'
 import { variantFormErrors, variantRequests } from '../../features/catalog/productVariantForm.js'
@@ -40,7 +41,6 @@ export default function ProductFormModal({
   const [code, setCode] = useState('')
   const [barcode, setBarcode] = useState('')
   const [name, setName] = useState('')
-  const [variantGroup, setVariantGroup] = useState('')
   const [variantLabel, setVariantLabel] = useState('')
   const [variantRows, setVariantRows] = useState([])
   const [price, setPrice] = useState('')
@@ -75,7 +75,6 @@ export default function ProductFormModal({
     setCode('')
     setBarcode('')
     setName('')
-    setVariantGroup('')
     setVariantLabel('')
     setVariantRows([])
     setPrice('')
@@ -140,7 +139,6 @@ export default function ProductFormModal({
             setCode(variantSource ? '' : p.code || '')
             setBarcode(variantSource ? '' : p.barcode || '')
             setName(p.name || '')
-            setVariantGroup(p.variantGroup || '')
             setVariantLabel(variantSource ? '' : p.variantLabel || '')
             setPrice(p.price != null ? String(p.price) : '')
             setBillableWeightKg(p.billableWeightKg == null ? '' : String(p.billableWeightKg))
@@ -282,8 +280,8 @@ export default function ProductFormModal({
     if (!/^\d+(\.\d{1,2})?$/.test(price) || !Number.isFinite(numPrice) || numPrice <= 0 || numPrice > 999999999999.99) {
       errors.price = 'Giá niêm yết phải lớn hơn 0, tối đa 999.999.999.999,99đ và 2 chữ số thập phân.'
     }
-    if (billableWeightKg !== '' && (!/^\d+(\.\d{1,3})?$/.test(billableWeightKg) || Number(billableWeightKg) <= 0 || Number(billableWeightKg) > 9999999.999)) {
-      errors.billableWeightKg = 'Khối lượng phải lớn hơn 0, tối đa 9.999.999,999 kg và 3 chữ số thập phân.'
+    if (billableWeightKg !== '' && (!Number.isFinite(Number(billableWeightKg)) || Number(billableWeightKg) <= 0)) {
+      errors.billableWeightKg = 'Khối lượng phải lớn hơn 0.'
     }
 
     const threshold = Number(lowStockThreshold)
@@ -303,8 +301,14 @@ export default function ProductFormModal({
       if (value.trim().length > limit) errors[field] = `Trường này tối đa ${limit} ký tự.`
     }
 
+    Object.assign(errors, variantFormErrors({ variantLabel, code, barcode, price }, variantRows, isVariant))
     setFormErrors(errors)
-    if (Object.keys(errors).length) document.getElementById('product-' + Object.keys(errors)[0])?.focus()
+    if (Object.keys(errors).length) requestAnimationFrame(() => {
+      const invalid = dialogRef.current?.querySelector('[aria-invalid="true"]')
+      const details = invalid?.closest('details')
+      if (details) details.open = true
+      invalid?.focus()
+    })
     return Object.keys(errors).length === 0
   }
 
@@ -313,11 +317,6 @@ export default function ProductFormModal({
     if (submitting || loading || !masterDataReady || !productReady || masterDataError) return
     if (!validate()) return
 
-    if (Boolean(variantGroup.trim()) !== Boolean(variantLabel.trim()) || (variantRows.length && !variantGroup.trim())) {
-      setFormErrors((previous) => ({ ...previous, variantLabel: 'Nhập cả nhóm sản phẩm và tên biến thể.' }))
-      document.getElementById('product-variant-label')?.focus()
-      return
-    }
     setSubmitting(true)
     setServerError('')
     try {
@@ -325,7 +324,6 @@ export default function ProductFormModal({
         const updatePayload = {
           barcode: barcode.trim() || null,
           name: name.trim(),
-          variantGroup: variantGroup.trim() || null,
           variantLabel: variantLabel.trim() || null,
           price: Number(price),
           billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
@@ -360,10 +358,11 @@ export default function ProductFormModal({
         onClose()
       } else {
         const createPayload = {
+          familyId: isVariant ? variantSource.familyId : null,
+          isActive: Boolean(isActive),
           code: code.trim() ? code.trim().toUpperCase() : null,
           barcode: barcode.trim() || null,
           name: name.trim(),
-          variantGroup: variantGroup.trim() || null,
           variantLabel: variantLabel.trim() || null,
           price: Number(price),
           billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
@@ -385,21 +384,13 @@ export default function ProductFormModal({
           })),
         }
 
-        if (variantRows.length) {
-          const errors = variantFormErrors({ ...createPayload, price, code, barcode, variantLabel }, variantRows)
-          if (Object.keys(errors).length) {
-            setFormErrors(errors)
-            requestAnimationFrame(() => dialogRef.current?.querySelector('[aria-invalid="true"]')?.focus())
-            return
-          }
-        }
         const createdVariants = variantRows.length
           ? await adminProductService.createVariants(variantRequests(createPayload, variantRows), imageFiles)
           : [await adminProductService.createProduct(createPayload, imageFiles)]
         const created = createdVariants[0]
         addToast({
           message: createdVariants.length > 1 ? `Đã tạo ${createdVariants.length} biến thể cho “${name.trim()}”. Nhập kho riêng cho từng biến thể.`
-            : isVariant ? `Đã thêm biến thể “${variantLabel.trim()}” cho “${variantGroup.trim()}”. Mã: ${created.code || 'đã tạo tự động'}. Tồn kho = 0.`
+            : isVariant ? `Đã thêm biến thể “${variantLabel.trim()}” cho “${variantSource.familyName || variantSource.name}”. Mã: ${created.code || 'đã tạo tự động'}. Tồn kho = 0.`
               : `Đã tạo mới sản phẩm "${name.trim()}". Mã: ${created.code || 'đã tạo tự động'}. Tồn kho = 0.`,
           type: 'success',
         })
@@ -411,6 +402,13 @@ export default function ProductFormModal({
       const fields = err.fieldErrors || err.data?.fieldErrors || {}
       setFormErrors(Object.fromEntries(Object.entries(fields).map(([key, message]) => [key.replace(/^variants\[0\]\./, ''), message])))
       setServerError(err.message || 'Đã xảy ra lỗi khi lưu thông tin sản phẩm')
+      requestAnimationFrame(() => {
+        const invalid = dialogRef.current?.querySelector('[aria-invalid="true"]')
+        const details = invalid?.closest('details')
+        if (details) details.open = true
+        if (invalid) invalid.focus()
+        else dialogRef.current?.querySelector('[role="alert"]')?.focus()
+      })
     } finally {
       setSubmitting(false)
     }
@@ -437,7 +435,7 @@ export default function ProductFormModal({
               </div>
               <div className="min-w-0">
                 <h2 id="product-form-modal-title" className="break-words text-lg font-bold text-ink">
-                  {isEdit ? `Chỉnh sửa nhạc cụ: ${code}` : isVariant ? `Thêm biến thể cho “${variantSource.variantGroup || variantSource.name}”` : 'Thêm mới nhạc cụ truyền thống'}
+                  {isEdit ? `Chỉnh sửa nhạc cụ: ${code}` : isVariant ? `Thêm biến thể cho “${variantSource.familyName || variantSource.name}”` : 'Thêm mới nhạc cụ truyền thống'}
                 </h2>
                 <p className="text-xs text-secondary mt-0.5">
                   {isEdit
@@ -460,7 +458,7 @@ export default function ProductFormModal({
           {/* Modal Body */}
           <div className="flex-1 overflow-y-auto p-6 bg-[#F6F7F8]">
             {serverError && (
-              <div role="alert" className="mb-5 p-4 rounded-xl bg-[#FFFFFF] border border-rose-200 text-rose-700 text-sm font-medium">
+              <div role="alert" tabIndex={-1} className="mb-5 p-4 rounded-xl bg-[#FFFFFF] border border-rose-200 text-rose-700 text-sm font-medium">
                 {serverError}
               </div>
             )}
@@ -487,6 +485,8 @@ export default function ProductFormModal({
                       * Các trường bắt buộc
                     </span>
                   </h3>
+
+                  {isVariant && <p className="mb-4 text-sm text-secondary">Phần thông tin này tạo 1 biến thể mới. Điền tên tone hoặc phiên bản và giá bán bên dưới. Giá có thể giống hoặc khác các biến thể đã có.</p>}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
                     {/* If editing, show code as read-only */}
@@ -527,13 +527,14 @@ export default function ProductFormModal({
                       <label htmlFor="product-barcode" className="block text-sm font-semibold text-ink mb-1.5">
                         Mã vạch (Barcode)
                       </label>
-                      <input id="product-barcode" name="barcode" maxLength={100} aria-invalid={Boolean(formErrors.barcode)}
+                      <input id="product-barcode" name="barcode" maxLength={100} aria-invalid={Boolean(formErrors.barcode)} aria-describedby={formErrors.barcode ? 'product-barcode-error' : undefined}
                         type="text"
                         value={barcode}
-                        onChange={(e) => setBarcode(e.target.value)}
+                        onChange={(e) => { setBarcode(e.target.value); setFormErrors((previous) => ({ ...previous, barcode: '' })) }}
                         placeholder="Để trống tự tạo EAN-13"
                         className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#E3E6E8] bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 font-mono"
                       />
+                      {formErrors.barcode && <span id="product-barcode-error" role="alert" className="text-xs text-danger mt-1 block">{formErrors.barcode}</span>}
                       <span className="text-xs text-secondary mt-1 block">
                         Nhập từ máy quét hoặc để trống để tự tạo EAN-13
                       </span>
@@ -543,7 +544,7 @@ export default function ProductFormModal({
                       <label htmlFor="product-name" className="block text-sm font-semibold text-ink mb-1.5">
                         Tên sản phẩm nhạc cụ <span className="text-rose-500">*</span>
                       </label>
-                      <input id="product-name" name="name" maxLength={200} aria-invalid={Boolean(formErrors.name)} aria-describedby={formErrors.name ? "product-name-error" : undefined}
+                      <input id="product-name" name="name" maxLength={200} readOnly={isVariant} aria-invalid={Boolean(formErrors.name)} aria-describedby={formErrors.name ? 'product-name-error' : isVariant ? 'product-name-source' : undefined}
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
@@ -552,55 +553,18 @@ export default function ProductFormModal({
                           formErrors.name ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E3E6E8]'
                         } bg-[#FFFFFF] text-ink focus:outline-none focus:ring-2 focus:ring-brand/30`}
                       />
+                      {isVariant && <p id="product-name-source" className="mt-1 text-xs text-secondary">Biến thể mới thuộc sản phẩm này. Đổi tên chung trong phần chỉnh sửa sản phẩm.</p>}
                       {formErrors.name && (
                         <span id="product-name-error" role="alert" className="text-xs text-rose-500 mt-1 block">{formErrors.name}</span>
                       )}
                     </div>
 
-                    <ProductVariantFields group={variantGroup} label={variantLabel} onGroupChange={setVariantGroup}
+                    <ProductVariantFields label={variantLabel} required={isVariant || variantRows.length > 0}
                       onLabelChange={(value) => { setVariantLabel(value); setFormErrors((previous) => ({ ...previous, variantLabel: '' })) }}
                       error={formErrors.variantLabel} />
-                    <div>
-                      <label htmlFor="product-price" className="block text-sm font-semibold text-ink mb-1.5">
-                        Đơn giá niêm yết (VND) <span className="text-rose-500">*</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          id="product-price"
-                          name="price"
-                          type="number"
-                          inputMode="decimal"
-                          min="0.01"
-                          max="999999999999.99"
-                          step="0.01"
-                          autoComplete="off"
-                          value={price}
-                          onChange={(e) => {
-                            setPrice(e.target.value)
-                            if (formErrors.price) {
-                              setFormErrors((previous) => ({ ...previous, price: undefined }))
-                            }
-                          }}
-                          placeholder="VD: 6500000"
-                          aria-invalid={Boolean(formErrors.price)}
-                          aria-describedby={formErrors.price ? 'product-price-error' : undefined}
-                          className={`w-full rounded-xl border bg-[#FFFFFF] px-3.5 py-2.5 pr-10 text-sm font-mono text-ink focus:outline-none focus:ring-2 focus:ring-brand/30 ${
-                            formErrors.price ? 'border-rose-400 bg-surface-secondary/30' : 'border-[#E3E6E8]'
-                          }`}
-                        />
-                        <span
-                          className="pointer-events-none absolute inset-y-0 right-3.5 flex items-center text-sm font-semibold text-secondary"
-                          aria-hidden="true"
-                        >
-                          ₫
-                        </span>
-                      </div>
-                      {formErrors.price && (
-                        <span id="product-price-error" className="text-xs text-rose-500 mt-1 block">
-                          {formErrors.price}
-                        </span>
-                      )}
-                    </div>
+                    <MoneyInput id="product-price" name="price" label="Đơn giá niêm yết (VND)" required
+                      value={price} error={formErrors.price} placeholder="Ví dụ: 6.500.000"
+                      onValueChange={(value) => { setPrice(value); setFormErrors((previous) => ({ ...previous, price: '' })) }} />
 
                     <div>
                       <label htmlFor="product-lowStockThreshold" className="block text-sm font-semibold text-ink mb-1.5">Ngưỡng cảnh báo tồn kho</label>
@@ -609,7 +573,7 @@ export default function ProductFormModal({
                       {formErrors.lowStockThreshold && <p role="alert" className="mt-1 text-xs text-danger">{formErrors.lowStockThreshold}</p>}
                     </div>
 
-                    <Input id="product-billableWeightKg" name="billableWeightKg" type="number" min="0.001" max="9999999.999" step="0.001" label="Khối lượng tính cước (kg)" value={billableWeightKg} error={formErrors.billableWeightKg} helperText="Nhập khối lượng thực tế hoặc quy đổi. Cần có khi bật phí vận chuyển." onChange={(event) => setBillableWeightKg(event.target.value)} />
+                    <Input id="product-billableWeightKg" name="billableWeightKg" type="number" min="0" step="any" label="Khối lượng tính cước (kg)" value={billableWeightKg} error={formErrors.billableWeightKg} helperText="Nhập khối lượng thực tế hoặc quy đổi. Cần có khi bật phí vận chuyển." onChange={(event) => setBillableWeightKg(event.target.value)} />
 
                     <div className="flex flex-col justify-end pb-1 sm:col-span-2 lg:col-span-2">
                       <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-ink">
@@ -968,6 +932,7 @@ export default function ProductFormModal({
                     <div className="flex items-center gap-2 text-sm text-secondary">
                       <Package size={18} className="text-brand shrink-0" />
                       <span>
+                        <span className="block font-medium text-ink" aria-live="polite">{isVariant || variantRows.length ? `Sẽ tạo ${variantRows.length + 1} biến thể mới.` : 'Sẽ tạo 1 sản phẩm mới.'}</span>
                         {isVariant ? 'Biến thể mới có tồn kho 0, dùng SKU và giá riêng. Nhập hàng qua ' : 'Tồn kho sản phẩm mới sẽ mặc định là 0. Quản lý kho qua chức năng '}<strong>Nhập kho</strong>.
                       </span>
                     </div>
@@ -989,7 +954,7 @@ export default function ProductFormModal({
                       aria-busy={submitting}
                       className="px-6 py-2.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm font-semibold shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
                     >
-                      {submitting ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : variantRows.length ? `Tạo ${variantRows.length + 1} biến thể` : isVariant ? 'Tạo biến thể' : 'Tạo sản phẩm'}
+                      {submitting ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : isVariant || variantRows.length ? `Tạo ${variantRows.length + 1} biến thể` : 'Tạo sản phẩm'}
                     </button>
                   </div>
                 </div>

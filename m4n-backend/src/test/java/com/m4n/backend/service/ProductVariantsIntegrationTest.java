@@ -155,6 +155,27 @@ class ProductVariantsIntegrationTest {
         assertThat(created).allSatisfy(item -> assertThat(item.stockQuantity()).isZero());
     }
 
+    @Test void addingOneVariantCreatesOnlyOneNewSkuAndKeepsExistingPricesAndStocks() {
+        var created = service.createProduct(request(group, "Tone La", "150000", false));
+        assertThat(created.isActive()).isFalse();
+        assertThat(created.stockQuantity()).isZero();
+        assertThat(created.price()).isEqualByComparingTo("150000");
+        assertThat(service.listAdminVariants(doTone.getId(), PageRequest.of(0, 20)).getTotalElements()).isEqualTo(3);
+        assertThat(service.listVariants(doTone.getId(), PageRequest.of(0, 20)).getContent())
+                .extracting(item -> item.id()).doesNotContain(created.id());
+        assertThat(service.getAdminProductDetail(doTone.getId()).stockQuantity()).isEqualTo(9);
+        assertThat(service.getAdminProductDetail(reTone.getId()).stockQuantity()).isEqualTo(2);
+        assertThat(service.getAdminProductDetail(reTone.getId()).price()).isEqualByComparingTo("150000");
+    }
+
+    @Test void newBatchHonorsEachSkusSellingStatusAndDefaultsToActive() {
+        var created = service.createVariants(new CreateProductVariantsRequest(List.of(
+                request(group, "Tone La", "150000", false), request(group, "Tone Si", "150000", true),
+                request(group, "Tone Fa", "150000"))));
+        assertThat(created).extracting(item -> item.isActive()).containsExactly(false, true, true);
+        assertThat(created).allSatisfy(item -> assertThat(item.stockQuantity()).isZero());
+    }
+
     @Test void failedBatchRollsBackAllCreatedSkusAndStocks() {
         var transaction = new org.springframework.transaction.support.TransactionTemplate(transactions);
         transaction.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -163,7 +184,7 @@ class ProductVariantsIntegrationTest {
         assertThatThrownBy(() -> transaction.executeWithoutResult(status -> {
             var ownCategory = categories.saveAndFlush(Category.builder().code("BATCH-" + UUID.randomUUID()).name("Sáo").build());
             var first = new CreateProductRequest(firstCode, null, "Sáo", new BigDecimal("100000"), ownCategory.getId(),
-                    null, null, null, null, null, null, null, List.of(), 5, null, null, batchGroup, "Tone Đô");
+                    null, null, null, null, null, null, null, List.of(), 5, null, null, batchGroup, "Tone Đô", null, null);
             service.createVariants(new CreateProductVariantsRequest(List.of(first, first)));
         })).isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class);
         assertThat(products.existsByCodeIgnoreCase(firstCode)).isFalse();
@@ -201,6 +222,7 @@ class ProductVariantsIntegrationTest {
 
     @Test void maximumLengthBaseNameAndVariantLabelFitTransactionSnapshots() {
         reTone.setName("N".repeat(200));
+        reTone.getFamily().setName("N".repeat(200));
         reTone.setVariantLabel("T".repeat(100));
         products.saveAndFlush(reTone);
         authenticate(user(RoleName.POS_STAFF));
@@ -215,9 +237,13 @@ class ProductVariantsIntegrationTest {
     }
 
     private CreateProductRequest request(String family, String label, String price) {
+        return request(family, label, price, null);
+    }
+
+    private CreateProductRequest request(String family, String label, String price, Boolean active) {
         return new CreateProductRequest("SKU-" + UUID.randomUUID(), null, "Sáo trúc", new BigDecimal(price), category.getId(),
                 null, null, "Tre", "60 cm", null, "Việt Nam", null, List.of(), 5,
-                new BigDecimal("0.2"), BigDecimal.ZERO, family, label);
+                new BigDecimal("0.2"), BigDecimal.ZERO, family, label, active, null);
     }
 
     private void setStock(Product product, int quantity) {

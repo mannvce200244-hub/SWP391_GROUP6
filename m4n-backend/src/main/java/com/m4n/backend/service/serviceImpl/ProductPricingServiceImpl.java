@@ -23,7 +23,13 @@ public class ProductPricingServiceImpl implements ProductPricingService {
         List<Long> ids = products.stream().map(Product::getId).distinct().toList();
         Map<Long, ProductPromotion> strongest = new HashMap<>();
         for (var promotion : promotionRepository.findApplicablePromotions(ids, Instant.now())) {
-            strongest.putIfAbsent(promotion.getProduct().getId(), promotion);
+            var familyIds = promotion.getFamilies().stream().map(com.m4n.backend.entity.ProductFamily::getId).collect(java.util.stream.Collectors.toSet());
+            for (var product : products) {
+                if ((promotion.getProduct() != null && promotion.getProduct().getId().equals(product.getId()))
+                        || (product.getFamily() != null && familyIds.contains(product.getFamily().getId()))) {
+                    strongest.putIfAbsent(product.getId(), promotion);
+                }
+            }
         }
         Map<Long, ProductPrice> prices = new HashMap<>();
         for (Product product : products) {

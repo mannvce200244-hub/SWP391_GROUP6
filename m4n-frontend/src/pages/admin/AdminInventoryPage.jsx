@@ -24,12 +24,13 @@ function readFilters() {
   const types = view === 'documents' ? DOCUMENT_TYPES : MOVEMENT_TYPES
   const page = Number(params.get('page'))
   const productId = Number(params.get('productId'))
+  const familyId = Number(params.get('familyId'))
   return {
     view, page: Number.isSafeInteger(page) && page >= 0 ? page : 0,
     status: statuses.some(([value]) => value === params.get('status')) ? params.get('status') : '',
     type: types.some(([value]) => value === params.get('type')) ? params.get('type') : '',
     keyword: params.get('keyword') || '',
-    product: Number.isSafeInteger(productId) && productId > 0 ? { id: productId, name: params.get('productName') || `Sản phẩm #${productId}` } : null,
+    product: Number.isSafeInteger(familyId) && familyId > 0 ? { familyId, name: params.get('productName') || `Sản phẩm #${familyId}` } : Number.isSafeInteger(productId) && productId > 0 ? { id: productId, name: params.get('productName') || `Sản phẩm #${productId}` } : null,
   }
 }
 
@@ -48,7 +49,7 @@ export default function AdminInventoryPage() {
   const [confirmTarget, setConfirmTarget] = useState(null)
 
   const { view, page, type, status, keyword, product } = filters
-  const requestKey = JSON.stringify([view, page, type, status, keyword, product?.id, refreshKey])
+  const requestKey = JSON.stringify([view, page, type, status, keyword, product?.id, product?.familyId, refreshKey])
   const pending = loading || completedRequestKey !== requestKey
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function AdminInventoryPage() {
     if (status) params.set('status', status)
     if (type && view !== 'balance') params.set('type', type)
     if (keyword && view === 'balance') params.set('keyword', keyword)
-    if (product && view !== 'balance') { params.set('productId', product.id); params.set('productName', product.name) }
+    if (product && view !== 'balance') { params.set(product.familyId ? 'familyId' : 'productId', product.familyId || product.id); params.set('productName', product.name) }
     window.history.replaceState(window.history.state, '', `${window.location.pathname}?${params}`)
   }, [view, page, status, type, keyword, product])
 
@@ -74,7 +75,7 @@ export default function AdminInventoryPage() {
       setLoading(true)
       setError('')
       try {
-        const request = { page, size: 15, productId: product?.id, type, status }
+        const request = { page, size: 15, productId: product?.id, familyId: product?.familyId, type, status }
         const response = view === 'balance' ? await getInventory({ page, size: 15, keyword, status })
           : view === 'documents' ? await getStockDocuments(request) : await getInventoryMovements(request)
         if (!active) return
@@ -95,7 +96,7 @@ export default function AdminInventoryPage() {
 
   const reload = () => setRefreshKey((current) => current + 1)
   const changeView = (next) => setFilters((current) => ({ ...current, view: next, page: 0, status: '', type: '' }))
-  const historyFor = (item) => setFilters((current) => ({ ...current, view: 'movements', page: 0, type: '', status: '', product: { id: item.productId, name: item.productName } }))
+  const historyFor = (item) => setFilters((current) => ({ ...current, view: 'movements', page: 0, type: '', status: '', product: item.familyId ? { familyId: item.familyId, name: item.productName } : { id: item.productId, name: item.productName } }))
 
   function created(document) {
     setDraftTarget(null)
@@ -163,7 +164,7 @@ export default function AdminInventoryPage() {
             <Button variant="secondary" size="sm" disabled={page >= totalPages - 1} onClick={() => setFilters((current) => ({ ...current, page: current.page + 1 }))}>Sau</Button></div>
         </div>}
       </section>
-      {draftTarget && <StockDraftDialog product={draftTarget} onClose={() => setDraftTarget(null)} onCreated={created} />}
+      {draftTarget && <StockDraftDialog product={draftTarget} onClose={() => setDraftTarget(null)} onCreated={created} onVariantsChanged={reload} />}
       {confirmTarget && <StockConfirmationDialog document={confirmTarget} onClose={() => setConfirmTarget(null)} onConfirmed={confirmed}
         onStale={() => { setConfirmTarget(null); reload(); addToast({ type: 'error', message: 'Phiếu đã được cập nhật bởi người khác. Danh sách đã được tải lại.' }) }} />}
     </div>

@@ -25,5 +25,7 @@ public record ProductDetailResponse(
         BigDecimal productDiscountAmount,
         Long productPromotionId,
         String variantGroup,
-        String variantLabel
+        String variantLabel,
+        Long familyId,
+        String familyName
 ) {}

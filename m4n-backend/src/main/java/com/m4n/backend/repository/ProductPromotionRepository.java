@@ -17,8 +17,10 @@ public interface ProductPromotionRepository extends JpaRepository<ProductPromoti
     Optional<ProductPromotion> findById(Long id);
 
     // Optional period bounds and stable strongest-rate precedence are clearer together than a derived method name.
-    @Query("SELECT p FROM ProductPromotion p WHERE p.product.id IN :productIds AND p.isActive = true AND p.discountRate > 0 "
+    @Query("SELECT DISTINCT p FROM ProductPromotion p LEFT JOIN p.families target LEFT JOIN FETCH p.families "
+            + "LEFT JOIN FETCH p.product WHERE (p.product.id IN :productIds OR target.id IN "
+            + "(SELECT sku.family.id FROM Product sku WHERE sku.id IN :productIds)) AND p.isActive = true AND p.discountRate > 0 "
             + "AND (p.validFrom IS NULL OR p.validFrom <= :now) AND (p.validUntil IS NULL OR p.validUntil > :now) "
-            + "ORDER BY p.product.id ASC, p.discountRate DESC, p.id ASC")
+            + "ORDER BY p.discountRate DESC, p.id ASC")
     List<ProductPromotion> findApplicablePromotions(@Param("productIds") List<Long> productIds, @Param("now") Instant now);
 }

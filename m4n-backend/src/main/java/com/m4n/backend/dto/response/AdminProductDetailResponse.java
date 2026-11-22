@@ -29,5 +29,7 @@ public record AdminProductDetailResponse(
         BigDecimal billableWeightKg,
         BigDecimal bulkySurcharge,
         String variantGroup,
-        String variantLabel
+        String variantLabel,
+        Long familyId,
+        String familyName
 ) {}

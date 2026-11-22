@@ -36,6 +36,7 @@ class ProductPricingShippingIntegrationTest {
     @Autowired private ProductService productService;
     @Autowired private CategoryRepository categoryRepository;
     @Autowired private ProductRepository productRepository;
+    @Autowired private com.m4n.backend.repository.ProductPromotionRepository promotionRepository;
     @Autowired private Validator validator;
     @Autowired private WebApplicationContext context;
     private Category category;
@@ -56,7 +57,9 @@ class ProductPricingShippingIntegrationTest {
         var strongest = createPromotion(product, "0.2", true, null, null);
         createPromotion(product, "0.2", true, null, null);
         createPromotion(product, "0.9", false, null, null);
-        createPromotion(product, "0.8", true, null, Instant.now().minusSeconds(60));
+        promotionRepository.saveAndFlush(com.m4n.backend.entity.ProductPromotion.builder().product(product)
+                .name("Expired historical program").discountRate(new BigDecimal("0.8")).isActive(true)
+                .validUntil(Instant.now().minusSeconds(60)).build());
         createPromotion(product, "0.7", true, Instant.now().plusSeconds(60), null);
         ProductPrice price = pricingService.resolvePrices(List.of(product)).get(product.getId());
         assertThat(price.originalUnitPrice()).isEqualByComparingTo("100.25");
@@ -135,9 +138,9 @@ class ProductPricingShippingIntegrationTest {
     void stalePromotionUpdateAndDeletePreserveLatestConfiguration() {
         Product product = product("Version", "1000", null, "0");
         var original = createPromotion(product, "0.1", true, null, null);
-        var updated = promotionService.updatePromotion(original.id(), new UpdateProductPromotionRequest(product.getId(), "Updated", new BigDecimal("0.2"), true, null, null, original.version()));
+        var updated = promotionService.updatePromotion(original.id(), new UpdateProductPromotionRequest(product.getId(), "Updated", new BigDecimal("0.2"), true, null, null, original.version(), null));
         assertThat(updated.version()).isGreaterThan(original.version());
-        assertThatThrownBy(() -> promotionService.updatePromotion(original.id(), new UpdateProductPromotionRequest(product.getId(), "Stale", BigDecimal.ZERO, false, null, null, original.version())))
+        assertThatThrownBy(() -> promotionService.updatePromotion(original.id(), new UpdateProductPromotionRequest(product.getId(), "Stale", BigDecimal.ZERO, false, null, null, original.version(), null)))
                 .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> promotionService.deletePromotion(original.id(), original.version())).isInstanceOf(IllegalStateException.class);
         assertThat(pricingService.resolvePrices(List.of(product)).get(product.getId()).chargedUnitPrice()).isEqualByComparingTo("800");
@@ -202,7 +205,7 @@ class ProductPricingShippingIntegrationTest {
         Product product = product("Validation", "100", null, "0");
         Instant now = Instant.now();
         assertThatThrownBy(() -> createPromotion(product, "0.1", true, now, now)).isInstanceOf(IllegalArgumentException.class);
-        assertThat(validator.validate(new CreateProductPromotionRequest(product.getId(), "Program", new BigDecimal("0.00001"), true, null, null)))
+        assertThat(validator.validate(new CreateProductPromotionRequest(product.getId(), "Program", new BigDecimal("0.00001"), true, null, null, null)))
                 .anyMatch(v -> v.getPropertyPath().toString().equals("discountRate"));
         assertThat(validator.validate(new UpdateShippingSettingsRequest(true, new BigDecimal("100.001"), false, null, 0L)))
                 .anyMatch(v -> v.getPropertyPath().toString().equals("ratePerKg"));
@@ -234,7 +237,7 @@ class ProductPricingShippingIntegrationTest {
     }
 
     private ProductPromotionResponse createPromotion(Product product, String rate, boolean active, Instant from, Instant until) {
-        return promotionService.createPromotion(new CreateProductPromotionRequest(product.getId(), "Program", new BigDecimal(rate), active, from, until));
+        return promotionService.createPromotion(new CreateProductPromotionRequest(product.getId(), "Program", new BigDecimal(rate), active, from, until, null));
     }
 
     private void enableShipping(String rate, boolean free, BigDecimal threshold) {

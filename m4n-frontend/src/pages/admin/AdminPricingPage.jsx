@@ -69,7 +69,7 @@ export default function AdminPricingPage() {
           <div className="overflow-x-auto"><table className="w-full text-sm text-left min-w-[640px]">
             <thead><tr className="bg-[#F6F7F8]"><th scope="col" className="p-3">Chương trình / sản phẩm</th><th scope="col" className="p-3">Mức giảm</th><th scope="col" className="p-3">Thời gian</th><th scope="col" className="p-3">Thao tác</th></tr></thead>
             <tbody>{data.content.map((item) => <tr key={item.id} className="border-b border-border">
-              <td className="p-3 max-w-72 break-words"><strong>{item.name}</strong><p className="text-muted mt-1">{item.productName} · #{item.productId}</p><p className="text-xs mt-1">{item.isActive ? 'Đã bật' : 'Đã tắt'}</p></td>
+              <td className="p-3 max-w-72 break-words"><strong>{item.name}</strong><p className="text-muted mt-1">{item.products?.length ? item.products.map((target) => target.name).join(', ') : item.productName}</p><p className="text-xs mt-1">{item.isActive ? 'Đã bật' : 'Đã tắt'}</p></td>
               <td className="p-3 tabular-nums">{Number((Number(item.discountRate) * 100).toFixed(2))}%</td>
               <td className="p-3 text-xs">{item.validFrom ? new Date(item.validFrom).toLocaleString('vi-VN') : 'Không giới hạn bắt đầu'}<br />{item.validUntil ? new Date(item.validUntil).toLocaleString('vi-VN') : 'Không giới hạn kết thúc'}</td>
               <td className="p-3"><div className="flex gap-2"><Button variant="secondary" onClick={() => setEditor({ promotion: item })}>Sửa</Button><Button variant="quiet" onClick={() => setDeleteTarget(item)}>Xóa</Button></div></td>

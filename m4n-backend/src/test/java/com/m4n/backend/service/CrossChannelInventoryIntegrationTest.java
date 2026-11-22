@@ -117,7 +117,7 @@ class CrossChannelInventoryIntegrationTest {
                 new DiscountCalculationResponse(null, null, BigDecimal.ZERO, BigDecimal.ZERO,
                         BigDecimal.ZERO, invocation.getArgument(1)));
         inventoryService = new InventoryServiceImpl(inventoryRepository,
-                inventoryMovementRepository, productMediaRepository);
+                inventoryMovementRepository, productMediaRepository, productRepository);
         stockDocumentService = new StockDocumentServiceImpl(stockDocumentRepository, productRepository, inventoryRepository, inventoryService);
         posService = new PosServiceImpl(productRepository, inventoryRepository, invoiceRepository, userRepository, voucherService, inventoryService, productPricingService,
                 mock(com.m4n.backend.repository.PosMomoPaymentRepository.class), mock(tools.jackson.databind.ObjectMapper.class), mock(PosCustomerService.class));

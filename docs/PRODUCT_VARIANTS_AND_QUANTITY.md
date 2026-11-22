@@ -1,5 +1,9 @@
 # Product variants, quantity controls and support notifications
 
+The group-string-only model below is superseded by the user-approved 2026-11-22
+parent/SKU relationship in `PRODUCT_FAMILY_UPGRADE.md`. Earlier entries record
+compatibility/history; parent references now replace the manual group field.
+
 Approved by the user on 2026-11-19: each variant has its own SKU, barcode,
 price and inventory. Customers and POS choose the SKU they want to buy.
 
@@ -69,6 +73,18 @@ price and inventory. Customers and POS choose the SKU they want to buy.
   the selected SKU; quantity resets to one on a SKU change.
 - This extension needs no additional database migration or dependency. Deploy
   backend before frontend for the new Admin endpoints.
+
+### Variant form clarification — 2026-11-22
+
+- Adding to an existing product opens with exactly one new SKU. Optional bulk
+  rows are under “Tạo nhiều biến thể cùng lúc”; each added row creates one more
+  SKU. The submit count includes the new SKU at the top and all added rows.
+  Empty added rows must be completed or removed, never silently discarded.
+- Variant mode requires both group and label even for a single new SKU. Prices
+  can match an existing variant; labels, SKU and barcode remain unique.
+- `CreateProductRequest.isActive` is optional: omitted/null preserves the existing
+  active default; false creates an inactive SKU. JSON and uploaded-image creation,
+  including batches, honor the form's selling-status checkbox atomically.
 
 ## Quantity and POS layout
 

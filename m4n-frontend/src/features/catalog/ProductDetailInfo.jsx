@@ -184,7 +184,7 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
             )}
           </div>
 
-          {product.variantGroup && <ProductVariantPicker product={product} disabled={isAdding || isBuying}
+          {(product.familyId || product.variantGroup) && <ProductVariantPicker product={product} disabled={isAdding || isBuying}
             onSelect={onSelectVariant} />}
           {product.variantLabel && <p role="status" className="text-sm text-muted">Đã chọn: <strong className="text-ink">{product.variantLabel}</strong> · {formattedPrice}{switching ? ' · Đang kiểm tra thông tin…' : ''}</p>}
           {/* Purchase / Add to Cart Actions */}

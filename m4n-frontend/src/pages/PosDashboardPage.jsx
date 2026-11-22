@@ -1,4 +1,6 @@
 import PosCatalog from '../features/pos/PosCatalog.jsx'
+import { hasPosVariants } from '../features/pos/posCatalogGroups.js'
+import ProductVariantPicker from '../features/catalog/ProductVariantPicker.jsx'
 import QuantitySelector from '../components/ui/QuantitySelector.jsx'
 import VoucherSuggestions from '../features/checkout/VoucherSuggestions.jsx'
 import PosCustomerFields from '../features/pos/PosCustomerFields.jsx'
@@ -30,6 +32,7 @@ import {
   Store,
   Banknote,
   CreditCard,
+  Plus,
 } from 'lucide-react'
 
 function PosDashboardPage() {
@@ -44,6 +47,10 @@ function PosDashboardPage() {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [barcodeInput, setBarcodeInput] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
+  const [variantTarget, setVariantTarget] = useState(null)
+  const variantPanelRef = useRef(null)
+  const catalogButtonRef = useRef(null)
+  const catalogSearchRef = useRef(null)
 
   // Current POS Bill State
   const [billItems, setBillItemsState] = useState([])
@@ -170,6 +177,24 @@ function PosDashboardPage() {
     })
   }, [addToast, successSale, vnpayPaymentId, setBillItems, salePreview.knownStock])
 
+  const closeVariantSelection = () => {
+    setVariantTarget(null)
+    requestAnimationFrame(() => {
+      const target = catalogButtonRef.current?.isConnected ? catalogButtonRef.current : catalogSearchRef.current
+      target?.focus()
+    })
+  }
+
+  const handleSelectProduct = (product, button) => {
+    if (salePending.current || successSale || vnpayPaymentId) return
+    catalogButtonRef.current = button
+    setVariantTarget(product)
+    requestAnimationFrame(() => {
+      variantPanelRef.current?.scrollIntoView({ block: 'nearest' })
+      variantPanelRef.current?.focus({ preventScroll: true })
+    })
+  }
+
   // 3. Update quantity
   const handleUpdateQty = (productId, quantity) => {
     const item = billItemsRef.current.find((entry) => entry.productId === productId)
@@ -202,6 +227,7 @@ function PosDashboardPage() {
     salePreview.retry()
     voucherPreviewVersionRef.current += 1
     setBillItems([])
+    setVariantTarget(null)
     setVoucherCode('')
     setVoucherState({ applied: false, discount: 0, message: '', loading: false })
     setAmountReceived('')
@@ -410,6 +436,7 @@ function PosDashboardPage() {
     voucherPreviewVersionRef.current += 1
     setSuccessSale(null)
     setBillItems([])
+    setVariantTarget(null)
     setVoucherCode('')
     setVoucherState({ applied: false, discount: 0, message: '', loading: false })
     setAmountReceived('')
@@ -450,6 +477,7 @@ function PosDashboardPage() {
         <div className="relative flex-1 max-w-lg">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
+            ref={catalogSearchRef}
             type="text"
             name="posProductSearch"
             aria-label="Tìm nhạc cụ tại quầy"
@@ -512,7 +540,7 @@ function PosDashboardPage() {
             <h2 className="text-xs font-bold text-ink uppercase tracking-wider">
               Danh mục nhạc cụ showroom
             </h2>
-            <span className="text-xs text-muted">Bấm sản phẩm hoặc tone để thêm vào hóa đơn</span>
+            <span className="text-xs text-muted">Bấm sản phẩm để xem · Bấm + để thêm</span>
           </div>
 
           {loadingCatalog ? (
@@ -532,7 +560,7 @@ function PosDashboardPage() {
               <p className="text-xs text-muted">Thử nhập từ khóa khác hoặc quét mã vạch trực tiếp.</p>
             </div>
           ) : (
-            <PosCatalog products={catalog} onAdd={handleAddToBill}
+            <PosCatalog products={catalog} onSelect={handleSelectProduct} onAdd={handleAddToBill} selectedProductId={variantTarget?.id}
               disabled={submittingSale || Boolean(successSale) || Boolean(vnpayPaymentId)} />
           )}
         </div>
@@ -559,6 +587,25 @@ function PosDashboardPage() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {variantTarget && <section id="pos-variant-selection" ref={variantPanelRef} tabIndex={-1}
+            aria-labelledby="pos-variant-title" className="m-3 rounded-xl border border-border bg-white p-3 space-y-3 focus-visible:outline-2 focus-visible:outline-brand">
+            <div className="flex items-center justify-between gap-2">
+              <h3 id="pos-variant-title" className="min-w-0 break-words text-sm font-bold text-ink">{variantTarget.familyName || variantTarget.variantGroup || variantTarget.name}</h3>
+              <button type="button" aria-label="Đóng thông tin sản phẩm" onClick={closeVariantSelection}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-brand"><X size={18} aria-hidden="true" /></button>
+            </div>
+            <p className="text-xs text-muted">Bấm + ở sản phẩm hoặc biến thể cần mua để thêm vào hóa đơn.</p>
+            {hasPosVariants(variantTarget) ? <ProductVariantPicker key={variantTarget.familyId || variantTarget.variantGroup || variantTarget.id}
+              product={variantTarget} purchasing disabled={submittingSale || Boolean(successSale) || Boolean(vnpayPaymentId)}
+              onAdd={(variant) => handleAddToBill({ ...variant, quantity: variant.stockQuantity, primaryImage: variant.media?.[0]?.url })} />
+              : <div className="flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0"><p className="break-all text-xs text-muted" translate="no">{variantTarget.code}</p>
+                  <p className="font-semibold">{formatCurrencyVND(variantTarget.price)} · {variantTarget.quantity > 0 ? `Còn ${variantTarget.quantity}` : 'Hết hàng'}</p></div>
+                <button type="button" aria-label={`Thêm ${variantTarget.name} vào hóa đơn`} disabled={variantTarget.quantity <= 0}
+                  onClick={() => handleAddToBill(variantTarget)}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border text-brand hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-40"><Plus size={18} aria-hidden="true" /></button>
+              </div>}
+          </section>}
           {/* Bill Items List */}
           <div className="p-4 flex flex-col gap-2.5 max-h-72 overflow-y-auto divide-y divide-border/60">
             {billItems.length === 0 ? (
@@ -566,7 +613,7 @@ function PosDashboardPage() {
                 <Store size={32} className="text-muted/40" />
                 <p className="text-xs font-bold text-ink">Chưa có sản phẩm nào</p>
                 <p className="text-xs text-muted">
-                  Bấm vào sản phẩm bên trái hoặc quét mã vạch để thêm vào hóa đơn.
+                  Bấm + ở sản phẩm cần mua hoặc quét mã vạch để thêm vào hóa đơn.
                 </p>
               </div>
             ) : (

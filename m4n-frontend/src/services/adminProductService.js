@@ -14,11 +14,13 @@ export const adminProductService = Object.freeze({
     artisanId,
     craftVillageId,
     isActive,
+    groupVariants = false,
     page = 0,
     size = 10,
     sort = 'createdAt,desc',
   } = {}) {
     const params = new URLSearchParams()
+    if (groupVariants) params.set('groupVariants', 'true')
     if (keyword && keyword.trim()) params.append('keyword', keyword.trim())
     if (categoryId) params.append('categoryId', String(categoryId))
     if (artisanId) params.append('artisanId', String(artisanId))

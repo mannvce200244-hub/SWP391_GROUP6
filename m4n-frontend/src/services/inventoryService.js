@@ -4,6 +4,7 @@ export async function getInventory({ page = 0, size = 10, keyword = '', status =
   const params = new URLSearchParams()
   params.append('page', page)
   params.append('size', size)
+  params.set('groupVariants', 'true')
   if (keyword && keyword.trim()) {
     params.append('keyword', keyword.trim())
   }
@@ -22,9 +23,10 @@ export async function importStock(productId, { quantity, unitCost, notes = '' })
   })
 }
 
-export async function getStockDocuments({ page = 0, size = 10, productId, type = '', status = '' } = {}) {
+export async function getStockDocuments({ page = 0, size = 10, productId, familyId, type = '', status = '' } = {}) {
   const params = new URLSearchParams({ page, size })
   if (productId) params.set('productId', productId)
+  if (familyId) params.set('familyId', familyId)
   if (type) params.set('type', type)
   if (status) params.set('status', status)
   return apiClient.get(`/inventory/documents?${params}`)
@@ -37,9 +39,10 @@ export async function confirmStockDocument(documentId, { rejectedQuantity = 0, r
   })
 }
 
-export async function getInventoryMovements({ page = 0, size = 10, productId, type = '' } = {}) {
+export async function getInventoryMovements({ page = 0, size = 10, productId, familyId, type = '' } = {}) {
   const params = new URLSearchParams({ page, size })
   if (productId) params.set('productId', productId)
+  if (familyId) params.set('familyId', familyId)
   if (type) params.set('type', type)
   return apiClient.get(`/inventory/movements?${params}`)
 }

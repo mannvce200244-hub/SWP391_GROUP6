@@ -13,4 +13,8 @@ public interface InventoryMovementRepository extends JpaRepository<InventoryMove
     @Query("SELECT m FROM InventoryMovement m WHERE (:productId IS NULL OR m.product.id = :productId) " +
             "AND (:type IS NULL OR m.type = :type)")
     Page<InventoryMovement> search(@Param("productId") Long productId, @Param("type") String type, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"product", "product.family"})
+    @Query("SELECT m FROM InventoryMovement m WHERE m.product.family.id = :familyId AND (:type IS NULL OR m.type = :type)")
+    Page<InventoryMovement> searchFamily(@Param("familyId") Long familyId, @Param("type") String type, Pageable pageable);
 }

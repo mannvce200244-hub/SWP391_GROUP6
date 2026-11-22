@@ -60,6 +60,7 @@ class ProductServiceTest {
     @Mock
     private com.m4n.backend.repository.CraftVillageRepository craftVillageRepository;
 
+    @Mock private com.m4n.backend.repository.ProductFamilyRepository familyRepository;
     private ProductMapper productMapper;
     @Mock private ProductPromotionRepository productPromotionRepository;
     private ProductService productService;
@@ -75,7 +76,7 @@ class ProductServiceTest {
                 artisanRepository,
                 craftVillageRepository,
                 productMapper,
-                new ProductPricingServiceImpl(productPromotionRepository)
+                new ProductPricingServiceImpl(productPromotionRepository), familyRepository
         );
     }
 
@@ -314,6 +315,11 @@ class ProductServiceTest {
             return savedInventory;
         });
 
+        when(familyRepository.save(any(com.m4n.backend.entity.ProductFamily.class))).thenAnswer(invocation -> {
+            var family = (com.m4n.backend.entity.ProductFamily) invocation.getArgument(0);
+            family.setId(500L);
+            return family;
+        });
         com.m4n.backend.dto.request.CreateProductRequest request = new com.m4n.backend.dto.request.CreateProductRequest(
                 "TR-001",
                 null,
@@ -331,7 +337,7 @@ class ProductServiceTest {
                 null,
                 null,
                 BigDecimal.ZERO
-        , null, null);
+        , null, null, null, null);
 
         com.m4n.backend.dto.response.AdminProductDetailResponse response = productService.createProduct(request);
 
@@ -346,6 +352,11 @@ class ProductServiceTest {
     void shouldRejectDuplicateProductCodeOnCreate() {
         when(productRepository.existsByCodeIgnoreCase("DUP-01")).thenReturn(true);
 
+        when(familyRepository.save(any(com.m4n.backend.entity.ProductFamily.class))).thenAnswer(invocation -> {
+            var family = (com.m4n.backend.entity.ProductFamily) invocation.getArgument(0);
+            family.setId(500L);
+            return family;
+        });
         com.m4n.backend.dto.request.CreateProductRequest request = new com.m4n.backend.dto.request.CreateProductRequest(
                 "DUP-01",
                 null,
@@ -359,7 +370,7 @@ class ProductServiceTest {
                 null,
                 null,
                 BigDecimal.ZERO
-        , null, null);
+        , null, null, null, null);
 
         assertThatThrownBy(() -> productService.createProduct(request))
                 .isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class)
@@ -443,6 +454,11 @@ class ProductServiceTest {
                 .build();
         when(productRepository.save(any(Product.class))).thenReturn(savedInit);
 
+        when(familyRepository.save(any(com.m4n.backend.entity.ProductFamily.class))).thenAnswer(invocation -> {
+            var family = (com.m4n.backend.entity.ProductFamily) invocation.getArgument(0);
+            family.setId(500L);
+            return family;
+        });
         com.m4n.backend.dto.request.CreateProductRequest req = new com.m4n.backend.dto.request.CreateProductRequest(
                 null, // code omitted -> auto-generate
                 null, // barcode omitted -> auto-generate EAN-13
@@ -453,7 +469,7 @@ class ProductServiceTest {
                 null,
                 null,
                 BigDecimal.ZERO
-        , null, null);
+        , null, null, null, null);
 
         productService.createProduct(req);
 
@@ -473,6 +489,11 @@ class ProductServiceTest {
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(cat));
         when(productRepository.existsByBarcodeIgnoreCase("8938501234567")).thenReturn(true);
 
+        when(familyRepository.save(any(com.m4n.backend.entity.ProductFamily.class))).thenAnswer(invocation -> {
+            var family = (com.m4n.backend.entity.ProductFamily) invocation.getArgument(0);
+            family.setId(500L);
+            return family;
+        });
         com.m4n.backend.dto.request.CreateProductRequest req = new com.m4n.backend.dto.request.CreateProductRequest(
                 "NEW-001",
                 "8938501234567",
@@ -483,7 +504,7 @@ class ProductServiceTest {
                 null,
                 null,
                 BigDecimal.ZERO
-        , null, null);
+        , null, null, null, null);
 
         assertThatThrownBy(() -> productService.createProduct(req))
                 .isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class)

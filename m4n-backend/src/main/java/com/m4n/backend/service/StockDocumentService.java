@@ -15,4 +15,5 @@ public interface StockDocumentService {
     StockDocumentResponse createIssue(Long productId, StockIssueRequest request);
     StockDocumentResponse confirm(Long documentId, ConfirmStockDocumentRequest request);
     Page<StockDocumentResponse> list(Long productId, StockDocumentType type, StockDocumentStatus status, Pageable pageable);
+    Page<StockDocumentResponse> list(Long productId, Long familyId, StockDocumentType type, StockDocumentStatus status, Pageable pageable);
 }

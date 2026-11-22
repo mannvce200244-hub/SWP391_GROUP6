@@ -13,6 +13,38 @@ test('multiple variants preserve shared attributes and independent prices and id
   assert.equal(requests[2].code, 'SAO-E')
   assert.ok(requests.every((row) => row.variantGroup === base.variantGroup && row.categoryId === 1))
 })
+test('adding one variant sends one new SKU without extra rows or the source identity', () => {
+  const newVariant = { ...base, variantLabel: 'Tone Rê', code: null, barcode: null, price: 150000, isActive: false }
+  assert.deepEqual(variantFormErrors(newVariant, [], true), {})
+  assert.deepEqual(variantRequests(newVariant, []), [newVariant])
+  assert.equal(base.variantLabel, 'Tone Đô')
+  const extra = { label: 'Tone Mi', price: '150000', code: '', barcode: '', id: 'extra' }
+  assert.equal(variantRequests(newVariant, [extra]).length, 2)
+  assert.equal(variantRequests(newVariant, []).length, 1)
+  assert.equal(variantRequests(newVariant, [extra])[1].isActive, false)
+})
+test('variant mode requires a tone and no longer requires a manually entered group', () => {
+  const ungrouped = { ...base, variantGroup: '', variantLabel: '' }
+  assert.deepEqual(variantFormErrors(ungrouped, []), {})
+  const errors = variantFormErrors(ungrouped, [], true)
+  assert.equal(errors.variantGroup, undefined)
+  assert.ok(errors.variantLabel)
+  assert.ok(variantFormErrors({ ...base, variantLabel: '' }, [], true).variantLabel)
+  assert.deepEqual(variantFormErrors({ ...base, variantGroup: '' }, [], true), {})
+})
+test('blank additional rows block creation instead of silently creating an unintended variant', () => {
+  const errors = variantFormErrors(base, [{ label: '', code: '', barcode: '', price: '' }], true)
+  assert.ok(errors['variants[1].variantLabel'])
+  assert.ok(errors['variants[1].price'])
+  assert.deepEqual(variantFormErrors(base, [], true), {})
+})
+
+test('new variants keep the explicit parent reference without requiring a group-name input', () => {
+  const parent = { ...base, familyId: 25, variantGroup: undefined }
+  const rows = [{ label: 'Tone Rê', code: '', barcode: '', price: '150000' }]
+  assert.deepEqual(variantFormErrors(parent, rows, true), {})
+  assert.deepEqual(variantRequests(parent, rows).map(item => item.familyId), [25, 25])
+})
 test('variant rows reject duplicate tones, SKU/barcodes, and invalid or excessive prices', () => {
   const rows = [{ label: ' tone đô ', price: '0', code: 'sao-c', barcode: '' }, { label: 'Tone Rê', price: '1.234', code: '', barcode: '89301' }, { label: '', price: '1000000000000', code: '', barcode: '89301' }]
   const errors = variantFormErrors(base, rows)

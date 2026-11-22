@@ -10,7 +10,11 @@ public interface InventoryService {
 
     Page<InventoryItemResponse> listInventory(String keyword, String status, Pageable pageable);
 
+    Page<InventoryItemResponse> listInventoryFamilies(String keyword, String status, Pageable pageable);
+
     Page<InventoryMovementResponse> listMovements(Long productId, String type, Pageable pageable);
+
+    Page<InventoryMovementResponse> listMovements(Long productId, Long familyId, String type, Pageable pageable);
 
     void recordMovement(InventoryMovement movement);
 }

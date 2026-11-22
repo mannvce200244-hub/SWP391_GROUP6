@@ -17,7 +17,10 @@ public record ProductSummaryResponse(
         BigDecimal originalPrice,
         BigDecimal productDiscountAmount,
         Long productPromotionId,
-        Integer stockQuantity,
+        Long stockQuantity,
         String variantGroup,
-        String variantLabel
+        String variantLabel,
+        Long familyId,
+        String familyName,
+        long variantCount
 ) {}

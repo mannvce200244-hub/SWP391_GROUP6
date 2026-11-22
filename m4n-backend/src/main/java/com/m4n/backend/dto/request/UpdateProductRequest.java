@@ -52,7 +52,6 @@ public record UpdateProductRequest(
         @Min(value = 0, message = "Ngưỡng cảnh báo tồn kho không được âm")
         Integer lowStockThreshold,
         @DecimalMin(value = "0", inclusive = false, message = "Trọng lượng tính cước phải lớn hơn 0")
-        @Digits(integer = 7, fraction = 3, message = "Trọng lượng tối đa 7 chữ số nguyên và 3 chữ số thập phân")
         BigDecimal billableWeightKg,
         @DecimalMin(value = "0", message = "Phụ phí cồng kềnh không được âm")
         @Digits(integer = 13, fraction = 0, message = "Phụ phí là số VND nguyên, tối đa 13 chữ số")

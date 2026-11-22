@@ -143,7 +143,7 @@ class ProductGalleryIntegrationTest {
         return new CreateProductRequest("P-" + UUID.randomUUID(), null, name, price, category.getId(),
                 null, null, null, null, null, null, null, List.of(
                 new CreateProductMediaRequest(MediaType.IMAGE, "/original.jpg", "Original", 0),
-                new CreateProductMediaRequest(MediaType.IMAGE, "/removed.jpg", "Removed", 1)), null, null, BigDecimal.ZERO, null, null);
+                new CreateProductMediaRequest(MediaType.IMAGE, "/removed.jpg", "Removed", 1)), null, null, BigDecimal.ZERO, null, null, null, null);
     }
 
     private UpdateProductRequest update(String name, List<ProductMediaItemRequest> media) {

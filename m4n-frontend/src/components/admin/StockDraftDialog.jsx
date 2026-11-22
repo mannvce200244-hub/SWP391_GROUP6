@@ -5,12 +5,13 @@ import { formatCurrencyVND } from '../../utils/currency.js'
 import useDialogFocus from '../../hooks/useDialogFocus.js'
 import Button from '../ui/Button.jsx'
 import Input from '../ui/Input.jsx'
+import MoneyInput from '../ui/MoneyInput.jsx'
 import { Skeleton } from '../ui/Skeleton.jsx'
 import adminProductService from '../../services/adminProductService.js'
 import ProductVariantPicker from '../../features/catalog/ProductVariantPicker.jsx'
 import ProductFormModal from './ProductFormModal.jsx'
 
-export default function StockDraftDialog({ product, onClose, onCreated }) {
+export default function StockDraftDialog({ product, onClose, onCreated, onVariantsChanged }) {
   const [quantity, setQuantity] = useState('')
   const [unitCost, setUnitCost] = useState('')
   const [reason, setReason] = useState('')
@@ -92,7 +93,7 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
           <Button variant="ghost" size="sm" disabled={busy} onClick={onClose} aria-label="Đóng hộp thoại tạo phiếu kho"><X size={18} aria-hidden="true" /></Button>
         </div>
         <p className="text-sm break-words">
-          <strong>{selection?.variantLabel ? `${selection.variantGroup} · ${selection.variantLabel}` : selection?.name || (detailTargetId === product.productId ? product.productName : 'Biến thể vừa tạo')}</strong>
+          <strong>{selection?.variantLabel ? `${selection.familyName || selection.variantGroup || selection.name} · ${selection.variantLabel}` : selection?.name || (detailTargetId === product.productId ? product.productName : 'Biến thể vừa tạo')}</strong>
           {(selection?.code || detailTargetId === product.productId) && <> · <span translate="no">{selection?.code || product.productCode}</span></>}
         </p>
         <p id="stock-draft-description" className="text-sm text-muted">Chọn đúng biến thể trước khi nhập số lượng và giá nhập. Chỉ hàng đạt QC được cộng vào tồn của SKU đã chọn.</p>
@@ -104,12 +105,12 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
         </div>}
         {productError && <p role="alert" className="text-sm text-danger">{productError} <button type="button" className="underline" onClick={() => { setProductError(''); setRetry((value) => value + 1) }}>Thử lại</button></p>}
         {productReady && <>
-        {selection.variantGroup && <ProductVariantPicker key={`${product.productId}-${pickerVersion}`} product={selection} admin initialPage={variantsPage} disabled={busy}
+        {(selection.familyId || selection.variantGroup) && <ProductVariantPicker key={`${product.productId}-${pickerVersion}`} product={selection} admin initialPage={variantsPage} disabled={busy}
           onSelect={(variant) => {
             if (variant.id === selection.id) return
             setSelection(variant); setQuantity(''); setUnitCost(''); setErrors({}); setError('')
           }} />}
-        {selection?.variantGroup && <Button ref={variantButtonRef} variant="secondary" disabled={busy} onClick={async () => {
+        {(selection?.familyId || selection?.variantGroup) && <Button ref={variantButtonRef} variant="secondary" disabled={busy} onClick={async () => {
           setBusy(true)
           try { setVariantSource(await adminProductService.getProductDetail(selection.id)) }
           catch (failure) { setError(failure.message || 'Không thể tải thông tin biến thể.') }
@@ -120,8 +121,8 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
         <Input id="stock-draft-quantity" name="quantity" label={`Số lượng ${action}`} required type="number" inputMode="numeric"
           autoComplete="off" min={1} max={2147483647} step={1} value={quantity} onChange={(event) => setQuantity(event.target.value)}
           error={errors.quantity} disabled={busy} data-dialog-initial-focus />
-        <Input id="stock-draft-unit-cost" name="unitCost" label="Đơn giá nhập (đồng / sản phẩm)" required type="number" inputMode="numeric"
-          autoComplete="off" min={0} max={9999999999} step={1} value={unitCost} onChange={(event) => setUnitCost(event.target.value)} error={errors.unitCost} disabled={busy} />
+        <MoneyInput id="stock-draft-unit-cost" name="unitCost" label="Đơn giá nhập (đồng / sản phẩm)" required
+          value={unitCost} onValueChange={setUnitCost} error={errors.unitCost} disabled={busy} helperText="Đơn giá nhập tính theo đồng nguyên, ví dụ 400.000." />
         <p className="rounded-lg bg-surface-secondary p-3 text-sm" aria-live="polite">Tiền lô dự kiến: <strong>{validQuantity && validCost ? formatCurrencyVND(BigInt(count) * BigInt(cost)) : '—'}</strong>. Tiền thực nhận được tính lại sau QC.</p>
         <Input id="stock-draft-reason" name="reason" label="Ghi chú lô hàng (tùy chọn)"
           autoComplete="off" maxLength={500} value={reason} onChange={(event) => setReason(event.target.value)} error={errors.reason} disabled={busy} />
@@ -137,6 +138,7 @@ export default function StockDraftDialog({ product, onClose, onCreated }) {
       setPickerVersion((value) => value + 1)
       setQuantity(''); setUnitCost(''); setErrors({}); setError('')
       setSelection(null); setVariantsPage(null); setProductError(''); setDetailTargetId(id)
+      onVariantsChanged()
     }} />}
     </>
   )

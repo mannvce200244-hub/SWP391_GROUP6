@@ -48,6 +48,14 @@ public class Product {
     @Column(nullable = false, length = 200)
     private String name;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_id")
+    private ProductFamily family;
+
+    public String getFamilyName() {
+        return family == null ? name : family.getName();
+    }
+
     @Column(name = "variant_group", length = 100)
     private String variantGroup;
 
@@ -55,13 +63,13 @@ public class Product {
     private String variantLabel;
 
     public String getDisplayName() {
-        return variantLabel == null ? name : name + " · " + variantLabel;
+        return variantLabel == null ? getFamilyName() : getFamilyName() + " · " + variantLabel;
     }
 
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "billable_weight_kg", precision = 10, scale = 3)
+    @Column(name = "billable_weight_kg", columnDefinition = "numeric")
     private BigDecimal billableWeightKg;
 
     @Builder.Default

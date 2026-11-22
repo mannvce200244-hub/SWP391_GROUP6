@@ -45,9 +45,11 @@ public class InventoryController {
     public ResponseEntity<Page<InventoryItemResponse>> listInventory(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "false") boolean groupVariants,
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return ResponseEntity.ok(inventoryService.listInventory(keyword, status, pageable));
+        return ResponseEntity.ok(groupVariants ? inventoryService.listInventoryFamilies(keyword, status, pageable)
+                : inventoryService.listInventory(keyword, status, pageable));
     }
 
     @PostMapping("/{productId}/import")
@@ -74,10 +76,12 @@ public class InventoryController {
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     public ResponseEntity<Page<StockDocumentResponse>> documents(
             @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) Long familyId,
             @RequestParam(required = false) StockDocumentType type,
             @RequestParam(required = false) StockDocumentStatus status,
             @PageableDefault(size = 10, sort = {"createdAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(stockDocumentService.list(productId, type, status, pageable));
+        return ResponseEntity.ok(familyId == null ? stockDocumentService.list(productId, type, status, pageable)
+                : stockDocumentService.list(productId, familyId, type, status, pageable));
     }
 
     @PostMapping("/documents/{id}/confirm")
@@ -99,8 +103,9 @@ public class InventoryController {
     @GetMapping("/movements")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN', 'ADMIN')")
     public ResponseEntity<Page<InventoryMovementResponse>> movements(
-            @RequestParam(required = false) Long productId, @RequestParam(required = false) String type,
+            @RequestParam(required = false) Long productId, @RequestParam(required = false) Long familyId, @RequestParam(required = false) String type,
             @PageableDefault(size = 10, sort = {"createdAt", "id"}, direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(inventoryService.listMovements(productId, type, pageable));
+        return ResponseEntity.ok(familyId == null ? inventoryService.listMovements(productId, type, pageable)
+                : inventoryService.listMovements(productId, familyId, type, pageable));
     }
 }

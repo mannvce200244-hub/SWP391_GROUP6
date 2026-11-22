@@ -32,6 +32,7 @@ import com.m4n.backend.service.PosCustomerService;
 import com.m4n.backend.service.InventoryService;
 import com.m4n.backend.service.ProductPricingService;
 import com.m4n.backend.service.ProductPrice;
+import com.m4n.backend.specification.ProductSpecification;
 import com.m4n.backend.validation.MoneyValidation;
 import com.m4n.backend.service.VoucherService;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -80,11 +82,22 @@ public class PosServiceImpl implements PosService {
     @Transactional(readOnly = true)
     public List<PosProductResponse> searchProducts(String keyword) {
         String cleanKeyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
-        List<Product> products = productRepository.searchPosProducts(cleanKeyword, PageRequest.of(0, 40)).getContent();
+        var matches = ProductSpecification.filterCatalog(cleanKeyword, null, null, null, null, null, Sort.unsorted());
+        List<Product> products = productRepository.findAll(ProductSpecification.familyRepresentatives(matches, matches),
+                PageRequest.of(0, 40, Sort.by("id"))).getContent();
+        var familyIds = products.stream().filter(product -> product.getFamily() != null)
+                .map(product -> product.getFamily().getId()).distinct().toList();
+        var variantCounts = familyIds.isEmpty() ? Map.<Long, Long>of()
+                : productRepository.activeFamilyInventoryTotals(familyIds).stream().collect(java.util.stream.Collectors.toMap(
+                    ProductRepository.FamilyInventoryTotals::getFamilyId, ProductRepository.FamilyInventoryTotals::getVariantCount));
 
         Map<Long, ProductPrice> prices = productPricingService.resolvePrices(products);
         return products.stream()
-                .map(product -> mapToPosProductResponse(product, prices.get(product.getId())))
+                .map(product -> {
+                    var response = mapToPosProductResponse(product, prices.get(product.getId()));
+                    response.setVariantCount(product.getFamily() == null ? 1L : variantCounts.getOrDefault(product.getFamily().getId(), 1L));
+                    return response;
+                })
                 .toList();
     }
 
@@ -484,6 +497,7 @@ public class PosServiceImpl implements PosService {
                 .barcode(product.getBarcode())
                 .name(product.getDisplayName())
                 .variantGroup(product.getVariantGroup()).variantLabel(product.getVariantLabel())
+                .familyId(product.getFamily() == null ? null : product.getFamily().getId()).familyName(product.getFamilyName())
                 .price(pricing.chargedUnitPrice())
                 .originalUnitPrice(pricing.originalUnitPrice())
                 .productDiscountAmount(pricing.productDiscountAmount())

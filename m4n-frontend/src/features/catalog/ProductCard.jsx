@@ -9,6 +9,7 @@ function ProductCard({ priority = false, product }) {
   const [failedImageUrl, setFailedImageUrl] = useState(null)
   const rawImage = getFirstProductImage(product.media)
   const hasValidImage = Boolean(rawImage && failedImageUrl !== rawImage.url)
+  const displayName = product.familyName || product.name
 
   // Stock status text if available in product data
   const hasStockInfo =
@@ -24,7 +25,7 @@ function ProductCard({ priority = false, product }) {
 
   return (
     <RouterLink
-      aria-label={`Xem chi tiết ${product.name}`}
+      aria-label={`Xem chi tiết ${displayName}`}
       className="group flex flex-col h-full no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 select-none rounded-xl bg-white border border-border hover:border-brand/40 p-3 hover:-translate-y-1 hover:shadow-md transition-all duration-200"
       href={CUSTOMER_ROUTES.productDetail(product.id)}
     >
@@ -35,7 +36,7 @@ function ProductCard({ priority = false, product }) {
             alt={
               typeof rawImage.alt === 'string' && rawImage.alt.trim()
                 ? rawImage.alt.trim()
-                : product.name
+                : displayName
             }
             className="w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-300 ease-out"
             decoding="async"
@@ -77,8 +78,9 @@ function ProductCard({ priority = false, product }) {
       <div className="pt-3 pb-1 flex flex-col flex-1 gap-1.5">
         {/* Product Title */}
         <h3 className="text-base font-bold text-ink leading-snug group-hover:text-brand transition-colors duration-200 line-clamp-2">
-          {product.name}
+          {displayName}
         </h3>
+        {product.variantCount > 1 && <p className="text-xs text-muted">{product.variantCount} biến thể · Chọn khi xem chi tiết</p>}
 
         {/* Artisan & Village Metadata */}
         {product.artisanName || product.craftVillageName ? (

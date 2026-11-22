@@ -28,4 +28,8 @@ public class PosProductResponse {
     private String availability;
     private String variantGroup;
     private String variantLabel;
+    private Long familyId;
+    private String familyName;
+    @Builder.Default
+    private long variantCount = 1L;
 }
