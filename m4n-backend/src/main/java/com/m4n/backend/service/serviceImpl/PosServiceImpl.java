@@ -473,7 +473,7 @@ public class PosServiceImpl implements PosService {
         int qty = inventory != null ? inventory.getQuantity() : 0;
 
         String availability;
-        int threshold = product.getLowStockThreshold() == null ? 5 : product.getLowStockThreshold();
+        int threshold = Inventory.LOW_STOCK_THRESHOLD;
         if (qty > threshold) {
             availability = "IN_STOCK";
         } else if (qty > 0) {
@@ -498,6 +498,8 @@ public class PosServiceImpl implements PosService {
                 .name(product.getDisplayName())
                 .variantGroup(product.getVariantGroup()).variantLabel(product.getVariantLabel())
                 .familyId(product.getFamily() == null ? null : product.getFamily().getId()).familyName(product.getFamilyName())
+                .option1Name(product.getOption1Name()).option2Name(product.getOption2Name())
+                .option1Value(product.getOption1Value()).option2Value(product.getOption2Value())
                 .price(pricing.chargedUnitPrice())
                 .originalUnitPrice(pricing.originalUnitPrice())
                 .productDiscountAmount(pricing.productDiscountAmount())

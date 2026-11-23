@@ -29,6 +29,9 @@ import java.time.Instant;
 @Builder
 public class Inventory {
 
+    /** Unified system-wide low-stock alert threshold (1..5 = LOW_STOCK, 0 = OUT_OF_STOCK, > 5 = IN_STOCK). */
+    public static final int LOW_STOCK_THRESHOLD = 5;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

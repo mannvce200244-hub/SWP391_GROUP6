@@ -1,6 +1,7 @@
 import PosCatalog from '../features/pos/PosCatalog.jsx'
-import { hasPosVariants } from '../features/pos/posCatalogGroups.js'
-import ProductVariantPicker from '../features/catalog/ProductVariantPicker.jsx'
+import ProductPurchaseDialog from '../features/catalog/ProductPurchaseDialog.jsx'
+import { additionalQuantityLimit } from '../features/catalog/productPurchase.js'
+import { getFirstProductImage } from '../features/catalog/productMedia.js'
 import QuantitySelector from '../components/ui/QuantitySelector.jsx'
 import VoucherSuggestions from '../features/checkout/VoucherSuggestions.jsx'
 import PosCustomerFields from '../features/pos/PosCustomerFields.jsx'
@@ -32,7 +33,6 @@ import {
   Store,
   Banknote,
   CreditCard,
-  Plus,
 } from 'lucide-react'
 
 function PosDashboardPage() {
@@ -48,9 +48,6 @@ function PosDashboardPage() {
   const [barcodeInput, setBarcodeInput] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
   const [variantTarget, setVariantTarget] = useState(null)
-  const variantPanelRef = useRef(null)
-  const catalogButtonRef = useRef(null)
-  const catalogSearchRef = useRef(null)
 
   // Current POS Bill State
   const [billItems, setBillItemsState] = useState([])
@@ -136,13 +133,13 @@ function PosDashboardPage() {
   }, [searchKeyword, loadCatalog])
 
   // 2. Add product to Bill
-  const handleAddToBill = useCallback((product) => {
-    if (salePending.current || successSale || vnpayPaymentId) return
+  const handleAddToBill = useCallback((product, quantity = 1) => {
+    if (salePending.current || successSale || vnpayPaymentId) return false
     const existingItem = billItemsRef.current.find((item) => item.productId === product.id)
     const available = Math.min(product.quantity, salePreview.knownStock[product.id] ?? product.quantity)
-    if ((existingItem?.quantity ?? 0) >= available) {
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > additionalQuantityLimit(available, existingItem?.quantity ?? 0)) {
       addToast({ message: `Chỉ còn ${available} sản phẩm “${product.name}”.`, type: 'error' })
-      return
+      return false
     }
     voucherPreviewVersionRef.current += 1
     setVoucherState((previous) => previous.applied || previous.loading
@@ -153,7 +150,7 @@ function PosDashboardPage() {
       if (existing) {
         return prev.map((item) =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1, availableQuantity: product.quantity }
+            ? { ...item, quantity: item.quantity + quantity, availableQuantity: product.quantity }
             : item
         )
       }
@@ -165,34 +162,22 @@ function PosDashboardPage() {
           barcode: product.barcode,
           name: product.name,
           price: product.price,
-          quantity: 1,
+          quantity,
           primaryImage: product.primaryImage,
           availableQuantity: product.quantity,
         },
       ]
     })
     addToast({
-      message: `Đã thêm '${product.name}' vào đơn hàng.`,
+      message: `Đã thêm ${quantity} “${product.name}” vào đơn hàng.`,
       type: 'success',
     })
+    return true
   }, [addToast, successSale, vnpayPaymentId, setBillItems, salePreview.knownStock])
 
-  const closeVariantSelection = () => {
-    setVariantTarget(null)
-    requestAnimationFrame(() => {
-      const target = catalogButtonRef.current?.isConnected ? catalogButtonRef.current : catalogSearchRef.current
-      target?.focus()
-    })
-  }
-
-  const handleSelectProduct = (product, button) => {
+  const handleSelectProduct = (product) => {
     if (salePending.current || successSale || vnpayPaymentId) return
-    catalogButtonRef.current = button
     setVariantTarget(product)
-    requestAnimationFrame(() => {
-      variantPanelRef.current?.scrollIntoView({ block: 'nearest' })
-      variantPanelRef.current?.focus({ preventScroll: true })
-    })
   }
 
   // 3. Update quantity
@@ -477,7 +462,6 @@ function PosDashboardPage() {
         <div className="relative flex-1 max-w-lg">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
-            ref={catalogSearchRef}
             type="text"
             name="posProductSearch"
             aria-label="Tìm nhạc cụ tại quầy"
@@ -540,7 +524,7 @@ function PosDashboardPage() {
             <h2 className="text-xs font-bold text-ink uppercase tracking-wider">
               Danh mục nhạc cụ showroom
             </h2>
-            <span className="text-xs text-muted">Bấm sản phẩm để xem · Bấm + để thêm</span>
+            <span className="text-xs text-muted">Bấm sản phẩm để chọn biến thể và số lượng</span>
           </div>
 
           {loadingCatalog ? (
@@ -587,25 +571,6 @@ function PosDashboardPage() {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          {variantTarget && <section id="pos-variant-selection" ref={variantPanelRef} tabIndex={-1}
-            aria-labelledby="pos-variant-title" className="m-3 rounded-xl border border-border bg-white p-3 space-y-3 focus-visible:outline-2 focus-visible:outline-brand">
-            <div className="flex items-center justify-between gap-2">
-              <h3 id="pos-variant-title" className="min-w-0 break-words text-sm font-bold text-ink">{variantTarget.familyName || variantTarget.variantGroup || variantTarget.name}</h3>
-              <button type="button" aria-label="Đóng thông tin sản phẩm" onClick={closeVariantSelection}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-brand"><X size={18} aria-hidden="true" /></button>
-            </div>
-            <p className="text-xs text-muted">Bấm + ở sản phẩm hoặc biến thể cần mua để thêm vào hóa đơn.</p>
-            {hasPosVariants(variantTarget) ? <ProductVariantPicker key={variantTarget.familyId || variantTarget.variantGroup || variantTarget.id}
-              product={variantTarget} purchasing disabled={submittingSale || Boolean(successSale) || Boolean(vnpayPaymentId)}
-              onAdd={(variant) => handleAddToBill({ ...variant, quantity: variant.stockQuantity, primaryImage: variant.media?.[0]?.url })} />
-              : <div className="flex items-center justify-between gap-3 text-sm">
-                <div className="min-w-0"><p className="break-all text-xs text-muted" translate="no">{variantTarget.code}</p>
-                  <p className="font-semibold">{formatCurrencyVND(variantTarget.price)} · {variantTarget.quantity > 0 ? `Còn ${variantTarget.quantity}` : 'Hết hàng'}</p></div>
-                <button type="button" aria-label={`Thêm ${variantTarget.name} vào hóa đơn`} disabled={variantTarget.quantity <= 0}
-                  onClick={() => handleAddToBill(variantTarget)}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border text-brand hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-40"><Plus size={18} aria-hidden="true" /></button>
-              </div>}
-          </section>}
           {/* Bill Items List */}
           <div className="p-4 flex flex-col gap-2.5 max-h-72 overflow-y-auto divide-y divide-border/60">
             {billItems.length === 0 ? (
@@ -858,6 +823,12 @@ function PosDashboardPage() {
       {/* Camera Scanner Modal */}
       </fieldset>
       <ConfirmDialog isOpen={clearConfirmOpen} title="Xóa toàn bộ hóa đơn đang nhập?" description="Các sản phẩm và voucher trong hóa đơn này sẽ được xóa." confirmLabel="Xóa hóa đơn" onConfirm={handleClearBill} onCancel={() => setClearConfirmOpen(false)} variant="danger" />
+      {variantTarget && <ProductPurchaseDialog id="pos-variant-selection" key={variantTarget.id} product={variantTarget}
+        confirmLabel="+ Thêm vào hóa đơn" onClose={() => setVariantTarget(null)}
+        disabled={submittingSale || Boolean(successSale) || Boolean(vnpayPaymentId)}
+        quantityLimit={(selected) => additionalQuantityLimit(Math.min(selected.stockQuantity, salePreview.knownStock[selected.id] ?? selected.stockQuantity),
+          billItems.find(item => item.productId === selected.id)?.quantity ?? 0)}
+        onConfirm={(selected, quantity) => handleAddToBill({ ...selected, quantity: selected.stockQuantity, primaryImage: getFirstProductImage(selected.media)?.url }, quantity)} />}
       {scannerOpen && <PosScannerDialog onClose={() => setScannerOpen(false)} onProduct={handleAddToBill} />}
 
       {successSale && <PosReceiptDialog sale={successSale} staffName={user?.fullName} onNewSale={handleNewSale} />}

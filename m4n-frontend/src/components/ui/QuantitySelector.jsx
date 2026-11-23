@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react'
 
-export default function QuantitySelector({ disabled = false, max = 99, min = 1, onChange, value = 1, label = 'Số lượng sản phẩm' }) {
+export default function QuantitySelector({ id, disabled = false, max = 99, min = 1, onChange, value = 1, label = 'Số lượng sản phẩm' }) {
   const [draft, setDraft] = useState(null)
   const [message, setMessage] = useState('')
   const hintId = useId()
@@ -22,7 +22,7 @@ export default function QuantitySelector({ disabled = false, max = 99, min = 1, 
           onPointerDown={(event) => event.preventDefault()}
           onClick={() => { setMessage(''); commit(draft === null && value > limit ? limit : current - 1) }}
           className="h-11 w-11 shrink-0 cursor-pointer text-ink hover:bg-surface-secondary disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-brand">−</button>
-        <input type="text" inputMode="numeric" autoComplete="off" name="quantity" aria-label={label}
+        <input id={id} type="text" inputMode="numeric" autoComplete="off" name="quantity" aria-label={label}
           aria-describedby={feedback ? hintId : undefined} disabled={disabled || limit < min}
           value={draft ?? String(value)}
           onFocus={() => { cancelled.current = false; setDraft(String(value)) }}

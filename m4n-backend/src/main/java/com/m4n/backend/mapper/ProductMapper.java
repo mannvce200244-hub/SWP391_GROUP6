@@ -120,14 +120,18 @@ public class ProductMapper {
                 toProductMediaResponses(product.getMedia()),
                 availability,
                 stockQuantity,
-                product.getLowStockThreshold(),
+                com.m4n.backend.entity.Inventory.LOW_STOCK_THRESHOLD,
                 price.originalUnitPrice(),
                 price.productDiscountAmount(),
                 price.productPromotionId(),
                 product.getVariantGroup(),
                 product.getVariantLabel(),
                 product.getFamily() == null ? null : product.getFamily().getId(),
-                product.getFamilyName()
+                product.getFamilyName(),
+                product.getOption1Name(),
+                product.getOption2Name(),
+                product.getOption1Value(),
+                product.getOption2Value()
         );
     }
 
@@ -164,7 +168,11 @@ public class ProductMapper {
                 product.getVariantLabel(),
                 product.getFamily() == null ? null : product.getFamily().getId(),
                 product.getFamilyName(),
-                variantCount
+                variantCount,
+                product.getOption1Name(),
+                product.getOption2Name(),
+                product.getOption1Value(),
+                product.getOption2Value()
         );
     }
 
@@ -232,13 +240,17 @@ public class ProductMapper {
                 availability,
                 product.getCreatedAt(),
                 product.getUpdatedAt(),
-                product.getLowStockThreshold(),
+                com.m4n.backend.entity.Inventory.LOW_STOCK_THRESHOLD,
                 product.getBillableWeightKg(),
                 product.getBulkySurcharge(),
                 product.getVariantGroup(),
                 product.getVariantLabel(),
                 product.getFamily() == null ? null : product.getFamily().getId(),
-                product.getFamilyName()
+                product.getFamilyName(),
+                product.getOption1Name(),
+                product.getOption2Name(),
+                product.getOption1Value(),
+                product.getOption2Value()
         );
     }
 }

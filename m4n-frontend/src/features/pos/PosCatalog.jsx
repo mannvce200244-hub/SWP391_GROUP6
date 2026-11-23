@@ -20,8 +20,8 @@ export default function PosCatalog({ products, onSelect, onAdd, selectedProductI
       const name = variants ? product.familyName || product.variantGroup || product.name : product.name
       return <article key={key} className={`flex min-w-0 flex-col justify-between gap-3 rounded-xl border bg-white p-3 shadow-xs ${selected ? 'border-brand' : 'border-border'}`}>
         <button type="button" disabled={disabled} aria-label={`Xem sản phẩm ${name}`}
-          aria-expanded={selected} aria-controls={selected ? 'pos-variant-selection' : undefined}
-          onClick={(event) => onSelect(product, event.currentTarget)}
+          aria-haspopup="dialog" aria-expanded={selected} aria-controls={selected ? 'pos-variant-selection' : undefined}
+          onClick={() => onSelect(product)}
           className="group w-full space-y-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50">
           <ProductImage key={product.primaryImage} product={product} />
           <p className="text-xs text-muted">{variants ? product.variantCount > 1 ? `${product.variantCount} biến thể` : 'Có lựa chọn biến thể'
@@ -32,7 +32,7 @@ export default function PosCatalog({ products, onSelect, onAdd, selectedProductI
         <div className="flex w-full items-center justify-between gap-2 border-t border-border/60 pt-2">
           <span className="break-words text-xs font-bold tabular-nums text-brand">{variants ? 'Chọn biến thể' : formatCurrencyVND(product.price)}</span>
           {variants ? <button type="button" aria-label={`Xem biến thể ${name}`} disabled={disabled}
-            onClick={(event) => onSelect(product, event.currentTarget)}
+            aria-haspopup="dialog" onClick={() => onSelect(product)}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-brand hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-brand disabled:opacity-50"><ChevronRight size={18} aria-hidden="true" /></button>
             : <button type="button" aria-label={`Thêm ${name} vào hóa đơn`} disabled={disabled || product.quantity <= 0}
               onClick={() => onAdd(product)}

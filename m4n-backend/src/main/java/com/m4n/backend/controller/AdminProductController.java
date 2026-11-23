@@ -91,7 +91,7 @@ public class AdminProductController {
             @RequestParam(required = false) Long craftVillageId,
             @RequestParam(required = false) Boolean isActive,
             @RequestParam(defaultValue = "false") boolean groupVariants,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 10, sort = "stockQuantity", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return ResponseEntity.ok(groupVariants
                 ? productService.listAdminProducts(keyword, categoryId, artisanId, craftVillageId, isActive, pageable, true)

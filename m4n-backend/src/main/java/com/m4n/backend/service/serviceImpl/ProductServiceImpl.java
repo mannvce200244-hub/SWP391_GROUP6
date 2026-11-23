@@ -173,8 +173,8 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toMap(ProductRepository.FamilyInventoryTotals::getFamilyId, value -> value));
     }
 
-    private String familyAvailability(long quantity, long threshold) {
-        return quantity <= 0 ? "OUT_OF_STOCK" : quantity <= threshold ? "LOW_STOCK" : "IN_STOCK";
+    private String familyAvailability(long quantity, long ignoredThreshold) {
+        return quantity <= 0 ? "OUT_OF_STOCK" : quantity <= Inventory.LOW_STOCK_THRESHOLD ? "LOW_STOCK" : "IN_STOCK";
     }
 
     private Page<ProductSummaryResponse> catalogPage(Page<Product> productPage, boolean grouped) {
@@ -265,13 +265,22 @@ public class ProductServiceImpl implements ProductService {
     @Override @Transactional(readOnly = true)
     public Page<AdminProductSummaryResponse> listAdminProducts(String keyword, Long categoryId, Long artisanId,
             Long craftVillageId, Boolean isActive, Pageable pageable, boolean groupVariants) {
-        validateProductSort(pageable);
+        validateAdminProductSort(pageable);
         Specification<Product> spec = ProductSpecification.filterAdminProducts(
                 keyword, categoryId, artisanId, craftVillageId, isActive
         );
 
         if (groupVariants) spec = ProductSpecification.familyRepresentatives(spec, spec);
-        Page<Product> productPage = productRepository.findAll(spec, pageable != null ? pageable : Pageable.unpaged());
+        Pageable effectivePageable = pageable != null ? pageable : Pageable.unpaged();
+        Sort.Order stockOrder = effectivePageable.getSort().getOrderFor("stockQuantity");
+        if (stockOrder == null) stockOrder = effectivePageable.getSort().getOrderFor("quantity");
+        if (stockOrder != null) {
+            spec = spec.and(ProductSpecification.orderByStock(groupVariants, stockOrder.isAscending()));
+            effectivePageable = effectivePageable.isPaged()
+                    ? PageRequest.of(effectivePageable.getPageNumber(), effectivePageable.getPageSize())
+                    : Pageable.unpaged();
+        }
+        Page<Product> productPage = productRepository.findAll(spec, effectivePageable);
         var totals = groupVariants ? familyTotals(productPage.getContent(), false) : Map.<Long, ProductRepository.FamilyInventoryTotals>of();
 
         List<Long> productIds = productPage.getContent().stream()
@@ -324,15 +333,26 @@ public class ProductServiceImpl implements ProductService {
         var first = request.variants().getFirst();
         String group = first.variantGroup();
         String normalized = group == null ? null : java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC);
+        String firstOpt1Name = normalizeOption(first.option1Name(), "Tên nhóm phân loại 1 tối đa 48 ký tự.");
+        String firstOpt2Name = normalizeOption(first.option2Name(), "Tên nhóm phân loại 2 tối đa 48 ký tự.");
+        validateOptionNames(firstOpt1Name, firstOpt2Name);
         for (CreateProductRequest variant : request.variants()) {
             if (variant == null || !java.util.Objects.equals(first.familyId(), variant.familyId())
                     || (normalized != null && (variant.variantGroup() == null || !normalized.equalsIgnoreCase(
                     java.text.Normalizer.normalize(variant.variantGroup().trim(), java.text.Normalizer.Form.NFC))))) {
                 throw new IllegalArgumentException("Các biến thể phải thuộc cùng một nhóm sản phẩm.");
             }
-            if (variant.variantLabel() == null || variant.variantLabel().isBlank()) throw new IllegalArgumentException("Nhập tên cho từng biến thể.");
+            String rowOpt1Name = normalizeOption(variant.option1Name(), "Tên nhóm phân loại 1 tối đa 48 ký tự.");
+            String rowOpt2Name = normalizeOption(variant.option2Name(), "Tên nhóm phân loại 2 tối đa 48 ký tự.");
+            if ((rowOpt1Name != null && firstOpt1Name != null && !firstOpt1Name.equalsIgnoreCase(rowOpt1Name))
+                    || (rowOpt2Name != null && firstOpt2Name != null && !firstOpt2Name.equalsIgnoreCase(rowOpt2Name))) {
+                throw new IllegalArgumentException("Các biến thể phải dùng chung tên nhóm phân loại.");
+            }
+            boolean hasLabel = variant.variantLabel() != null && !variant.variantLabel().isBlank();
+            boolean hasOpt1 = variant.option1Value() != null && !variant.option1Value().isBlank();
+            if (!hasLabel && !hasOpt1) throw new IllegalArgumentException("Nhập tên cho từng biến thể.");
         }
-        var family = familyFor(first.familyId(), first.variantGroup(), first.name());
+        var family = familyFor(first.familyId(), first.variantGroup(), first.name(), firstOpt1Name, firstOpt2Name);
         List<AdminProductDetailResponse> created = new ArrayList<>();
         for (CreateProductRequest variant : request.variants()) created.add(createProduct(variant, family));
         return created;
@@ -341,21 +361,41 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public AdminProductDetailResponse createProduct(CreateProductRequest request) {
-        if (request.familyId() != null && (request.variantLabel() == null || request.variantLabel().isBlank())) {
+        String opt1Name = normalizeOption(request.option1Name(), "Tên nhóm phân loại 1 tối đa 48 ký tự.");
+        String opt2Name = normalizeOption(request.option2Name(), "Tên nhóm phân loại 2 tối đa 48 ký tự.");
+        validateOptionNames(opt1Name, opt2Name);
+        boolean hasLabel = request.variantLabel() != null && !request.variantLabel().isBlank();
+        boolean hasOpt1 = request.option1Value() != null && !request.option1Value().isBlank();
+        if (request.familyId() != null && !hasLabel && !hasOpt1) {
             throw new IllegalArgumentException("Nhập tên biến thể mới.");
         }
-        return createProduct(request, familyFor(request.familyId(), request.variantGroup(), request.name()));
+        return createProduct(request, familyFor(request.familyId(), request.variantGroup(), request.name(), opt1Name, opt2Name));
     }
 
-    private com.m4n.backend.entity.ProductFamily familyFor(Long familyId, String group, String name) {
-        if (familyId != null) return familyRepository.findById(familyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm cha không tồn tại."));
+    private com.m4n.backend.entity.ProductFamily familyFor(Long familyId, String group, String name, String opt1Name, String opt2Name) {
+        if (familyId != null) {
+            var existing = familyRepository.findById(familyId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm cha không tồn tại."));
+            applyFamilyOptionNames(existing, opt1Name, opt2Name);
+            return existing;
+        }
         String key = group == null || group.isBlank() ? null : "group:" + java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC).toLowerCase(java.util.Locale.ROOT);
         if (key != null) {
             var existing = familyRepository.findByLegacyKey(key);
-            if (existing.isPresent()) return existing.get();
+            if (existing.isPresent()) {
+                applyFamilyOptionNames(existing.get(), opt1Name, opt2Name);
+                return existing.get();
+            }
         }
-        return familyRepository.save(com.m4n.backend.entity.ProductFamily.builder().name(name.trim()).legacyKey(key).build());
+        return familyRepository.save(com.m4n.backend.entity.ProductFamily.builder()
+                .name(name.trim()).option1Name(opt1Name).option2Name(opt2Name).legacyKey(key).build());
+    }
+
+    private void applyFamilyOptionNames(com.m4n.backend.entity.ProductFamily family, String opt1Name, String opt2Name) {
+        if (opt1Name == null && opt2Name == null) return;
+        validateOptionNames(opt1Name != null ? opt1Name : family.getOption1Name(), opt2Name != null ? opt2Name : family.getOption2Name());
+        if (family.getOption1Name() == null && opt1Name != null) family.setOption1Name(opt1Name);
+        if (family.getOption2Name() == null && opt2Name != null) family.setOption2Name(opt2Name);
     }
 
     private AdminProductDetailResponse createProduct(CreateProductRequest request, com.m4n.backend.entity.ProductFamily family) {
@@ -396,7 +436,7 @@ public class ProductServiceImpl implements ProductService {
                 .price(request.price())
                 .billableWeightKg(request.billableWeightKg())
                 .bulkySurcharge(request.bulkySurcharge() != null ? request.bulkySurcharge() : BigDecimal.ZERO)
-                .lowStockThreshold(request.lowStockThreshold() != null ? request.lowStockThreshold() : 5)
+                .lowStockThreshold(Inventory.LOW_STOCK_THRESHOLD)
                 .description(request.description() != null ? request.description().trim() : null)
                 .material(request.material() != null ? request.material().trim() : null)
                 .dimensions(request.dimensions() != null ? request.dimensions().trim() : null)
@@ -408,7 +448,7 @@ public class ProductServiceImpl implements ProductService {
                 .isActive(!Boolean.FALSE.equals(request.isActive()))
                 .build();
 
-        configureVariant(product, request.variantGroup(), request.variantLabel());
+        configureVariant(product, request.variantGroup(), request.variantLabel(), request.option1Value(), request.option2Value());
         Product savedProduct = productRepository.save(product);
         if (family != null && org.hibernate.Hibernate.isInitialized(family.getVariants())) family.getVariants().add(savedProduct);
 
@@ -470,11 +510,30 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toAdminDetailResponse(savedProduct, "OUT_OF_STOCK", 0);
     }
 
-    private void configureVariant(Product product, String group, String label) {
+    private void configureVariant(Product product, String group, String label, String rawOption1Value, String rawOption2Value) {
         String normalizedGroup = group == null || group.isBlank() ? null
                 : java.text.Normalizer.normalize(group.trim(), java.text.Normalizer.Form.NFC);
         String normalizedLabel = label == null || label.isBlank() ? null
                 : java.text.Normalizer.normalize(label.trim(), java.text.Normalizer.Form.NFC);
+        String opt1Val = normalizeOption(rawOption1Value, "Giá trị phân loại 1 tối đa 48 ký tự.");
+        String opt2Val = normalizeOption(rawOption2Value, "Giá trị phân loại 2 tối đa 48 ký tự.");
+        if (opt2Val != null && opt1Val == null) {
+            throw new IllegalArgumentException("Cần nhập giá trị phân loại 1 trước giá trị phân loại 2.");
+        }
+        String familyOpt1 = product.getFamily() == null ? null : product.getFamily().getOption1Name();
+        String familyOpt2 = product.getFamily() == null ? null : product.getFamily().getOption2Name();
+        if (familyOpt1 != null && opt1Val == null) {
+            throw new IllegalArgumentException("Vui lòng nhập giá trị cho nhóm phân loại '" + familyOpt1 + "'.");
+        }
+        if (familyOpt2 != null && opt2Val == null) {
+            throw new IllegalArgumentException("Vui lòng nhập giá trị cho nhóm phân loại '" + familyOpt2 + "'.");
+        }
+        if (familyOpt2 == null && opt2Val != null) {
+            throw new IllegalArgumentException("Cần khai báo tên nhóm phân loại 2 trước khi nhập giá trị phân loại 2.");
+        }
+        if (opt1Val != null) {
+            normalizedLabel = opt2Val != null ? opt1Val + " · " + opt2Val : opt1Val;
+        }
         if (normalizedGroup != null && normalizedLabel == null) {
             throw new IllegalArgumentException("Nhập tên biến thể cho sản phẩm này.");
         }
@@ -489,6 +548,24 @@ public class ProductServiceImpl implements ProductService {
         }
         product.setVariantGroup(normalizedGroup);
         product.setVariantLabel(normalizedLabel);
+        product.setOption1Value(opt1Val);
+        product.setOption2Value(opt2Val);
+    }
+
+    private String normalizeOption(String raw, String lengthError) {
+        if (raw == null || raw.isBlank()) return null;
+        String value = java.text.Normalizer.normalize(raw.trim(), java.text.Normalizer.Form.NFC);
+        if (value.length() > 48) throw new IllegalArgumentException(lengthError);
+        return value;
+    }
+
+    private void validateOptionNames(String opt1Name, String opt2Name) {
+        if (opt2Name != null && opt1Name == null) {
+            throw new IllegalArgumentException("Cần nhập tên nhóm phân loại 1 trước khi dùng nhóm phân loại 2.");
+        }
+        if (opt1Name != null && opt2Name != null && opt1Name.equalsIgnoreCase(opt2Name)) {
+            throw new IllegalArgumentException("Hai nhóm phân loại không được trùng tên.");
+        }
     }
 
     private String generateEan13Barcode(Long id) {
@@ -530,13 +607,41 @@ public class ProductServiceImpl implements ProductService {
         }
 
         product.setName(request.name().trim());
-        if (product.getFamily() == null) product.setFamily(familyFor(null, request.variantGroup(), request.name()));
+        String opt1Name = normalizeOption(request.option1Name(), "Tên nhóm phân loại 1 tối đa 48 ký tự.");
+        String opt2Name = normalizeOption(request.option2Name(), "Tên nhóm phân loại 2 tối đa 48 ký tự.");
+        validateOptionNames(opt1Name, opt2Name);
+        if (product.getFamily() == null) product.setFamily(familyFor(null, request.variantGroup(), request.name(), opt1Name, opt2Name));
         product.getFamily().setName(request.name().trim());
-        configureVariant(product, request.variantGroup(), request.variantLabel());
+        if (opt1Name != null || opt2Name != null) {
+            var family = product.getFamily();
+            String currentOpt1 = family.getOption1Name();
+            String currentOpt2 = family.getOption2Name();
+            if (currentOpt1 == null && opt1Name != null && family.getId() != null
+                    && productRepository.countByFamilyId(family.getId()) > 1) {
+                throw new IllegalArgumentException("Không thể thêm nhóm phân loại mới khi sản phẩm đã có nhiều biến thể cũ.");
+            }
+            if (currentOpt2 == null && opt2Name != null && family.getId() != null
+                    && productRepository.countByFamilyId(family.getId()) > 1) {
+                throw new IllegalArgumentException("Không thể thêm nhóm phân loại 2 khi sản phẩm đã có nhiều biến thể ở nhóm 1.");
+            }
+            if (currentOpt2 != null && opt2Name == null && family.getId() != null
+                    && productRepository.existsByFamilyIdAndOption2ValueIsNotNullAndIdNot(family.getId(), productId)) {
+                throw new IllegalArgumentException("Không thể bỏ nhóm phân loại 2 khi các biến thể khác đang sử dụng.");
+            }
+            family.setOption1Name(opt1Name);
+            family.setOption2Name(opt2Name);
+        }
+        String effectiveOpt1Value = request.option1Value() != null || request.option2Value() != null
+                ? request.option1Value()
+                : (request.variantLabel() == null ? product.getOption1Value() : null);
+        String effectiveOpt2Value = request.option1Value() != null || request.option2Value() != null
+                ? request.option2Value()
+                : (request.variantLabel() == null ? product.getOption2Value() : null);
+        configureVariant(product, request.variantGroup(), request.variantLabel(), effectiveOpt1Value, effectiveOpt2Value);
         product.setPrice(request.price());
         product.setBillableWeightKg(request.billableWeightKg());
         product.setBulkySurcharge(request.bulkySurcharge() != null ? request.bulkySurcharge() : BigDecimal.ZERO);
-        if (request.lowStockThreshold() != null) product.setLowStockThreshold(request.lowStockThreshold());
+        product.setLowStockThreshold(Inventory.LOW_STOCK_THRESHOLD);
         product.setCategory(category);
         product.setArtisan(artisan);
         product.setCraftVillage(craftVillage);
@@ -684,10 +789,20 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+    private void validateAdminProductSort(Pageable pageable) {
+        if (pageable == null) return;
+        if (pageable.getOffset() > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Trang yêu cầu vượt giới hạn phân trang. Vui lòng chọn trang nhỏ hơn.");
+        }
+        var allowed = java.util.Set.of("id", "code", "name", "price", "createdAt", "updatedAt", "stockQuantity", "quantity");
+        if (pageable.getSort().stream().anyMatch(order -> !allowed.contains(order.getProperty()))) {
+            throw new IllegalArgumentException("Trường sắp xếp sản phẩm không hợp lệ.");
+        }
+    }
+
     private String availabilityFor(Product product, int quantity) {
         if (quantity <= 0) return "OUT_OF_STOCK";
-        int threshold = product.getLowStockThreshold() != null ? product.getLowStockThreshold() : 5;
-        return quantity <= threshold ? "LOW_STOCK" : "IN_STOCK";
+        return quantity <= Inventory.LOW_STOCK_THRESHOLD ? "LOW_STOCK" : "IN_STOCK";
     }
 
     private void validatePriceFilters(BigDecimal minPrice, BigDecimal maxPrice) {

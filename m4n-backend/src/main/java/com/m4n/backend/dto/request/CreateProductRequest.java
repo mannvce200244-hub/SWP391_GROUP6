@@ -63,5 +63,27 @@ public record CreateProductRequest(
         String variantLabel,
         Boolean isActive,
         @jakarta.validation.constraints.Positive(message = "Sản phẩm cha không hợp lệ")
-        Long familyId
-) {}
+        Long familyId,
+        @Size(max = 48, message = "Tên nhóm phân loại 1 tối đa 48 ký tự")
+        String option1Name,
+        @Size(max = 48, message = "Tên nhóm phân loại 2 tối đa 48 ký tự")
+        String option2Name,
+        @Size(max = 48, message = "Giá trị phân loại 1 tối đa 48 ký tự")
+        String option1Value,
+        @Size(max = 48, message = "Giá trị phân loại 2 tối đa 48 ký tự")
+        String option2Value
+) {
+    public CreateProductRequest(
+            String code, String barcode, String name, BigDecimal price, Long categoryId,
+            Long artisanId, Long craftVillageId, String material, String dimensions,
+            String musicalRange, String origin, String description,
+            List<CreateProductMediaRequest> media, Integer lowStockThreshold,
+            BigDecimal billableWeightKg, BigDecimal bulkySurcharge,
+            String variantGroup, String variantLabel, Boolean isActive, Long familyId
+    ) {
+        this(code, barcode, name, price, categoryId, artisanId, craftVillageId, material,
+                dimensions, musicalRange, origin, description, media, lowStockThreshold,
+                billableWeightKg, bulkySurcharge, variantGroup, variantLabel, isActive, familyId,
+                null, null, null, null);
+    }
+}

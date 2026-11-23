@@ -30,6 +30,25 @@ field is required. This supersedes the group-string-only model in BR-PRODUCT-01.
   that SKU. Plain products have a separate + on the catalog and preview; variants
   have their own + in the bill-side picker. Exact barcode scans keep direct add.
   This supersedes the earlier inline-choices-on-catalog presentation.
+- User refinement (2026-11-23): online Add to cart / Buy now and POS product
+  inspection use a shared purchase sheet with SKU image, current price, stock,
+  variant choices and editable quantity. Mobile uses a bottom sheet; desktop a
+  centered dialog. Choosing a SKU never purchases it. Only the explicit action
+  adds that SKU/quantity or opens direct checkout. POS's plain-SKU + and exact
+  barcode scans retain their one-item shortcut. This supersedes the previous
+  bill-side variant preview. Existing single-label variants remain the model;
+  no invented attribute combinations, delivery estimates or discount claims.
+  Add allowance subtracts the same SKU already in the cart/bill. Buy now uses
+  full displayed SKU stock and never mutates the cart. Prices and stock remain
+  server-authoritative, with fresh SKU detail checked before confirmation.
+- User refinement (2026-11-23): `ProductFamily` may define up to 2 named option
+  dimensions (`option1Name`, optional `option2Name`) and each SKU stores its
+  corresponding `option1Value` / `option2Value` (automatically formatted into
+  `variantLabel = "opt1 · opt2"` or `"opt1"` for backward compatibility across
+  cart/order/invoice/PDF snapshots). Admin create generates Cartesian-product SKU
+  rows; Storefront, Purchase Sheet, POS, and Admin pickers render attribute
+  groups independently and resolve the matching SKU combination. Legacy
+  single-label families remain supported.
 - Adding a variant keeps the parent's name read-only. The shared name is edited
   through the existing product editor; each variant's price and stock remain independent.
 

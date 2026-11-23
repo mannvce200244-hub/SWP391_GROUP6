@@ -30,6 +30,10 @@ public class PosProductResponse {
     private String variantLabel;
     private Long familyId;
     private String familyName;
+    private String option1Name;
+    private String option2Name;
+    private String option1Value;
+    private String option2Value;
     @Builder.Default
     private long variantCount = 1L;
 }

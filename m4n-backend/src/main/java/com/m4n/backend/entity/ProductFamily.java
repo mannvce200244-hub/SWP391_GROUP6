@@ -13,6 +13,10 @@ public class ProductFamily {
     private Long id;
     @Column(nullable = false, length = 200)
     private String name;
+    @Column(name = "option1_name", length = 50)
+    private String option1Name;
+    @Column(name = "option2_name", length = 50)
+    private String option2Name;
     @Column(name = "legacy_key", unique = true, length = 220)
     private String legacyKey;
     @Version

@@ -41,6 +41,7 @@ export default function AdminInstrumentsPage() {
   const [selectedArtisan, setSelectedArtisan] = useState('')
   const [selectedVillage, setSelectedVillage] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('ALL') // ALL | ACTIVE | INACTIVE
+  const [sort, setSort] = useState('stockQuantity,asc')
   const [page, setPage] = useState(0)
   const [pageSize] = useState(10)
 
@@ -127,7 +128,7 @@ export default function AdminInstrumentsPage() {
         isActive: isActiveFilter,
         page,
         size: pageSize,
-        sort: 'createdAt,desc',
+        sort,
       })
     })
       .then((response) => {
@@ -155,6 +156,7 @@ export default function AdminInstrumentsPage() {
     selectedArtisan,
     selectedVillage,
     selectedStatus,
+    sort,
     page,
     pageSize,
     refreshKey,
@@ -219,6 +221,7 @@ export default function AdminInstrumentsPage() {
       setSelectedArtisan('')
       setSelectedVillage('')
       setSelectedStatus('ALL')
+      setSort('stockQuantity,asc')
       setPage(0)
     })
   }
@@ -228,7 +231,8 @@ export default function AdminInstrumentsPage() {
       selectedCategory ||
       selectedArtisan ||
       selectedVillage ||
-      selectedStatus !== 'ALL'
+      selectedStatus !== 'ALL' ||
+      sort !== 'stockQuantity,asc'
   )
 
   // Metric computations for active products view
@@ -357,7 +361,7 @@ export default function AdminInstrumentsPage() {
       <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-[#E5E8EB] shadow-2xs flex flex-col gap-3.5">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
           {/* Search box */}
-          <div className="lg:col-span-4 relative">
+          <div className="lg:col-span-3 relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-secondary">
               <Search size={16} />
             </div>
@@ -373,6 +377,7 @@ export default function AdminInstrumentsPage() {
           {/* Category filter */}
           <div className="lg:col-span-2">
             <select
+              aria-label="Lọc theo danh mục"
               value={selectedCategory}
               onChange={(e) => {
                 setSelectedCategory(e.target.value)
@@ -392,6 +397,7 @@ export default function AdminInstrumentsPage() {
           {/* Artisan filter */}
           <div className="lg:col-span-2">
             <select
+              aria-label="Lọc theo nghệ nhân"
               value={selectedArtisan}
               onChange={(e) => {
                 setSelectedArtisan(e.target.value)
@@ -411,6 +417,7 @@ export default function AdminInstrumentsPage() {
           {/* Craft Village filter */}
           <div className="lg:col-span-2">
             <select
+              aria-label="Lọc theo làng nghề"
               value={selectedVillage}
               onChange={(e) => {
                 setSelectedVillage(e.target.value)
@@ -428,18 +435,39 @@ export default function AdminInstrumentsPage() {
           </div>
 
           {/* Status filter */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <select
+              aria-label="Lọc theo trạng thái bán"
               value={selectedStatus}
               onChange={(e) => {
                 setSelectedStatus(e.target.value)
                 setPage(0)
               }}
+              className="w-full px-2.5 py-2 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 shadow-2xs"
+            >
+              <option value="ALL">Tất cả</option>
+              <option value="ACTIVE">Đang bán</option>
+              <option value="INACTIVE">Ngừng bán</option>
+            </select>
+          </div>
+
+          {/* Sort selector */}
+          <div className="lg:col-span-2">
+            <select
+              aria-label="Sắp xếp danh sách nhạc cụ"
+              value={sort}
+              onChange={(e) => {
+                setSort(e.target.value)
+                setPage(0)
+              }}
               className="w-full px-3 py-2 text-sm rounded-xl border border-[#E5E8EB] bg-[#FFFFFF] text-[#17191B] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30 shadow-2xs"
             >
-              <option value="ALL">Tất cả trạng thái</option>
-              <option value="ACTIVE">Đang kinh doanh (trang này)</option>
-              <option value="INACTIVE">Tạm ngừng bán</option>
+              <option value="stockQuantity,asc">Cần nhập trước (Hết → Sắp hết)</option>
+              <option value="stockQuantity,desc">Tồn kho cao → thấp</option>
+              <option value="createdAt,desc">Mới nhất</option>
+              <option value="price,asc">Giá thấp → cao</option>
+              <option value="price,desc">Giá cao → thấp</option>
+              <option value="name,asc">Tên A → Z</option>
             </select>
           </div>
         </div>

@@ -1,6 +1,4 @@
-export function hasPosVariants(product) {
-  return Boolean(product.variantCount > 1 || product.variantLabel || (!product.familyId && product.variantGroup))
-}
+export { hasProductVariants as hasPosVariants } from '../catalog/productPurchase.js'
 
 export function groupPosCatalog(products) {
   const groups = new Map()

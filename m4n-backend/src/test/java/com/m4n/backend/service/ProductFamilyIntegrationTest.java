@@ -83,10 +83,65 @@ class ProductFamilyIntegrationTest {
         var publicRow = products.listProducts(name, null, null, null, null, null, PageRequest.of(0, 10), true).getContent().getFirst();
         assertThat(publicRow.stockQuantity()).isZero();
         assertThat(publicRow.variantCount()).isEqualTo(1);
-        var adminRow = inventory.listInventoryFamilies(name, "LOW_STOCK", PageRequest.of(0, 10)).getContent().getFirst();
+        var adminRow = inventory.listInventoryFamilies(name, "IN_STOCK", PageRequest.of(0, 10)).getContent().getFirst();
         assertThat(adminRow.getQuantity()).isEqualTo(8);
         assertThat(adminRow.getVariantCount()).isEqualTo(2);
+        assertThat(inventory.listInventoryFamilies(name, "LOW_STOCK", PageRequest.of(0, 10)).getContent()).isEmpty();
         assertThat(inventory.listInventoryFamilies(name, "OUT_OF_STOCK", PageRequest.of(0, 10)).getContent()).isEmpty();
+    }
+
+    @Test void twoAttributeVariantMatrixCreatesCombinationsAndRejectsDuplicatesOrMissingDimension() {
+        var matrix = products.createVariants(new CreateProductVariantsRequest(List.of(
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ trắc", "16 dây", "5000000"),
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ trắc", "18 dây", "5500000"),
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ mun", "16 dây", "6000000"),
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ mun", "18 dây", "6500000"))));
+        assertThat(matrix).hasSize(4);
+        Long familyId = matrix.getFirst().familyId();
+        assertThat(matrix).allSatisfy(item -> {
+            assertThat(item.familyId()).isEqualTo(familyId);
+            assertThat(item.option1Name()).isEqualTo("Chất liệu");
+            assertThat(item.option2Name()).isEqualTo("Số dây");
+        });
+        assertThat(matrix).extracting(item -> item.variantLabel())
+                .containsExactly("Gỗ trắc · 16 dây", "Gỗ trắc · 18 dây", "Gỗ mun · 16 dây", "Gỗ mun · 18 dây");
+        var listed = products.listVariants(matrix.getFirst().id(), PageRequest.of(0, 100));
+        assertThat(listed.getTotalElements()).isEqualTo(4);
+        assertThat(listed.getContent()).allSatisfy(item -> {
+            assertThat(item.option1Name()).isEqualTo("Chất liệu");
+            assertThat(item.option2Name()).isEqualTo("Số dây");
+            assertThat(item.option1Value()).isNotBlank();
+            assertThat(item.option2Value()).isNotBlank();
+        });
+        assertThatThrownBy(() -> products.createProduct(optionRequest(familyId, "Chất liệu", "Số dây", "Gỗ trắc", "16 dây", "5000000")))
+                .isInstanceOf(com.m4n.backend.exception.DuplicateResourceException.class);
+        assertThatThrownBy(() -> products.createProduct(optionRequest(familyId, "Chất liệu", "Số dây", "Gỗ hương", null, "7000000")))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test void stockPrioritySortingBringsOutOfStockAndLowStockToFirstPageAcrossInventoryAndAdminProducts() {
+        var plenty = products.createProduct(request(null, null, "100000"));
+        var low = products.createProduct(request(null, null, "100000"));
+        var emptyCreatedLast = products.createProduct(request(null, null, "100000"));
+        setStock(plenty.id(), 20);
+        setStock(low.id(), 3);
+        setStock(emptyCreatedLast.id(), 0);
+
+        var invPage0 = inventory.listInventoryFamilies(name, null, PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "quantity")));
+        assertThat(invPage0.getContent()).extracting(item -> item.getProductId())
+                .containsExactly(emptyCreatedLast.id(), low.id());
+        var invDesc = inventory.listInventoryFamilies(name, null, PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "quantity")));
+        assertThat(invDesc.getContent()).extracting(item -> item.getProductId())
+                .containsExactly(plenty.id(), low.id(), emptyCreatedLast.id());
+
+        var prodPage0 = products.listAdminProducts(name, null, null, null, null,
+                PageRequest.of(0, 2, Sort.by(Sort.Direction.ASC, "stockQuantity")), true);
+        assertThat(prodPage0.getContent()).extracting(item -> item.id())
+                .containsExactly(emptyCreatedLast.id(), low.id());
+        var prodDesc = products.listAdminProducts(name, null, null, null, null,
+                PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "stockQuantity")), true);
+        assertThat(prodDesc.getContent()).extracting(item -> item.id())
+                .containsExactly(plenty.id(), low.id(), emptyCreatedLast.id());
     }
 
     @Test void multiProductProgramAppliesToEachSelectedParentsVariantsAndNewSkus() {
@@ -214,9 +269,41 @@ class ProductFamilyIntegrationTest {
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
     }
 
+    @Test void updatingStructuredProductCanRenameFamilyOptionsAndBlocksDroppingUsedOption2() {
+        var created = products.createVariants(new CreateProductVariantsRequest(List.of(
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ trắc", "16 dây", "5000000"),
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ mun", "18 dây", "6000000")
+        )));
+        var first = created.get(0);
+        var second = created.get(1);
+
+        var renamed = products.updateProduct(first.id(), new com.m4n.backend.dto.request.UpdateProductRequest(
+                name, first.barcode(), new BigDecimal("5200000"), category.getId(), null, null,
+                null, null, null, null, null, true, null, 5, new BigDecimal("0.000001"), BigDecimal.ZERO,
+                null, null, "Loại gỗ", "Cấu hình dây", "Gỗ trắc", "16 dây"));
+        assertThat(renamed.option1Name()).isEqualTo("Loại gỗ");
+        assertThat(renamed.option2Name()).isEqualTo("Cấu hình dây");
+        var refreshedSecond = products.getAdminProductDetail(second.id());
+        assertThat(refreshedSecond.option1Name()).isEqualTo("Loại gỗ");
+        assertThat(refreshedSecond.option2Name()).isEqualTo("Cấu hình dây");
+
+        assertThatThrownBy(() -> products.updateProduct(first.id(), new com.m4n.backend.dto.request.UpdateProductRequest(
+                name, first.barcode(), new BigDecimal("5200000"), category.getId(), null, null,
+                null, null, null, null, null, true, null, 5, new BigDecimal("0.000001"), BigDecimal.ZERO,
+                null, null, "Loại gỗ", null, "Gỗ trắc", null)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("nhóm phân loại 2");
+    }
+
     private CreateProductRequest request(Long family, String tone, String price) {
         return new CreateProductRequest(null, null, name, new BigDecimal(price), category.getId(), null, null,
                 null, null, null, null, null, List.of(), 5, new BigDecimal("0.000001"), BigDecimal.ZERO, null, tone, true, family);
+    }
+
+    private CreateProductRequest optionRequest(Long family, String opt1Name, String opt2Name, String opt1Val, String opt2Val, String price) {
+        return new CreateProductRequest(null, null, name, new BigDecimal(price), category.getId(), null, null,
+                null, null, null, null, null, List.of(), 5, new BigDecimal("0.000001"), BigDecimal.ZERO, null, null, true, family,
+                opt1Name, opt2Name, opt1Val, opt2Val);
     }
 
     private void setStock(Long id, int quantity) {

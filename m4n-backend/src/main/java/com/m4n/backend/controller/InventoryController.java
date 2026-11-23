@@ -46,7 +46,7 @@ public class InventoryController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "false") boolean groupVariants,
-            @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.ASC) Pageable pageable
+            @PageableDefault(size = 10, sort = "quantity", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return ResponseEntity.ok(groupVariants ? inventoryService.listInventoryFamilies(keyword, status, pageable)
                 : inventoryService.listInventory(keyword, status, pageable));

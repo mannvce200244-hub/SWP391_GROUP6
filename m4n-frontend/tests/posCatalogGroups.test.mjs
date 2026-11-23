@@ -1,6 +1,27 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { groupPosCatalog, hasPosVariants } from '../src/features/pos/posCatalogGroups.js'
+import { additionalQuantityLimit } from '../src/features/catalog/productPurchase.js'
+
+test('purchases only allow the remaining quantity of the selected SKU', () => {
+  assert.equal(additionalQuantityLimit(9, 0), 9)
+  assert.equal(additionalQuantityLimit(9, 4), 5)
+  assert.equal(additionalQuantityLimit(9, 9), 0)
+  assert.equal(additionalQuantityLimit(9, 15), 0)
+  assert.equal(additionalQuantityLimit(0, 0), 0)
+})
+
+test('direct purchase uses full SKU stock independently of cart contents', () => {
+  assert.equal(additionalQuantityLimit(9), 9)
+  assert.equal(additionalQuantityLimit(9, 7), 2)
+})
+
+test('missing or invalid stock never enables purchasing an unchecked quantity', () => {
+  for (const stock of [undefined, null, NaN, Infinity, -1, 1.5, '9', Number.MAX_SAFE_INTEGER + 1]) {
+    assert.equal(additionalQuantityLimit(stock), 0)
+  }
+  for (const selected of [-1, 1.5, NaN, Infinity]) assert.equal(additionalQuantityLimit(9, selected), 0)
+})
 
 test('POS opens variant choices only for a multi-SKU or named-variant product', () => {
   assert.equal(hasPosVariants({ id: 1, familyId: 10, variantCount: 1 }), false)

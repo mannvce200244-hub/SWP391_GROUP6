@@ -1,10 +1,13 @@
 import apiClient from '../api/apiClient.js'
 
-export async function getInventory({ page = 0, size = 10, keyword = '', status = '' } = {}) {
+export async function getInventory({ page = 0, size = 10, keyword = '', status = '', sort = 'quantity,asc' } = {}) {
   const params = new URLSearchParams()
   params.append('page', page)
   params.append('size', size)
   params.set('groupVariants', 'true')
+  if (sort) {
+    params.set('sort', sort)
+  }
   if (keyword && keyword.trim()) {
     params.append('keyword', keyword.trim())
   }

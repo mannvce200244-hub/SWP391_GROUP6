@@ -11,6 +11,8 @@ import ProductGallery from './ProductGallery.jsx'
 import ProductSpecs from './ProductSpecs.jsx'
 import QuantitySelector from '../../components/ui/QuantitySelector.jsx'
 import ProductVariantPicker from './ProductVariantPicker.jsx'
+import ProductPurchaseDialog from './ProductPurchaseDialog.jsx'
+import { additionalQuantityLimit, hasProductVariants } from './productPurchase.js'
 
 function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
   const [quantityState, setQuantityState] = useState({ id: product?.id, value: 1 })
@@ -18,6 +20,7 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
   const setQuantity = (value) => setQuantityState({ id: product.id, value })
   const [isAdding, setIsAdding] = useState(false)
   const [isBuying, setIsBuying] = useState(false)
+  const [purchaseMode, setPurchaseMode] = useState(null)
   const { addToCart, buyNow, cart, loading: cartLoading } = useCart()
   const { isAuthenticated, user } = useAuth()
   const { addToast } = useToast()
@@ -26,6 +29,7 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
   if (!product) return null
 
   const isOutOfStock = product.availability === 'OUT_OF_STOCK'
+  const hasVariants = hasProductVariants(product)
   const categoryName = product.category?.name || product.groupName
   const artisanName = product.artisan?.name || product.artisanName
   const villageName = product.craftVillage?.name || product.craftVillageName
@@ -37,12 +41,14 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
   const remainingForCart = Math.max(0, (product.stockQuantity ?? 0) - inCart)
   const exceedsCartStock = inCart > 0 && quantity > remainingForCart
 
-  const handleAddToCart = async () => {
-    if (switching || isOutOfStock || isAdding || isBuying || cartLoading || exceedsCartStock) return
+  const handleAddToCart = async (selected, amount) => {
+    const selectedInCart = cart?.items?.find(item => item.productId === selected.id)?.quantity ?? 0
+    if (switching || isAdding || isBuying || cartLoading || !Number.isSafeInteger(amount) || amount < 1
+      || amount > additionalQuantityLimit(selected.stockQuantity, selectedInCart)) return false
 
     try {
       setIsAdding(true)
-      const result = await addToCart(product.id, quantity)
+      const result = await addToCart(selected.id, amount)
 
       if (result.requireAuth) {
         addToast({
@@ -50,36 +56,40 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
           type: 'error',
         })
         navigateTo(CUSTOMER_ROUTES.login)
-        return
+        return false
       }
 
       if (result.success) {
         addToast({
-          message: `Đã thêm ${quantity} nhạc cụ "${product.name}" vào giỏ hàng.`,
+          message: `Đã thêm ${amount} nhạc cụ “${selected.name}” vào giỏ hàng.`,
           type: 'success',
         })
+        onSelectVariant?.(selected)
+        return true
       } else {
         addToast({
           message: result.message || 'Không thể thêm sản phẩm vào giỏ hàng.',
           type: 'error',
         })
+        return false
       }
     } catch {
       addToast({
         message: 'Đã xảy ra lỗi khi thêm vào giỏ hàng.',
         type: 'error',
       })
+      return false
     } finally {
       setIsAdding(false)
     }
   }
 
-  const handleBuyNow = async () => {
-    if (switching || isOutOfStock || isAdding || isBuying) return
+  const handleBuyNow = async (selected, amount) => {
+    if (switching || isAdding || isBuying || !Number.isSafeInteger(amount) || amount < 1 || amount > selected.stockQuantity) return false
 
     try {
       setIsBuying(true)
-      const result = await buyNow(product.id, quantity)
+      const result = await buyNow(selected.id, amount)
 
       if (result.requireAuth) {
         addToast({
@@ -87,26 +97,29 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
           type: 'info',
         })
         navigateTo(CUSTOMER_ROUTES.login)
-        return
+        return false
       }
 
       if (result.success) {
         addToast({
-          message: `Đã chọn mua ${quantity} nhạc cụ "${product.name}".`,
+          message: `Đã chọn mua ${amount} nhạc cụ “${selected.name}”.`,
           type: 'success',
         })
         navigateTo(result.checkoutUrl)
+        return true
       } else {
         addToast({
           message: result.message || 'Không thể tiến hành mua hàng.',
           type: 'error',
         })
+        return false
       }
     } catch {
       addToast({
         message: 'Đã xảy ra lỗi khi tiến hành mua hàng.',
         type: 'error',
       })
+      return false
     } finally {
       setIsBuying(false)
     }
@@ -184,9 +197,11 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
             )}
           </div>
 
-          {(product.familyId || product.variantGroup) && <ProductVariantPicker product={product} disabled={isAdding || isBuying}
-            onSelect={onSelectVariant} />}
-          {product.variantLabel && <p role="status" className="text-sm text-muted">Đã chọn: <strong className="text-ink">{product.variantLabel}</strong> · {formattedPrice}{switching ? ' · Đang kiểm tra thông tin…' : ''}</p>}
+          {(product.familyId || product.variantGroup) ? (
+            <ProductVariantPicker product={product} disabled={isAdding || isBuying} switching={switching} onSelect={onSelectVariant} />
+          ) : (
+            product.variantLabel && <p role="status" className="text-sm text-muted">Đang chọn: <strong className={isOutOfStock ? 'text-muted' : 'text-ink'}>{product.variantLabel}</strong> · {formattedPrice}{switching ? ' · Đang kiểm tra thông tin…' : ''}</p>
+          )}
           {/* Purchase / Add to Cart Actions */}
           {canPurchase ? (
           <div className="pt-3 flex flex-col gap-3">
@@ -212,10 +227,11 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
                 value={quantity}
               />
               <button
-                aria-label={isOutOfStock ? 'Sản phẩm tạm hết hàng' : 'Thêm nhạc cụ vào giỏ hàng'}
+                aria-label={isOutOfStock && !hasVariants ? 'Sản phẩm tạm hết hàng' : 'Thêm nhạc cụ vào giỏ hàng'}
                 className="flex-1 h-11 px-4 rounded-lg text-sm font-semibold text-brand bg-brand-soft/60 hover:bg-brand-soft border border-brand/30 active:bg-brand-soft/90 transition-all duration-150 flex items-center justify-center gap-2 shadow-2xs disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                disabled={switching || isOutOfStock || isAdding || isBuying || cartLoading || exceedsCartStock}
-                onClick={handleAddToCart}
+                disabled={switching || isAdding || isBuying || cartLoading || (!hasVariants && (isOutOfStock || exceedsCartStock))}
+                onClick={() => setPurchaseMode('cart')}
+                aria-haspopup="dialog"
                 type="button"
               >
                 <ShoppingBag size={18} />
@@ -231,15 +247,16 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
 
             {/* Row 2: Buy Now Primary Button */}
             <button
-              aria-label={isOutOfStock ? 'Sản phẩm tạm hết hàng' : `Mua ngay ${product.name}`}
+              aria-label={isOutOfStock && !hasVariants ? 'Sản phẩm tạm hết hàng' : `Mua ngay ${product.name}`}
               className="w-full h-12 px-6 rounded-lg text-sm font-bold uppercase tracking-wider text-white bg-brand hover:bg-brand-hover active:bg-brand-dark transition-all duration-150 flex items-center justify-center gap-2 shadow-xs hover:shadow-md disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-              disabled={switching || isOutOfStock || isAdding || isBuying}
-              onClick={handleBuyNow}
+              disabled={switching || (isOutOfStock && !hasVariants) || isAdding || isBuying}
+              onClick={() => setPurchaseMode('buy')}
+              aria-haspopup="dialog"
               type="button"
             >
               <span>
                 {isOutOfStock
-                  ? 'Tạm hết hàng'
+                  ? hasVariants ? 'Chọn biến thể để mua' : 'Tạm hết hàng'
                   : isBuying
                     ? 'Đang xử lý...'
                     : 'Mua hàng'}
@@ -287,6 +304,12 @@ function ProductDetailInfo({ product, switching = false, onSelectVariant }) {
           craftVillage={product.craftVillage || product.craftVillageName}
         />
       </div>
+      {purchaseMode && <ProductPurchaseDialog key={product.id} product={product} initialQuantity={quantity}
+        confirmLabel={purchaseMode === 'buy' ? 'Mua ngay' : 'Thêm vào giỏ hàng'}
+        onClose={() => setPurchaseMode(null)} disabled={isAdding || isBuying || (purchaseMode === 'cart' && cartLoading)}
+        quantityLimit={purchaseMode === 'cart' ? selected => additionalQuantityLimit(selected.stockQuantity,
+          cart?.items?.find(item => item.productId === selected.id)?.quantity ?? 0) : undefined}
+        onConfirm={purchaseMode === 'buy' ? handleBuyNow : handleAddToCart} />}
     </article>
   )
 }

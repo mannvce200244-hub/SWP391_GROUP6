@@ -133,7 +133,7 @@ export default function StockDraftDialog({ product, onClose, onCreated, onVarian
         </div>
       </form>
     </div>
-    {variantSource && <ProductFormModal isOpen variantSource={variantSource} onClose={closeVariantForm} onSuccess={(id) => {
+    {variantSource && <ProductFormModal isOpen variantSource={variantSource} existingVariants={variantsPage?.content || []} context="inventory" onClose={closeVariantForm} onSuccess={(id) => {
       setVariantSource(null)
       setPickerVersion((value) => value + 1)
       setQuantity(''); setUnitCost(''); setErrors({}); setError('')

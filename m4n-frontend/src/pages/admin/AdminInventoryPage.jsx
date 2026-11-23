@@ -12,7 +12,13 @@ import StockConfirmationDialog from '../../components/admin/StockConfirmationDia
 import { InventoryBalanceTable, InventoryMovementsTable, StockDocumentsTable } from '../../components/admin/InventoryTables.jsx'
 
 const VIEWS = [{ id: 'balance', label: 'Tồn kho hiện tại' }, { id: 'documents', label: 'Phiếu kho' }, { id: 'movements', label: 'Lịch sử biến động' }]
-const STOCK_STATUSES = [['', 'Tất cả trạng thái'], ['IN_STOCK', 'Còn hàng'], ['LOW_STOCK', 'Sắp hết'], ['OUT_OF_STOCK', 'Hết hàng']]
+const STOCK_STATUSES = [['', 'Tất cả trạng thái'], ['OUT_OF_STOCK', 'Hết hàng'], ['LOW_STOCK', 'Sắp hết (≤ 5)'], ['IN_STOCK', 'Còn hàng (> 5)']]
+const INVENTORY_SORTS = [
+  ['quantity,asc', 'Cần nhập trước (Hết → Sắp hết)'],
+  ['quantity,desc', 'Tồn kho nhiều → ít'],
+  ['updatedAt,desc', 'Cập nhật mới nhất'],
+  ['id,asc', 'Mã sản phẩm'],
+]
 const DOCUMENT_STATUSES = [['', 'Tất cả trạng thái'], ['DRAFT', 'Chờ xác nhận'], ['CONFIRMED', 'Đã xác nhận']]
 const DOCUMENT_TYPES = [['', 'Tất cả loại phiếu'], ['RECEIPT', 'Phiếu nhập'], ['ISSUE', 'Phiếu xuất']]
 const MOVEMENT_TYPES = [...DOCUMENT_TYPES, ['IMPORT', 'Nhập kho cũ'], ['ORDER_CONFIRMATION', 'Xác nhận đơn online'], ['POS_SALE', 'Bán tại quầy'], ['ORDER_CANCELLATION', 'Hoàn kho khi hủy đơn']]
@@ -25,10 +31,13 @@ function readFilters() {
   const page = Number(params.get('page'))
   const productId = Number(params.get('productId'))
   const familyId = Number(params.get('familyId'))
+  const rawSort = params.get('sort') || 'quantity,asc'
+  const sort = INVENTORY_SORTS.some(([value]) => value === rawSort) ? rawSort : 'quantity,asc'
   return {
     view, page: Number.isSafeInteger(page) && page >= 0 ? page : 0,
     status: statuses.some(([value]) => value === params.get('status')) ? params.get('status') : '',
     type: types.some(([value]) => value === params.get('type')) ? params.get('type') : '',
+    sort,
     keyword: params.get('keyword') || '',
     product: Number.isSafeInteger(familyId) && familyId > 0 ? { familyId, name: params.get('productName') || `Sản phẩm #${familyId}` } : Number.isSafeInteger(productId) && productId > 0 ? { id: productId, name: params.get('productName') || `Sản phẩm #${productId}` } : null,
   }
@@ -48,8 +57,8 @@ export default function AdminInventoryPage() {
   const [draftTarget, setDraftTarget] = useState(null)
   const [confirmTarget, setConfirmTarget] = useState(null)
 
-  const { view, page, type, status, keyword, product } = filters
-  const requestKey = JSON.stringify([view, page, type, status, keyword, product?.id, product?.familyId, refreshKey])
+  const { view, page, type, status, sort, keyword, product } = filters
+  const requestKey = JSON.stringify([view, page, type, status, sort, keyword, product?.id, product?.familyId, refreshKey])
   const pending = loading || completedRequestKey !== requestKey
 
   useEffect(() => {
@@ -63,11 +72,12 @@ export default function AdminInventoryPage() {
     params.set('view', view)
     if (page) params.set('page', page)
     if (status) params.set('status', status)
+    if (sort && sort !== 'quantity,asc' && view === 'balance') params.set('sort', sort)
     if (type && view !== 'balance') params.set('type', type)
     if (keyword && view === 'balance') params.set('keyword', keyword)
     if (product && view !== 'balance') { params.set(product.familyId ? 'familyId' : 'productId', product.familyId || product.id); params.set('productName', product.name) }
     window.history.replaceState(window.history.state, '', `${window.location.pathname}?${params}`)
-  }, [view, page, status, type, keyword, product])
+  }, [view, page, status, sort, type, keyword, product])
 
   useEffect(() => {
     let active = true
@@ -76,7 +86,7 @@ export default function AdminInventoryPage() {
       setError('')
       try {
         const request = { page, size: 15, productId: product?.id, familyId: product?.familyId, type, status }
-        const response = view === 'balance' ? await getInventory({ page, size: 15, keyword, status })
+        const response = view === 'balance' ? await getInventory({ page, size: 15, keyword, status, sort })
           : view === 'documents' ? await getStockDocuments(request) : await getInventoryMovements(request)
         if (!active) return
         if (page > 0 && page >= response.totalPages) {
@@ -92,7 +102,7 @@ export default function AdminInventoryPage() {
     }
     load()
     return () => { active = false }
-  }, [view, page, type, status, keyword, product, requestKey])
+  }, [view, page, type, status, sort, keyword, product, requestKey])
 
   const reload = () => setRefreshKey((current) => current + 1)
   const changeView = (next) => setFilters((current) => ({ ...current, view: next, page: 0, status: '', type: '' }))
@@ -133,6 +143,9 @@ export default function AdminInventoryPage() {
           </form>
           <div className="w-full sm:w-48"><Select id="inventory-status" name="status" label="Trạng thái kho" value={status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value, page: 0 }))}>
             {STOCK_STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </Select></div>
+          <div className="w-full sm:w-64"><Select id="inventory-sort" name="sort" label="Sắp xếp" value={sort} onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value, page: 0 }))}>
+            {INVENTORY_SORTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </Select></div>
         </> : <>
           <div className="w-full sm:w-60"><Select id="inventory-type" name="type" label={view === 'documents' ? 'Loại phiếu' : 'Loại biến động'} value={type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value, page: 0 }))}>
