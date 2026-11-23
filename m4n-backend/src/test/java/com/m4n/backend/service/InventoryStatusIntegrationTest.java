@@ -99,21 +99,25 @@ class InventoryStatusIntegrationTest {
     }
 
     @Test
-    void configuredProductThresholdControlsInventoryFiltersAndZeroDisablesLowStock() {
+    void unifiedGlobalThresholdControlsInventoryFiltersRegardlessOfLegacyColumnValue() {
         Category category = categoryRepository.findAll().getFirst();
         String prefix = "THRESHOLD-" + UUID.randomUUID().toString().substring(0, 8);
-        Product highThreshold = createInventory(category, prefix + "-HIGH", 8);
-        highThreshold.setLowStockThreshold(10);
-        productRepository.save(highThreshold);
-        Product zeroThreshold = createInventory(category, prefix + "-ZERO", 1);
-        zeroThreshold.setLowStockThreshold(0);
-        productRepository.save(zeroThreshold);
+        Product highLegacy = createInventory(category, prefix + "-HIGH", 8);
+        highLegacy.setLowStockThreshold(40);
+        productRepository.save(highLegacy);
+        Product lowLegacy = createInventory(category, prefix + "-LOW", 3);
+        lowLegacy.setLowStockThreshold(0);
+        productRepository.save(lowLegacy);
+        Product empty = createInventory(category, prefix + "-ZERO", 0);
 
         var lowStock = inventoryService.listInventory(prefix, "LOW_STOCK", PageRequest.of(0, 10));
         assertThat(lowStock.getContent()).extracting(InventoryItemResponse::getProductCode)
-                .containsExactly(highThreshold.getCode());
+                .containsExactly(lowLegacy.getCode());
         var available = inventoryService.listInventory(prefix, "IN_STOCK", PageRequest.of(0, 10));
         assertThat(available.getContent()).extracting(InventoryItemResponse::getProductCode)
-                .containsExactly(zeroThreshold.getCode());
+                .containsExactly(highLegacy.getCode());
+        var urgentOrder = inventoryService.listInventory(prefix, null, PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "quantity")));
+        assertThat(urgentOrder.getContent()).extracting(InventoryItemResponse::getProductCode)
+                .containsExactly(empty.getCode(), lowLegacy.getCode(), highLegacy.getCode());
     }
 }

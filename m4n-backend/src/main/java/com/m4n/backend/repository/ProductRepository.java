@@ -46,6 +46,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByFamilyIdAndIsActiveTrue(Long familyId);
 
+    long countByFamilyId(Long familyId);
+
+    boolean existsByFamilyIdAndOption2ValueIsNotNullAndIdNot(Long familyId, Long id);
+
     interface FamilyInventoryTotals {
         Long getFamilyId();
         Long getQuantity();

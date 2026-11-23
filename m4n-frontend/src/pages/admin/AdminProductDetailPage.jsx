@@ -498,7 +498,7 @@ export default function AdminProductDetailPage({ productId }) {
 
       {(product.familyId || product.variantLabel) && <section className="rounded-xl border border-border bg-white p-5 space-y-3">
         <h2 className="font-semibold text-ink">Các biến thể của {product.familyName || product.name}</h2>
-        <p className="text-sm text-muted">Chọn để xem giá, SKU và tồn kho của từng biến thể. Dùng “Thêm biến thể” để tạo thêm tone.</p>
+        <p className="text-sm text-muted">Chọn để xem giá, SKU và tồn kho của từng biến thể. Dùng “Thêm biến thể” để tạo thêm phiên bản hoặc tổ hợp phân loại.</p>
         <ProductVariantPicker key={`${product.id}-${refreshKey}`} product={product} admin
           onSelect={(variant) => { if (variant.id !== product.id) navigateTo(CUSTOMER_ROUTES.adminInstrumentDetail(variant.id)) }} />
         <button type="button" className="min-h-11 rounded-lg border border-border px-4 text-sm font-semibold hover:bg-surface-secondary"

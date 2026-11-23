@@ -62,7 +62,8 @@ public class ProductImageServiceImpl implements ProductImageService {
         return new CreateProductRequest(request.code(), request.barcode(), request.name(),
                 request.price(), request.categoryId(), request.artisanId(), request.craftVillageId(), request.material(),
                 request.dimensions(), request.musicalRange(), request.origin(), request.description(), media,
-                request.lowStockThreshold(), request.billableWeightKg(), request.bulkySurcharge(), request.variantGroup(), request.variantLabel(), request.isActive(), request.familyId());
+                request.lowStockThreshold(), request.billableWeightKg(), request.bulkySurcharge(), request.variantGroup(), request.variantLabel(), request.isActive(), request.familyId(),
+                request.option1Name(), request.option2Name(), request.option1Value(), request.option2Value());
     }
 
     @Override
@@ -77,7 +78,8 @@ public class ProductImageServiceImpl implements ProductImageService {
         return products.updateProduct(productId, new UpdateProductRequest(request.name(), request.barcode(), request.price(),
                 request.categoryId(), request.artisanId(), request.craftVillageId(), request.material(), request.dimensions(),
                 request.musicalRange(), request.origin(), request.description(), request.isActive(), media,
-                request.lowStockThreshold(), request.billableWeightKg(), request.bulkySurcharge(), request.variantGroup(), request.variantLabel()));
+                request.lowStockThreshold(), request.billableWeightKg(), request.bulkySurcharge(), request.variantGroup(), request.variantLabel(),
+                request.option1Name(), request.option2Name(), request.option1Value(), request.option2Value()));
     }
 
     private List<String> storeImages(List<MultipartFile> images) {

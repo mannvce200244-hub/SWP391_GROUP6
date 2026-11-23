@@ -115,7 +115,7 @@ class ProductGalleryIntegrationTest {
     }
 
     @Test
-    void lowStockThresholdDefaultsToFiveAndZeroDisablesOnlyTheLowStockWarning() {
+    void lowStockThresholdIsUnifiedGloballyAtFiveAcrossCreateAndUpdate() {
         var original = createProduct("Threshold product");
         assertThat(original.lowStockThreshold()).isEqualTo(5);
         jdbcTemplate.update("UPDATE inventories SET quantity = 5 WHERE product_id = ?", original.id());
@@ -123,14 +123,13 @@ class ProductGalleryIntegrationTest {
         var request = new UpdateProductRequest("Threshold updated", null, new BigDecimal("100.25"), category.getId(),
                 null, null, null, null, null, null, null, true, null, 0, null, BigDecimal.ZERO, null, null);
         assertThat(validator.validate(request)).isEmpty();
-        productService.updateProduct(original.id(), request);
+        var updated = productService.updateProduct(original.id(), request);
+        assertThat(updated.lowStockThreshold()).isEqualTo(5);
+        assertThat(productService.getProductDetail(original.id()).availability()).isEqualTo("LOW_STOCK");
+        jdbcTemplate.update("UPDATE inventories SET quantity = 6 WHERE product_id = ?", original.id());
         assertThat(productService.getProductDetail(original.id()).availability()).isEqualTo("IN_STOCK");
-        assertThat(productService.updateProduct(original.id(), update("Threshold preserved", null)).lowStockThreshold()).isZero();
         jdbcTemplate.update("UPDATE inventories SET quantity = 0 WHERE product_id = ?", original.id());
         assertThat(productService.getProductDetail(original.id()).availability()).isEqualTo("OUT_OF_STOCK");
-        var invalid = new UpdateProductRequest("Invalid threshold", null, BigDecimal.ZERO, category.getId(),
-                null, null, null, null, null, null, null, true, null, -1, null, BigDecimal.ZERO, null, null);
-        assertThat(validator.validate(invalid)).anyMatch(violation -> violation.getPropertyPath().toString().equals("lowStockThreshold"));
     }
 
     private AdminProductDetailResponse createProduct(String name) {

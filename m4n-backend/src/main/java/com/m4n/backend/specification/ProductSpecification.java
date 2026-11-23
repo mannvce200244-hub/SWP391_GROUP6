@@ -48,15 +48,27 @@ public final class ProductSpecification {
             var inventory = balance.from(com.m4n.backend.entity.Inventory.class);
             balance.select(cb.coalesce(cb.sum(inventory.<Integer>get("quantity")).as(Long.class), 0L))
                     .where(sameFamily(root, inventory.get("product"), cb));
-            var threshold = query.subquery(Long.class);
-            var sibling = threshold.from(Product.class);
-            threshold.select(cb.sum(cb.coalesce(sibling.<Integer>get("lowStockThreshold"), 5)).as(Long.class)).where(sameFamily(root, sibling, cb));
+            long threshold = com.m4n.backend.entity.Inventory.LOW_STOCK_THRESHOLD;
             return switch (status.toUpperCase(Locale.ROOT)) {
                 case "IN_STOCK" -> cb.greaterThan(balance, threshold);
                 case "LOW_STOCK" -> cb.and(cb.greaterThan(balance, 0L), cb.lessThanOrEqualTo(balance, threshold));
                 case "OUT_OF_STOCK" -> cb.equal(balance, 0L);
                 default -> throw new IllegalArgumentException("Trạng thái tồn kho không hợp lệ.");
             };
+        };
+    }
+
+    public static Specification<Product> orderByStock(boolean grouped, boolean ascending) {
+        return (root, query, cb) -> {
+            if (query != null && query.getResultType() != Long.class && query.getResultType() != long.class) {
+                var balance = query.subquery(Long.class);
+                var inventory = balance.from(com.m4n.backend.entity.Inventory.class);
+                balance.select(cb.coalesce(cb.sum(inventory.<Integer>get("quantity")).as(Long.class), 0L))
+                        .where(grouped ? sameFamily(root, inventory.get("product"), cb)
+                                : cb.equal(inventory.get("product").get("id"), root.get("id")));
+                query.orderBy(ascending ? cb.asc(balance) : cb.desc(balance), cb.asc(root.get("id")));
+            }
+            return cb.conjunction();
         };
     }
 

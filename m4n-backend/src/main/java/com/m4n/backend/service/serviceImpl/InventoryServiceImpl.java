@@ -53,13 +53,21 @@ public class InventoryServiceImpl implements InventoryService {
     @Override @Transactional(readOnly = true)
     public Page<InventoryItemResponse> listInventoryFamilies(String keyword, String status, Pageable pageable) {
         validatePage(pageable);
-        if (pageable.getSort().stream().anyMatch(order -> !Set.of("id", "updatedAt").contains(order.getProperty()))) {
-            throw new IllegalArgumentException("Sắp xếp sản phẩm trong kho theo mã hoặc thời gian cập nhật.");
+        if (pageable.getSort().stream().anyMatch(order -> !Set.of("id", "quantity", "updatedAt").contains(order.getProperty()))) {
+            throw new IllegalArgumentException("Sắp xếp sản phẩm trong kho theo số lượng, mã hoặc thời gian cập nhật.");
         }
         var filter = com.m4n.backend.specification.ProductSpecification.filterAdminProducts(keyword, null, null, null, null);
         var spec = com.m4n.backend.specification.ProductSpecification.familyRepresentatives(filter, filter)
                 .and(com.m4n.backend.specification.ProductSpecification.familyInventoryStatus(status));
-        var products = productRepository.findAll(spec, pageable);
+        Pageable effectivePageable = pageable;
+        var quantityOrder = pageable.getSort().getOrderFor("quantity");
+        if (quantityOrder != null) {
+            spec = spec.and(com.m4n.backend.specification.ProductSpecification.orderByStock(true, quantityOrder.isAscending()));
+            effectivePageable = pageable.isPaged()
+                    ? org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize())
+                    : Pageable.unpaged();
+        }
+        var products = productRepository.findAll(spec, effectivePageable);
         var ids = products.getContent().stream().map(Product::getId).toList();
         var familyIds = products.getContent().stream().filter(p -> p.getFamily() != null).map(p -> p.getFamily().getId()).distinct().toList();
         var totals = familyIds.isEmpty() ? Map.<Long, com.m4n.backend.repository.ProductRepository.FamilyInventoryTotals>of()
@@ -78,8 +86,10 @@ public class InventoryServiceImpl implements InventoryService {
                 if (total != null) {
                     response.setQuantity(total.getQuantity());
                     response.setVariantCount(total.getVariantCount());
-                    response.setStatus(total.getQuantity() <= 0 ? "OUT_OF_STOCK" : total.getQuantity() <= total.getThreshold() ? "LOW_STOCK" : "IN_STOCK");
-                    response.setStatusLabel(response.getStatus().equals("OUT_OF_STOCK") ? "Hết hàng" : response.getStatus().equals("LOW_STOCK") ? "Sắp hết hàng" : "Còn hàng");
+                    response.setStatus(total.getQuantity() <= 0 ? "OUT_OF_STOCK"
+                            : total.getQuantity() <= Inventory.LOW_STOCK_THRESHOLD ? "LOW_STOCK" : "IN_STOCK");
+                    response.setStatusLabel(response.getStatus().equals("OUT_OF_STOCK") ? "Hết hàng"
+                            : response.getStatus().equals("LOW_STOCK") ? "Sắp hết hàng" : "Còn hàng");
                 }
             }
             return response;
@@ -174,8 +184,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         String status;
         String statusLabel;
-        int threshold = product.getLowStockThreshold() == null ? 5 : product.getLowStockThreshold();
-        if (qty > threshold) {
+        if (qty > Inventory.LOW_STOCK_THRESHOLD) {
             status = "IN_STOCK";
             statusLabel = "Còn hàng";
         } else if (qty > 0) {

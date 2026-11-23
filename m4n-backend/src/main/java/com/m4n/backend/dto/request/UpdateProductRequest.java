@@ -59,5 +59,27 @@ public record UpdateProductRequest(
         @Size(max = 100, message = "Nhóm biến thể tối đa 100 ký tự")
         String variantGroup,
         @Size(max = 100, message = "Tên biến thể tối đa 100 ký tự")
-        String variantLabel
-) {}
+        String variantLabel,
+        @Size(max = 48, message = "Tên nhóm phân loại 1 tối đa 48 ký tự")
+        String option1Name,
+        @Size(max = 48, message = "Tên nhóm phân loại 2 tối đa 48 ký tự")
+        String option2Name,
+        @Size(max = 48, message = "Giá trị phân loại 1 tối đa 48 ký tự")
+        String option1Value,
+        @Size(max = 48, message = "Giá trị phân loại 2 tối đa 48 ký tự")
+        String option2Value
+) {
+    public UpdateProductRequest(
+            String name, String barcode, BigDecimal price, Long categoryId,
+            Long artisanId, Long craftVillageId, String material, String dimensions,
+            String musicalRange, String origin, String description, Boolean isActive,
+            List<ProductMediaItemRequest> media, Integer lowStockThreshold,
+            BigDecimal billableWeightKg, BigDecimal bulkySurcharge,
+            String variantGroup, String variantLabel
+    ) {
+        this(name, barcode, price, categoryId, artisanId, craftVillageId, material,
+                dimensions, musicalRange, origin, description, isActive, media,
+                lowStockThreshold, billableWeightKg, bulkySurcharge, variantGroup, variantLabel,
+                null, null, null, null);
+    }
+}

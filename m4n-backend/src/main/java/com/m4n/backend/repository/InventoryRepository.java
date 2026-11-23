@@ -30,10 +30,10 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("SELECT i FROM Inventory i WHERE i.product.id IN :productIds")
     List<Inventory> findByProductIdsWithLock(@Param("productIds") Collection<Long> productIds);
 
-    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > COALESCE(i.product.lowStockThreshold, 5)")
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > 5")
     long countAvailableProducts();
 
-    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > 0 AND i.quantity <= COALESCE(i.product.lowStockThreshold, 5)")
+    @Query("SELECT COUNT(i) FROM Inventory i WHERE i.quantity > 0 AND i.quantity <= 5")
     long countLowStockProducts();
 
     long countByQuantity(Integer quantity);
@@ -50,8 +50,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
             "LOWER(i.product.variantLabel) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
             "LOWER(i.product.barcode) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
             "(:status IS NULL OR :status = '' OR " +
-            "(:status = 'IN_STOCK' AND i.quantity > COALESCE(i.product.lowStockThreshold, 5)) OR " +
-            "(:status = 'LOW_STOCK' AND i.quantity > 0 AND i.quantity <= COALESCE(i.product.lowStockThreshold, 5)) OR " +
+            "(:status = 'IN_STOCK' AND i.quantity > 5) OR " +
+            "(:status = 'LOW_STOCK' AND i.quantity > 0 AND i.quantity <= 5) OR " +
             "(:status = 'OUT_OF_STOCK' AND i.quantity = 0))")
     Page<Inventory> searchInventories(
             @Param("keyword") String keyword,

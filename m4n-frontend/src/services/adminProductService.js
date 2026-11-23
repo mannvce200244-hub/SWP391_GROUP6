@@ -17,7 +17,7 @@ export const adminProductService = Object.freeze({
     groupVariants = false,
     page = 0,
     size = 10,
-    sort = 'createdAt,desc',
+    sort = 'stockQuantity,asc',
   } = {}) {
     const params = new URLSearchParams()
     if (groupVariants) params.set('groupVariants', 'true')
@@ -38,7 +38,7 @@ export const adminProductService = Object.freeze({
     return apiClient.get(`/admin/products/${id}`)
   },
 
-  listVariants: (id, page = 0) => apiClient.get(`/admin/products/${encodeURIComponent(id)}/variants?page=${page}&size=20`),
+  listVariants: (id, page = 0, size = 100) => apiClient.get(`/admin/products/${encodeURIComponent(id)}/variants?page=${page}&size=${size}`),
 
   createVariants(variants, files = []) {
     const payload = { variants }

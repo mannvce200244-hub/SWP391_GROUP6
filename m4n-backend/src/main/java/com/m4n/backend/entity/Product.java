@@ -62,6 +62,20 @@ public class Product {
     @Column(name = "variant_label", length = 100)
     private String variantLabel;
 
+    @Column(name = "option1_value", length = 50)
+    private String option1Value;
+
+    @Column(name = "option2_value", length = 50)
+    private String option2Value;
+
+    public String getOption1Name() {
+        return family == null ? null : family.getOption1Name();
+    }
+
+    public String getOption2Name() {
+        return family == null ? null : family.getOption2Name();
+    }
+
     public String getDisplayName() {
         return variantLabel == null ? getFamilyName() : getFamilyName() + " · " + variantLabel;
     }
