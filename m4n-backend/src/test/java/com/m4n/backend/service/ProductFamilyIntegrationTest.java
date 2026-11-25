@@ -326,6 +326,75 @@ class ProductFamilyIntegrationTest {
         });
     }
 
+    @Test void addingSecondGroupClassifiesExistingSkusWithoutReplacingTheirIdentityOrStock() {
+        var initial = products.createVariants(new CreateProductVariantsRequest(List.of(
+                optionRequest(null, "Chất liệu", null, "Gỗ trắc", null, "5000000"),
+                optionRequest(null, "Chất liệu", null, "Gỗ mun", null, "6000000"),
+                optionRequest(null, "Chất liệu", null, "Gỗ hương", null, "7000000")
+        )));
+        var first = initial.getFirst();
+        var second = initial.get(1);
+        var third = initial.get(2);
+        setStock(first.id(), 4);
+        setStock(second.id(), 8);
+        products.updateProductStatus(third.id(), false);
+        var assignments = java.util.Map.of(first.id(), "16 dây", second.id(), "18 dây", third.id(), "16 dây");
+        products.updateProduct(first.id(), secondOptionRequest(first, assignments));
+        entityManager.flush();
+        entityManager.clear();
+
+        for (var original : initial) {
+            var reloaded = products.getAdminProductDetail(original.id());
+            assertThat(reloaded.id()).isEqualTo(original.id());
+            assertThat(reloaded.code()).isEqualTo(original.code());
+            assertThat(reloaded.barcode()).isEqualTo(original.barcode());
+            assertThat(reloaded.price()).isEqualByComparingTo(original.price());
+            assertThat(reloaded.option2Name()).isEqualTo("Số dây");
+            assertThat(reloaded.option2Value()).isEqualTo(assignments.get(original.id()));
+            assertThat(reloaded.variantLabel()).isEqualTo(original.option1Value() + " · " + assignments.get(original.id()));
+        }
+        assertThat(products.getAdminProductDetail(first.id()).stockQuantity()).isEqualTo(4);
+        assertThat(products.getAdminProductDetail(second.id()).stockQuantity()).isEqualTo(8);
+        assertThat(products.getAdminProductDetail(third.id()).isActive()).isFalse();
+        assertThat(products.listAdminVariants(first.id(), PageRequest.of(0, 100)).getTotalElements()).isEqualTo(3);
+        var added = products.createProduct(optionRequest(first.familyId(), "Chất liệu", "Số dây", "Gỗ trắc", "18 dây", "5500000"));
+        assertThat(added.stockQuantity()).isZero();
+        assertThat(added.familyId()).isEqualTo(first.familyId());
+    }
+
+    @Test void addingSecondGroupRejectsMissingBlankForeignAndStaleSkuAssignments() {
+        var initial = products.createVariants(new CreateProductVariantsRequest(List.of(
+                optionRequest(null, "Chất liệu", null, "Gỗ trắc", null, "5000000"),
+                optionRequest(null, "Chất liệu", null, "Gỗ mun", null, "6000000")
+        )));
+        var first = initial.getFirst();
+        var second = initial.getLast();
+        for (var assignments : List.of(
+                java.util.Map.of(first.id(), "16 dây"),
+                java.util.Map.of(first.id(), "16 dây", second.id(), " "),
+                java.util.Map.of(first.id(), "16 dây", Long.MAX_VALUE, "18 dây"),
+                java.util.Map.of(first.id(), "16 dây", second.id(), "18 dây", Long.MAX_VALUE, "16 dây")
+        )) {
+            assertThatThrownBy(() -> products.updateProduct(first.id(), secondOptionRequest(first, assignments)))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThat(products.getAdminProductDetail(second.id()).option2Name()).isNull();
+            assertThat(products.getAdminProductDetail(second.id()).option2Value()).isNull();
+        }
+    }
+
+    @Test void variantCreationCannotSilentlyAddASecondGroupToUnclassifiedExistingSkus() {
+        var first = products.createProduct(optionRequest(null, "Chất liệu", null, "Gỗ trắc", null, "5000000"));
+        assertThatThrownBy(() -> products.createProduct(optionRequest(first.familyId(), "Chất liệu", "Số dây", "Gỗ mun", "18 dây", "6000000")))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("từng SKU");
+        assertThat(products.getAdminProductDetail(first.id()).option2Name()).isNull();
+    }
+
+    private UpdateProductRequest secondOptionRequest(com.m4n.backend.dto.response.AdminProductDetailResponse selected, java.util.Map<Long, String> assignments) {
+        return new UpdateProductRequest(name, selected.barcode(), selected.price(), category.getId(), null, null,
+                null, null, null, null, null, true, null, 5, new BigDecimal("0.000001"), BigDecimal.ZERO,
+                null, null, "Chất liệu", "Số dây", selected.option1Value(), "16 dây", assignments);
+    }
+
     private CreateProductRequest request(Long family, String tone, String price) {
         return new CreateProductRequest(null, null, name, new BigDecimal(price), category.getId(), null, null,
                 null, null, null, null, null, List.of(), 5, new BigDecimal("0.000001"), BigDecimal.ZERO, null, tone, true, family);

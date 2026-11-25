@@ -374,7 +374,7 @@ public class ProductServiceImpl implements ProductService {
 
     private com.m4n.backend.entity.ProductFamily familyFor(Long familyId, String group, String name, String opt1Name, String opt2Name) {
         if (familyId != null) {
-            var existing = familyRepository.findById(familyId)
+            var existing = familyRepository.findByIdWithLock(familyId)
                     .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm cha không tồn tại."));
             applyFamilyOptionNames(existing, opt1Name, opt2Name);
             return existing;
@@ -383,8 +383,9 @@ public class ProductServiceImpl implements ProductService {
         if (key != null) {
             var existing = familyRepository.findByLegacyKey(key);
             if (existing.isPresent()) {
-                applyFamilyOptionNames(existing.get(), opt1Name, opt2Name);
-                return existing.get();
+                var locked = familyRepository.findByIdWithLock(existing.get().getId()).orElseThrow();
+                applyFamilyOptionNames(locked, opt1Name, opt2Name);
+                return locked;
             }
         }
         return familyRepository.save(com.m4n.backend.entity.ProductFamily.builder()
@@ -393,6 +394,9 @@ public class ProductServiceImpl implements ProductService {
 
     private void applyFamilyOptionNames(com.m4n.backend.entity.ProductFamily family, String opt1Name, String opt2Name) {
         if (opt1Name == null && opt2Name == null) return;
+        if (family.getOption2Name() == null && opt2Name != null && productRepository.countByFamilyId(family.getId()) > 0) {
+            throw new IllegalArgumentException("Thêm nhóm 2 trong phần chỉnh sửa và chọn giá trị cho từng SKU hiện có.");
+        }
         validateOptionNames(opt1Name != null ? opt1Name : family.getOption1Name(), opt2Name != null ? opt2Name : family.getOption2Name());
         if (family.getOption1Name() == null && opt1Name != null) family.setOption1Name(opt1Name);
         if (family.getOption2Name() == null && opt2Name != null) family.setOption2Name(opt2Name);
@@ -583,6 +587,9 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public AdminProductDetailResponse updateProduct(Long productId, UpdateProductRequest request) {
+        // Lock parent before SKU: a second-option transition also updates sibling labels.
+        productRepository.findFamilyIdByProductId(productId).ifPresent(id -> familyRepository.findByIdWithLock(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm cha không tồn tại.")));
         Product product = productRepository.findByIdWithLock(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
 
@@ -610,7 +617,12 @@ public class ProductServiceImpl implements ProductService {
         String opt1Name = normalizeOption(request.option1Name(), "Tên nhóm phân loại 1 tối đa 48 ký tự.");
         String opt2Name = normalizeOption(request.option2Name(), "Tên nhóm phân loại 2 tối đa 48 ký tự.");
         validateOptionNames(opt1Name, opt2Name);
-        if (product.getFamily() == null) product.setFamily(familyFor(null, request.variantGroup(), request.name(), opt1Name, opt2Name));
+        if (product.getFamily() == null) product.setFamily(familyFor(null, request.variantGroup(), request.name(), null, null));
+        var lockedFamily = familyRepository.findByIdWithLock(product.getFamily().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm cha không tồn tại."));
+        if (request.option2Assignments() != null && (lockedFamily.getOption2Name() != null || opt2Name == null)) {
+            throw new IllegalArgumentException("Phân loại đã thay đổi. Vui lòng tải lại sản phẩm trước khi thêm nhóm 2.");
+        }
         product.getFamily().setName(request.name().trim());
         if (opt1Name != null || opt2Name != null) {
             var family = product.getFamily();
@@ -620,9 +632,8 @@ public class ProductServiceImpl implements ProductService {
                     && productRepository.countByFamilyId(family.getId()) > 1) {
                 throw new IllegalArgumentException("Không thể thêm nhóm phân loại mới khi sản phẩm đã có nhiều biến thể cũ.");
             }
-            if (currentOpt2 == null && opt2Name != null && family.getId() != null
-                    && productRepository.countByFamilyId(family.getId()) > 1) {
-                throw new IllegalArgumentException("Không thể thêm nhóm phân loại 2 khi sản phẩm đã có nhiều biến thể ở nhóm 1.");
+            if (currentOpt2 == null && opt2Name != null && family.getId() != null) {
+                assignSecondOption(product, request);
             }
             if (currentOpt2 != null && opt2Name == null && family.getId() != null
                     && productRepository.existsByFamilyIdAndOption2ValueIsNotNullAndIdNot(family.getId(), productId)) {
@@ -666,6 +677,38 @@ public class ProductServiceImpl implements ProductService {
         String availability = availabilityFor(product, stockQuantity);
 
         return productMapper.toAdminDetailResponse(savedProduct, availability, stockQuantity);
+    }
+
+    private void assignSecondOption(Product selected, UpdateProductRequest request) {
+        var siblings = productRepository.findByFamilyIdOrderByIdAsc(selected.getFamily().getId());
+        var assignments = request.option2Assignments();
+        if (siblings.size() == 1 && assignments == null) return;
+        var ids = siblings.stream().map(Product::getId).collect(Collectors.toSet());
+        if (assignments == null || !assignments.keySet().equals(ids)) {
+            throw new IllegalArgumentException("Chọn giá trị nhóm 2 cho đầy đủ các SKU hiện có. Vui lòng tải lại nếu danh sách đã thay đổi.");
+        }
+        var normalized = new java.util.HashMap<Long, String>();
+        var labels = new java.util.HashSet<String>();
+        for (Product sibling : siblings) {
+            String first = normalizeOption(sibling.getId().equals(selected.getId()) ? request.option1Value() : sibling.getOption1Value(),
+                    "Giá trị phân loại 1 tối đa 48 ký tự.");
+            String second = normalizeOption(assignments.get(sibling.getId()), "Giá trị phân loại 2 tối đa 48 ký tự.");
+            if (first == null || second == null) {
+                throw new IllegalArgumentException("Mỗi SKU cần có đủ giá trị của cả hai nhóm phân loại.");
+            }
+            String label = (first + " · " + second).toLowerCase(java.util.Locale.ROOT);
+            if (!labels.add(label)) throw new IllegalArgumentException("Tổ hợp biến thể bị trùng trong danh sách.");
+            normalized.put(sibling.getId(), second);
+        }
+        String selectedValue = normalizeOption(request.option2Value(), "Giá trị phân loại 2 tối đa 48 ký tự.");
+        if (!normalized.get(selected.getId()).equals(selectedValue)) {
+            throw new IllegalArgumentException("Giá trị nhóm 2 của SKU đang sửa chưa khớp với bảng phân loại.");
+        }
+        for (Product sibling : siblings) {
+            if (sibling.getId().equals(selected.getId())) continue;
+            sibling.setOption2Value(normalized.get(sibling.getId()));
+            sibling.setVariantLabel(sibling.getOption1Value() + " · " + sibling.getOption2Value());
+        }
     }
 
     @Override

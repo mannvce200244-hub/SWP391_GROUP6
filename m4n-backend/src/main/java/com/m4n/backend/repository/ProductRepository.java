@@ -30,6 +30,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Optional<Product> findByIdAndIsActiveTrue(Long id);
 
+    @Query("SELECT p.family.id FROM Product p WHERE p.id = :id")
+    Optional<Long> findFamilyIdByProductId(@Param("id") Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :id")
     Optional<Product> findByIdWithLock(@Param("id") Long id);
@@ -47,6 +50,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     boolean existsByFamilyIdAndIsActiveTrue(Long familyId);
 
     long countByFamilyId(Long familyId);
+
+    // A second-option transition must classify every existing SKU atomically.
+    List<Product> findByFamilyIdOrderByIdAsc(Long familyId);
 
     boolean existsByFamilyIdAndOption2ValueIsNotNullAndIdNot(Long familyId, Long id);
 

@@ -68,8 +68,25 @@ public record UpdateProductRequest(
         @Size(max = 48, message = "Giá trị phân loại 1 tối đa 48 ký tự")
         String option1Value,
         @Size(max = 48, message = "Giá trị phân loại 2 tối đa 48 ký tự")
-        String option2Value
+        String option2Value,
+        java.util.Map<@NotNull @jakarta.validation.constraints.Positive Long,
+                @NotBlank @Size(max = 48) String> option2Assignments
 ) {
+    public UpdateProductRequest(
+            String name, String barcode, BigDecimal price, Long categoryId,
+            Long artisanId, Long craftVillageId, String material, String dimensions,
+            String musicalRange, String origin, String description, Boolean isActive,
+            List<ProductMediaItemRequest> media, Integer lowStockThreshold,
+            BigDecimal billableWeightKg, BigDecimal bulkySurcharge,
+            String variantGroup, String variantLabel, String option1Name, String option2Name,
+            String option1Value, String option2Value
+    ) {
+        this(name, barcode, price, categoryId, artisanId, craftVillageId, material,
+                dimensions, musicalRange, origin, description, isActive, media,
+                lowStockThreshold, billableWeightKg, bulkySurcharge, variantGroup, variantLabel,
+                option1Name, option2Name, option1Value, option2Value, null);
+    }
+
     public UpdateProductRequest(
             String name, String barcode, BigDecimal price, Long categoryId,
             Long artisanId, Long craftVillageId, String material, String dimensions,
