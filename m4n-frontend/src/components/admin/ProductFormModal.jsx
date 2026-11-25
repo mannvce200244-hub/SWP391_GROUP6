@@ -87,10 +87,12 @@ export default function ProductFormModal({
   const [masterDataReady, setMasterDataReady] = useState(false)
   const [productReady, setProductReady] = useState(!productId && !variantSource)
   const [siblingVariants, setSiblingVariants] = useState([])
-  const [loadingSiblings, setLoadingSiblings] = useState(false)
+  const [loadingSiblings, setLoadingSiblings] = useState(Boolean((productId || variantSource) && !existingVariants?.length))
   const [loadedFamilyId, setLoadedFamilyId] = useState(null)
   const [editStructuredEnabled, setEditStructuredEnabled] = useState(false)
   const [editUseOption2, setEditUseOption2] = useState(false)
+  const [originalOption2Name, setOriginalOption2Name] = useState('')
+  const [option2Assignments, setOption2Assignments] = useState({})
   const [addedOption1Values, setAddedOption1Values] = useState([])
   const [addedOption2Values, setAddedOption2Values] = useState([])
   const [editNewRows, setEditNewRows] = useState([])
@@ -136,6 +138,8 @@ export default function ProductFormModal({
     setLoadedFamilyId(null)
     setEditStructuredEnabled(false)
     setEditUseOption2(false)
+    setOriginalOption2Name('')
+    setOption2Assignments({})
     setAddedOption1Values([])
     setAddedOption2Values([])
     setEditNewRows([])
@@ -222,6 +226,7 @@ export default function ProductFormModal({
           setAddedOption2Values([])
           setEditNewRows([])
           setVariantRows([])
+          setOption2Assignments({})
           setPendingSwitchTarget(null)
           const nextCode = variantSource ? '' : p.code || ''
           const nextBarcode = variantSource ? '' : p.barcode || ''
@@ -264,6 +269,7 @@ export default function ProductFormModal({
           setLoadedFamilyId(p.familyId || null)
           setEditStructuredEnabled(Boolean(nextOpt1Name))
           setEditUseOption2(Boolean(nextOpt2Name))
+          setOriginalOption2Name(nextOpt2Name)
           const sortedMedia = [...(p.media || [])].sort(
             (left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0),
           )
@@ -392,6 +398,7 @@ export default function ProductFormModal({
   const useMatrix = !isEdit && !isVariant && matrixConfig.enabled
   const hasStructuredOptions = isEdit ? (editStructuredEnabled || Boolean(option1Name.trim())) : Boolean(option1Name.trim())
   const effectiveUseOption2 = isEdit ? editUseOption2 : Boolean(option2Name.trim())
+  const addingSecondOption = isEdit && editUseOption2 && !originalOption2Name
   const additionalVariantCount = hasStructuredOptions ? editNewRows.length : variantRows.length
 
   const resolvedSiblings = useMemo(
@@ -406,7 +413,7 @@ export default function ProductFormModal({
 
   const isEditDirty = useMemo(() => {
     if (!isEdit || !initialEditSnapshot) return false
-    if (variantRows.length > 0 || editNewRows.length > 0 || addedOption1Values.length > 0 || addedOption2Values.length > 0) return true
+    if (Object.keys(option2Assignments).length || variantRows.length > 0 || editNewRows.length > 0 || addedOption1Values.length > 0 || addedOption2Values.length > 0) return true
     const currentSnapshot = JSON.stringify({
       barcode, name, variantLabel, option1Name, option2Name,
       option1Value, option2Value, price, billableWeightKg,
@@ -416,7 +423,7 @@ export default function ProductFormModal({
     })
     return currentSnapshot !== initialEditSnapshot
   }, [
-    isEdit, initialEditSnapshot, variantRows.length, editNewRows.length,
+    isEdit, initialEditSnapshot, option2Assignments, variantRows.length, editNewRows.length,
     addedOption1Values.length, addedOption2Values.length,
     barcode, name, variantLabel, option1Name, option2Name,
     option1Value, option2Value, price, billableWeightKg,
@@ -424,21 +431,31 @@ export default function ProductFormModal({
     material, dimensions, musicalRange, origin, description, isActive, mediaList,
   ])
 
-  const recomputeEditNewRows = (nextAdded1, nextAdded2, nextUseOpt2 = editUseOption2, nextOpt1Val = option1Value, nextOpt2Val = option2Value, prevRows = editNewRows) => {
+  const recomputeEditNewRows = (nextAdded1, nextAdded2, nextUseOpt2 = editUseOption2, nextOpt1Val = option1Value, nextOpt2Val = option2Value, prevRows = editNewRows, assignments = option2Assignments) => {
     if (!nextAdded1.length && !nextAdded2.length) {
       setEditNewRows([])
       return
     }
     const base1 = [...existingAttributeGroups.option1Values, ...(nextOpt1Val.trim() ? [nextOpt1Val.trim()] : []), ...nextAdded1]
     const base2 = nextUseOpt2
-      ? [...existingAttributeGroups.option2Values, ...(nextOpt2Val.trim() ? [nextOpt2Val.trim()] : []), ...nextAdded2]
+      ? [...existingAttributeGroups.option2Values, ...(!originalOption2Name ? Object.values(assignments).filter(Boolean) : []), ...(nextOpt2Val.trim() ? [nextOpt2Val.trim()] : []), ...nextAdded2]
       : []
     const existingWithoutSelf = resolvedSiblings.filter((item) => Number(item.id) !== Number(activeEditId))
+      .map((item) => !originalOption2Name && nextUseOpt2 ? { ...item, option2Value: assignments[item.id] || '' } : item)
     const effectiveExisting = [
       ...existingWithoutSelf,
       ...(nextOpt1Val.trim() ? [{ id: activeEditId, option1Value: nextOpt1Val.trim(), option2Value: nextUseOpt2 ? nextOpt2Val.trim() : '' }] : []),
     ]
     setEditNewRows(buildMissingVariantMatrix(base1, base2, effectiveExisting, prevRows, price))
+  }
+
+  const handleOption2Assignment = (id, value) => {
+    const assignments = { ...option2Assignments, [id]: value }
+    setOption2Assignments(assignments)
+    const selectedValue = Number(id) === Number(activeEditId) ? value : option2Value
+    if (Number(id) === Number(activeEditId)) setOption2Value(value)
+    recomputeEditNewRows(addedOption1Values, addedOption2Values, editUseOption2, option1Value, selectedValue, editNewRows, assignments)
+    setFormErrors((current) => ({ ...current, [`option2Assignments[${id}]`]: '', option2Value: '' }))
   }
 
   const switchToEditVariant = (variantId) => {
@@ -462,7 +479,7 @@ export default function ProductFormModal({
       if (isEdit && Number(item.id) === Number(activeEditId)) continue
       if (hasStructuredOptions && item.option1Value) {
         const v1 = item.option1Value.trim().normalize('NFC')
-        const v2 = effectiveUseOption2 ? (item.option2Value || '').trim().normalize('NFC') : ''
+        const v2 = effectiveUseOption2 ? ((addingSecondOption ? option2Assignments[item.id] : item.option2Value) || '').trim().normalize('NFC') : ''
         const combined = (effectiveUseOption2 ? `${v1} · ${v2}` : v1).toLocaleLowerCase('vi')
         if (v1 && (!effectiveUseOption2 || v2)) keys.add(combined)
       } else if (item.variantLabel) {
@@ -470,7 +487,7 @@ export default function ProductFormModal({
       }
     }
     return keys
-  }, [resolvedSiblings, isEdit, activeEditId, hasStructuredOptions, effectiveUseOption2])
+  }, [resolvedSiblings, isEdit, activeEditId, hasStructuredOptions, effectiveUseOption2, addingSecondOption, option2Assignments])
 
   const liveDuplicateWarning = useMemo(() => {
     if ((!isVariant && !isEdit) || !existingComboKeys.size) return ''
@@ -528,6 +545,12 @@ export default function ProductFormModal({
     if (useMatrix) {
       Object.assign(errors, matrixFormErrors(matrixConfig, matrixRows))
     } else if (hasStructuredOptions) {
+      if (addingSecondOption) {
+        for (const sku of resolvedSiblings) {
+          const value = (option2Assignments[sku.id] || '').trim()
+          if (!value || value.length > 48) errors[`option2Assignments[${sku.id}]`] = 'Nhập giá trị nhóm 2 cho SKU này, tối đa 48 ký tự.'
+        }
+      }
       const structuredRows = [
         { option1Value, option2Value, price, code, barcode },
         ...variantRows,
@@ -614,6 +637,9 @@ export default function ProductFormModal({
           option2Name: hasStructuredOptions && effectiveUseOption2 ? option2Name.trim() : null,
           option1Value: hasStructuredOptions ? option1Value.trim() : null,
           option2Value: hasStructuredOptions && effectiveUseOption2 ? option2Value.trim() : null,
+          ...(addingSecondOption ? { option2Assignments: Object.fromEntries(
+            resolvedSiblings.map((sku) => [sku.id, (option2Assignments[sku.id] || '').trim()]),
+          ) } : {}),
           price: Number(price),
           billableWeightKg: billableWeightKg === '' ? null : Number(billableWeightKg),
           categoryId: Number(categoryId),
@@ -946,6 +972,10 @@ export default function ProductFormModal({
                                 }
                               }}
                               onOption2ValueChange={(value) => {
+                                if (addingSecondOption) {
+                                  handleOption2Assignment(activeEditId, value)
+                                  return
+                                }
                                 setOption2Value(value)
                                 setFormErrors((previous) => ({ ...previous, option2Value: '', variantLabel: '' }))
                                 if (isEdit && (addedOption1Values.length || addedOption2Values.length)) {
@@ -1020,6 +1050,7 @@ export default function ProductFormModal({
                         setVariantRows([])
                         if (!checked) {
                           setEditUseOption2(false)
+                          setOption2Assignments({})
                           setOption1Name('')
                           setOption2Name('')
                           setOption1Value('')
@@ -1030,14 +1061,18 @@ export default function ProductFormModal({
                           setFormErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => !k.startsWith('option') && !k.startsWith('newVariants['))))
                         }
                       }}
-                      canToggleOption2={resolvedSiblings.length <= 1}
+                      canToggleOption2={!originalOption2Name || resolvedSiblings.length <= 1}
                       useOption2={editUseOption2}
+                      requiresOption2Assignments={addingSecondOption}
+                      option2Assignments={option2Assignments}
+                      onOption2AssignmentChange={handleOption2Assignment}
                       onToggleOption2={(checked) => {
                         setEditUseOption2(checked)
                         if (!checked) {
                           setOption2Name('')
                           setOption2Value('')
                           setAddedOption2Values([])
+                          setOption2Assignments({})
                           recomputeEditNewRows(addedOption1Values, [], false, option1Value, '')
                         } else {
                           recomputeEditNewRows(addedOption1Values, addedOption2Values, true, option1Value, option2Value)

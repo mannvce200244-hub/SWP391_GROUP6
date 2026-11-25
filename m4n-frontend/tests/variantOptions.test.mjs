@@ -149,3 +149,16 @@ test('buildMissingVariantMatrix generates only new combinations not present in e
   assert.equal(expanded.find((r) => r.label === 'Gỗ hương · 16 dây')?.code, 'DT-HUONG-16')
   assert.equal(expanded.find((r) => r.label === 'Gỗ trắc · 21 dây')?.price, '6200000')
 })
+
+test('adding a second group keeps explicitly classified existing SKUs out of the new combination batch', () => {
+  const existing = [
+    { id: 1, option1Value: 'Gỗ trắc', option2Value: '16 dây' },
+    { id: 2, option1Value: 'Gỗ mun', option2Value: '18 dây' },
+    { id: 3, option1Value: 'Gỗ hương', option2Value: '16 dây' },
+  ]
+  const rows = buildMissingVariantMatrix(['Gỗ trắc', 'Gỗ mun', 'Gỗ hương'], ['16 dây', '18 dây'], existing, [], '6000000')
+  assert.deepEqual(rows.map((row) => row.label), ['Gỗ trắc · 18 dây', 'Gỗ mun · 16 dây', 'Gỗ hương · 18 dây'])
+  const payload = matrixVariantRequests({ familyId: 42 }, { option1Name: 'Chất liệu', option2Name: 'Số dây', useOption2: true }, rows)
+  assert.ok(payload.every((sku) => sku.familyId === 42 && sku.option1Value && sku.option2Value))
+  assert.equal(payload.length, 3)
+})

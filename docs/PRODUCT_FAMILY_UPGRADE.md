@@ -57,6 +57,12 @@ field is required. This supersedes the group-string-only model in BR-PRODUCT-01.
   rows updates the selected SKU and creates only the additional SKUs, with zero
   initial stock. Switching the edited SKU discards draft rows only after the
   existing unsaved-change confirmation.
+- Existing one-attribute families may add a second group in the editor, even
+  with multiple SKUs. Admin must explicitly assign a second-group value to every
+  existing SKU, including inactive ones. The update changes their labels and
+  classification atomically while keeping IDs, barcode, price, stock and historic
+  snapshots. Missing/foreign/stale assignments fail without partial classification.
+  Parent-before-SKU locks serialize this transition with variant creation/edits.
 
 ## Promotions and weight
 

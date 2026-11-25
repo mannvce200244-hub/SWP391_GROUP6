@@ -108,6 +108,9 @@ export default function ProductEditVariantsSection({
   canToggleOption2 = false,
   useOption2 = false,
   onToggleOption2,
+  requiresOption2Assignments = false,
+  option2Assignments = {},
+  onOption2AssignmentChange,
   existingOption1Values = [],
   existingOption2Values = [],
   addedOption1Values = [],
@@ -313,6 +316,25 @@ export default function ProductEditVariantsSection({
                       addedValues={addedOption2Values}
                       onAddedChange={onAddedOption2Change}
                     />
+                    {requiresOption2Assignments && (
+                      <div className="space-y-3 border-t border-border pt-3">
+                        <p className="text-xs text-secondary">Chọn giá trị nhóm 2 cho từng SKU hiện có. Giữ nguyên mã, giá và tồn kho; không tự tạo lại các SKU này.</p>
+                        {siblings.map((sku) => (
+                          <Input
+                            key={sku.id}
+                            id={`option2-assignment-${sku.id}`}
+                            name={`option2Assignments[${sku.id}]`}
+                            label={`${sku.code} · ${sku.option1Value || sku.variantLabel || 'Mặc định'}`}
+                            required
+                            maxLength={48}
+                            value={option2Assignments[sku.id] || ''}
+                            onChange={(event) => onOption2AssignmentChange(sku.id, event.target.value)}
+                            placeholder={`Nhập ${option2Name || 'giá trị nhóm 2'}`}
+                            error={errors[`option2Assignments[${sku.id}]`]}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <p className="text-xs text-muted leading-relaxed">
