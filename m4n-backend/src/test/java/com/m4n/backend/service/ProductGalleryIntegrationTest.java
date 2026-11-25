@@ -121,7 +121,7 @@ class ProductGalleryIntegrationTest {
         jdbcTemplate.update("UPDATE inventories SET quantity = 5 WHERE product_id = ?", original.id());
         assertThat(productService.getProductDetail(original.id()).availability()).isEqualTo("LOW_STOCK");
         var request = new UpdateProductRequest("Threshold updated", null, new BigDecimal("100.25"), category.getId(),
-                null, null, null, null, null, null, null, true, null, 0, null, BigDecimal.ZERO, null, null);
+                null, null, null, null, null, null, null, true, null, 0, BigDecimal.ONE, BigDecimal.ZERO, null, null);
         assertThat(validator.validate(request)).isEmpty();
         var updated = productService.updateProduct(original.id(), request);
         assertThat(updated.lowStockThreshold()).isEqualTo(5);

@@ -230,6 +230,29 @@ class ProductPricingShippingIntegrationTest {
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.discountRate").exists());
     }
 
+    @Test @WithMockUser(roles = "ADMIN")
+    void createAndUpdateRequirePositiveWeightIncludingWhenShippingIsDisabled() throws Exception {
+        var settings = shippingService.getSettings();
+        shippingService.updateSettings(new UpdateShippingSettingsRequest(false, BigDecimal.ZERO, false, null, settings.version()));
+        Product existing = product("Legacy without weight", "100", null, "0");
+        String base = "\"name\":\"Instrument\",\"price\":100,\"categoryId\":" + category.getId();
+        for (String weightField : new String[]{"", ",\"billableWeightKg\":null", ",\"billableWeightKg\":0", ",\"billableWeightKg\":-1"}) {
+            String body = "{" + base + weightField + "}";
+            mvc.perform(post("/api/v1/admin/products").contentType("application/json").content(body))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.billableWeightKg").exists());
+            mvc.perform(put("/api/v1/admin/products/" + existing.getId()).contentType("application/json").content(body))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors.billableWeightKg").exists());
+            mvc.perform(post("/api/v1/admin/products/variants").contentType("application/json")
+                            .content("{\"variants\":[{" + base + weightField + ",\"variantLabel\":\"C\"}]}"))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.fieldErrors['variants[0].billableWeightKg']").exists());
+        }
+        String valid = "{" + base + ",\"billableWeightKg\":0.000001}";
+        mvc.perform(post("/api/v1/admin/products").contentType("application/json").content(valid))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.billableWeightKg").value(0.000001));
+        mvc.perform(put("/api/v1/admin/products/" + existing.getId()).contentType("application/json").content(valid))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.billableWeightKg").value(0.000001));
+    }
+
     private Product product(String suffix, String price, String weight, String surcharge) {
         return productRepository.saveAndFlush(Product.builder().code("P-" + UUID.randomUUID()).name(prefix + " " + suffix)
                 .price(new BigDecimal(price)).category(category).billableWeightKg(weight == null ? null : new BigDecimal(weight))

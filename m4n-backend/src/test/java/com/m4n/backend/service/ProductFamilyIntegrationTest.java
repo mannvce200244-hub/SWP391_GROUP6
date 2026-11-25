@@ -30,6 +30,7 @@ class ProductFamilyIntegrationTest {
     @Autowired ProductFamilyRepository families;
     @Autowired StockDocumentService documents;
     @Autowired org.springframework.web.context.WebApplicationContext context;
+    @Autowired jakarta.persistence.EntityManager entityManager;
     private Category category;
     private String name;
 
@@ -293,6 +294,36 @@ class ProductFamilyIntegrationTest {
                 null, null, "Loại gỗ", null, "Gỗ trắc", null)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("nhóm phân loại 2");
+    }
+
+    @Test void addingOptionsToOneGroupKeepsBothGroupsAfterReloadingFromDatabase() {
+        var initial = products.createVariants(new CreateProductVariantsRequest(List.of(
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ trắc", "16 dây", "5000000"),
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ trắc", "18 dây", "5500000"),
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ mun", "16 dây", "6000000"),
+                optionRequest(null, "Chất liệu", "Số dây", "Gỗ mun", "18 dây", "6500000")
+        )));
+        Long familyId = initial.getFirst().familyId();
+        entityManager.flush();
+        entityManager.clear();
+        products.createVariants(new CreateProductVariantsRequest(List.of(
+                optionRequest(familyId, "Chất liệu", "Số dây", "Gỗ hương", "16 dây", "7000000"),
+                optionRequest(familyId, "Chất liệu", "Số dây", "Gỗ hương", "18 dây", "7500000")
+        )));
+        entityManager.flush();
+        entityManager.clear();
+
+        var reloaded = products.getAdminProductDetail(initial.getFirst().id());
+        assertThat(reloaded.option1Name()).isEqualTo("Chất liệu");
+        assertThat(reloaded.option2Name()).isEqualTo("Số dây");
+        var variants = products.listAdminVariants(reloaded.id(), PageRequest.of(0, 100));
+        assertThat(variants.getTotalElements()).isEqualTo(6);
+        assertThat(variants.getContent()).allSatisfy(variant -> {
+            assertThat(variant.option1Name()).isEqualTo("Chất liệu");
+            assertThat(variant.option2Name()).isEqualTo("Số dây");
+            assertThat(variant.option1Value()).isIn("Gỗ trắc", "Gỗ mun", "Gỗ hương");
+            assertThat(variant.option2Value()).isIn("16 dây", "18 dây");
+        });
     }
 
     private CreateProductRequest request(Long family, String tone, String price) {

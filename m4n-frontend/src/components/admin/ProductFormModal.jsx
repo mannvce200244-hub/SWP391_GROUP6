@@ -77,7 +77,6 @@ export default function ProductFormModal({
 
   // Media items state
   const [mediaList, setMediaList] = useState([])
-  const [imageFiles, setImageFiles] = useState([])
   const [newMediaUrl, setNewMediaUrl] = useState('')
   const [newMediaType, setNewMediaType] = useState('IMAGE')
   const [newMediaAlt, setNewMediaAlt] = useState('')
@@ -132,7 +131,6 @@ export default function ProductFormModal({
     setDescription('')
     setIsActive(true)
     setMediaList([])
-    setImageFiles([])
     setSiblingVariants([])
     setLoadingSiblings(false)
     setLoadedFamilyId(null)
@@ -220,7 +218,6 @@ export default function ProductFormModal({
         if (active) {
           setServerError('')
           setFormErrors({})
-          setImageFiles([])
           setAddedOption1Values([])
           setAddedOption2Values([])
           setEditNewRows([])
@@ -407,7 +404,7 @@ export default function ProductFormModal({
 
   const isEditDirty = useMemo(() => {
     if (!isEdit || !initialEditSnapshot) return false
-    if (imageFiles.length > 0 || editNewRows.length > 0 || addedOption1Values.length > 0 || addedOption2Values.length > 0) return true
+    if (editNewRows.length > 0 || addedOption1Values.length > 0 || addedOption2Values.length > 0) return true
     const currentSnapshot = JSON.stringify({
       barcode, name, variantLabel, option1Name, option2Name,
       option1Value, option2Value, price, billableWeightKg,
@@ -417,7 +414,7 @@ export default function ProductFormModal({
     })
     return currentSnapshot !== initialEditSnapshot
   }, [
-    isEdit, initialEditSnapshot, imageFiles.length, editNewRows.length,
+    isEdit, initialEditSnapshot, editNewRows.length,
     addedOption1Values.length, addedOption2Values.length,
     barcode, name, variantLabel, option1Name, option2Name,
     option1Value, option2Value, price, billableWeightKg,
@@ -508,7 +505,9 @@ export default function ProductFormModal({
         errors.price = 'Giá niêm yết phải lớn hơn 0, tối đa 999.999.999.999,99đ và 2 chữ số thập phân.'
       }
     }
-    if (billableWeightKg !== '' && (!Number.isFinite(Number(billableWeightKg)) || Number(billableWeightKg) <= 0)) {
+    if (!billableWeightKg.trim()) {
+      errors.billableWeightKg = 'Vui lòng nhập khối lượng.'
+    } else if (!Number.isFinite(Number(billableWeightKg)) || Number(billableWeightKg) <= 0) {
       errors.billableWeightKg = 'Khối lượng phải lớn hơn 0.'
     }
 
@@ -633,7 +632,7 @@ export default function ProductFormModal({
           })),
         }
 
-        const updated = await adminProductService.updateProduct(activeEditId, updatePayload, imageFiles)
+        const updated = await adminProductService.updateProduct(activeEditId, updatePayload)
 
         if (editNewRows.length > 0) {
           const familyIdToUse = updated?.familyId || loadedFamilyId
@@ -661,7 +660,6 @@ export default function ProductFormModal({
           try {
             const createdExtra = await adminProductService.createVariants(
               matrixVariantRequests(batchBase, { option1Name, option2Name, useOption2: effectiveUseOption2 }, editNewRows),
-              [],
             )
             addToast({
               message: `Đã cập nhật “${name.trim()}” và tạo thêm ${createdExtra.length} biến thể mới (tồn kho = 0).`,
@@ -723,7 +721,6 @@ export default function ProductFormModal({
         if (useMatrix) {
           createdVariants = await adminProductService.createVariants(
             matrixVariantRequests(createPayload, matrixConfig, matrixRows),
-            imageFiles,
           )
         } else if (variantRows.length) {
           const batch = hasStructuredOptions
@@ -732,9 +729,9 @@ export default function ProductFormModal({
               ...variantRows,
             ])
             : variantRequests(createPayload, variantRows)
-          createdVariants = await adminProductService.createVariants(batch, imageFiles)
+          createdVariants = await adminProductService.createVariants(batch)
         } else {
-          createdVariants = [await adminProductService.createProduct(createPayload, imageFiles)]
+          createdVariants = [await adminProductService.createProduct(createPayload)]
         }
         const created = createdVariants[0]
         addToast({
@@ -961,7 +958,7 @@ export default function ProductFormModal({
                         </>
                       )}
 
-                      <Input id="product-billableWeightKg" name="billableWeightKg" type="number" min="0" step="any" label="Khối lượng tính cước (kg)" value={billableWeightKg} error={formErrors.billableWeightKg} helperText="Nhập khối lượng thực tế hoặc quy đổi. Cần có khi bật phí vận chuyển." onChange={(event) => setBillableWeightKg(event.target.value)} />
+                      <Input id="product-billableWeightKg" name="billableWeightKg" type="number" min="0" step="any" label="Khối lượng tính cước (kg)" required aria-required="true" value={billableWeightKg} error={formErrors.billableWeightKg} helperText="Nhập khối lượng thực tế hoặc quy đổi, lớn hơn 0 kg." onChange={(event) => setBillableWeightKg(event.target.value)} />
 
                       <div className="flex flex-col justify-end pb-1 sm:col-span-2 lg:col-span-2">
                         <label className="flex items-center gap-2.5 cursor-pointer text-sm font-semibold text-ink">
@@ -1268,24 +1265,6 @@ export default function ProductFormModal({
                           </h3>
 
                           {/* Add Media Bar */}
-                          <div className="mb-4 flex flex-col gap-2">
-                            <label htmlFor="product-image-files" className="text-sm font-medium text-ink">Tải ảnh từ máy tính</label>
-                            <input id="product-image-files" name="images" type="file" accept="image/png,image/jpeg"
-                              multiple disabled={submitting} aria-describedby="product-image-help"
-                              onChange={(event) => {
-                                const files = Array.from(event.target.files || [])
-                                if (files.length > 10 || files.some((file) => file.size > 5 * 1024 * 1024 || !['image/png', 'image/jpeg'].includes(file.type))) {
-                                  setFormErrors((current) => ({ ...current, media: 'Chọn tối đa 10 ảnh JPEG/PNG, mỗi ảnh tối đa 5 MB.' }))
-                                  event.target.value = ''
-                                  setImageFiles([])
-                                  return
-                                }
-                                setImageFiles(files)
-                                setFormErrors((current) => ({ ...current, media: undefined }))
-                              }} />
-                            <p id="product-image-help" className="text-xs text-secondary">JPEG/PNG, tối đa 5 MB và 16 triệu điểm ảnh mỗi ảnh. Ảnh được lưu cùng sản phẩm.</p>
-                            {imageFiles.length > 0 && <p role="status" className="text-sm text-ink">Đã chọn {imageFiles.length} ảnh: {imageFiles.map((file) => file.name).join(', ')}</p>}
-                          </div>
                           <div className="p-3.5 bg-[#F6F7F8] rounded-xl border border-[#E3E6E8] mb-4.5 flex flex-col sm:flex-row gap-2.5">
                             <input
                               type="text"

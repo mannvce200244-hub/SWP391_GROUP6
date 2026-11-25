@@ -58,8 +58,6 @@ export default function AdminInstrumentsPage() {
   // Modals state
   const [productModalOpen, setProductModalOpen] = useState(false)
   const [editingProductId, setEditingProductId] = useState(null)
-  const [variantSource, setVariantSource] = useState(null)
-  const [loadingVariant, setLoadingVariant] = useState(false)
   const [categoryModalOpen, setCategoryModalOpen] = useState(false)
   const [artisanModalOpen, setArtisanModalOpen] = useState(false)
   const [villageModalOpen, setVillageModalOpen] = useState(false)
@@ -164,13 +162,11 @@ export default function AdminInstrumentsPage() {
 
   // Action handlers
   const handleOpenCreateProduct = () => {
-    setVariantSource(null)
     setEditingProductId(null)
     setProductModalOpen(true)
   }
 
   const handleOpenEditProduct = (productId) => {
-    setVariantSource(null)
     setEditingProductId(productId)
     setProductModalOpen(true)
   }
@@ -178,16 +174,6 @@ export default function AdminInstrumentsPage() {
   const handleProductSaved = () => {
     setRefreshKey((k) => k + 1)
     loadMasterData()
-  }
-
-  const handleAddVariant = async (id) => {
-    if (loadingVariant) return
-    setLoadingVariant(true)
-    try {
-      const source = await adminProductService.getProductDetail(id)
-      setVariantSource(source); setEditingProductId(null); setProductModalOpen(true)
-    } catch (failure) { addToast({ type: 'error', message: failure.message || 'Không thể tải thông tin sản phẩm.' }) }
-    finally { setLoadingVariant(false) }
   }
 
   const handleToggleStatus = async (product) => {
@@ -705,10 +691,6 @@ export default function AdminInstrumentsPage() {
                             <Pencil size={15} />
                             <span>Sửa</span>
                           </button>
-                          <button type="button" disabled={loadingVariant} onClick={() => handleAddVariant(p.id)}
-                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-surface-secondary disabled:opacity-50">
-                            <Plus size={15} aria-hidden="true" />Thêm biến thể
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -757,7 +739,6 @@ export default function AdminInstrumentsPage() {
       {productModalOpen && <ProductFormModal
         isOpen={productModalOpen}
         productId={editingProductId}
-        variantSource={variantSource}
         onClose={() => setProductModalOpen(false)}
         onSuccess={handleProductSaved}
       />}
