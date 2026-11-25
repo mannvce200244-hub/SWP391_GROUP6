@@ -57,12 +57,29 @@ field is required. This supersedes the group-string-only model in BR-PRODUCT-01.
   rows updates the selected SKU and creates only the additional SKUs, with zero
   initial stock. Switching the edited SKU discards draft rows only after the
   existing unsaved-change confirmation.
+- When an existing default SKU has no variant label, adding named legacy variants
+  does not require naming that default SKU too. Its identity and unnamed label
+  stay unchanged; every new SKU still requires its own nonblank unique label.
+  An existing named SKU keeps its separate, explicitly labeled edit field.
 - Existing one-attribute families may add a second group in the editor, even
   with multiple SKUs. Admin must explicitly assign a second-group value to every
   existing SKU, including inactive ones. The update changes their labels and
   classification atomically while keeping IDs, barcode, price, stock and historic
   snapshots. Missing/foreign/stale assignments fail without partial classification.
   Parent-before-SKU locks serialize this transition with variant creation/edits.
+- Legacy families with named or unnamed SKUs can enable one or two attribute
+  groups in the editor. Admin explicitly assigns every existing SKU to a unique
+  combination, including inactive SKUs. Save this classification before adding
+  new combinations. No SKU is recreated; IDs, codes, barcode, prices, inventory,
+  active status and historical snapshots retain their meaning. The selected
+  SKU's normal editable fields still follow its update request.
+- After classification, an explicit action previews missing combinations of
+  the two existing groups, even without adding a new option value. Admin reviews
+  prices/SKUs and can remove draft rows before saving; existing inactive SKUs
+  also count as existing combinations and are never silently duplicated.
+- The existing update request accepts optional `option1Assignments` alongside
+  `option2Assignments` when first enabling classification. Missing, foreign,
+  stale and duplicate combinations fail atomically. No schema migration is needed.
 
 ## Promotions and weight
 

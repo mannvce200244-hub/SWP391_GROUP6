@@ -620,6 +620,9 @@ public class ProductServiceImpl implements ProductService {
         if (product.getFamily() == null) product.setFamily(familyFor(null, request.variantGroup(), request.name(), null, null));
         var lockedFamily = familyRepository.findByIdWithLock(product.getFamily().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Sản phẩm cha không tồn tại."));
+        if (request.option1Assignments() != null && (lockedFamily.getOption1Name() != null || opt1Name == null)) {
+            throw new IllegalArgumentException("Phân loại đã thay đổi. Vui lòng tải lại sản phẩm trước khi thiết lập nhóm 1.");
+        }
         if (request.option2Assignments() != null && (lockedFamily.getOption2Name() != null || opt2Name == null)) {
             throw new IllegalArgumentException("Phân loại đã thay đổi. Vui lòng tải lại sản phẩm trước khi thêm nhóm 2.");
         }
@@ -628,12 +631,10 @@ public class ProductServiceImpl implements ProductService {
             var family = product.getFamily();
             String currentOpt1 = family.getOption1Name();
             String currentOpt2 = family.getOption2Name();
-            if (currentOpt1 == null && opt1Name != null && family.getId() != null
-                    && productRepository.countByFamilyId(family.getId()) > 1) {
-                throw new IllegalArgumentException("Không thể thêm nhóm phân loại mới khi sản phẩm đã có nhiều biến thể cũ.");
-            }
-            if (currentOpt2 == null && opt2Name != null && family.getId() != null) {
-                assignSecondOption(product, request);
+            boolean addingFirst = currentOpt1 == null && opt1Name != null;
+            boolean addingSecond = currentOpt2 == null && opt2Name != null;
+            if (addingFirst || addingSecond) {
+                assignExistingOptions(product, request, addingFirst, addingSecond);
             }
             if (currentOpt2 != null && opt2Name == null && family.getId() != null
                     && productRepository.existsByFamilyIdAndOption2ValueIsNotNullAndIdNot(family.getId(), productId)) {
@@ -679,35 +680,50 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toAdminDetailResponse(savedProduct, availability, stockQuantity);
     }
 
-    private void assignSecondOption(Product selected, UpdateProductRequest request) {
+    private void assignExistingOptions(Product selected, UpdateProductRequest request, boolean addingFirst, boolean addingSecond) {
         var siblings = productRepository.findByFamilyIdOrderByIdAsc(selected.getFamily().getId());
-        var assignments = request.option2Assignments();
-        if (siblings.size() == 1 && assignments == null) return;
+        var firstAssignments = request.option1Assignments();
+        var secondAssignments = request.option2Assignments();
+        if (siblings.size() == 1 && firstAssignments == null && secondAssignments == null) return;
         var ids = siblings.stream().map(Product::getId).collect(Collectors.toSet());
-        if (assignments == null || !assignments.keySet().equals(ids)) {
+        if (addingFirst && (firstAssignments == null || !firstAssignments.keySet().equals(ids))) {
+            throw new IllegalArgumentException("Chọn giá trị nhóm 1 cho đầy đủ các SKU hiện có. Vui lòng tải lại nếu danh sách đã thay đổi.");
+        }
+        if (addingSecond && (secondAssignments == null || !secondAssignments.keySet().equals(ids))) {
             throw new IllegalArgumentException("Chọn giá trị nhóm 2 cho đầy đủ các SKU hiện có. Vui lòng tải lại nếu danh sách đã thay đổi.");
         }
-        var normalized = new java.util.HashMap<Long, String>();
+        var normalizedFirst = new java.util.HashMap<Long, String>();
+        var normalizedSecond = new java.util.HashMap<Long, String>();
         var labels = new java.util.HashSet<String>();
         for (Product sibling : siblings) {
-            String first = normalizeOption(sibling.getId().equals(selected.getId()) ? request.option1Value() : sibling.getOption1Value(),
+            String rawFirst = addingFirst ? firstAssignments.get(sibling.getId())
+                    : (sibling.getId().equals(selected.getId()) ? request.option1Value() : sibling.getOption1Value());
+            String first = normalizeOption(rawFirst,
                     "Giá trị phân loại 1 tối đa 48 ký tự.");
-            String second = normalizeOption(assignments.get(sibling.getId()), "Giá trị phân loại 2 tối đa 48 ký tự.");
-            if (first == null || second == null) {
-                throw new IllegalArgumentException("Mỗi SKU cần có đủ giá trị của cả hai nhóm phân loại.");
+            String second = addingSecond ? normalizeOption(secondAssignments.get(sibling.getId()), "Giá trị phân loại 2 tối đa 48 ký tự.") : null;
+            if (first == null || (addingSecond && second == null)) {
+                throw new IllegalArgumentException("Mỗi SKU cần có đủ giá trị của các nhóm phân loại.");
             }
-            String label = (first + " · " + second).toLowerCase(java.util.Locale.ROOT);
+            String label = (addingSecond ? first + " · " + second : first).toLowerCase(java.util.Locale.ROOT);
             if (!labels.add(label)) throw new IllegalArgumentException("Tổ hợp biến thể bị trùng trong danh sách.");
-            normalized.put(sibling.getId(), second);
+            normalizedFirst.put(sibling.getId(), first);
+            normalizedSecond.put(sibling.getId(), second);
         }
-        String selectedValue = normalizeOption(request.option2Value(), "Giá trị phân loại 2 tối đa 48 ký tự.");
-        if (!normalized.get(selected.getId()).equals(selectedValue)) {
-            throw new IllegalArgumentException("Giá trị nhóm 2 của SKU đang sửa chưa khớp với bảng phân loại.");
+        String selectedFirst = normalizeOption(request.option1Value(), "Giá trị phân loại 1 tối đa 48 ký tự.");
+        String selectedSecond = normalizeOption(request.option2Value(), "Giá trị phân loại 2 tối đa 48 ký tự.");
+        if (!normalizedFirst.get(selected.getId()).equals(selectedFirst)
+                || (addingSecond && !normalizedSecond.get(selected.getId()).equals(selectedSecond))) {
+            throw new IllegalArgumentException("Giá trị của SKU đang sửa chưa khớp với bảng phân loại.");
         }
+        // Release old labels inside this transaction so renamed SKUs can reuse one another's labels.
+        String temporaryPrefix = "classification-" + java.util.UUID.randomUUID() + "-";
+        for (Product sibling : siblings) sibling.setVariantLabel(temporaryPrefix + sibling.getId());
+        productRepository.flush();
         for (Product sibling : siblings) {
             if (sibling.getId().equals(selected.getId())) continue;
-            sibling.setOption2Value(normalized.get(sibling.getId()));
-            sibling.setVariantLabel(sibling.getOption1Value() + " · " + sibling.getOption2Value());
+            sibling.setOption1Value(normalizedFirst.get(sibling.getId()));
+            sibling.setOption2Value(normalizedSecond.get(sibling.getId()));
+            sibling.setVariantLabel(addingSecond ? sibling.getOption1Value() + " · " + sibling.getOption2Value() : sibling.getOption1Value());
         }
     }
 

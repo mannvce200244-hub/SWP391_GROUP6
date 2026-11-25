@@ -1,8 +1,26 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { variantFormErrors, variantRequests } from '../src/features/catalog/productVariantForm.js'
+import { classificationAssignmentErrors, variantFormErrors, variantRequests } from '../src/features/catalog/productVariantForm.js'
 
 const base = { name: 'Sáo trúc', variantGroup: 'Sáo nứa', variantLabel: 'Tone Đô', price: '100000', code: 'SAO-C', barcode: '', categoryId: 1 }
+
+test('legacy SKU classification accepts two attribute groups without requiring unique individual values', () => {
+  const siblings = [{ id: 1 }, { id: 2 }, { id: 3, isActive: false }]
+  assert.deepEqual(classificationAssignmentErrors(siblings,
+    { 1: 'Gỗ trắc', 2: 'Gỗ mun', 3: 'Gỗ mun' }, { 1: '16 dây', 2: '16 dây', 3: '18 dây' }, true), {})
+  const errors = classificationAssignmentErrors(siblings,
+    { 1: 'Gỗ trắc', 2: ' gỗ trắc ', 3: '' }, { 1: '16 dây', 2: '16 dây' }, true)
+  assert.ok(errors['option1Assignments[2]'])
+  assert.ok(errors['option1Assignments[3]'])
+  assert.ok(errors['option2Assignments[3]'])
+})
+
+test('one group classification rejects duplicate values and ignores disabled second-group drafts', () => {
+  assert.deepEqual(classificationAssignmentErrors([{ id: 1 }, { id: 2 }],
+    { 1: 'C', 2: 'D' }, { 1: '' }, false), {})
+  assert.ok(classificationAssignmentErrors([{ id: 1 }, { id: 2 }],
+    { 1: 'C', 2: ' c ' }, {}, false)['option1Assignments[2]'])
+})
 test('multiple variants preserve shared attributes and independent prices and identifiers', () => {
   const rows = [{ label: 'Tone Rê', price: '150000', code: '', barcode: '' }, { label: 'Tone Mi', price: '100000', code: 'sao-e', barcode: '8930000000001' }]
   assert.deepEqual(variantFormErrors(base, rows), {})
@@ -52,9 +70,9 @@ test('variant rows reject duplicate tones, SKU/barcodes, and invalid or excessiv
 })
 
 test('editing a legacy SKU adds only the requested new variants under its existing parent', () => {
-  const source = { ...base, code: 'SW4-P1', familyId: 42, billableWeightKg: 0.5, media: [{ url: 'https://example.com/flute.jpg', mediaType: 'IMAGE' }] }
+  const source = { ...base, variantLabel: '', code: 'SW4-P1', familyId: 42, billableWeightKg: 0.5, media: [{ url: 'https://example.com/flute.jpg', mediaType: 'IMAGE' }] }
   const rows = [{ label: 'Tone Rê', price: '150000', code: '', barcode: '' }]
-  assert.deepEqual(variantFormErrors(source, rows), {})
+  assert.deepEqual(variantFormErrors(source, rows, false, { allowUnnamedBase: true }), {})
   const additional = variantRequests(source, rows).slice(1)
   assert.equal(additional.length, 1)
   assert.equal(additional[0].familyId, 42)
@@ -65,4 +83,27 @@ test('editing a legacy SKU adds only the requested new variants under its existi
   assert.equal(additional[0].billableWeightKg, 0.5)
   assert.deepEqual(additional[0].media, source.media)
   assert.equal(source.code, 'SW4-P1')
+  assert.equal(source.variantLabel, '')
+})
+
+test('allowing an unnamed existing SKU still validates every new variant and its identifiers', () => {
+  const source = { ...base, variantLabel: '' }
+  const rows = [
+    { label: '', price: '0', code: source.code, barcode: '89301' },
+    { label: 'Tone Rê', price: '150000', code: '', barcode: '89301' },
+    { label: ' tone rê ', price: '150000', code: '', barcode: '' },
+  ]
+  const errors = variantFormErrors(source, rows, false, { allowUnnamedBase: true })
+  assert.equal(errors.variantLabel, undefined)
+  for (const field of ['variants[1].variantLabel', 'variants[1].price', 'variants[1].code', 'variants[2].barcode', 'variants[3].variantLabel']) {
+    assert.ok(errors[field], field)
+  }
+})
+
+test('new product batches and new standalone variants still require their first variant name', () => {
+  const source = { ...base, variantLabel: '' }
+  const rows = [{ label: 'Tone Rê', price: '150000', code: '', barcode: '' }]
+  assert.ok(variantFormErrors(source, rows).variantLabel)
+  assert.ok(variantFormErrors(source, [], true).variantLabel)
+  assert.ok(variantFormErrors({ ...base, variantLabel: 'a'.repeat(101) }, [], false, { allowUnnamedBase: true }).variantLabel)
 })

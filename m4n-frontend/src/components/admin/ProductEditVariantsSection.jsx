@@ -109,6 +109,10 @@ export default function ProductEditVariantsSection({
   useOption2 = false,
   onToggleOption2,
   requiresOption2Assignments = false,
+  requiresOption1Assignments = false,
+  option1Assignments = {},
+  onOption1AssignmentChange,
+  onGenerateMissing,
   option2Assignments = {},
   onOption2AssignmentChange,
   existingOption1Values = [],
@@ -152,7 +156,7 @@ export default function ProductEditVariantsSection({
           </div>
           <p className="text-xs text-muted leading-relaxed">
             {siblings.length > 1
-              ? <>Đang sửa SKU <strong className="font-mono text-ink">{activeCode}</strong>{activeLabel ? <> ({activeLabel})</> : ''}. Chọn biến thể khác bên dưới để chuyển nhanh, đổi tên nhóm phân loại chung, hoặc thêm lựa chọn mới để tạo thêm tổ hợp SKU.</>
+              ? <>Đang sửa SKU <strong className="font-mono text-ink">{activeCode}</strong>{activeLabel ? <> ({activeLabel})</> : ''}. {showStructured ? 'Thiết lập các nhóm phân loại bên dưới. Mỗi tổ hợp tương ứng một SKU với giá và tồn kho riêng.' : 'Chọn SKU để chỉnh sửa, hoặc bật phân loại để sắp xếp các SKU vào tối đa hai nhóm thuộc tính.'}</>
               : 'Bật phân loại nếu muốn chia sản phẩm thành nhiều phiên bản (VD: Chất liệu × Số dây) với giá và tồn kho riêng.'}
           </p>
         </div>
@@ -264,14 +268,14 @@ export default function ProductEditVariantsSection({
                 placeholder="VD: Chất liệu, Tone..."
                 error={errors.option1Name}
               />
-              <EditChipGroupInput
+              {!requiresOption1Assignments && <EditChipGroupInput
                 id="edit-variant-opt1-values"
                 label="Các lựa chọn của nhóm 1"
                 placeholder="Thêm lựa chọn mới rồi bấm Enter (VD: Gỗ hương)"
                 existingValues={existingOption1Values}
                 addedValues={addedOption1Values}
                 onAddedChange={onAddedOption1Change}
-              />
+              />}
             </div>
 
             {/* Group 2 */}
@@ -308,15 +312,15 @@ export default function ProductEditVariantsSection({
                       placeholder="VD: Số dây, Kích cỡ..."
                       error={errors.option2Name}
                     />
-                    <EditChipGroupInput
+                    {!requiresOption1Assignments && <EditChipGroupInput
                       id="edit-variant-opt2-values"
                       label="Các lựa chọn của nhóm 2"
                       placeholder="Thêm lựa chọn mới rồi bấm Enter (VD: 21 dây)"
                       existingValues={existingOption2Values}
                       addedValues={addedOption2Values}
                       onAddedChange={onAddedOption2Change}
-                    />
-                    {requiresOption2Assignments && (
+                    />}
+                    {requiresOption2Assignments && !requiresOption1Assignments && (
                       <div className="space-y-3 border-t border-border pt-3">
                         <p className="text-xs text-secondary">Chọn giá trị nhóm 2 cho từng SKU hiện có. Giữ nguyên mã, giá và tồn kho; không tự tạo lại các SKU này.</p>
                         {siblings.map((sku) => (
@@ -344,6 +348,57 @@ export default function ProductEditVariantsSection({
               </div>
             )}
           </div>
+
+          {requiresOption1Assignments && (
+            <div className="space-y-3 rounded-xl border border-border bg-[#F6F7F8] p-4">
+              <div>
+                <h4 className="text-sm font-semibold text-ink">Phân loại các SKU hiện có</h4>
+                <p className="mt-1 text-xs text-secondary">Nhập giá trị của từng nhóm cho mỗi SKU. Mã, giá và tồn kho được giữ nguyên. Lưu phân loại trước, sau đó có thể thêm lựa chọn để tạo tổ hợp mới.</p>
+              </div>
+              {siblings.map((sku) => (
+                <fieldset key={sku.id} className="min-w-0 rounded-lg border border-border bg-white p-3">
+                  <legend className="max-w-full break-words px-1 text-xs font-semibold text-ink">{sku.code} · {sku.variantLabel || 'Mặc định'}</legend>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Input
+                      id={`option1-assignment-${sku.id}`}
+                      name={`option1Assignments[${sku.id}]`}
+                      label={option1Name.trim() || 'Giá trị nhóm 1'}
+                      required
+                      maxLength={48}
+                      value={option1Assignments[sku.id] || ''}
+                      onChange={(event) => onOption1AssignmentChange(sku.id, event.target.value)}
+                      autoComplete="off"
+                      placeholder="VD: Gỗ trắc…"
+                      error={errors[`option1Assignments[${sku.id}]`]}
+                    />
+                    {useOption2 && (
+                      <Input
+                        id={`option2-assignment-${sku.id}`}
+                        name={`option2Assignments[${sku.id}]`}
+                        label={option2Name.trim() || 'Giá trị nhóm 2'}
+                        required
+                        maxLength={48}
+                        value={option2Assignments[sku.id] || ''}
+                        onChange={(event) => onOption2AssignmentChange(sku.id, event.target.value)}
+                        autoComplete="off"
+                        placeholder="VD: 16 dây…"
+                        error={errors[`option2Assignments[${sku.id}]`]}
+                      />
+                    )}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+          )}
+
+          {!requiresOption1Assignments && !requiresOption2Assignments && useOption2 && (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-secondary">Bổ sung các kết hợp chưa có giữa hai nhóm; xem lại giá và SKU trước khi lưu.</p>
+              <Button type="button" variant="secondary" size="sm" onClick={onGenerateMissing}>
+                <Plus size={14} aria-hidden="true" />Tạo tổ hợp còn thiếu
+              </Button>
+            </div>
+          )}
 
           {/* Pending New Combinations generated from newly added option values */}
           {pendingNewRows.length > 0 && (
