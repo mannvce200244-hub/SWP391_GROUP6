@@ -360,7 +360,7 @@ export default function ProductVariantRows({
           <Input id={`variant-${row.id}-barcode`} name={`variants[${index + 1}].barcode`} label="Barcode (tự tạo nếu để trống)" maxLength={100}
             value={row.barcode} onChange={(e) => update(row.id, 'barcode', e.target.value)} error={errors[`variants[${index + 1}].barcode`]} />
         </div>
-        <Button type="button" variant="ghost" className="mt-2" onClick={() => onChange(rows.filter((item) => item.id !== row.id))} aria-label={`Bỏ biến thể ${index + 2}`}>
+        <Button type="button" variant="ghost" className="mt-2" onClick={() => onChange(rows.filter((item) => item.id !== row.id))} aria-label={`Bỏ biến thể mới thứ ${index + (editingExisting ? 1 : 2)}`}>
           <Trash2 size={16} aria-hidden="true" />Bỏ dòng này</Button>
       </fieldset>)}
     </div>

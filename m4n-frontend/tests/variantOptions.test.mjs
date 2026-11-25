@@ -162,3 +162,16 @@ test('adding a second group keeps explicitly classified existing SKUs out of the
   assert.ok(payload.every((sku) => sku.familyId === 42 && sku.option1Value && sku.option2Value))
   assert.equal(payload.length, 3)
 })
+
+test('an incomplete two-group family can add its missing combination without adding another option value', () => {
+  const siblings = [
+    { id: 1, option1Value: 'Gỗ trắc', option2Value: '16 dây' },
+    { id: 2, option1Value: 'Gỗ mun', option2Value: '16 dây' },
+    { id: 3, option1Value: 'Gỗ mun', option2Value: '18 dây', isActive: false },
+  ]
+  const missing = buildMissingVariantMatrix(['Gỗ trắc', 'Gỗ mun'], ['16 dây', '18 dây'], siblings, [], '100000')
+  assert.deepEqual(missing.map((row) => row.label), ['Gỗ trắc · 18 dây'])
+  const requests = matrixVariantRequests({ familyId: 42 }, { option1Name: 'Chất liệu', option2Name: 'Số dây', useOption2: true }, missing)
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].familyId, 42)
+})

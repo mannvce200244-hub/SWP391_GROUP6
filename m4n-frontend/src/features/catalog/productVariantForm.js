@@ -1,4 +1,4 @@
-export function variantFormErrors(base, rows, requireVariant = false) {
+export function variantFormErrors(base, rows, requireVariant = false, { allowUnnamedBase = false } = {}) {
   const errors = {}
   const needsVariant = requireVariant || rows.length > 0 || Boolean(base.variantLabel?.trim())
   const labels = new Set()
@@ -8,7 +8,8 @@ export function variantFormErrors(base, rows, requireVariant = false) {
   all.forEach((row, index) => {
     const field = (key) => index ? `variants[${index}].${key}` : key
     const label = row.label.trim().normalize('NFC').toLocaleLowerCase('vi')
-    if (needsVariant && (!label || label.length > 100)) errors[field('variantLabel')] = 'Nhập tên biến thể, tối đa 100 ký tự.'
+    const needsLabel = index > 0 || (needsVariant && !allowUnnamedBase)
+    if ((needsLabel && !label) || label.length > 100) errors[field('variantLabel')] = 'Nhập tên biến thể, tối đa 100 ký tự.'
     else if (labels.has(label)) errors[field('variantLabel')] = 'Tên biến thể đã có trong danh sách.'
     labels.add(label)
     if (!/^\d+(\.\d{1,2})?$/.test(row.price.trim()) || !Number.isFinite(Number(row.price)) || Number(row.price) <= 0 || Number(row.price) >= 1e12) {
@@ -27,6 +28,23 @@ export function variantFormErrors(base, rows, requireVariant = false) {
 export function variantRequests(base, rows) {
   return [base, ...rows.map((row) => ({ ...base, code: row.code.trim().toUpperCase() || null,
     barcode: row.barcode.trim() || null, variantLabel: row.label.trim(), price: Number(row.price) }))]
+}
+
+export function classificationAssignmentErrors(siblings, firstAssignments, secondAssignments, useOption2) {
+  const errors = {}
+  const seen = new Set()
+  for (const sku of siblings) {
+    const first = (firstAssignments[sku.id] || '').trim().normalize('NFC')
+    const second = useOption2 ? (secondAssignments[sku.id] || '').trim().normalize('NFC') : ''
+    if (!first || first.length > 48) errors[`option1Assignments[${sku.id}]`] = 'Nhập giá trị nhóm 1 cho SKU này, tối đa 48 ký tự.'
+    if (useOption2 && (!second || second.length > 48)) errors[`option2Assignments[${sku.id}]`] = 'Nhập giá trị nhóm 2 cho SKU này, tối đa 48 ký tự.'
+    if (first && (!useOption2 || second)) {
+      const key = (useOption2 ? `${first} · ${second}` : first).toLocaleLowerCase('vi')
+      if (seen.has(key)) errors[`option1Assignments[${sku.id}]`] = 'Tổ hợp biến thể bị trùng. Chọn giá trị khác cho SKU này.'
+      seen.add(key)
+    }
+  }
+  return errors
 }
 
 export function matrixFormErrors(

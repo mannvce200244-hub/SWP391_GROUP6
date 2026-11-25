@@ -395,6 +395,88 @@ class ProductFamilyIntegrationTest {
                 null, null, "Chất liệu", "Số dây", selected.option1Value(), "16 dây", assignments);
     }
 
+    @Test void legacySkusCanBeClassifiedIntoTwoGroupsWithoutCreatingOrReplacingSkus() {
+        var initial = products.createVariants(new CreateProductVariantsRequest(List.of(
+                request(null, "Tone C", "100000"), request(null, "Tone D", "150000"), request(null, "Đàn tranh", "200000"))));
+        var first = initial.getFirst();
+        var second = initial.get(1);
+        var third = initial.getLast();
+        setStock(first.id(), 4);
+        setStock(second.id(), 8);
+        products.updateProductStatus(third.id(), false);
+        var firstValues = java.util.Map.of(first.id(), "Gỗ trắc", second.id(), "Gỗ mun", third.id(), "Gỗ mun");
+        var secondValues = java.util.Map.of(first.id(), "16 dây", second.id(), "16 dây", third.id(), "18 dây");
+        products.updateProduct(first.id(), classificationRequest(first, firstValues, secondValues));
+        entityManager.flush();
+        entityManager.clear();
+        for (var original : initial) {
+            var actual = products.getAdminProductDetail(original.id());
+            assertThat(actual.code()).isEqualTo(original.code());
+            assertThat(actual.barcode()).isEqualTo(original.barcode());
+            assertThat(actual.familyId()).isEqualTo(first.familyId());
+            assertThat(actual.price()).isEqualByComparingTo(original.price());
+            assertThat(actual.option1Name()).isEqualTo("Chất liệu");
+            assertThat(actual.option2Name()).isEqualTo("Số dây");
+            assertThat(actual.option1Value()).isEqualTo(firstValues.get(original.id()));
+            assertThat(actual.option2Value()).isEqualTo(secondValues.get(original.id()));
+            assertThat(actual.variantLabel()).isEqualTo(firstValues.get(original.id()) + " · " + secondValues.get(original.id()));
+        }
+        assertThat(products.getAdminProductDetail(first.id()).stockQuantity()).isEqualTo(4);
+        assertThat(products.getAdminProductDetail(second.id()).stockQuantity()).isEqualTo(8);
+        assertThat(products.getAdminProductDetail(third.id()).isActive()).isFalse();
+        assertThat(products.listAdminVariants(first.id(), PageRequest.of(0, 100)).getTotalElements()).isEqualTo(3);
+        var added = products.createProduct(optionRequest(first.familyId(), "Chất liệu", "Số dây", "Gỗ trắc", "18 dây", "125000"));
+        assertThat(added.stockQuantity()).isZero();
+        assertThatThrownBy(() -> products.updateProduct(first.id(), classificationRequest(first, firstValues, secondValues)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("tải lại");
+    }
+
+    @Test void legacyClassificationCanReuseAnotherSkusOldLabelWithoutTransientUniqueConflicts() {
+        var initial = products.createVariants(new CreateProductVariantsRequest(List.of(
+                request(null, "Gỗ mun", "100000"), request(null, "Gỗ trắc", "150000"))));
+        var first = initial.getFirst();
+        products.updateProduct(first.id(), classificationRequest(first,
+                java.util.Map.of(first.id(), "Gỗ trắc", initial.getLast().id(), "Gỗ mun"), null));
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(products.getAdminProductDetail(first.id()).variantLabel()).isEqualTo("Gỗ trắc");
+        assertThat(products.getAdminProductDetail(initial.getLast().id()).variantLabel()).isEqualTo("Gỗ mun");
+        assertThat(products.getAdminProductDetail(first.id()).option2Name()).isNull();
+    }
+
+    @Test void legacyClassificationRequiresCompleteDistinctAssignmentsIncludingInactiveSkus() {
+        var initial = products.createVariants(new CreateProductVariantsRequest(List.of(
+                request(null, "Tone C", "100000"), request(null, "Tone D", "150000"))));
+        var first = initial.getFirst();
+        var second = initial.getLast();
+        products.updateProductStatus(second.id(), false);
+        for (var assignments : List.of(
+                java.util.Map.of(first.id(), "Gỗ trắc"),
+                java.util.Map.of(first.id(), "Gỗ trắc", second.id(), " "),
+                java.util.Map.of(first.id(), "Gỗ trắc", Long.MAX_VALUE, "Gỗ mun"),
+                java.util.Map.of(first.id(), "Gỗ trắc", second.id(), "Gỗ mun", Long.MAX_VALUE, "Gỗ hương"),
+                java.util.Map.of(first.id(), "Gỗ trắc", second.id(), " gỗ trắc ")
+        )) {
+            assertThatThrownBy(() -> products.updateProduct(first.id(), classificationRequest(first, assignments, null)))
+                    .isInstanceOf(IllegalArgumentException.class);
+            assertThat(products.getAdminProductDetail(second.id()).option1Name()).isNull();
+            assertThat(products.getAdminProductDetail(second.id()).variantLabel()).isEqualTo("Tone D");
+        }
+        assertThatThrownBy(() -> products.updateProduct(first.id(), classificationRequest(first, null, null)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("nhóm 1");
+        assertThatThrownBy(() -> products.updateProduct(first.id(), classificationRequest(first,
+                java.util.Map.of(first.id(), "Gỗ trắc", second.id(), "Gỗ mun"), java.util.Map.of(first.id(), "16 dây"))))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("nhóm 2");
+    }
+
+    private UpdateProductRequest classificationRequest(com.m4n.backend.dto.response.AdminProductDetailResponse selected,
+            java.util.Map<Long, String> first, java.util.Map<Long, String> second) {
+        return new UpdateProductRequest(name, selected.barcode(), selected.price(), category.getId(), null, null,
+                null, null, null, null, null, true, null, 5, new BigDecimal("0.000001"), BigDecimal.ZERO,
+                null, null, "Chất liệu", second == null ? null : "Số dây",
+                first == null ? "Gỗ trắc" : first.get(selected.id()), second == null ? null : second.get(selected.id()), second, first);
+    }
+
     private CreateProductRequest request(Long family, String tone, String price) {
         return new CreateProductRequest(null, null, name, new BigDecimal(price), category.getId(), null, null,
                 null, null, null, null, null, List.of(), 5, new BigDecimal("0.000001"), BigDecimal.ZERO, null, tone, true, family);

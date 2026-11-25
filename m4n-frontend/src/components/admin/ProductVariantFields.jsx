@@ -29,6 +29,7 @@ function SuggestionChips({ label, suggestions = [], selectedValue = '', onPick }
 
 export default function ProductVariantFields({
   label,
+  labelCaption = 'Tên biến thể',
   onLabelChange,
   error,
   required = false,
@@ -101,7 +102,7 @@ export default function ProductVariantFields({
       <Input
         id="product-variant-label"
         name="variantLabel"
-        label="Tên biến thể"
+        label={labelCaption}
         required={required}
         maxLength={100}
         value={label}
