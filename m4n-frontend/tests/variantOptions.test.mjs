@@ -84,6 +84,28 @@ test('matrixFormErrors and matrixVariantRequests validate and emit structured pa
   assert.ok(duplicateNames.option2Name)
 })
 
+test('adding a third value to one group preserves the other group through the save payload and reload', () => {
+  const config = { option1Name: 'Chất liệu', option2Name: 'Số dây', useOption2: true }
+  const initial = buildVariantMatrix(['Gỗ trắc', 'Gỗ mun'], ['16 dây', '18 dây'], [], '5000000')
+  initial[1] = { ...initial[1], price: '5500000', code: 'DT-TRAC-18', barcode: '8938500000010' }
+  const expanded = buildVariantMatrix(['Gỗ trắc', 'Gỗ mun', 'Gỗ hương'], ['16 dây', '18 dây'], initial, '6000000')
+  const payload = matrixVariantRequests({ name: 'Đàn Tranh', categoryId: 1 }, config, expanded)
+  const reopened = buildAttributeGroups(JSON.parse(JSON.stringify(payload)))
+
+  assert.equal(payload.length, 6)
+  assert.deepEqual(reopened, {
+    structured: true,
+    option1Name: 'Chất liệu',
+    option2Name: 'Số dây',
+    option1Values: ['Gỗ trắc', 'Gỗ mun', 'Gỗ hương'],
+    option2Values: ['16 dây', '18 dây'],
+  })
+  assert.deepEqual(payload.filter((sku) => sku.option1Value === 'Gỗ hương').map((sku) => sku.option2Value), ['16 dây', '18 dây'])
+  const unchanged = payload.find((sku) => sku.code === 'DT-TRAC-18')
+  assert.equal(unchanged.price, 5500000)
+  assert.equal(unchanged.barcode, '8938500000010')
+})
+
 test('matrixFormErrors maps first-row errors to top-level keys and detects existing sibling combos', () => {
   const config = { option1Name: 'Chất liệu', option2Name: 'Số dây', useOption2: true }
   const existing = new Set(['gỗ trắc · 16 dây'])

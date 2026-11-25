@@ -62,11 +62,29 @@ field is required. This supersedes the group-string-only model in BR-PRODUCT-01.
   delegated the choice: use the voucher-consistent minimum of one hour after
   both original creation and optional start. No end means no expiry. Existing
   programs are revalidated when edited; editing uses their original creation.
-- Optional weight accepts a positive decimal without the old 3-decimal/7-integer
+- User refinement (2026-11-25): weight is required when creating or editing a
+  product/SKU, including variants. Existing records are not assigned estimated
+  weights; Admin supplies a positive weight when saving an edit.
+- Required weight accepts a positive decimal without the old 3-decimal/7-integer
   input restriction. PostgreSQL uses unconstrained numeric, with no rounding to
   zero. Shipping-provider and payable-amount bounds remain enforced when quoting.
 
 ## Rollout
 
-Additive migration and regression checks are required before deploying. No
-production migration or push is authorized by this implementation request.
+User refinement (2026-11-25): product create/edit and variant forms add images
+through media URLs only. Remove the local file picker and multipart submission
+from these frontend flows; existing product media remain usable.
+
+Additive migration and regression checks are required before deploying.
+Apply `migrations/20261123-variant-attributes-and-global-threshold.sql` after
+the product-family migration and before starting the attribute-aware backend
+with schema validation.
+
+Production recovery (2026-11-25, explicitly requested by the user): a deployment
+failed validation because all four option columns were missing. After a verified
+full database backup, the existing migration was applied transactionally and the
+crashed Railway container restarted. The four columns and both checks were
+verified; recorded row counts and inventory total were unchanged. Railway health,
+catalog through Railway/Vercel and Google options returned HTTP 200. The migration
+also normalized six legacy per-SKU alert thresholds to the approved common value
+5. No SKU labels or historical transaction snapshots were rewritten.

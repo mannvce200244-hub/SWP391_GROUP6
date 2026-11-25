@@ -99,7 +99,7 @@ class ProductImageIntegrationTest {
     private CreateProductRequest variant(String group, String label, Boolean active) {
         var base = request(null);
         return new CreateProductRequest(null, null, base.name(), base.price(), base.categoryId(), null, null,
-                base.material(), base.dimensions(), null, base.origin(), null, List.of(), 5, null, null, group, label, active, null);
+                base.material(), base.dimensions(), null, base.origin(), null, List.of(), 5, base.billableWeightKg(), null, group, label, active, null);
     }
 
     @Test void uploadedSingleAndBatchVariantsPreserveInactiveStatus() throws Exception {
