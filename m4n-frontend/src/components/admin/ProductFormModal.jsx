@@ -221,6 +221,7 @@ export default function ProductFormModal({
           setAddedOption1Values([])
           setAddedOption2Values([])
           setEditNewRows([])
+          setVariantRows([])
           setPendingSwitchTarget(null)
           const nextCode = variantSource ? '' : p.code || ''
           const nextBarcode = variantSource ? '' : p.barcode || ''
@@ -391,6 +392,7 @@ export default function ProductFormModal({
   const useMatrix = !isEdit && !isVariant && matrixConfig.enabled
   const hasStructuredOptions = isEdit ? (editStructuredEnabled || Boolean(option1Name.trim())) : Boolean(option1Name.trim())
   const effectiveUseOption2 = isEdit ? editUseOption2 : Boolean(option2Name.trim())
+  const additionalVariantCount = hasStructuredOptions ? editNewRows.length : variantRows.length
 
   const resolvedSiblings = useMemo(
     () => (Array.isArray(existingVariants) && existingVariants.length > 0 ? existingVariants : siblingVariants),
@@ -404,7 +406,7 @@ export default function ProductFormModal({
 
   const isEditDirty = useMemo(() => {
     if (!isEdit || !initialEditSnapshot) return false
-    if (editNewRows.length > 0 || addedOption1Values.length > 0 || addedOption2Values.length > 0) return true
+    if (variantRows.length > 0 || editNewRows.length > 0 || addedOption1Values.length > 0 || addedOption2Values.length > 0) return true
     const currentSnapshot = JSON.stringify({
       barcode, name, variantLabel, option1Name, option2Name,
       option1Value, option2Value, price, billableWeightKg,
@@ -414,7 +416,7 @@ export default function ProductFormModal({
     })
     return currentSnapshot !== initialEditSnapshot
   }, [
-    isEdit, initialEditSnapshot, editNewRows.length,
+    isEdit, initialEditSnapshot, variantRows.length, editNewRows.length,
     addedOption1Values.length, addedOption2Values.length,
     barcode, name, variantLabel, option1Name, option2Name,
     option1Value, option2Value, price, billableWeightKg,
@@ -634,7 +636,7 @@ export default function ProductFormModal({
 
         const updated = await adminProductService.updateProduct(activeEditId, updatePayload)
 
-        if (editNewRows.length > 0) {
+        if (additionalVariantCount > 0) {
           const familyIdToUse = updated?.familyId || loadedFamilyId
           const inheritedMedia = (updated?.media || mediaList).map((m, idx) => ({
             url: m.url,
@@ -659,7 +661,9 @@ export default function ProductFormModal({
           }
           try {
             const createdExtra = await adminProductService.createVariants(
-              matrixVariantRequests(batchBase, { option1Name, option2Name, useOption2: effectiveUseOption2 }, editNewRows),
+              hasStructuredOptions
+                ? matrixVariantRequests(batchBase, { option1Name, option2Name, useOption2: effectiveUseOption2 }, editNewRows)
+                : variantRequests(batchBase, variantRows).slice(1),
             )
             addToast({
               message: `Đã cập nhật “${name.trim()}” và tạo thêm ${createdExtra.length} biến thể mới (tồn kho = 0).`,
@@ -667,7 +671,11 @@ export default function ProductFormModal({
             })
           } catch (createErr) {
             const fields = createErr.fieldErrors || createErr.data?.fieldErrors || {}
-            setFormErrors(Object.fromEntries(Object.entries(fields).map(([key, msg]) => [key.replace(/^variants\[/, 'newVariants['), msg])))
+            setFormErrors(Object.fromEntries(Object.entries(fields).map(([key, msg]) => [
+              hasStructuredOptions ? key.replace(/^variants\[/, 'newVariants[')
+                : key.replace(/^variants\[(\d+)\]/, (_, index) => `variants[${Number(index) + 1}]`),
+              msg,
+            ])))
             setServerError(`Đã lưu thay đổi cho ${code}, nhưng chưa tạo được các biến thể mới: ${createErr.message || 'Vui lòng kiểm tra lại.'}`)
             if (onSuccess) onSuccess(activeEditId)
             adminProductService.listVariants(activeEditId).then((pageData) => {
@@ -978,6 +986,7 @@ export default function ProductFormModal({
                   </div>
 
                   {isEdit ? (
+                    <div className="space-y-4">
                     <ProductEditVariantsSection
                       activeProductId={activeEditId}
                       activeCode={code}
@@ -1008,6 +1017,7 @@ export default function ProductFormModal({
                       structuredEnabled={editStructuredEnabled}
                       onToggleStructured={(checked) => {
                         setEditStructuredEnabled(checked)
+                        setVariantRows([])
                         if (!checked) {
                           setEditUseOption2(false)
                           setOption1Name('')
@@ -1054,6 +1064,18 @@ export default function ProductFormModal({
                       defaultPrice={price}
                       errors={formErrors}
                     />
+                    {!hasStructuredOptions && <ProductVariantRows
+                      editingExisting
+                      rows={variantRows}
+                      defaultPrice={price}
+                      errors={formErrors}
+                      onChange={(rows, changedField) => {
+                        setVariantRows(rows)
+                        setFormErrors((current) => Object.fromEntries(Object.entries(current).filter(([key]) =>
+                          changedField ? key !== changedField : !key.startsWith('variants['))))
+                      }}
+                    />}
+                    </div>
                   ) : (
                     <ProductVariantRows
                       mode={isVariant ? 'flat' : 'matrix'}
@@ -1429,12 +1451,12 @@ export default function ProductFormModal({
                               : <>Tồn kho sản phẩm mới sẽ mặc định là 0. Quản lý kho qua chức năng <strong>Nhập kho</strong>.</>}
                         </span>
                       </div>
-                    ) : editNewRows.length > 0 ? (
+                    ) : additionalVariantCount > 0 ? (
                       <div className="flex items-center gap-2 text-sm text-secondary">
                         <Package size={18} className="text-brand shrink-0" />
                         <span aria-live="polite">
                           <span className="block font-medium text-ink">
-                            Sẽ cập nhật {code} và tạo thêm {editNewRows.length} biến thể mới.
+                            Sẽ cập nhật {code} và tạo thêm {additionalVariantCount} biến thể mới.
                           </span>
                           Biến thể mới có tồn kho = 0; SKU hiện có giữ nguyên lịch sử.
                         </span>
@@ -1460,8 +1482,8 @@ export default function ProductFormModal({
                         {submitting
                           ? 'Đang lưu…'
                           : isEdit
-                            ? editNewRows.length > 0
-                              ? `Lưu & tạo thêm ${editNewRows.length} biến thể`
+                            ? additionalVariantCount > 0
+                              ? `Lưu & tạo thêm ${additionalVariantCount} biến thể`
                               : 'Lưu thay đổi'
                             : useMatrix
                               ? `Tạo ${matrixRows.length} biến thể`

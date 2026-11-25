@@ -72,6 +72,7 @@ function ChipGroupInput({ id, label, placeholder, values, onChange }) {
 
 export default function ProductVariantRows({
   mode = 'flat',
+  editingExisting = false,
   rows = [],
   onChange,
   matrixConfig,
@@ -313,12 +314,14 @@ export default function ProductVariantRows({
 
   return <details className="rounded-xl border border-border bg-surface-secondary p-4">
     <summary className="cursor-pointer rounded text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand">
-      Tạo nhiều biến thể cùng lúc (tùy chọn)
-      {rows.length > 0 && <span className="ml-2 font-normal">· {rows.length + 1} biến thể mới</span>}
+      {editingExisting ? 'Thêm biến thể cho sản phẩm' : 'Tạo nhiều biến thể cùng lúc (tùy chọn)'}
+      {rows.length > 0 && <span className="ml-2 font-normal">· {rows.length + (editingExisting ? 0 : 1)} biến thể mới</span>}
     </summary>
     <div className="mt-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-secondary">Thông tin phía trên là biến thể đầu tiên. Mỗi dòng thêm bên dưới sẽ tạo thêm 1 biến thể mới.</p>
+        <p className="text-sm text-secondary">{editingExisting
+          ? 'Mỗi dòng bên dưới tạo thêm 1 biến thể thuộc sản phẩm đang sửa, có SKU, giá riêng và tồn kho ban đầu bằng 0.'
+          : 'Thông tin phía trên là biến thể đầu tiên. Mỗi dòng thêm bên dưới sẽ tạo thêm 1 biến thể mới.'}</p>
         <Button type="button" variant="secondary" onClick={() => onChange([...rows, { id: crypto.randomUUID(), label: '', option1Value: '', option2Value: '', code: '', barcode: '', price: defaultPrice }])}>
           <Plus size={16} aria-hidden="true" />Thêm 1 dòng biến thể</Button>
       </div>
@@ -333,7 +336,7 @@ export default function ProductVariantRows({
         </datalist>
       )}
       {rows.map((row, index) => <fieldset key={row.id} className="min-w-0 rounded-lg border border-border bg-white p-4">
-        <legend className="px-1 text-sm font-semibold">Biến thể mới thứ {index + 2}</legend>
+        <legend className="px-1 text-sm font-semibold">Biến thể mới thứ {index + (editingExisting ? 1 : 2)}</legend>
         <div className="grid gap-3 sm:grid-cols-2">
           {structured ? (
             <>

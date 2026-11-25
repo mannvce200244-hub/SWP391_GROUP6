@@ -51,6 +51,12 @@ field is required. This supersedes the group-string-only model in BR-PRODUCT-01.
   single-label families remain supported.
 - Adding a variant keeps the parent's name read-only. The shared name is edited
   through the existing product editor; each variant's price and stock remain independent.
+- The Admin list omits the separate add-variant shortcut. The editor still
+  supports adding variants: structured families add option values/combinations;
+  legacy flat-label families add named rows under the same parent. Saving those
+  rows updates the selected SKU and creates only the additional SKUs, with zero
+  initial stock. Switching the edited SKU discards draft rows only after the
+  existing unsaved-change confirmation.
 
 ## Promotions and weight
 

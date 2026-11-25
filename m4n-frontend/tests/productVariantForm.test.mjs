@@ -50,3 +50,19 @@ test('variant rows reject duplicate tones, SKU/barcodes, and invalid or excessiv
   const errors = variantFormErrors(base, rows)
   for (const field of ['variants[1].variantLabel', 'variants[1].code', 'variants[1].price', 'variants[2].price', 'variants[3].price', 'variants[3].variantLabel', 'variants[3].barcode']) assert.ok(errors[field], field)
 })
+
+test('editing a legacy SKU adds only the requested new variants under its existing parent', () => {
+  const source = { ...base, code: 'SW4-P1', familyId: 42, billableWeightKg: 0.5, media: [{ url: 'https://example.com/flute.jpg', mediaType: 'IMAGE' }] }
+  const rows = [{ label: 'Tone Rê', price: '150000', code: '', barcode: '' }]
+  assert.deepEqual(variantFormErrors(source, rows), {})
+  const additional = variantRequests(source, rows).slice(1)
+  assert.equal(additional.length, 1)
+  assert.equal(additional[0].familyId, 42)
+  assert.equal(additional[0].variantLabel, 'Tone Rê')
+  assert.equal(additional[0].code, null)
+  assert.equal(additional[0].barcode, null)
+  assert.equal(additional[0].price, 150000)
+  assert.equal(additional[0].billableWeightKg, 0.5)
+  assert.deepEqual(additional[0].media, source.media)
+  assert.equal(source.code, 'SW4-P1')
+})
