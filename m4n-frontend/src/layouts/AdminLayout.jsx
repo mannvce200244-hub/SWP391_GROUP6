@@ -156,7 +156,7 @@ function AdminLayout({ children, pathname }) {
       >
         {/* Sidebar Brand Header */}
         <div
-          className={`h-16 px-4 border-b border-border flex items-center justify-between ${
+          className={`h-16 shrink-0 px-4 border-b border-border flex items-center justify-between ${
             sidebarCollapsed ? 'justify-center' : ''
           }`}
         >
@@ -212,7 +212,7 @@ function AdminLayout({ children, pathname }) {
         )}
 
         {/* Navigation Sections */}
-        <nav className="flex-1 p-3 flex flex-col gap-5 overflow-y-auto overflow-x-hidden">
+        <nav className="min-h-0 flex-1 p-3 flex flex-col gap-5 overflow-y-auto overflow-x-hidden">
           {navSections.map((section) => (
             <div key={section.title} className="flex flex-col gap-1">
               {!sidebarCollapsed ? (
@@ -273,24 +273,31 @@ function AdminLayout({ children, pathname }) {
         </nav>
 
         {/* Sidebar Footer: User Profile and Logout */}
-        <div className="p-3 border-t border-border bg-[#F6F7F8]">
-          <div className={`flex items-center gap-2.5 p-2 rounded-xl bg-white border border-border ${sidebarCollapsed ? 'justify-center' : ''}`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#F6F7F8] text-[#A62F25] font-bold text-xs flex items-center justify-center border border-[#A62F25]/40 shrink-0">
+        <div className="shrink-0 p-3 border-t border-border bg-[#F6F7F8]">
+          <RouterLink
+            href={CUSTOMER_ROUTES.adminProfile}
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label={`Mở hồ sơ cá nhân: ${user?.fullName || 'Quản trị viên'}`}
+            aria-current={pathname === CUSTOMER_ROUTES.adminProfile ? 'page' : undefined}
+            title="Mở hồ sơ cá nhân"
+            className={`flex min-h-12 w-full items-center gap-2.5 rounded-xl border border-border bg-white p-2 text-ink transition-colors hover:border-brand hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${sidebarCollapsed ? 'justify-center' : ''}`}
+          >
+            <div className="flex w-full min-w-0 items-center gap-2.5">
+              <div aria-hidden="true" className="w-8 h-8 rounded-lg bg-[#F6F7F8] text-[#A62F25] font-bold text-xs flex items-center justify-center border border-[#A62F25]/40 shrink-0">
                 {user?.fullName ? user.fullName.charAt(0).toUpperCase() : 'A'}
               </div>
               {!sidebarCollapsed && (
                 <div className="flex flex-col min-w-0 flex-1">
-                  <span className="text-xs font-bold text-white truncate leading-tight">
+                  <span className="text-sm font-semibold text-ink truncate leading-snug" title={user?.fullName || 'Quản trị viên'}>
                     {user?.fullName || 'Quản trị viên'}
                   </span>
-                  <span className="text-xs text-secondary truncate">
+                  <span className="text-xs text-secondary truncate" title={user?.email}>
                     {user?.email || 'admin@m4n.vn'}
                   </span>
                 </div>
               )}
             </div>
-          </div>
+          </RouterLink>
 
           <button
             type="button"
